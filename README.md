@@ -30,4 +30,5 @@ To contribute a docset, follow the steps below. If you get stuck at any point or
   * Include a `icon.png` and `icon@2x.png` with sizes `16x16` and `32x32`
   * Edit the docset.json file
   * Edit the README.md
+  * Include a icon.png and icon@2x.png with sizes `16x16 and 32x32`
 * Submit a pull request
