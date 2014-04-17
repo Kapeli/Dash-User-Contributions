@@ -1,7 +1,7 @@
 Sample Docset
 =======================
 
-This README needs to be edited to include the following:
+When you contribute a docset, you need to edit this README to include the following:
 * Who are you (GitHub and/or Twitter username)
 * Complete instructions on how to generate the docset, including:
   * List of any prerequisites
