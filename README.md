@@ -17,6 +17,7 @@ To contribute a docset, follow the steps below. If you get stuck at any point or
 * Generate a docset by following the instructions at http://kapeli.com/docsets
     * Note: you can ignore the instructions regarding docset feeds. You won't need them if you plan to contribute to this repo
 * Make sure your docset fulfils all the required criteria on the [Docset Contribution Checklist](https://github.com/Kapeli/Dash-User-Contributions/wiki/Docset-Contribution-Checklist) and as many of the optional ones as possible
+* Check out the [Versioning Guidelines](https://github.com/Kapeli/Dash-User-Contributions/wiki/Docset-Versioning-Guidelines) to understand how docset versioning works in Dash
 * Fork and clone this repo
 * Set up your directory structure:
   * Copy the `Sample_Docset` folder into the `docsets` folder and rename it. Use the same name as your docset, but replace whitespaces with underscores
