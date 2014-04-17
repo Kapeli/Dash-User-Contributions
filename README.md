@@ -1,7 +1,7 @@
 Dash User Contributed Docsets
 =======================
 
-### Report an issue or request a docset
+### Report a bug or request a docset
 [Open an issue](https://github.com/Kapeli/Dash-User-Contributions/issues).
 
 ### Improve an existing docset
