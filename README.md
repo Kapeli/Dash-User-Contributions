@@ -20,7 +20,10 @@ To contribute a docset, follow the steps below. If you get stuck at any point or
 * Fork and clone this repo
 * Set up your directory structure:
   * Copy the `Sample_Docset` folder into the `docsets` folder and rename it. Use the same name as your docset, but replace whitespaces with underscores
-  * Archive your docset using `tar --exclude='.DS_Store' -cvzf <docset name>.tgz <docset name>.docset`
+  * Archive your docset using:
+  ```bash
+  tar --exclude='.DS_Store' -cvzf <docset name>.tgz <docset name>.docset
+  ```
   * Copy your docset archive
   * Copy your docset generation script or any other required resources
   * Edit the docset.json file
