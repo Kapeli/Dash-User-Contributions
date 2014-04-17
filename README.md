@@ -1,8 +1,8 @@
 Dash User Contributed Docsets
 =======================
 
-### Report an issue with an existing docset
-If a docset is out of date or has any bugs, please [open an issue](https://github.com/Kapeli/Dash-User-Contributions/issues).
+### Report an issue or request a docset
+[Open an issue](https://github.com/Kapeli/Dash-User-Contributions/issues).
 
 ### Improve an existing docset
 
