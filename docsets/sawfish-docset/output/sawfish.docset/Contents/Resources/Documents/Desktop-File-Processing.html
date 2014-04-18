@@ -1,0 +1,255 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- Created by GNU Texinfo 5.1, http://www.gnu.org/software/texinfo/ -->
+<head>
+<title>sawfish Programming Manual: Desktop File Processing</title>
+
+<meta name="description" content="sawfish Programming Manual: Desktop File Processing">
+<meta name="keywords" content="sawfish Programming Manual: Desktop File Processing">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link href="index.html#Top" rel="start" title="Top">
+<link href="Function-Index.html#Function-Index" rel="index" title="Function Index">
+<link href="Concept-Index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Applications-Menu.html#Applications-Menu" rel="up" title="Applications Menu">
+<link href="Popup-Definitions.html#Popup-Definitions" rel="next" title="Popup Definitions">
+<link href="Applications-Menu-Functions.html#Applications-Menu-Functions" rel="previous" title="Applications Menu Functions">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.smallquotation {font-size: smaller}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.indentedblock {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+div.smalldisplay {margin-left: 3.2em}
+div.smallexample {margin-left: 3.2em}
+div.smallindentedblock {margin-left: 3.2em; font-size: smaller}
+div.smalllisp {margin-left: 3.2em}
+kbd {font-style:oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+pre.smalldisplay {font-family: inherit; font-size: smaller}
+pre.smallexample {font-size: smaller}
+pre.smallformat {font-family: inherit; font-size: smaller}
+pre.smalllisp {font-size: smaller}
+span.nocodebreak {white-space:nowrap}
+span.nolinebreak {white-space:nowrap}
+span.roman {font-family:serif; font-weight:normal}
+span.sansserif {font-family:sans-serif; font-weight:normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en" bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" alink="#FF0000">
+<a name="Desktop-File-Processing"></a>
+<div class="header">
+<p>
+Previous: <a href="Applications-Menu-Functions.html#Applications-Menu-Functions" accesskey="p" rel="previous">Applications Menu Functions</a>, Up: <a href="Applications-Menu.html#Applications-Menu" accesskey="u" rel="up">Applications Menu</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Function-Index.html#Function-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<a name="Desktop-File-Processing-1"></a>
+<h4 class="subsection">15.2.3 Desktop File Processing</h4>
+<a name="index-Applications-menu-filtering"></a>
+<a name="index-Filtering_002c-applications-menu"></a>
+
+<p>In this section it is shown how Sawfish processes desktop file entries
+while building the applications menu. Each entry passes through many
+<em>filters</em>, and they&rsquo;re what you may want to customize.
+</p>
+<p>Desktop file entries are expressed as a list. Here is an example of
+<samp>emacs.desktop</samp> file before any filters are performed:
+</p>
+<div class="lisp">
+<pre class="lisp">(&quot;Desktop Entry&quot;
+	   (&quot;Name&quot; . &quot;Emacs Text Editor&quot;)
+	   (&quot;Name[de]&quot; . &quot;Emacs Texteditor&quot;)
+	   (&quot;GenericName&quot; . &quot;Text Editor&quot;)
+	   (&quot;Comment&quot; . &quot;Edit text&quot;)
+	   (&quot;Exec&quot; . &quot;emacs %f&quot;)
+	   (&quot;Icon&quot; . &quot;emacs-icon&quot;)
+	   (&quot;Type&quot; . &quot;Application&quot;)
+	   (&quot;Terminal&quot; . &quot;false&quot;)
+	   (&quot;Categories&quot; . &quot;Development;TextEditor;&quot;)
+	   (&quot;StartupWMClass&quot; . &quot;Emacs&quot;))
+</pre></div>
+
+<p>It then gets split into two lists. The original &ldquo;Categories&rdquo; key
+contains several values, and each of new entries has &ldquo;Category&rdquo; key
+which contains only one of the original categories.
+</p>
+<div class="lisp">
+<pre class="lisp">(&quot;Desktop Entry&quot;
+	   (&quot;Name&quot; . &quot;Emacs Text Editor&quot;)
+	   (&quot;Name[de]&quot; . &quot;Emacs Texteditor&quot;)
+	   (&quot;GenericName&quot; . &quot;Text Editor&quot;)
+	   (&quot;Comment&quot; . &quot;Edit text&quot;)
+	   (&quot;Exec&quot; . &quot;emacs %f&quot;)
+	   (&quot;Icon&quot; . &quot;emacs-icon&quot;)
+	   (&quot;Type&quot; . &quot;Application&quot;)
+	   (&quot;Terminal&quot; . &quot;false&quot;)
+	   (&quot;Categories&quot; . &quot;Development;TextEditor;&quot;)
+	   (&quot;Cateogry&quot; . &quot;Development&quot;) ; Look here
+	   (&quot;StartupWMClass&quot; . &quot;Emacs&quot;))
+
+(&quot;Desktop Entry&quot;
+	   (&quot;Name&quot; . &quot;Emacs Text Editor&quot;)
+	   (&quot;Name[de]&quot; . &quot;Emacs Texteditor&quot;)
+	   (&quot;GenericName&quot; . &quot;Text Editor&quot;)
+	   (&quot;Comment&quot; . &quot;Edit text&quot;)
+	   (&quot;Exec&quot; . &quot;emacs %f&quot;)
+	   (&quot;Icon&quot; . &quot;emacs-icon&quot;)
+	   (&quot;Type&quot; . &quot;Application&quot;)
+	   (&quot;Terminal&quot; . &quot;false&quot;)
+	   (&quot;Categories&quot; . &quot;Development;TextEditor;&quot;)
+	   (&quot;Cateogry&quot; . &quot;TextEditor&quot;) ; Look here
+	   (&quot;StartupWMClass&quot; . &quot;Emacs&quot;))
+</pre></div>
+
+<p>This is the entry list format that is used in all of the later filters.
+All filtering functions should accept such an entry list as its argument,
+and all filtering functions should either return nil or an entry list.
+If <code>fdo-associate-categories</code> is <code>t</code> then the &ldquo;Category&rdquo; key will be
+changed to the main category that will eventually show up in the <code>apps-menu</code>.
+The keys that are used by the applications menu are currently,
+</p>
+<ul>
+<li> Name([])
+
+<p>The name to be displayed in the applications menu. If
+<code>apps-menu-lang</code> or the locale coincides with one of the
+Name[lang] keys in the entry list, then that will be the name used.
+</p>
+</li><li> Exec
+
+<p>The command to be run when the entry is called.
+</p>
+</li><li> Terminal
+
+<p>Whether or not to run the <code>Exec</code> value inside of a terminal or
+not. If it&rsquo;s true, the terminal specified by <code>xterm-program</code> is
+used.
+</p>
+</li><li> Category
+
+<p>Which top-level category to place the entry in.
+</p>
+</li><li> Hidden
+
+<p>Whether or not the entry should be hidden by default.
+</p>
+</li><li> NoDisplay
+
+<p>Whether or not the entry should be displayed by default.
+</p>
+</li><li> NotShowIn
+
+<p>If an item should not be shown by checking the current desktop
+enviroment against the value of this key.
+</p>
+</li><li> OnlyShowIn
+
+<p>If an item should be shown by checking the current desktop enviroment
+against the value of this key.
+</p></li></ul>
+
+<a name="Filters"></a>
+<h4 class="subsubheading">Filters</h4>
+<p>Filters are functions, either pre-defined or user-defined, which take
+one argument, a desktop file entry. You can set your filter to the
+<code>apps-menu-filter</code> variable.
+</p>
+<p>Here we show an example user-defined filter, and all pre-defined
+filters, which are also available to user codes.
+</p>
+<div class="lisp">
+<pre class="lisp">;; This will move emacs to the ``util'' category, in addition to the
+;; operations done by default filter.
+(setq apps-menu-filter
+      (lambda (ent)
+	(let ((ent (fdo-default-filter ent)))
+	  (when ent
+	    (cond ((string-match &quot;[Ee]macs&quot; (cdr (assoc &quot;Name&quot; ent)) nil t)
+		   (rplacd (assoc &quot;Category&quot; ent) &quot;util&quot;)))
+	    ent))))
+</pre></div>
+
+<p>The pre-defined filters:
+</p>
+<div class="lisp">
+<pre class="lisp">(define (fdo-nodisplay-filter fdol)
+  &quot;Return the desktop-file-list if NoDisplay is False, or if NoDisplay is
+not present in the desktop-file-list&quot;
+  (if (assoc &quot;NoDisplay&quot; fdol)
+      ;; [Ff] means match to &quot;false&quot;
+      (if (string-match &quot;[Ff]&quot; (cdr (assoc &quot;NoDisplay&quot; fdol)))
+      	  fdol)
+    fdol))
+
+(define (fdo-hidden-filter fdol)
+  &quot;Return the desktop-file-list if Hidden is False, or if Hidden is
+not present in the desktop-file-list&quot;
+  (if (assoc &quot;Hidden&quot; fdol)
+      (if (string-match &quot;[Ff]&quot; (string-downcase (cdr (assoc &quot;OnlyShowIn&quot; fdol))))
+	  fdol)
+    fdol))
+
+(define (fdo-onlyshowin-filter fdol)
+  &quot;Return the desktop-file-list if OnlyShowIn matches `desktop-environment',
+or if OnlyShowIn is not present in the desktop-file-list&quot;
+  (if (assoc &quot;OnlyShowIn&quot; fdol)
+      (if (string-match desktop-environment (string-downcase (cdr (assoc &quot;OnlyShowIn&quot; fdol))))
+	  fdol)
+    fdol))
+
+(define (fdo-notshowin-filter fdol)
+  &quot;Return the desktop-file-list if NotShowIn does not match `desktop-environment',
+or if NotShowIn is not present in the desktop-file-list&quot;
+  (if (assoc &quot;NotShowIn&quot; fdol)
+      (if (not (string-match desktop-environment (string-downcase (cdr (assoc &quot;NotShowIn&quot; fdol)))))
+	  fdol)
+    fdol))
+
+(define (fdo-associate-categories-filter fdol)
+  &quot;If `apps-menu-associate-categories' is true, filter the
+desktop-entry through `fdo-associate-categories'.&quot;
+  (when fdol
+    (if apps-menu-associate-categories
+	(associate-categories fdol)
+      fdol)))
+
+(define (fdo-toplevel-filter fdol)
+  &quot;Return the desktop-file-list if the `Category' is of the
+Top-Level variety.&quot;
+  (when fdol
+    (if (not (equal &quot;Top-Level&quot; (cdr (assoc &quot;Category&quot; fdol))))
+	fdol)))
+
+(define (fdo-default-filter fdol)
+  &quot;The default fdo-filter, combines the above.&quot;
+  (fdo-toplevel-filter
+   (fdo-hidden-filter
+    (fdo-notshowin-filter
+     (fdo-onlyshowin-filter
+      (fdo-nodisplay-filter fdol))))))
+
+(setq apps-menu-filter fdo-default-filter)
+</pre></div>
+
+<hr>
+<div class="header">
+<p>
+Previous: <a href="Applications-Menu-Functions.html#Applications-Menu-Functions" accesskey="p" rel="previous">Applications Menu Functions</a>, Up: <a href="Applications-Menu.html#Applications-Menu" accesskey="u" rel="up">Applications Menu</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Function-Index.html#Function-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

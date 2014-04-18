@@ -1,0 +1,435 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- Created by GNU Texinfo 5.1, http://www.gnu.org/software/texinfo/ -->
+<head>
+<title>sawfish Programming Manual: EdgeActions</title>
+
+<meta name="description" content="sawfish Programming Manual: EdgeActions">
+<meta name="keywords" content="sawfish Programming Manual: EdgeActions">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link href="index.html#Top" rel="start" title="Top">
+<link href="Function-Index.html#Function-Index" rel="index" title="Function Index">
+<link href="Concept-Index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Workspaces.html#Workspaces" rel="up" title="Workspaces">
+<link href="RandR-and-Xinerama.html#RandR-and-Xinerama" rel="next" title="RandR and Xinerama">
+<link href="Workspaces-and-Windows.html#Workspaces-and-Windows" rel="previous" title="Workspaces and Windows">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.smallquotation {font-size: smaller}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.indentedblock {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+div.smalldisplay {margin-left: 3.2em}
+div.smallexample {margin-left: 3.2em}
+div.smallindentedblock {margin-left: 3.2em; font-size: smaller}
+div.smalllisp {margin-left: 3.2em}
+kbd {font-style:oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+pre.smalldisplay {font-family: inherit; font-size: smaller}
+pre.smallexample {font-size: smaller}
+pre.smallformat {font-family: inherit; font-size: smaller}
+pre.smalllisp {font-size: smaller}
+span.nocodebreak {white-space:nowrap}
+span.nolinebreak {white-space:nowrap}
+span.roman {font-family:serif; font-weight:normal}
+span.sansserif {font-family:sans-serif; font-weight:normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en" bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" alink="#FF0000">
+<a name="EdgeActions"></a>
+<div class="header">
+<p>
+Previous: <a href="Workspaces-and-Windows.html#Workspaces-and-Windows" accesskey="p" rel="previous">Workspaces and Windows</a>, Up: <a href="Workspaces.html#Workspaces" accesskey="u" rel="up">Workspaces</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Function-Index.html#Function-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<a name="EdgeActions-1"></a>
+<h3 class="section">12.4 EdgeActions</h3>
+
+<p>EdgeActions is a centralized way to control the behaviour of the
+screen-borders and -corners, which offers high customizability.
+</p>
+<p>It consists of the following modules: <code>sawfish.wm.edge.subrs</code> -, which
+contains the C-subroutines, <code>sawfish.wm.edge.utils</code> - a set of utility
+functions, <code>sawfish.wm.edge.conf</code> - configuration infrastructure,
+<code>sawfish.wm.edge.actions</code> - functionality infrastucture module,
+<code>sawfish.wm.edge.flip</code> - viewport/workspace fliping functions,
+<code>sawfish.wm.edge.hot-spots</code> - hot-spot/hot-move functions,
+<code>sawfish.wm.edge.tile</code> - simple, but functional tiling funtion and
+<code>sawfish.wm.edge.viewport-drag</code> - functions for dragging the viewport.
+</p>
+<a name="EdgeAction-Internals"></a>
+<h3 class="section">12.5 EdgeAction Internals</h3>
+
+<p>C-Subroutines (<code>sawfish.wm.edge.subrs</code>):
+</p>
+<dl>
+<dt><a name="index-create_002dflippers"></a>Function: <strong>create-flippers</strong></dt>
+<dd><p>Create the flipper-window, which is -to put it plainly- your screen-border.
+Actions are performed when the flipper-window is activated. Technically it&rsquo;s
+one window, but from users point of view it consists of 8 parts (4 borders
+plus 4 corners).
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-destroy_002dflippers"></a>Function: <strong>destroy-flippers</strong></dt>
+<dd><p>Destroy the flipper-window.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-recreate_002dflippers"></a>Function: <strong>recreate-flippers</strong></dt>
+<dd><p>Recreate the flipper-window, this is done automatically, when the resolution
+changes, to ensure EdgeActions stays working properly.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-enter_002dflipper_002dhook"></a>HOOK: <strong>enter-flipper-hook</strong></dt>
+<dd><p>This hook is called when the flipper-window is entered.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-leave_002dflipper_002dhook"></a>HOOK: <strong>leave-flipper-hook</strong></dt>
+<dd><p>This hook is called when the flipper-window is left.
+</p></dd></dl>
+
+<p>Utils (<code>sawfish.wm.edge.utils</code>):
+</p>
+<dl>
+<dt><a name="index-activate_002dflippers"></a>Function: <strong>activate-flippers</strong> <em>t</em></dt>
+<dd><p>A wrapper-functions around <code>recreate-flippers</code> and <code>destroy-flippers</code>,
+which additionally adds (respectively removes) the required hook-functions.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-get_002dactive_002dcorner"></a>Function: <strong>get-active-corner</strong></dt>
+<dd><p>This function returns the corner of the flipper-window which was entered, or nil.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-get_002dactive_002dborder"></a>Function: <strong>get-active-border</strong></dt>
+<dd><p>This function returns the border of the flipper-window which was entered, or nil.
+</p></dd></dl>
+
+<p>Configuration infrastructure (<code>sawfish.wm.edge.conf</code>):
+</p>
+<dl>
+<dt><a name="index-before_002dedge_002daction_002dhook"></a>HOOK: <strong>before-edge-action-hook</strong></dt>
+<dd><p>This hook is called before an edge-action is performed.
+Passes <code>func</code>, <code>edge</code> and <code>while-moving</code> to the functions invoked.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-after_002dedge_002daction_002dhook"></a>HOOK: <strong>after-edge-action-hook</strong></dt>
+<dd><p>This hook is called after an edge-action is performed.
+Passes <code>func</code>, <code>edge</code> and <code>while-moving</code> to the functions invoked.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-edge_002dactions_002denabled"></a>Customizable: <strong>edge-actions-enabled</strong> <em>nil</em></dt>
+<dd><p>Global configuration, whether to enable or disable EdgeActions.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-left_002dright_002dedge_002daction"></a>Customizable: <strong>left-right-edge-action</strong> <em>'none/hot-spot</em></dt>
+<dd><p>Action to perform for the left and right screen-edges when they are hit by the
+pointer, either flip-workspace, flip-viewport, viewport-drag or none/hot-spot.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-left_002dright_002dedge_002dmove_002daction"></a>Customizable: <strong>left-right-edge-move-action</strong> <em>'none/hot-move</em></dt>
+<dd><p>Action to perform for the left and right screen-edges when a window is dragged over
+them, either flip-workspace, flip-viewport, viewport-drag or none/hot-move.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-top_002dbottom_002dedge_002daction"></a>Customizable: <strong>top-bottom-edge-action</strong> <em>'none/hot-spot</em></dt>
+<dd><p>Action to perform for the top and buttom screen-edges when they are hit by the
+pointer, either flip-workspace, flip-viewport, viewport-drag or none/hot-spot.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-top_002dbottom_002dedge_002dmove_002daction"></a>Customizable: <strong>top-bottom-edge-move-action</strong> <em>'none/hot-move</em></dt>
+<dd><p>Action to perform for the top and bottom screen-edges when a window is dragged
+over them, either flip-workspace, flip-viewport, viewport-drag or none/hot-move.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-edge_002dflip_002ddelay"></a>Customizable: <strong>edge-flip-delay</strong> <em>250</em></dt>
+<dd><p>&quot;Delay (in milliseconds) of flipping of viewport / workspace.&quot;
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-hot_002dspot_002ddelay"></a>Customizable: <strong>hot-spot-delay</strong> <em>150</em></dt>
+<dd><p>Delay (in milliseconds) before activating a hot-spot.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-hot_002dspots_002dcorner_002dlength"></a>Customizable: <strong>hot-spots-corner-length</strong> <em>50</em></dt>
+<dd><p>Length in px (in both x and y direction) wich is used for the hot-spot corners.
+All remaining pixels represent the borders.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-viewport_002ddrag_002ddistance"></a>Customizable: <strong>viewport-drag-distance</strong> <em>64</em></dt>
+<dd><p>Amount to drag the viewport (in pixel) each time the pointer hits the screen edge.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-viewport_002ddrag_002dcursor_002ddistance"></a>Customizable: <strong>viewport-drag-cursor-distance</strong> <em>32</em></dt>
+<dd><p>&quot;Amount to pull back the cursor (in pixel) after dragging the viewport.&quot;
+Recommended is half of <code>viewport-drag-distance</code>.
+</p></dd></dl>
+
+<p>Functionality infrastructure (<code>sawfish.wm.edge.actions</code>):
+</p>
+<dl>
+<dt><a name="index-activate_002dedges"></a>Function: <strong>activate-edges</strong> <em>t</em></dt>
+<dd><p>This function calls <code>activate-flippers</code> and adds the required
+hook-functions to be able to perform user-actions on the edges.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-activate_002dedges_002dafter_002dset"></a>Function: <strong>activate-edges-after-set</strong></dt>
+<dd><p>This function is used by the <code>edge-actions-enabled</code> customizable to make
+(de-)activating EdgeActions from SawfishConfig and resource-file work.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-edge_002daction_002dcall"></a>Function: <strong>edge-action-call</strong> <em>func edge while-moving</em></dt>
+<dd><p>This function calls the desired user-action <code>func</code> for the screen-edge
+<code>edge</code>. <code>while-moving</code> to distinguish whether a window is dragged or not.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-edge_002daction_002dhook_002dfunc"></a>Function: <strong>edge-action-hook-func</strong></dt>
+<dd><p>This hook-function is responsible to either call <code>hot-spot-invoke</code> (if a
+corner was activated) or to call <code>edge-action-call</code> to perform an action,
+when the edge was activated using the pointer.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-edge_002daction_002dmove_002dhook_002dfunc"></a>Function: <strong>edge-action-move-hook-func</strong></dt>
+<dd><p>This hook-function is responsible to either call <code>hot-move-invoke</code> or to 
+call <code>edge-action-call</code> to perfom an action, if the edge was activated
+while dragging a window over it.
+</p></dd></dl>
+
+<p>EdgeFlip (<code>sawfish.wm.edge.flip</code>):
+</p>
+<p>This is the traditional EdgeFlip. When a window or the pointer hits the
+screen-edge, the screen is shifted by either one Viewport or one Workspace in
+that direction. The pointer is warped accordingly (to keep in logical position).
+</p>
+<dl>
+<dt><a name="index-edge_002dflip_002dinvoke"></a>Function: <strong>edge-flip-invoke</strong> <em>edge type while-moving</em></dt>
+<dd><p>This function invokes edge-fliping. edge (a symbol) is the screen-edge that is active
+(left, right, top, bottom), type is either <code>flip-workspace</code> or <code>flip-viewport</code>.
+<code>while-moving</code> is used to distinguish whether a window is dragged or not.
+</p></dd></dl>
+
+<p>ViewportDrag (<code>sawfish.wm.edge.viewport-drag</code>):
+</p>
+<p>iViewportDrag (formerly Infinite-Desktop) is a mechanic, that shifts the
+Viewport accordingly to which screen edge was activated. This way the Viewport
+becomes virtually &quot;infinite&quot;, regardless of the physical size (thus the old name).
+</p>
+<dl>
+<dt><a name="index-viewport_002ddrag"></a>Function: <strong>viewport-drag</strong> <em>edge while-moving</em></dt>
+<dd><p>This function invokes viewport-dragging. edge is the screen-edge that is active
+(left, right, top, bottom) (a symbol).  <code>while-moving</code> is used to distinguish
+whether a window is dragged or not.
+</p></dd></dl>
+
+<p>Tile (<code>sawfish.wm.edge.tile</code>):
+</p>
+<p>Tiling is a mechanic to re-arrange windows in a non-overlapping way. Tiling as such
+means to &quot;organization of the screen into mutually non-overlapping frames, as opposed
+to the more popular approach of coordinate-based stacking of overlapping objects&quot;.
+</p>
+<p>This simple approach Sawfish provides may also be known as &quot;Expose&quot; or &quot;Mosaic&quot;.
+</p>
+<p>Sawfish does not tile all windows visible. It filters by given rules:
+</p>
+<p>- only current head (xinerama)
+- only current workspace
+- only current visible viewport
+- exclude iconified windows
+- exclude ignored windows
+- exclude windows with <code>never-expose</code> matcher
+</p>
+<dl>
+<dt><a name="index-tile_002dwindows"></a>Function: <strong>tile-windows</strong></dt>
+<dd><p>Interactive command to manually tile windows.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-tile_002dwindows_002dcore"></a>Function: <strong>tile-windows-core</strong> <em>edge while-moving</em></dt>
+<dd><p>Internal function to tile windows when activating an edge.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-window_002dnever_002dexpose_002dp"></a>Function: <strong>window-never-expose-p</strong> <em>w</em></dt>
+<dd><p>Returns whether window should be tiled or not.
+</p></dd></dl>
+
+<p>HotSpots (<code>sawfish.wm.edge.hot-spots</code>):
+</p>
+<p>HotSpots is a mechanic, which allows for practically everything to be done when
+a screen edge or a corner is activated. the corners are defined via
+<code>hot-spots-corner-length</code>. Only HotSpots responds to the corners.
+</p>
+<p>HotMove is HotSpots&rsquo; companion, which allows for practically everything to be done
+when a screen edge is actived by dragging a window over it. HotMove doesn&rsquo;t know about
+corners, it only sees for edges.
+</p>
+<p>That way your screen-edge is actually split into 12: 4 corners, two times 4
+edges (as explained above actions are split for when while moving a window and
+for when activating the edges using the pointer). Corners are not recognized for
+for while moving a window.
+</p>
+<p>HotSpots only allows functions to be used as actions, though practically
+everything can be done this way. If the arguement is not a function, an
+error is thrown, to in form the user.
+</p>
+<dl>
+<dt><a name="index-left_002dedge_002dfunction"></a>Customizable: <strong>left-edge-function</strong> <em>nil</em></dt>
+<dd><p>The function launched when hitting the left-edge.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-top_002dleft_002dcorner_002dfunction"></a>Customizable: <strong>top-left-corner-function</strong> <em>nil</em></dt>
+<dd><p>The function launched when hitting the top-left-corner.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-top_002dedge_002dfunction"></a>Customizable: <strong>top-edge-function</strong> <em>nil</em></dt>
+<dd><p>The function launched when hitting the top-edge.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-top_002dright_002dcorner_002dfunction"></a>Customizable: <strong>top-right-corner-function</strong> <em>nil</em></dt>
+<dd><p>The function launched when hitting the top-right-corner.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-right_002dedge_002dfunction"></a>Customizable: <strong>right-edge-function</strong> <em>nil</em></dt>
+<dd><p>The function launched when hitting the bottom-edge.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-bottom_002dright_002dcorner_002dfunction"></a>Customizable: <strong>bottom-right-corner-function</strong> <em>nil</em></dt>
+<dd><p>The function launched when hitting the bottom-right-corner.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-bottom_002dedge_002dfunction"></a>Customizable: <strong>bottom-edge-function</strong> <em>nil</em></dt>
+<dd><p>The function launched when hitting the bottom-edge.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-top_002dleft_002dcorner_002dfunction-1"></a>Customizable: <strong>top-left-corner-function</strong> <em>nil</em></dt>
+<dd><p>The function launched when hitting the bottom-left-corner.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-Customizable"></a>Variable: <strong>Customizable</strong> <em>left-edge-move-function nil</em></dt>
+<dd><p>The function launched when dragging a window over the left-edge.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-Customizable-1"></a>Variable: <strong>Customizable</strong> <em>top-edge-move-function nil</em></dt>
+<dd><p>The function launched when dragging a window over the top-edge.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-Customizable-2"></a>Variable: <strong>Customizable</strong> <em>right-edge-move-function nil</em></dt>
+<dd><p>The function launched when dragging a window over the right-edge.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-Customizable-3"></a>Variable: <strong>Customizable</strong> <em>bottom-edge-move-function nil</em></dt>
+<dd><p>The function launched when dragging a window over the bottom-edge.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-hot_002dspot_002dinvoke"></a>Function: <strong>hot-spot-invoke</strong> <em>spot</em></dt>
+<dd><p>This function invokes the hot-spot. spot (a symbol) is either left,
+top-left, top, top-right, right, bottom-right, bottom or bottom-left.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-hot_002dmove_002dinvoke"></a>Function: <strong>hot-move-invoke</strong> <em>spot</em></dt>
+<dd><p>This function invokes the hot-spot while moving. spot (a symbol) is
+either left, top, right, or bottom.
+</p></dd></dl>
+
+<p>Example configuration (<samp>~/.sawfishrc</samp>):
+</p>
+<p>Note: this is just an example, not all functions in
+      it may be availabe on your system.
+</p>
+<div class="lisp">
+<pre class="lisp">;; Timers
+( defvar-setq edge-flip-delay 250 )
+( defvar-setq hot-spot-delay 125 )
+
+;; Activate screen edges
+( activate-edges t )
+
+;; HotSpots
+( defvar-setq top-left-corner-function
+  ( lambda () ( tile-windows ) ) )
+
+( defvar-setq top-right-corner-function
+  ( lambda () ( pager-unhide ) ) )
+
+( defvar-setq  bottom-right-corner-function
+  ( lambda () ( show-desktop ) ) )
+
+( defvar-setq bottom-left-corner-function
+  ( lambda () ( raise-window ( get-window-by-role &quot;panel_&quot; #:regex t ) ) ) )
+
+( defvar-setq top-edge-function
+  ( lambda () ( jump-or-exec &quot;Konsole&quot; &quot;konsole&quot; #:match-class t ) ) )
+
+( defvar-setq bottom-edge-function
+  ( lambda () ( jump-or-exec &quot;Dolphin&quot; &quot;dolphin&quot; #:match-class t ) ) )
+
+;; HotMove
+( defvar-setq top-edge-move-function
+  ( lambda ( win ) ( maximize-window win ) ) )
+
+( defvar-setq bottom-edge-move-function
+  ( lambda ( win ) ( delete-window win ) ) )
+
+;; actions when pointer hits edge
+( defvar-setq left-right-edge-action 'flip-viewport )
+( defvar-setq top-bottom-edge-action 'none/hot-spot )
+
+;; actions while moving window hits edge
+( defvar-setq left-right-edge-move-action 'flip-workspace )
+( defvar-setq top-bottom-edge-move-action 'none )
+</pre></div>
+
+<hr>
+<div class="header">
+<p>
+Previous: <a href="Workspaces-and-Windows.html#Workspaces-and-Windows" accesskey="p" rel="previous">Workspaces and Windows</a>, Up: <a href="Workspaces.html#Workspaces" accesskey="u" rel="up">Workspaces</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Function-Index.html#Function-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>
