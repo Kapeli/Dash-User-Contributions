@@ -3,3 +3,6 @@
 + sdl2 docset
 + sawfish docse
 + glut docset
+
+
+## for source, generate script see master branch 
