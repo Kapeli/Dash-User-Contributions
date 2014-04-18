@@ -20,7 +20,7 @@ To contribute a docset, follow the steps below. If you get stuck at any point or
 * Check out the [Versioning Guidelines](https://github.com/Kapeli/Dash-User-Contributions/wiki/Docset-Versioning-Guidelines) to understand how docset versioning works in Dash
 * Fork and clone this repo
 * Set up your directory structure:
-  * Copy the `Sample_Docset` folder into the `docsets` folder and rename it. Use the same name as your docset, but replace whitespaces with underscores. Note: don't add a `_Docset` at the end of the name, just use the docset name (e.g. `ExtJS`).
+  * Copy the `Sample_Docset` folder into the `docsets` folder and rename it. Use the same name as your docset, but replace whitespaces with underscores. Note: don't add `_Docset` at the end of the name, just use the docset name (e.g. `ExtJS`) and nothing else.
   * Archive your docset using:
   ```bash
   tar --exclude='.DS_Store' -cvzf <docset name>.tgz <docset name>.docset
