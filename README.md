@@ -26,7 +26,7 @@ To contribute a docset, follow the steps below. If you get stuck at any point or
   tar --exclude='.DS_Store' -cvzf <docset name>.tgz <docset name>.docset
   ```
   * Copy your docset archive
-    * Note: don't worry about this repo's size getting huge. As soon as your docset gets distributed to my CDN, it will get removed from the repo automatically. If your docset exceeds GitHub's limit of 100 MB, open an issue and we'll figure out a different way to submit your docset
+    * Note: don't worry about this repo's size getting huge. As soon as your docset gets distributed to my CDN, it will get removed from the repo automatically. If your docset exceeds GitHub's file limit of 100 MB, open an issue and we'll figure out a different way to submit your docset
   * Copy your docset generation script and any other required resources, or add them as a git submodule
   * Include a `icon.png` and `icon@2x.png` with sizes `16x16` and `32x32`
   * Edit the docset.json file
