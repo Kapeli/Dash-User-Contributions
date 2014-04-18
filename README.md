@@ -29,6 +29,6 @@ To contribute a docset, follow the steps below. If you get stuck at any point or
     * Note: don't worry about this repo's size getting huge. As soon as your docset gets distributed to my CDN, it will get removed from the repo automatically. If your docset exceeds GitHub's file limit of 100 MB, open an issue and we'll figure out a different way to submit your docset
   * Copy your docset generation script and any other required resources, or add them as a git submodule
   * Include a `icon.png` and `icon@2x.png` with sizes `16x16` and `32x32`
-  * Edit the docset.json file
+  * Edit the docset.json file. Make sure to follow the same naming rules as the sample (i.e. your docset name should be the same as the archive name, but replace whitespaces with underscore)
   * Edit the README.md
 * Submit a pull request
