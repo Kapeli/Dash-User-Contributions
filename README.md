@@ -26,6 +26,7 @@ To contribute a docset, follow the steps below. If you get stuck at any point or
   tar --exclude='.DS_Store' -cvzf <docset name>.tgz <docset name>.docset
   ```
   * Copy your docset archive
+    * Note: Don't worry about this repo's size getting huge. As soon as your docset gets distributed to my CDN, it will get removed from the repo automatically
   * Copy your docset generation script or any other required resources
   * Include a `icon.png` and `icon@2x.png` with sizes `16x16` and `32x32`
   * Edit the docset.json file
