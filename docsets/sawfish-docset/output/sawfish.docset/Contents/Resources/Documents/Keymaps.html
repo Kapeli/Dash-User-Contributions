@@ -1,0 +1,185 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- Created by GNU Texinfo 5.1, http://www.gnu.org/software/texinfo/ -->
+<head>
+<title>sawfish Programming Manual: Keymaps</title>
+
+<meta name="description" content="sawfish Programming Manual: Keymaps">
+<meta name="keywords" content="sawfish Programming Manual: Keymaps">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link href="index.html#Top" rel="start" title="Top">
+<link href="Function-Index.html#Function-Index" rel="index" title="Function Index">
+<link href="Concept-Index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html#Top" rel="up" title="Top">
+<link href="Event-Loop.html#Event-Loop" rel="next" title="Event Loop">
+<link href="Invoking-Commands.html#Invoking-Commands" rel="previous" title="Invoking Commands">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.smallquotation {font-size: smaller}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.indentedblock {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+div.smalldisplay {margin-left: 3.2em}
+div.smallexample {margin-left: 3.2em}
+div.smallindentedblock {margin-left: 3.2em; font-size: smaller}
+div.smalllisp {margin-left: 3.2em}
+kbd {font-style:oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+pre.smalldisplay {font-family: inherit; font-size: smaller}
+pre.smallexample {font-size: smaller}
+pre.smallformat {font-family: inherit; font-size: smaller}
+pre.smalllisp {font-size: smaller}
+span.nocodebreak {white-space:nowrap}
+span.nolinebreak {white-space:nowrap}
+span.roman {font-family:serif; font-weight:normal}
+span.sansserif {font-family:sans-serif; font-weight:normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en" bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" alink="#FF0000">
+<a name="Keymaps"></a>
+<div class="header">
+<p>
+Next: <a href="Event-Loop.html#Event-Loop" accesskey="n" rel="next">Event Loop</a>, Previous: <a href="Commands.html#Commands" accesskey="p" rel="previous">Commands</a>, Up: <a href="index.html#Top" accesskey="u" rel="up">Top</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Function-Index.html#Function-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<a name="Keymaps-1"></a>
+<h2 class="chapter">18 Keymaps</h2>
+<a name="index-Keymaps"></a>
+
+<p>Keymaps are used to associate events with commands. When an event
+occurs, the associated command is found and evaluated. A keymap is
+simply a list whose first element is the symbol <code>keymap</code>.
+</p>
+<dl>
+<dt><a name="index-keymapp"></a>Function: <strong>keymapp</strong> <em>arg</em></dt>
+<dd><p>Returns <code>t</code> if <var>arg</var> may be used as a keymap.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-make_002dkeymap"></a>Function: <strong>make-keymap</strong></dt>
+<dd><p>Returns a newly-created empty keymap.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-bind_002dkeys"></a>Function: <strong>bind-keys</strong> <em>keymap &amp;rest bindings</em></dt>
+<dd><p>Installs zero or more key bindings into the keymap <var>keymap</var>, then
+returns <var>keymap</var>.
+</p>
+<p>Each binding is defined by two elements in the list of <var>bindings</var>,
+the first defines the name of an event (or the event itself) and the
+second defines the command to be associated with the event.
+</p>
+<p>For example to bind two keys in the keymap <var>keymap</var>; the event
+<kbd>C-f</kbd> to the command <code>foo</code> and the event <kbd>C-b</kbd> to the
+command <code>bar</code> the following form would be used,
+</p>
+<div class="lisp">
+<pre class="lisp">(bind-keys <var>keymap</var>
+ &quot;C-f&quot; 'foo
+ &quot;C-b&quot; 'bar)
+</pre></div>
+
+<p>Currently, multiple keystrokes can&rsquo;t be bound with a single
+<code>bind-keys</code> call. Instead, bind an event to another keymap.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-unbind_002dkeys"></a>Function: <strong>unbind-keys</strong> <em><var>keymap</var> &amp;rest <var>keys</var></em></dt>
+<dd><p>Removes the bindings of the events <var>keys</var> (these may be the names
+of the events or the event objects themselves) from the keymap
+<var>keymap</var>.
+</p></dd></dl>
+
+<p>Functions <code>bind-keys</code> and <code>unbind-keys</code> do not affect the
+bindings of existing windows, because keymaps are set on a window when
+the window is created and begins to be managed by Sawfish. Update
+can be done by following functions.
+</p>
+<dl>
+<dt><a name="index-grab_002dkeymap"></a>Function: <strong>grab-keymap</strong> <em>keymap</em></dt>
+<dt><a name="index-ungrab_002dkeymap"></a>Function: <strong>ungrab-keymap</strong> <em>keymap</em></dt>
+<dd><p>All bindings stored in <var>keymap</var> get into / out of effect of all
+windows, including root, but not of frame parts.
+</p>
+<p>Notice that <code>ungrab-keymap</code> has to be called BEFORE you change
+the keymap.
+</p>
+<p>If the window foo has its own keymap rather than <code>window-keymap</code>,
+then it is not affected by <code>(grab-keymap window-keymap)</code>.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-search_002dkeymap"></a>Function: <strong>search-keymap</strong> <em>event keymap</em></dt>
+<dd><p>Search for a binding of the event <var>event</var> in <var>keymap</var>. If a
+binding is found a cons cell <code>(<var>command</var> . <var>event</var>)</code> is
+returned.
+</p></dd></dl>
+
+<p>There are several pre-defined keymaps that are always available:
+</p>
+<dl compact="compact">
+<dt><code>global-keymap</code></dt>
+<dd><p>Keymap containing bindings active anywhere.
+</p>
+</dd>
+<dt><code>window-keymap</code></dt>
+<dd><p>Keymap containing bindings active when a client window is focused.
+</p>
+</dd>
+<dt><code>root-window-keymap</code></dt>
+<dd><p>Keymap containing bindings active when the pointer is in the root
+window.
+</p>
+</dd>
+<dt><code>title-keymap</code></dt>
+<dt><code>border-keymap</code></dt>
+<dd><p>Keymaps active in the title and borders of window frames.
+</p>
+</dd>
+<dt><code>close-button-keymap</code></dt>
+<dt><code>iconify-button-keymap</code></dt>
+<dt><code>maximize-button-keymap</code></dt>
+<dt><code>menu-button-keymap</code></dt>
+<dt><code>shade-button-keymap</code></dt>
+<dt><code>sticky-button-keymap</code></dt>
+<dt><code>lock-button-keymap</code></dt>
+<dt><code>rename-button-keymap</code></dt>
+<dt><code>move-resize-button-keymap</code></dt>
+<dt><code>raise-lower-button-keymap</code></dt>
+<dd><p>Keymaps active in the standard window frame buttons.
+</p>
+</dd>
+<dt><code>override-keymap</code></dt>
+<dd><p>Must be a keymap, a symbol, or <code>nil</code>.  If it is a keymap,
+this becomes the keymap in which all lookups occur (overriding the window,
+root and global keymaps).  If it is a symbol, Sawfish finds the
+symbol&rsquo;s value and tries again.  If it is <code>nil</code>, Sawfish behaves
+normally.
+</p>
+</dd>
+</dl>
+
+
+<hr>
+<div class="header">
+<p>
+Next: <a href="Event-Loop.html#Event-Loop" accesskey="n" rel="next">Event Loop</a>, Previous: <a href="Commands.html#Commands" accesskey="p" rel="previous">Commands</a>, Up: <a href="index.html#Top" accesskey="u" rel="up">Top</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Function-Index.html#Function-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

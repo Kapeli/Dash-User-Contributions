@@ -1,0 +1,139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- Created by GNU Texinfo 5.1, http://www.gnu.org/software/texinfo/ -->
+<head>
+<title>sawfish Programming Manual: Application Invocation</title>
+
+<meta name="description" content="sawfish Programming Manual: Application Invocation">
+<meta name="keywords" content="sawfish Programming Manual: Application Invocation">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link href="index.html#Top" rel="start" title="Top">
+<link href="Function-Index.html#Function-Index" rel="index" title="Function Index">
+<link href="Concept-Index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="External-Applications.html#External-Applications" rel="up" title="External Applications">
+<link href="Common-Applications.html#Common-Applications" rel="next" title="Common Applications">
+<link href="External-Applications.html#External-Applications" rel="previous" title="External Applications">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.smallquotation {font-size: smaller}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.indentedblock {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+div.smalldisplay {margin-left: 3.2em}
+div.smallexample {margin-left: 3.2em}
+div.smallindentedblock {margin-left: 3.2em; font-size: smaller}
+div.smalllisp {margin-left: 3.2em}
+kbd {font-style:oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+pre.smalldisplay {font-family: inherit; font-size: smaller}
+pre.smallexample {font-size: smaller}
+pre.smallformat {font-family: inherit; font-size: smaller}
+pre.smalllisp {font-size: smaller}
+span.nocodebreak {white-space:nowrap}
+span.nolinebreak {white-space:nowrap}
+span.roman {font-family:serif; font-weight:normal}
+span.sansserif {font-family:sans-serif; font-weight:normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en" bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" alink="#FF0000">
+<a name="Application-Invocation"></a>
+<div class="header">
+<p>
+Next: <a href="Common-Applications.html#Common-Applications" accesskey="n" rel="next">Common Applications</a>, Up: <a href="External-Applications.html#External-Applications" accesskey="u" rel="up">External Applications</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Function-Index.html#Function-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<a name="Application-Invocation-1"></a>
+<h3 class="section">21.1 Application Invocation</h3>
+
+<p>See also the lisp function <code>system</code> which invokes a command from
+a shell.  (see <a href="../librep/Shell-Commands.html#Shell-Commands">Shell Commands</a> in <cite>The Librep Manual</cite>)
+</p>
+<dl>
+<dt><a name="index-jump_002dor_002dexec"></a>Function: <strong>jump-or-exec</strong> <em>regex prog #!key match-class onfocused</em></dt>
+<dd><p>Jump to a window, or if it doesn&rsquo;t exist, start a program. Main use of
+this function is as a binding to keys. Defined in the
+module <code>sawfish.wm.commands.jump-or-exec</code>.
+</p>
+<p>Window is searched by matching the name with a regex <var>regex</var>.  If
+<em>boolean</em><var>match-class</var> is non-nil, the value of <var>regex</var>
+is matched with window&rsquo;s WM_CLASS. When no window matches, action
+specified by <var>prog</var> is taken.
+</p>
+<p>If <var>prog</var> is a string, then it should be a program name, and
+executed from a shell in the background. (I.e. Sawfish adds &rdquo;&amp;&rdquo;.)
+Otherwise, it should be one of a function, command name, or lisp
+expression. The function is called without any argument. The lisp
+expression will be evaluated in the <code>user</code> module.
+</p>
+<p>If the optional argument <var>onfocused</var> is non-nil, it defines the
+action when the window is already focused, in the same manner as
+<var>prog</var>, but the function will receive the focused windows as the
+argument. This can&rsquo;t be a string.
+</p>
+<div class="lisp">
+<pre class="lisp">;; Examples:
+
+;; Jump to a window named &quot;Geany&quot;. When not found, invoke &quot;geany&quot; 
+;; from a shell.
+(bind-keys global-keymap &quot;W-F10&quot;
+  '(jump-or-exec &quot;Geany&quot; &quot;geany&quot;))
+
+;; Jump to a window with the class &quot;Gnome-run-dialog&quot;.
+(bind-keys global-keymap &quot;W-F2&quot;
+  '(jump-or-exec &quot;Gnome-run-dialog&quot; &quot;/usr/local/bin/gnome-run-dialog&quot; #:match-class t ))
+</pre></div>
+
+</dd></dl>
+
+<dl>
+<dt><a name="index-toggle_002dor_002dexec"></a>Function: <strong>toggle-or-exec</strong> <em>regex prog #!key match-class</em></dt>
+<dd><p>This function adds to <code>jump-or-exec</code> by turning a window to
+&ldquo;quake&rdquo;-like &quot;toggle-windows&quot;. That means, if this function is invoked
+on a matching window, that window will be iconified. Else it works in
+the same way as <code>jump-or-exec</code>.
+</p>
+<p>You may also want to use a window property
+<code>iconify-on-leave</code>. (see <a href="Iconifying-Windows.html#Iconifying-Windows">Iconifying Windows</a>.)
+</p>
+<div class="lisp">
+<pre class="lisp">;; Examples:
+
+;; Application &quot;dolphin&quot;, matched by its name (i.e. WM_NAME.)
+;; Press &quot;Home&quot; key, and
+;; * if no instance of dolphin is running, it's invoked.
+;; * if one is there, the focus jumps to it.
+;; * if it's already focused, it will be iconified.
+;;
+;;  ( bind-keys global-keymap &quot;Home&quot; 
+;;    `( toggle-or-exec &quot;Dolphin&quot; &quot;dolphin ~&quot; )
+
+;; &quot;konsole&quot;, matched by its window-class (= WM_CLASS).
+;;  ( bind-keys global-keymap &quot;F12&quot;
+;;    `( toggle-or-exec &quot;Konsole&quot; &quot;konsole&quot; #:match-class t ) 
+</pre></div>
+
+</dd></dl>
+
+<hr>
+<div class="header">
+<p>
+Next: <a href="Common-Applications.html#Common-Applications" accesskey="n" rel="next">Common Applications</a>, Up: <a href="External-Applications.html#External-Applications" accesskey="u" rel="up">External Applications</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Function-Index.html#Function-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

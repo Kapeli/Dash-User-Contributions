@@ -1,0 +1,142 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- Created by GNU Texinfo 5.1, http://www.gnu.org/software/texinfo/ -->
+<head>
+<title>sawfish Programming Manual: Session Management</title>
+
+<meta name="description" content="sawfish Programming Manual: Session Management">
+<meta name="keywords" content="sawfish Programming Manual: Session Management">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link href="index.html#Top" rel="start" title="Top">
+<link href="Function-Index.html#Function-Index" rel="index" title="Function Index">
+<link href="Concept-Index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html#Top" rel="up" title="Top">
+<link href="Low_002dlevel-X-Interface.html#Low_002dlevel-X-Interface" rel="next" title="Low-level X Interface">
+<link href="Standard-Properties.html#Standard-Properties" rel="previous" title="Standard Properties">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.smallquotation {font-size: smaller}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.indentedblock {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+div.smalldisplay {margin-left: 3.2em}
+div.smallexample {margin-left: 3.2em}
+div.smallindentedblock {margin-left: 3.2em; font-size: smaller}
+div.smalllisp {margin-left: 3.2em}
+kbd {font-style:oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+pre.smalldisplay {font-family: inherit; font-size: smaller}
+pre.smallexample {font-size: smaller}
+pre.smallformat {font-family: inherit; font-size: smaller}
+pre.smalllisp {font-size: smaller}
+span.nocodebreak {white-space:nowrap}
+span.nolinebreak {white-space:nowrap}
+span.roman {font-family:serif; font-weight:normal}
+span.sansserif {font-family:sans-serif; font-weight:normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en" bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" alink="#FF0000">
+<a name="Session-Management"></a>
+<div class="header">
+<p>
+Next: <a href="Low_002dlevel-X-Interface.html#Low_002dlevel-X-Interface" accesskey="n" rel="next">Low-level X Interface</a>, Previous: <a href="Standard-Properties.html#Standard-Properties" accesskey="p" rel="previous">Standard Properties</a>, Up: <a href="index.html#Top" accesskey="u" rel="up">Top</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Function-Index.html#Function-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<a name="Session-Management-1"></a>
+<h2 class="chapter">24 Session Management</h2>
+<a name="index-Session-management"></a>
+
+<p>Sawfish has fully integrated support for the X session management
+protocols. Also, this support is extensible to allow all Lisp modules
+to save and reload their own window state.
+</p>
+<p>There are two methods of doing this. If the module only wants to save
+and restore the values of properties in each window&rsquo;s property list
+(i.e. those values set via <code>window-put</code>), then the following
+functions may be used:
+</p>
+<dl>
+<dt><a name="index-sm_002dadd_002dsaved_002dproperties"></a>Function: <strong>sm-add-saved-properties</strong> <em>&amp;rest properties</em></dt>
+<dt><a name="index-sm_002dadd_002drestored_002dproperties"></a>Function: <strong>sm-add-restored-properties</strong> <em>&amp;rest properties</em></dt>
+<dd><p>Arrange for all symbols <var>properties</var> to be saved or restored with
+the session.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-sm_002dsaved_002dwindow_002dproperties"></a>Variable: <strong>sm-saved-window-properties</strong></dt>
+<dt><a name="index-sm_002drestored_002dwindow_002dproperties"></a>Variable: <strong>sm-restored-window-properties</strong></dt>
+<dd><p>Lists of properties (symbols) to be saved or restored with each
+session.
+</p></dd></dl>
+
+<p>If a Lisp module chooses to use this method it may add a function to
+the <code>add-window-hook</code> to act on the reloaded properties when the
+session is reloaded.
+</p>
+<p>For more complex window properties that can&rsquo;t be saved straight from
+the window&rsquo;s plist two hooks are available:
+</p>
+<dl>
+<dt><a name="index-sm_002dwindow_002dsave_002dfunctions-1"></a>Variable: <strong>sm-window-save-functions</strong></dt>
+<dd><p>A list of functions, each of which is called when the state of each
+window is saved. Each function is called with a single argument (the
+window) and should return a list of alist elements that will be saved
+in the state file. (As such, only values with valid read syntaxes may
+be included.)
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-sm_002drestore_002dwindow_002dhook-1"></a>Variable: <strong>sm-restore-window-hook</strong></dt>
+<dd><p>List of functions called when the state of a window is restored. Each
+is called with arguments <code>(<var>window</var> <var>alist</var>)</code>, where
+<var>alist</var> defines the state saved for the window.
+</p>
+<p>Each function should look for the properties it saved, and then take
+any action dependent on the values.
+</p></dd></dl>
+
+<p>The following hook is also called.
+</p>
+<dl>
+<dt><a name="index-sm_002dafter_002drestore_002dhook-1"></a>Variable: <strong>sm-after-restore-hook</strong></dt>
+<dd><p>Hook called after loading a saved session.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-sm_002dsave_002ddirectory"></a>Variable: <strong>sm-save-directory</strong></dt>
+<dd><p>The directory that will contain all Sawfish sessions.  It must be a
+string.  By default it is <code>&quot;~/.sawfish/sessions&quot;</code>.
+</p></dd></dl>
+
+<dl>
+<dt><a name="index-sm_002dsloppy_002did_002dmatching"></a>Variable: <strong>sm-sloppy-id-matching</strong></dt>
+<dd><p>When loading sessions, the algorithm that matches saved session data
+to running clients requires that if one has a session id, then so must
+the other, and they must match. Setting this variable to true turns
+that feature off, allowing some broken clients to be session managed.
+Defaults to false.
+</p></dd></dl>
+
+<hr>
+<div class="header">
+<p>
+Next: <a href="Low_002dlevel-X-Interface.html#Low_002dlevel-X-Interface" accesskey="n" rel="next">Low-level X Interface</a>, Previous: <a href="Standard-Properties.html#Standard-Properties" accesskey="p" rel="previous">Standard Properties</a>, Up: <a href="index.html#Top" accesskey="u" rel="up">Top</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Function-Index.html#Function-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>
