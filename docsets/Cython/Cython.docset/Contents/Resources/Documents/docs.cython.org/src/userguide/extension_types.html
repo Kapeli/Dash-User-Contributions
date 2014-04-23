@@ -1,0 +1,766 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  
+<!-- Mirrored from docs.cython.org/src/userguide/extension_types.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:57 GMT -->
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Extension Types &mdash; Cython 0.20 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.20',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Cython 0.20 documentation" href="../../index-2.html" />
+    <link rel="up" title="Users Guide" href="index.html" />
+    <link rel="next" title="Special Methods of Extension Types" href="special_methods.html" />
+    <link rel="prev" title="Language Basics" href="language_basics.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="special_methods.html" title="Special Methods of Extension Types"
+             accesskey="N">next</a></li>
+        <li class="right" >
+          <a href="language_basics.html" title="Language Basics"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Users Guide</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="extension-types">
+<span id="id1"></span><h1>Extension Types<a class="headerlink" href="#extension-types" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>As well as creating normal user-defined classes with the Python class
+statement, Cython also lets you create new built-in Python types, known as
+extension types. You define an extension type using the <a class="reference internal" href="../reference/language_basics.html#cdef"><tt class="xref std std-keyword docutils literal"><span class="pre">cdef</span></tt></a> class
+statement.  Here&#8217;s an example:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">class</span> <span class="nf">Shrubbery</span><span class="p">:</span>
+
+    <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">width</span><span class="p">,</span> <span class="nf">height</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">w</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="n">h</span>
+
+    <span class="k">def</span> <span class="nf">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span> <span class="s">&quot;This shrubbery is&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> \
+            <span class="s">&quot;by&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">height</span><span class="p">,</span> <span class="s">&quot;cubits.&quot;</span>
+</pre></div>
+</div>
+<p>As you can see, a Cython extension type definition looks a lot like a Python
+class definition. Within it, you use the def statement to define methods that
+can be called from Python code. You can even define many of the special
+methods such as <tt class="xref py py-meth docutils literal"><span class="pre">__init__()</span></tt> as you would in Python.</p>
+<p>The main difference is that you can use the <a class="reference internal" href="../reference/language_basics.html#cdef"><tt class="xref std std-keyword docutils literal"><span class="pre">cdef</span></tt></a> statement to define
+attributes. The attributes may be Python objects (either generic or of a
+particular extension type), or they may be of any C data type. So you can use
+extension types to wrap arbitrary C data structures and provide a Python-like
+interface to them.</p>
+</div>
+<div class="section" id="attributes">
+<span id="readonly"></span><h2>Attributes<a class="headerlink" href="#attributes" title="Permalink to this headline">¶</a></h2>
+<p>Attributes of an extension type are stored directly in the object&#8217;s C struct.
+The set of attributes is fixed at compile time; you can&#8217;t add attributes to an
+extension type instance at run time simply by assigning to them, as you could
+with a Python class instance. (You can subclass the extension type in Python
+and add attributes to instances of the subclass, however.)</p>
+<p>There are two ways that attributes of an extension type can be accessed: by
+Python attribute lookup, or by direct access to the C struct from Cython code.
+Python code is only able to access attributes of an extension type by the
+first method, but Cython code can use either method.</p>
+<p>By default, extension type attributes are only accessible by direct access,
+not Python access, which means that they are not accessible from Python code.
+To make them accessible from Python code, you need to declare them as
+<tt class="xref std std-keyword docutils literal"><span class="pre">public</span></tt> or <a class="reference internal" href="#readonly"><tt class="xref std std-keyword docutils literal"><span class="pre">readonly</span></tt></a>. For example:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">class</span> <span class="nf">Shrubbery</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="kr">public</span> <span class="kt">int</span> <span class="nf">width</span><span class="p">,</span> <span class="nf">height</span>
+    <span class="k">cdef</span> <span class="kr">readonly</span> <span class="kt">float</span> <span class="nf">depth</span>
+</pre></div>
+</div>
+<p>makes the width and height attributes readable and writable from Python code,
+and the depth attribute readable but not writable.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">You can only expose simple C types, such as ints, floats, and
+strings, for Python access. You can also expose Python-valued attributes.</p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Also the <tt class="xref std std-keyword docutils literal"><span class="pre">public</span></tt> and <a class="reference internal" href="#readonly"><tt class="xref std std-keyword docutils literal"><span class="pre">readonly</span></tt></a> options apply only to
+Python access, not direct access. All the attributes of an extension type
+are always readable and writable by C-level access.</p>
+</div>
+</div>
+<div class="section" id="type-declarations">
+<h2>Type declarations<a class="headerlink" href="#type-declarations" title="Permalink to this headline">¶</a></h2>
+<p>Before you can directly access the attributes of an extension type, the Cython
+compiler must know that you have an instance of that type, and not just a
+generic Python object. It knows this already in the case of the <tt class="docutils literal"><span class="pre">self</span></tt>
+parameter of the methods of that type, but in other cases you will have to use
+a type declaration.</p>
+<p>For example, in the following function:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="nf">widen_shrubbery</span><span class="p">(</span><span class="n">sh</span><span class="p">,</span> <span class="n">extra_width</span><span class="p">):</span> <span class="c"># BAD</span>
+    <span class="n">sh</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">sh</span><span class="o">.</span><span class="n">width</span> <span class="o">+</span> <span class="n">extra_width</span>
+</pre></div>
+</div>
+<p>because the <tt class="docutils literal"><span class="pre">sh</span></tt> parameter hasn&#8217;t been given a type, the width attribute
+will be accessed by a Python attribute lookup. If the attribute has been
+declared <tt class="xref std std-keyword docutils literal"><span class="pre">public</span></tt> or <a class="reference internal" href="#readonly"><tt class="xref std std-keyword docutils literal"><span class="pre">readonly</span></tt></a> then this will work, but it
+will be very inefficient. If the attribute is private, it will not work at all
+&#8211; the code will compile, but an attribute error will be raised at run time.</p>
+<p>The solution is to declare <tt class="docutils literal"><span class="pre">sh</span></tt> as being of type <tt class="xref py py-class docutils literal"><span class="pre">Shrubbery</span></tt>, as
+follows:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="nf">widen_shrubbery</span><span class="p">(</span><span class="n">Shrubbery</span> <span class="n">sh</span><span class="p">,</span> <span class="n">extra_width</span><span class="p">):</span>
+    <span class="n">sh</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">sh</span><span class="o">.</span><span class="n">width</span> <span class="o">+</span> <span class="n">extra_width</span>
+</pre></div>
+</div>
+<p>Now the Cython compiler knows that <tt class="docutils literal"><span class="pre">sh</span></tt> has a C attribute called
+<tt class="xref py py-attr docutils literal"><span class="pre">width</span></tt> and will generate code to access it directly and efficiently.
+The same consideration applies to local variables, for example,:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">Shrubbery</span> <span class="nf">another_shrubbery</span><span class="p">(</span><span class="n">Shrubbery</span> <span class="n">sh1</span><span class="p">):</span>
+    <span class="k">cdef</span> <span class="kt">Shrubbery</span> <span class="nf">sh2</span>
+    <span class="n">sh2</span> <span class="o">=</span> <span class="n">Shrubbery</span><span class="p">()</span>
+    <span class="n">sh2</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">sh1</span><span class="o">.</span><span class="n">width</span>
+    <span class="n">sh2</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="n">sh1</span><span class="o">.</span><span class="n">height</span>
+    <span class="k">return</span> <span class="n">sh2</span>
+</pre></div>
+</div>
+<div class="section" id="type-testing-and-casting">
+<h3>Type Testing and Casting<a class="headerlink" href="#type-testing-and-casting" title="Permalink to this headline">¶</a></h3>
+<p>Suppose I have a method <tt class="xref py py-meth docutils literal"><span class="pre">quest()</span></tt> which returns an object of type <tt class="xref py py-class docutils literal"><span class="pre">Shrubbery</span></tt>.
+To access it&#8217;s width I could write:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">Shrubbery</span> <span class="nf">sh</span> <span class="o">=</span> <span class="n">quest</span><span class="p">()</span>
+<span class="k">print</span> <span class="n">sh</span><span class="o">.</span><span class="n">width</span>
+</pre></div>
+</div>
+<p>which requires the use of a local variable and performs a type test on assignment.
+If you <em>know</em> the return value of <tt class="xref py py-meth docutils literal"><span class="pre">quest()</span></tt> will be of type <tt class="xref py py-class docutils literal"><span class="pre">Shrubbery</span></tt>
+you can use a cast to write:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">print</span> <span class="p">(&lt;</span><span class="kt">Shrubbery</span><span class="p">&gt;</span><span class="n">quest</span><span class="p">())</span><span class="o">.</span><span class="n">width</span>
+</pre></div>
+</div>
+<p>This may be dangerous if <tt class="xref py py-meth docutils literal"><span class="pre">quest()</span></tt> is not actually a <tt class="xref py py-class docutils literal"><span class="pre">Shrubbery</span></tt>, as it
+will try to access width as a C struct member which may not exist. At the C level,
+rather than raising an <tt class="xref py py-class docutils literal"><span class="pre">AttributeError</span></tt>, either an nonsensical result will be
+returned (interpreting whatever data is at at that address as an int) or a segfault
+may result from trying to access invalid memory. Instead, one can write:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">print</span> <span class="p">(&lt;</span><span class="kt">Shrubbery?</span><span class="p">&gt;</span><span class="n">quest</span><span class="p">())</span><span class="o">.</span><span class="n">width</span>
+</pre></div>
+</div>
+<p>which performs a type check (possibly raising a <tt class="xref py py-class docutils literal"><span class="pre">TypeError</span></tt>) before making the
+cast and allowing the code to proceed.</p>
+<p>To explicitly test the type of an object, use the <tt class="xref py py-meth docutils literal"><span class="pre">isinstance()</span></tt> method. By default,
+in Python, the <tt class="xref py py-meth docutils literal"><span class="pre">isinstance()</span></tt> method checks the <tt class="xref py py-class docutils literal"><span class="pre">__class__</span></tt> attribute of the
+first argument to determine if it is of the required type. However, this is potentially
+unsafe as the <tt class="xref py py-class docutils literal"><span class="pre">__class__</span></tt> attribute can be spoofed or changed, but the C structure
+of an extension type must be correct to access its <a class="reference internal" href="../reference/language_basics.html#cdef"><tt class="xref std std-keyword docutils literal"><span class="pre">cdef</span></tt></a> attributes and call its <a class="reference internal" href="../reference/language_basics.html#cdef"><tt class="xref std std-keyword docutils literal"><span class="pre">cdef</span></tt></a> methods. Cython detects if the second argument is a known extension
+type and does a type check instead, analogous to Pyrex&#8217;s <tt class="xref py py-meth docutils literal"><span class="pre">typecheck()</span></tt>.
+The old behavior is always available by passing a tuple as the second parameter:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">print</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sh</span><span class="p">,</span> <span class="n">Shrubbery</span><span class="p">)</span>     <span class="c"># Check the type of sh</span>
+<span class="k">print</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sh</span><span class="p">,</span> <span class="p">(</span><span class="n">Shrubbery</span><span class="p">,))</span>  <span class="c"># Check sh.__class__</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="extension-types-and-none">
+<h2>Extension types and None<a class="headerlink" href="#extension-types-and-none" title="Permalink to this headline">¶</a></h2>
+<p>When you declare a parameter or C variable as being of an extension type,
+Cython will allow it to take on the value <tt class="docutils literal"><span class="pre">None</span></tt> as well as values of its
+declared type. This is analogous to the way a C pointer can take on the value
+<tt class="docutils literal"><span class="pre">NULL</span></tt>, and you need to exercise the same caution because of it. There is no
+problem as long as you are performing Python operations on it, because full
+dynamic type checking will be applied. However, when you access C attributes
+of an extension type (as in the widen_shrubbery function above), it&#8217;s up to
+you to make sure the reference you&#8217;re using is not <tt class="docutils literal"><span class="pre">None</span></tt> &#8211; in the
+interests of efficiency, Cython does not check this.</p>
+<p>You need to be particularly careful when exposing Python functions which take
+extension types as arguments. If we wanted to make <tt class="xref py py-func docutils literal"><span class="pre">widen_shrubbery()</span></tt> a
+Python function, for example, if we simply wrote:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">def</span> <span class="nf">widen_shrubbery</span><span class="p">(</span><span class="n">Shrubbery</span> <span class="n">sh</span><span class="p">,</span> <span class="n">extra_width</span><span class="p">):</span> <span class="c"># This is</span>
+    <span class="n">sh</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">sh</span><span class="o">.</span><span class="n">width</span> <span class="o">+</span> <span class="n">extra_width</span>           <span class="c"># dangerous!</span>
+</pre></div>
+</div>
+<p>then users of our module could crash it by passing <tt class="docutils literal"><span class="pre">None</span></tt> for the <tt class="docutils literal"><span class="pre">sh</span></tt>
+parameter.</p>
+<p>One way to fix this would be:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">def</span> <span class="nf">widen_shrubbery</span><span class="p">(</span><span class="n">Shrubbery</span> <span class="n">sh</span><span class="p">,</span> <span class="n">extra_width</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">sh</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span>
+    <span class="n">sh</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">sh</span><span class="o">.</span><span class="n">width</span> <span class="o">+</span> <span class="n">extra_width</span>
+</pre></div>
+</div>
+<p>but since this is anticipated to be such a frequent requirement, Cython
+provides a more convenient way. Parameters of a Python function declared as an
+extension type can have a <tt class="docutils literal"><span class="pre">not</span> <span class="pre">None</span></tt> clause:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">def</span> <span class="nf">widen_shrubbery</span><span class="p">(</span><span class="n">Shrubbery</span> <span class="n">sh</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">,</span> <span class="n">extra_width</span><span class="p">):</span>
+    <span class="n">sh</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">sh</span><span class="o">.</span><span class="n">width</span> <span class="o">+</span> <span class="n">extra_width</span>
+</pre></div>
+</div>
+<p>Now the function will automatically check that <tt class="docutils literal"><span class="pre">sh</span></tt> is <tt class="docutils literal"><span class="pre">not</span> <span class="pre">None</span></tt> along
+with checking that it has the right type.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last"><tt class="docutils literal"><span class="pre">not</span> <span class="pre">None</span></tt> clause can only be used in Python functions (defined with
+<a class="reference external" href="http://docs.python.org/3.3/reference/compound_stmts.html#def" title="(in Python v3.3)"><tt class="xref std std-keyword docutils literal"><span class="pre">def</span></tt></a>) and not C functions (defined with <a class="reference internal" href="../reference/language_basics.html#cdef"><tt class="xref std std-keyword docutils literal"><span class="pre">cdef</span></tt></a>).  If
+you need to check whether a parameter to a C function is None, you will
+need to do it yourself.</p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Some more things:</p>
+<ul class="last simple">
+<li>The self parameter of a method of an extension type is guaranteed never to
+be <tt class="docutils literal"><span class="pre">None</span></tt>.</li>
+<li>When comparing a value with <tt class="docutils literal"><span class="pre">None</span></tt>, keep in mind that, if <tt class="docutils literal"><span class="pre">x</span></tt> is a Python
+object, <tt class="docutils literal"><span class="pre">x</span> <span class="pre">is</span> <span class="pre">None</span></tt> and <tt class="docutils literal"><span class="pre">x</span> <span class="pre">is</span> <span class="pre">not</span> <span class="pre">None</span></tt> are very efficient because they
+translate directly to C pointer comparisons, whereas <tt class="docutils literal"><span class="pre">x</span> <span class="pre">==</span> <span class="pre">None</span></tt> and
+<tt class="docutils literal"><span class="pre">x</span> <span class="pre">!=</span> <span class="pre">None</span></tt>, or simply using <tt class="docutils literal"><span class="pre">x</span></tt> as a boolean value (as in <tt class="docutils literal"><span class="pre">if</span> <span class="pre">x:</span> <span class="pre">...</span></tt>)
+will invoke Python operations and therefore be much slower.</li>
+</ul>
+</div>
+</div>
+<div class="section" id="special-methods">
+<h2>Special methods<a class="headerlink" href="#special-methods" title="Permalink to this headline">¶</a></h2>
+<p>Although the principles are similar, there are substantial differences between
+many of the <tt class="xref py py-meth docutils literal"><span class="pre">__xxx__()</span></tt> special methods of extension types and their Python
+counterparts. There is a <a class="reference internal" href="special_methods.html#special-methods"><em>separate page</em></a> devoted to this subject, and you should
+read it carefully before attempting to use any special methods in your
+extension types.</p>
+</div>
+<div class="section" id="properties">
+<h2>Properties<a class="headerlink" href="#properties" title="Permalink to this headline">¶</a></h2>
+<p>There is a special syntax for defining properties in an extension class:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">class</span> <span class="nf">Spam</span><span class="p">:</span>
+
+    <span class="k">property</span> <span class="nf">cheese</span><span class="p">:</span>
+
+        <span class="s">&quot;A doc string can go here.&quot;</span>
+
+        <span class="k">def</span> <span class="nf">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="c"># This is called when the property is read.</span>
+            <span class="o">...</span>
+
+        <span class="k">def</span> <span class="nf">__set__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+            <span class="c"># This is called when the property is written.</span>
+            <span class="o">...</span>
+
+        <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="c"># This is called when the property is deleted.</span>
+</pre></div>
+</div>
+<p>The <tt class="xref py py-meth docutils literal"><span class="pre">__get__()</span></tt>, <tt class="xref py py-meth docutils literal"><span class="pre">__set__()</span></tt> and <tt class="xref py py-meth docutils literal"><span class="pre">__del__()</span></tt> methods are all
+optional; if they are omitted, an exception will be raised when the
+corresponding operation is attempted.</p>
+<p>Here&#8217;s a complete example. It defines a property which adds to a list each
+time it is written to, returns the list when it is read, and empties the list
+when it is deleted.:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="c"># cheesy.pyx</span>
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">CheeseShop</span><span class="p">:</span>
+
+    <span class="k">cdef</span> <span class="kt">object</span> <span class="nf">cheeses</span>
+
+    <span class="k">def</span> <span class="nf">__cinit__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cheeses</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">property</span> <span class="nf">cheese</span><span class="p">:</span>
+
+        <span class="k">def</span> <span class="nf">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="s">&quot;We don&#39;t have: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">cheeses</span>
+
+        <span class="k">def</span> <span class="nf">__set__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cheeses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">cheeses</span><span class="p">[:]</span>
+
+<span class="c"># Test input</span>
+<span class="k">from</span> <span class="nn">cheesy</span> <span class="k">import</span> <span class="n">CheeseShop</span>
+
+<span class="n">shop</span> <span class="o">=</span> <span class="n">CheeseShop</span><span class="p">()</span>
+<span class="k">print</span> <span class="n">shop</span><span class="o">.</span><span class="n">cheese</span>
+
+<span class="n">shop</span><span class="o">.</span><span class="n">cheese</span> <span class="o">=</span> <span class="s">&quot;camembert&quot;</span>
+<span class="k">print</span> <span class="n">shop</span><span class="o">.</span><span class="n">cheese</span>
+
+<span class="n">shop</span><span class="o">.</span><span class="n">cheese</span> <span class="o">=</span> <span class="s">&quot;cheddar&quot;</span>
+<span class="k">print</span> <span class="n">shop</span><span class="o">.</span><span class="n">cheese</span>
+
+<span class="k">del</span> <span class="n">shop</span><span class="o">.</span><span class="n">cheese</span>
+<span class="k">print</span> <span class="n">shop</span><span class="o">.</span><span class="n">cheese</span>
+</pre></div>
+</div>
+<div class="highlight-text"><div class="highlight"><pre># Test output
+We don&#39;t have: []
+We don&#39;t have: [&#39;camembert&#39;]
+We don&#39;t have: [&#39;camembert&#39;, &#39;cheddar&#39;]
+We don&#39;t have: []
+</pre></div>
+</div>
+</div>
+<div class="section" id="subclassing">
+<h2>Subclassing<a class="headerlink" href="#subclassing" title="Permalink to this headline">¶</a></h2>
+<p>An extension type may inherit from a built-in type or another extension type:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">class</span> <span class="nf">Parrot</span><span class="p">:</span>
+    <span class="o">...</span>
+
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">Norwegian</span><span class="p">(</span><span class="n">Parrot</span><span class="p">):</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>A complete definition of the base type must be available to Cython, so if the
+base type is a built-in type, it must have been previously declared as an
+extern extension type. If the base type is defined in another Cython module, it
+must either be declared as an extern extension type or imported using the
+<a class="reference internal" href="sharing_declarations.html#cimport"><tt class="xref std std-keyword docutils literal"><span class="pre">cimport</span></tt></a> statement.</p>
+<p>An extension type can only have one base class (no multiple inheritance).</p>
+<p>Cython extension types can also be subclassed in Python. A Python class can
+inherit from multiple extension types provided that the usual Python rules for
+multiple inheritance are followed (i.e. the C layouts of all the base classes
+must be compatible).</p>
+<p>Since Cython 0.13.1, there is a way to prevent extension types from
+being subtyped in Python.  This is done via the <tt class="docutils literal"><span class="pre">final</span></tt> directive,
+usually set on an extension type using a decorator:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cimport</span> <span class="nn">cython</span>
+
+<span class="nd">@cython</span><span class="o">.</span><span class="n">final</span>
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">Parrot</span><span class="p">:</span>
+   <span class="k">def</span> <span class="nf">done</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="k">pass</span>
+</pre></div>
+</div>
+<p>Trying to create a Python subclass from this type will raise a
+<tt class="xref py py-class docutils literal"><span class="pre">TypeError</span></tt> at runtime.  Cython will also prevent subtyping a
+final type inside of the same module, i.e. creating an extension type
+that uses a final type as its base type will fail at compile time.
+Note, however, that this restriction does not currently propagate to
+other extension modules, so even final extension types can still be
+subtyped at the C level by foreign code.</p>
+</div>
+<div class="section" id="c-methods">
+<h2>C methods<a class="headerlink" href="#c-methods" title="Permalink to this headline">¶</a></h2>
+<p>Extension types can have C methods as well as Python methods. Like C
+functions, C methods are declared using <a class="reference internal" href="../reference/language_basics.html#cdef"><tt class="xref std std-keyword docutils literal"><span class="pre">cdef</span></tt></a> or <a class="reference internal" href="../reference/language_basics.html#cpdef"><tt class="xref std std-keyword docutils literal"><span class="pre">cpdef</span></tt></a> instead of
+<a class="reference external" href="http://docs.python.org/3.3/reference/compound_stmts.html#def" title="(in Python v3.3)"><tt class="xref std std-keyword docutils literal"><span class="pre">def</span></tt></a>. C methods are &#8220;virtual&#8221;, and may be overridden in derived
+extension types. In addition, <a class="reference internal" href="../reference/language_basics.html#cpdef"><tt class="xref std std-keyword docutils literal"><span class="pre">cpdef</span></tt></a> methods can even be overridden by python
+methods when called as C method. This adds a little to their calling overhead
+compared to a <a class="reference internal" href="../reference/language_basics.html#cdef"><tt class="xref std std-keyword docutils literal"><span class="pre">cdef</span></tt></a> methd:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="c"># pets.pyx</span>
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">Parrot</span><span class="p">:</span>
+
+    <span class="k">cdef</span> <span class="kt">void</span> <span class="nf">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span> <span class="s">&quot;This parrot is resting.&quot;</span>
+
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">Norwegian</span><span class="p">(</span><span class="n">Parrot</span><span class="p">):</span>
+
+    <span class="k">cdef</span> <span class="kt">void</span> <span class="nf">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">Parrot</span><span class="o">.</span><span class="n">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;Lovely plumage!&quot;</span>
+
+
+<span class="k">cdef</span> <span class="kt">Parrot</span> <span class="nf">p1</span><span class="p">,</span> <span class="nf">p2</span>
+<span class="n">p1</span> <span class="o">=</span> <span class="n">Parrot</span><span class="p">()</span>
+<span class="n">p2</span> <span class="o">=</span> <span class="n">Norwegian</span><span class="p">()</span>
+<span class="k">print</span> <span class="s">&quot;p1:&quot;</span>
+<span class="n">p1</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span>
+<span class="k">print</span> <span class="s">&quot;p2:&quot;</span>
+<span class="n">p2</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="highlight-text"><div class="highlight"><pre># Output
+p1:
+This parrot is resting.
+p2:
+This parrot is resting.
+Lovely plumage!
+</pre></div>
+</div>
+<p>The above example also illustrates that a C method can call an inherited C
+method using the usual Python technique, i.e.:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="n">Parrot</span><span class="o">.</span><span class="n">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="forward-declaring-extension-types">
+<h2>Forward-declaring extension types<a class="headerlink" href="#forward-declaring-extension-types" title="Permalink to this headline">¶</a></h2>
+<p>Extension types can be forward-declared, like <a class="reference internal" href="language_basics.html#struct"><tt class="xref std std-keyword docutils literal"><span class="pre">struct</span></tt></a> and
+<a class="reference internal" href="language_basics.html#union"><tt class="xref std std-keyword docutils literal"><span class="pre">union</span></tt></a> types. This will be necessary if you have two extension types
+that need to refer to each other, e.g.:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">class</span> <span class="nf">Shrubbery</span> <span class="c"># forward declaration</span>
+
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">Shrubber</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="kt">Shrubbery</span> <span class="nf">work_in_progress</span>
+
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">Shrubbery</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="kt">Shrubber</span> <span class="nf">creator</span>
+</pre></div>
+</div>
+<p>If you are forward-declaring an extension type that has a base class, you must
+specify the base class in both the forward declaration and its subsequent
+definition, for example,:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">class</span> <span class="nf">A</span><span class="p">(</span><span class="n">B</span><span class="p">)</span>
+
+<span class="o">...</span>
+
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">A</span><span class="p">(</span><span class="n">B</span><span class="p">):</span>
+    <span class="c"># attributes and methods</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="fast-instantiation">
+<h2>Fast instantiation<a class="headerlink" href="#fast-instantiation" title="Permalink to this headline">¶</a></h2>
+<p>Cython provides two ways to speed up the instantiation of extension types.
+The first one is a direct call to the <tt class="docutils literal"><span class="pre">__new__()</span></tt> special static method,
+as known from Python.  For an extension type <tt class="docutils literal"><span class="pre">Penguin</span></tt>, you could use
+the following code:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">class</span> <span class="nf">Penguin</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="kt">object</span> <span class="nf">food</span>
+
+    <span class="k">def</span> <span class="nf">__cinit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">food</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">food</span> <span class="o">=</span> <span class="n">food</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">food</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;eating!&quot;</span><span class="p">)</span>
+
+<span class="n">normal_penguin</span> <span class="o">=</span> <span class="n">Penguin</span><span class="p">(</span><span class="s">&#39;fish&#39;</span><span class="p">)</span>
+<span class="n">fast_penguin</span> <span class="o">=</span> <span class="n">Penguin</span><span class="o">.</span><span class="n">__new__</span><span class="p">(</span><span class="n">Penguin</span><span class="p">,</span> <span class="s">&#39;wheat&#39;</span><span class="p">)</span>  <span class="c"># note: not calling __init__() !</span>
+</pre></div>
+</div>
+<p>Note that the path through <tt class="docutils literal"><span class="pre">__new__()</span></tt> will <em>not</em> call the type&#8217;s
+<tt class="docutils literal"><span class="pre">__init__()</span></tt> method (again, as known from Python).  Thus, in the example
+above, the first instantiation will print <tt class="docutils literal"><span class="pre">eating!</span></tt>, but the second will
+not.  This is only one of the reasons why the <tt class="docutils literal"><span class="pre">__cinit__()</span></tt> method is
+safer and preferable over the normal <tt class="docutils literal"><span class="pre">__init__()</span></tt> method for extension
+types.</p>
+<p>The second performance improvement applies to types that are often created
+and deleted in a row, so that they can benefit from a freelist.  Cython
+provides the decorator <tt class="docutils literal"><span class="pre">&#64;cython.freelist(N)</span></tt> for this, which creates a
+statically sized freelist of <tt class="docutils literal"><span class="pre">N</span></tt> instances for a given type.  Example:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cimport</span> <span class="nn">cython</span>
+
+<span class="nd">@cython</span><span class="o">.</span><span class="n">freelist</span><span class="p">(</span><span class="mf">8</span><span class="p">)</span>
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">Penguin</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="kt">object</span> <span class="nf">food</span>
+    <span class="k">def</span> <span class="nf">__cinit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">food</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">food</span> <span class="o">=</span> <span class="n">food</span>
+
+<span class="n">penguin</span> <span class="o">=</span> <span class="n">Penguin</span><span class="p">(</span><span class="s">&#39;fish 1&#39;</span><span class="p">)</span>
+<span class="n">penguin</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="n">penguin</span> <span class="o">=</span> <span class="n">Penguin</span><span class="p">(</span><span class="s">&#39;fish 2&#39;</span><span class="p">)</span>  <span class="c"># does not need to allocate memory!</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="making-extension-types-weak-referenceable">
+<h2>Making extension types weak-referenceable<a class="headerlink" href="#making-extension-types-weak-referenceable" title="Permalink to this headline">¶</a></h2>
+<p>By default, extension types do not support having weak references made to
+them. You can enable weak referencing by declaring a C attribute of type
+object called <tt class="xref py py-attr docutils literal"><span class="pre">__weakref__</span></tt>. For example,:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">class</span> <span class="nf">ExplodingAnimal</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This animal will self-destruct when it is</span>
+<span class="sd">    no longer strongly referenced.&quot;&quot;&quot;</span>
+
+    <span class="k">cdef</span> <span class="kt">object</span> <span class="nf">__weakref__</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="controlling-cyclic-garbage-collection-in-cpython">
+<h2>Controlling cyclic garbage collection in CPython<a class="headerlink" href="#controlling-cyclic-garbage-collection-in-cpython" title="Permalink to this headline">¶</a></h2>
+<p>By default each extension type will support the cyclic garbage collector of
+CPython. If any Python objects can be referenced, Cython will automatically
+generate the <tt class="docutils literal"><span class="pre">tp_traverse</span></tt> and <tt class="docutils literal"><span class="pre">tp_clear</span></tt> slots. This is usually what you
+want.</p>
+<p>There is at least one reason why this might not be what you want: If you need
+to cleanup some external resources in the <tt class="docutils literal"><span class="pre">__dealloc__</span></tt> special function and
+your object happened to be in a reference cycle, the garbage collector may
+have triggered a call to <tt class="docutils literal"><span class="pre">tp_clear</span></tt> to drop references. This is the way that
+reference cycles are broken so that the garbage can actually be reclaimed.</p>
+<p>In that case any object references have vanished by the time when
+<tt class="docutils literal"><span class="pre">__dealloc__</span></tt> is called. Now your cleanup code lost access to the objects it
+has to clean up. In that case you can disable the cycle breaker <tt class="docutils literal"><span class="pre">tp_clear</span></tt>
+by using the <tt class="docutils literal"><span class="pre">no_gc_clear</span></tt> decorator</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="nd">@cython</span><span class="o">.</span><span class="n">no_gc_clear</span>
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">DBCursor</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="kt">DBConnection</span> <span class="nf">conn</span>
+    <span class="k">cdef</span> <span class="kt">DBAPI_Cursor</span> *<span class="nf">raw_cursor</span>
+    <span class="c"># ...</span>
+    <span class="k">def</span> <span class="nf">__dealloc__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">DBAPI_close_cursor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">raw_conn</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_cursor</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This example tries to close a cursor via a database connection when the Python
+object is destroyed. The <tt class="docutils literal"><span class="pre">DBConnection</span></tt> object is kept alive by the reference
+from <tt class="docutils literal"><span class="pre">DBCursor</span></tt>. But if a cursor happens to be in a reference cycle, the
+garbage collector may effectively &#8220;steal&#8221; the database connection reference,
+which makes it impossible to clean up the cursor.</p>
+<p>Using the <tt class="docutils literal"><span class="pre">no_gc_clear</span></tt> decorator this can not happen anymore because the
+references of a cursor object will not be cleared anymore.</p>
+</div>
+<div class="section" id="public-and-external-extension-types">
+<h2>Public and external extension types<a class="headerlink" href="#public-and-external-extension-types" title="Permalink to this headline">¶</a></h2>
+<p>Extension types can be declared extern or public. An extern extension type
+declaration makes an extension type defined in external C code available to a
+Cython module. A public extension type declaration makes an extension type
+defined in a Cython module available to external C code.</p>
+<div class="section" id="external-extension-types">
+<h3>External extension types<a class="headerlink" href="#external-extension-types" title="Permalink to this headline">¶</a></h3>
+<p>An extern extension type allows you to gain access to the internals of Python
+objects defined in the Python core or in a non-Cython extension module.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In previous versions of Pyrex, extern extension types were also used to
+reference extension types defined in another Pyrex module. While you can still
+do that, Cython provides a better mechanism for this. See
+<a class="reference internal" href="sharing_declarations.html#sharing-declarations"><em>Sharing Declarations Between Cython Modules</em></a>.</p>
+</div>
+<p>Here is an example which will let you get at the C-level members of the
+built-in complex object.:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">from</span> <span class="s">&quot;complexobject.h&quot;</span><span class="p">:</span>
+
+    <span class="k">struct</span> <span class="nc">Py_complex</span><span class="p">:</span>
+        <span class="n">double</span> <span class="n">real</span>
+        <span class="n">double</span> <span class="n">imag</span>
+
+    <span class="k">ctypedef</span> <span class="k">class</span> <span class="nc">__builtin__</span><span class="o">.</span><span class="n">complex</span> <span class="p">[</span><span class="nb">object</span> <span class="n">PyComplexObject</span><span class="p">]:</span>
+        <span class="k">cdef</span> <span class="kt">Py_complex</span> <span class="nf">cval</span>
+
+<span class="c"># A function which uses the above type</span>
+<span class="k">def</span> <span class="nf">spam</span><span class="p">(</span><span class="nb">complex</span> <span class="n">c</span><span class="p">):</span>
+    <span class="k">print</span> <span class="s">&quot;Real:&quot;</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">cval</span><span class="o">.</span><span class="n">real</span>
+    <span class="k">print</span> <span class="s">&quot;Imag:&quot;</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">cval</span><span class="o">.</span><span class="n">imag</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Some important things:</p>
+<ol class="last arabic">
+<li><p class="first">In this example, <a class="reference internal" href="language_basics.html#ctypedef"><tt class="xref std std-keyword docutils literal"><span class="pre">ctypedef</span></tt></a> class has been used. This is
+because, in the Python header files, the <tt class="docutils literal"><span class="pre">PyComplexObject</span></tt> struct is
+declared with:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span>
+    <span class="p">...</span>
+<span class="p">}</span> <span class="n">PyComplexObject</span><span class="p">;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">As well as the name of the extension type, the module in which its type
+object can be found is also specified. See the implicit importing section
+below.</p>
+</li>
+<li><p class="first">When declaring an external extension type, you don&#8217;t declare any
+methods.  Declaration of methods is not required in order to call them,
+because the calls are Python method calls. Also, as with
+<a class="reference internal" href="language_basics.html#struct"><tt class="xref std std-keyword docutils literal"><span class="pre">struct</span></tt></a> and <a class="reference internal" href="language_basics.html#union"><tt class="xref std std-keyword docutils literal"><span class="pre">union</span></tt></a>, if your extension class
+declaration is inside a <a class="reference internal" href="../reference/language_basics.html#cdef"><tt class="xref std std-keyword docutils literal"><span class="pre">cdef</span></tt></a> extern from block, you only need to
+declare those C members which you wish to access.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="section" id="name-specification-clause">
+<h3>Name specification clause<a class="headerlink" href="#name-specification-clause" title="Permalink to this headline">¶</a></h3>
+<p>The part of the class declaration in square brackets is a special feature only
+available for extern or public extension types. The full form of this clause
+is:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="p">[</span><span class="nb">object</span> <span class="n">object_struct_name</span><span class="p">,</span> <span class="nb">type</span> <span class="n">type_object_name</span> <span class="p">]</span>
+</pre></div>
+</div>
+<p>where <tt class="docutils literal"><span class="pre">object_struct_name</span></tt> is the name to assume for the type&#8217;s C struct,
+and type_object_name is the name to assume for the type&#8217;s statically declared
+type object. (The object and type clauses can be written in either order.)</p>
+<p>If the extension type declaration is inside a <a class="reference internal" href="../reference/language_basics.html#cdef"><tt class="xref std std-keyword docutils literal"><span class="pre">cdef</span></tt></a> extern from
+block, the object clause is required, because Cython must be able to generate
+code that is compatible with the declarations in the header file. Otherwise,
+for extern extension types, the object clause is optional.</p>
+<p>For public extension types, the object and type clauses are both required,
+because Cython must be able to generate code that is compatible with external C
+code.</p>
+</div>
+<div class="section" id="implicit-importing">
+<h3>Implicit importing<a class="headerlink" href="#implicit-importing" title="Permalink to this headline">¶</a></h3>
+<p>Cython requires you to include a module name in an extern extension class
+declaration, for example,:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">class</span> <span class="kt">MyModule</span>.<span class="nf">Spam</span><span class="p">:</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>The type object will be implicitly imported from the specified module and
+bound to the corresponding name in this module. In other words, in this
+example an implicit:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">from</span> <span class="nn">MyModule</span> <span class="k">import</span> <span class="n">Spam</span>
+</pre></div>
+</div>
+<p>statement will be executed at module load time.</p>
+<p>The module name can be a dotted name to refer to a module inside a package
+hierarchy, for example,:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">class</span> <span class="kt">My</span>.<span class="kt">Nested</span>.<span class="kt">Package</span>.<span class="nf">Spam</span><span class="p">:</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>You can also specify an alternative name under which to import the type using
+an as clause, for example,:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">class</span> <span class="kt">My</span>.<span class="kt">Nested</span>.<span class="kt">Package</span>.<span class="kt">Spam</span> <span class="k">as</span> <span class="nf">Yummy</span><span class="p">:</span>
+   <span class="o">...</span>
+</pre></div>
+</div>
+<p>which corresponds to the implicit import statement:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">from</span> <span class="nn">My.Nested.Package</span> <span class="k">import</span> <span class="n">Spam</span> <span class="k">as</span> <span class="n">Yummy</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="type-names-vs-constructor-names">
+<h3>Type names vs. constructor names<a class="headerlink" href="#type-names-vs-constructor-names" title="Permalink to this headline">¶</a></h3>
+<p>Inside a Cython module, the name of an extension type serves two distinct
+purposes. When used in an expression, it refers to a module-level global
+variable holding the type&#8217;s constructor (i.e. its type-object). However, it
+can also be used as a C type name to declare variables, arguments and return
+values of that type.</p>
+<p>When you declare:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">class</span> <span class="kt">MyModule</span>.<span class="nf">Spam</span><span class="p">:</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>the name Spam serves both these roles. There may be other names by which you
+can refer to the constructor, but only Spam can be used as a type name. For
+example, if you were to explicity import MyModule, you could use
+<tt class="docutils literal"><span class="pre">MyModule.Spam()</span></tt> to create a Spam instance, but you wouldn&#8217;t be able to use
+<tt class="xref py py-class docutils literal"><span class="pre">MyModule.Spam</span></tt> as a type name.</p>
+<p>When an as clause is used, the name specified in the as clause also takes over
+both roles. So if you declare:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">class</span> <span class="kt">MyModule</span>.<span class="kt">Spam</span> <span class="k">as</span> <span class="nf">Yummy</span><span class="p">:</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>then Yummy becomes both the type name and a name for the constructor. Again,
+there are other ways that you could get hold of the constructor, but only
+Yummy is usable as a type name.</p>
+</div>
+</div>
+<div class="section" id="public-extension-types">
+<h2>Public extension types<a class="headerlink" href="#public-extension-types" title="Permalink to this headline">¶</a></h2>
+<p>An extension type can be declared public, in which case a <tt class="docutils literal"><span class="pre">.h</span></tt> file is
+generated containing declarations for its object struct and type object. By
+including the <tt class="docutils literal"><span class="pre">.h</span></tt> file in external C code that you write, that code can
+access the attributes of the extension type.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index-2.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Extension Types</a><ul>
+<li><a class="reference internal" href="#introduction">Introduction</a></li>
+<li><a class="reference internal" href="#attributes">Attributes</a></li>
+<li><a class="reference internal" href="#type-declarations">Type declarations</a><ul>
+<li><a class="reference internal" href="#type-testing-and-casting">Type Testing and Casting</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#extension-types-and-none">Extension types and None</a></li>
+<li><a class="reference internal" href="#special-methods">Special methods</a></li>
+<li><a class="reference internal" href="#properties">Properties</a></li>
+<li><a class="reference internal" href="#subclassing">Subclassing</a></li>
+<li><a class="reference internal" href="#c-methods">C methods</a></li>
+<li><a class="reference internal" href="#forward-declaring-extension-types">Forward-declaring extension types</a></li>
+<li><a class="reference internal" href="#fast-instantiation">Fast instantiation</a></li>
+<li><a class="reference internal" href="#making-extension-types-weak-referenceable">Making extension types weak-referenceable</a></li>
+<li><a class="reference internal" href="#controlling-cyclic-garbage-collection-in-cpython">Controlling cyclic garbage collection in CPython</a></li>
+<li><a class="reference internal" href="#public-and-external-extension-types">Public and external extension types</a><ul>
+<li><a class="reference internal" href="#external-extension-types">External extension types</a></li>
+<li><a class="reference internal" href="#name-specification-clause">Name specification clause</a></li>
+<li><a class="reference internal" href="#implicit-importing">Implicit importing</a></li>
+<li><a class="reference internal" href="#type-names-vs-constructor-names">Type names vs. constructor names</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#public-extension-types">Public extension types</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="language_basics.html"
+                        title="previous chapter">Language Basics</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="special_methods.html"
+                        title="next chapter">Special Methods of Extension Types</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/src/userguide/extension_types.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="http://docs.cython.org/search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="special_methods.html" title="Special Methods of Extension Types"
+             >next</a></li>
+        <li class="right" >
+          <a href="language_basics.html" title="Language Basics"
+             >previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Users Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer">
+        &copy; Copyright 2014, Stefan Behnel, Robert Bradshaw, Dag Sverre Seljebotn, Greg Ewing, William Stein, Gabriel Gellner, et al..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-6139100-3");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+  </body>
+
+<!-- Mirrored from docs.cython.org/src/userguide/extension_types.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:57 GMT -->
+</html>

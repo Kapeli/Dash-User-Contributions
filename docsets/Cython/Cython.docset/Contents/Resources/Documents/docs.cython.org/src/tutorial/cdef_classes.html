@@ -1,0 +1,263 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  
+<!-- Mirrored from docs.cython.org/src/tutorial/cdef_classes.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:57 GMT -->
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Extension types (aka. cdef classes) &mdash; Cython 0.20 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.20',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Cython 0.20 documentation" href="../../index-2.html" />
+    <link rel="up" title="Tutorials" href="index.html" />
+    <link rel="next" title="pxd files" href="pxd_files.html" />
+    <link rel="prev" title="Using C libraries" href="clibraries.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="pxd_files.html" title="pxd files"
+             accesskey="N">next</a></li>
+        <li class="right" >
+          <a href="clibraries.html" title="Using C libraries"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="extension-types-aka-cdef-classes">
+<h1>Extension types (aka. cdef classes)<a class="headerlink" href="#extension-types-aka-cdef-classes" title="Permalink to this headline">¶</a></h1>
+<p>To support object-oriented programming, Cython supports writing normal
+Python classes exactly as in Python:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">class</span> <span class="nc">MathFunction</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">operator</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operator</span> <span class="o">=</span> <span class="n">operator</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">operands</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">operator</span><span class="p">(</span><span class="o">*</span><span class="n">operands</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Based on what Python calls a &#8220;built-in type&#8221;, however, Cython supports
+a second kind of class: <em>extension types</em>, sometimes referred to as
+&#8220;cdef classes&#8221; due to the keywords used for their declaration.  They
+are somewhat restricted compared to Python classes, but are generally
+more memory efficient and faster than generic Python classes.  The
+main difference is that they use a C struct to store their fields and methods
+instead of a Python dict.  This allows them to store arbitrary C types
+in their fields without requiring a Python wrapper for them, and to
+access fields and methods directly at the C level without passing
+through a Python dictionary lookup.</p>
+<p>Normal Python classes can inherit from cdef classes, but not the other
+way around.  Cython requires to know the complete inheritance
+hierarchy in order to lay out their C structs, and restricts it to
+single inheritance.  Normal Python classes, on the other hand, can
+inherit from any number of Python classes and extension types, both in
+Cython code and pure Python code.</p>
+<p>So far our integration example has not been very useful as it only
+integrates a single hard-coded function. In order to remedy this,
+with hardly sacrificing speed, we will use a cdef class to represent a
+function on floating point numbers:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">class</span> <span class="nf">Function</span><span class="p">:</span>
+    <span class="k">cpdef</span> <span class="kt">double</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">double</span> <span class="n">x</span><span class="p">)</span> <span class="k">except</span> <span class="o">*</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0</span>
+</pre></div>
+</div>
+<p>The directive cpdef makes two versions of the method available; one
+fast for use from Cython and one slower for use from Python. Then:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">class</span> <span class="nf">SinOfSquareFunction</span><span class="p">(</span><span class="n">Function</span><span class="p">):</span>
+    <span class="k">cpdef</span> <span class="kt">double</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">double</span> <span class="n">x</span><span class="p">)</span> <span class="k">except</span> <span class="o">*</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">sin</span><span class="p">(</span><span class="n">x</span><span class="o">**</span><span class="mf">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This does slightly more than providing a python wrapper for a cdef
+method: unlike a cdef method, a cpdef method is fully overrideable by
+methods and instance attributes in Python subclasses.  It adds a
+little calling overhead compared to a cdef method.</p>
+<p>Using this, we can now change our integration example:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">def</span> <span class="nf">integrate</span><span class="p">(</span><span class="n">Function</span> <span class="n">f</span><span class="p">,</span> <span class="n">double</span> <span class="n">a</span><span class="p">,</span> <span class="n">double</span> <span class="n">b</span><span class="p">,</span> <span class="nb">int</span> <span class="n">N</span><span class="p">):</span>
+    <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">i</span>
+    <span class="k">cdef</span> <span class="kt">double</span> <span class="nf">s</span><span class="p">,</span> <span class="nf">dx</span>
+    <span class="k">if</span> <span class="n">f</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;f cannot be None&quot;</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="mf">0</span>
+    <span class="n">dx</span> <span class="o">=</span> <span class="p">(</span><span class="n">b</span><span class="o">-</span><span class="n">a</span><span class="p">)</span><span class="o">/</span><span class="n">N</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">+=</span> <span class="n">f</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">a</span><span class="o">+</span><span class="n">i</span><span class="o">*</span><span class="n">dx</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">s</span> <span class="o">*</span> <span class="n">dx</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">integrate</span><span class="p">(</span><span class="n">SinOfSquareFunction</span><span class="p">(),</span> <span class="mf">0</span><span class="p">,</span> <span class="mf">1</span><span class="p">,</span> <span class="mf">10000</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>This is almost as fast as the previous code, however it is much more flexible
+as the function to integrate can be changed. We can even pass in a new
+function defined in Python-space:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="o">&gt;&gt;&gt;</span> <span class="k">import</span> <span class="nn">integrate</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="k">class</span> <span class="nc">MyPolynomial</span><span class="p">(</span><span class="n">integrate</span><span class="o">.</span><span class="n">Function</span><span class="p">):</span>
+<span class="o">...</span>     <span class="k">def</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+<span class="o">...</span>         <span class="k">return</span> <span class="mf">2</span><span class="o">*</span><span class="n">x</span><span class="o">*</span><span class="n">x</span> <span class="o">+</span> <span class="mf">3</span><span class="o">*</span><span class="n">x</span> <span class="o">-</span> <span class="mf">10</span>
+<span class="o">...</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">integrate</span><span class="p">(</span><span class="n">MyPolynomial</span><span class="p">(),</span> <span class="mf">0</span><span class="p">,</span> <span class="mf">1</span><span class="p">,</span> <span class="mf">10000</span><span class="p">)</span>
+<span class="o">-</span><span class="mf">7.8335833300000077</span>
+</pre></div>
+</div>
+<p>This is about 20 times slower, but still about 10 times faster than
+the original Python-only integration code.  This shows how large the
+speed-ups can easily be when whole loops are moved from Python code
+into a Cython module.</p>
+<p>Some notes on our new implementation of <tt class="docutils literal"><span class="pre">evaluate</span></tt>:</p>
+<blockquote>
+<div><ul class="simple">
+<li>The fast method dispatch here only works because <tt class="docutils literal"><span class="pre">evaluate</span></tt> was
+declared in <tt class="docutils literal"><span class="pre">Function</span></tt>. Had <tt class="docutils literal"><span class="pre">evaluate</span></tt> been introduced in
+<tt class="docutils literal"><span class="pre">SinOfSquareFunction</span></tt>, the code would still work, but Cython
+would have used the slower Python method dispatch mechanism
+instead.</li>
+<li>In the same way, had the argument <tt class="docutils literal"><span class="pre">f</span></tt> not been typed, but only
+been passed as a Python object, the slower Python dispatch would
+be used.</li>
+<li>Since the argument is typed, we need to check whether it is
+<tt class="docutils literal"><span class="pre">None</span></tt>. In Python, this would have resulted in an <tt class="docutils literal"><span class="pre">AttributeError</span></tt>
+when the <tt class="docutils literal"><span class="pre">evaluate</span></tt> method was looked up, but Cython would instead
+try to access the (incompatible) internal structure of <tt class="docutils literal"><span class="pre">None</span></tt> as if
+it were a <tt class="docutils literal"><span class="pre">Function</span></tt>, leading to a crash or data corruption.</li>
+</ul>
+</div></blockquote>
+<p>There is a <em>compiler directive</em> <tt class="docutils literal"><span class="pre">nonecheck</span></tt> which turns on checks
+for this, at the cost of decreased speed. Here&#8217;s how compiler directives
+are used to dynamically switch on or off <tt class="docutils literal"><span class="pre">nonecheck</span></tt>:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="c">#cython: nonecheck=True</span>
+<span class="c">#        ^^^ Turns on nonecheck globally</span>
+
+<span class="k">import</span> <span class="nn">cython</span>
+
+<span class="c"># Turn off nonecheck locally for the function</span>
+<span class="nd">@cython</span><span class="o">.</span><span class="n">nonecheck</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">func</span><span class="p">():</span>
+    <span class="k">cdef</span> <span class="kt">MyClass</span> <span class="nf">obj</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c"># Turn nonecheck on again for a block</span>
+        <span class="k">with</span> <span class="n">cython</span><span class="o">.</span><span class="n">nonecheck</span><span class="p">(</span><span class="bp">True</span><span class="p">):</span>
+            <span class="k">print</span> <span class="n">obj</span><span class="o">.</span><span class="n">myfunc</span><span class="p">()</span> <span class="c"># Raises exception</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">print</span> <span class="n">obj</span><span class="o">.</span><span class="n">myfunc</span><span class="p">()</span> <span class="c"># Hope for a crash!</span>
+</pre></div>
+</div>
+<p>Attributes in cdef classes behave differently from attributes in regular classes:</p>
+<blockquote>
+<div><ul class="simple">
+<li>All attributes must be pre-declared at compile-time</li>
+<li>Attributes are by default only accessible from Cython (typed access)</li>
+<li>Properties can be declared to expose dynamic attributes to Python-space</li>
+</ul>
+</div></blockquote>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">class</span> <span class="nf">WaveFunction</span><span class="p">(</span><span class="n">Function</span><span class="p">):</span>
+    <span class="c"># Not available in Python-space:</span>
+    <span class="k">cdef</span> <span class="kt">double</span> <span class="nf">offset</span>
+    <span class="c"># Available in Python-space:</span>
+    <span class="k">cdef</span> <span class="kr">public</span> <span class="kt">double</span> <span class="nf">freq</span>
+    <span class="c"># Available in Python-space:</span>
+    <span class="k">property</span> <span class="nf">period</span><span class="p">:</span>
+        <span class="k">def</span> <span class="nf">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">freq</span>
+        <span class="k">def</span> <span class="nf">__set__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">freq</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">value</span>
+    <span class="p">&lt;</span><span class="kt">...</span><span class="p">&gt;</span>
+</pre></div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="clibraries.html"
+                        title="previous chapter">Using C libraries</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pxd_files.html"
+                        title="next chapter">pxd files</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/src/tutorial/cdef_classes.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="http://docs.cython.org/search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="pxd_files.html" title="pxd files"
+             >next</a></li>
+        <li class="right" >
+          <a href="clibraries.html" title="Using C libraries"
+             >previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer">
+        &copy; Copyright 2014, Stefan Behnel, Robert Bradshaw, Dag Sverre Seljebotn, Greg Ewing, William Stein, Gabriel Gellner, et al..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-6139100-3");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+  </body>
+
+<!-- Mirrored from docs.cython.org/src/tutorial/cdef_classes.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:57 GMT -->
+</html>

@@ -1,0 +1,326 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  
+<!-- Mirrored from docs.cython.org/src/tutorial/cython_tutorial.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:56 GMT -->
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Basic Tutorial &mdash; Cython 0.20 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.20',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Cython 0.20 documentation" href="../../index-2.html" />
+    <link rel="up" title="Tutorials" href="index.html" />
+    <link rel="next" title="Calling C functions" href="external.html" />
+    <link rel="prev" title="Tutorials" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="external.html" title="Calling C functions"
+             accesskey="N">next</a></li>
+        <li class="right" >
+          <a href="index.html" title="Tutorials"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="basic-tutorial">
+<span id="tutorial"></span><h1>Basic Tutorial<a class="headerlink" href="#basic-tutorial" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="the-basics-of-cython">
+<h2>The Basics of Cython<a class="headerlink" href="#the-basics-of-cython" title="Permalink to this headline">¶</a></h2>
+<p>The fundamental nature of Cython can be summed up as follows: Cython is Python
+with C data types.</p>
+<p>Cython is Python: Almost any piece of Python code is also valid Cython code.
+(There are a few <a class="reference internal" href="../userguide/limitations.html#cython-limitations"><em>Limitations</em></a>, but this approximation will
+serve for now.) The Cython compiler will convert it into C code which makes
+equivalent calls to the Python/C API.</p>
+<p>But Cython is much more than that, because parameters and variables can be
+declared to have C data types. Code which manipulates Python values and C
+values can be freely intermixed, with conversions occurring automatically
+wherever possible. Reference count maintenance and error checking of Python
+operations is also automatic, and the full power of Python&#8217;s exception
+handling facilities, including the try-except and try-finally statements, is
+available to you &#8211; even in the midst of manipulating C data.</p>
+</div>
+<div class="section" id="cython-hello-world">
+<h2>Cython Hello World<a class="headerlink" href="#cython-hello-world" title="Permalink to this headline">¶</a></h2>
+<p>As Cython can accept almost any valid python source file, one of the hardest
+things in getting started is just figuring out how to compile your extension.</p>
+<p>So lets start with the canonical python hello world:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">print</span> <span class="s">&quot;Hello World&quot;</span>
+</pre></div>
+</div>
+<p>Save this code in a file named <tt class="file docutils literal"><span class="pre">helloworld.pyx</span></tt>.  Now we need to create
+the <tt class="file docutils literal"><span class="pre">setup.py</span></tt>, which is like a python Makefile (for more information
+see <a class="reference internal" href="../userguide/source_files_and_compilation.html#compilation"><em>Source Files and Compilation</em></a>). Your <tt class="file docutils literal"><span class="pre">setup.py</span></tt> should look like:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">from</span> <span class="nn">distutils.core</span> <span class="k">import</span> <span class="n">setup</span>
+<span class="k">from</span> <span class="nn">Cython.Build</span> <span class="k">import</span> <span class="n">cythonize</span>
+
+<span class="n">setup</span><span class="p">(</span>
+    <span class="n">ext_modules</span> <span class="o">=</span> <span class="n">cythonize</span><span class="p">(</span><span class="s">&quot;helloworld.pyx&quot;</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>To use this to build your Cython file use the commandline options:</p>
+<div class="highlight-text"><div class="highlight"><pre>$ python setup.py build_ext --inplace
+</pre></div>
+</div>
+<p>Which will leave a file in your local directory called <tt class="file docutils literal"><span class="pre">helloworld.so</span></tt> in unix
+or <tt class="file docutils literal"><span class="pre">helloworld.dll</span></tt> in Windows. Now to use this file: start the python
+interpreter and simply import it as if it was a regular python module:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="o">&gt;&gt;&gt;</span> <span class="k">import</span> <span class="nn">helloworld</span>
+<span class="n">Hello</span> <span class="n">World</span>
+</pre></div>
+</div>
+<p>Congratulations! You now know how to build a Cython extension. But so far
+this example doesn&#8217;t really give a feeling why one would ever want to use Cython, so
+lets create a more realistic example.</p>
+</div>
+<div class="section" id="pyximport-cython-compilation-the-easy-way">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">pyximport</span></tt>: Cython Compilation the Easy Way<a class="headerlink" href="#pyximport-cython-compilation-the-easy-way" title="Permalink to this headline">¶</a></h2>
+<p>If your module doesn&#8217;t require any extra C libraries or a special
+build setup, then you can use the pyximport module by Paul Prescod and
+Stefan Behnel to load .pyx files directly on import, without having to
+write a <tt class="file docutils literal"><span class="pre">setup.py</span></tt> file.  It is shipped and installed with
+Cython and can be used like this:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="o">&gt;&gt;&gt;</span> <span class="k">import</span> <span class="nn">pyximport</span><span class="p">;</span> <span class="n">pyximport</span><span class="o">.</span><span class="n">install</span><span class="p">()</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="k">import</span> <span class="nn">helloworld</span>
+<span class="n">Hello</span> <span class="n">World</span>
+</pre></div>
+</div>
+<p>Since Cython 0.11, the <tt class="xref py py-mod docutils literal"><span class="pre">pyximport</span></tt> module also has experimental
+compilation support for normal Python modules.  This allows you to
+automatically run Cython on every .pyx and .py module that Python
+imports, including the standard library and installed packages.
+Cython will still fail to compile a lot of Python modules, in which
+case the import mechanism will fall back to loading the Python source
+modules instead.  The .py import mechanism is installed like this:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="o">&gt;&gt;&gt;</span> <span class="n">pyximport</span><span class="o">.</span><span class="n">install</span><span class="p">(</span><span class="n">pyimport</span> <span class="o">=</span> <span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="fibonacci-fun">
+<h2>Fibonacci Fun<a class="headerlink" href="#fibonacci-fun" title="Permalink to this headline">¶</a></h2>
+<p>From the official Python tutorial a simple fibonacci function is defined as:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">def</span> <span class="nf">fib</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Print the Fibonacci series up to n.&quot;&quot;&quot;</span>
+    <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="mf">0</span><span class="p">,</span> <span class="mf">1</span>
+    <span class="k">while</span> <span class="n">b</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">:</span>
+        <span class="k">print</span> <span class="n">b</span><span class="p">,</span>
+        <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+</pre></div>
+</div>
+<p>Now following the steps for the Hello World example we first rename the file
+to have a <cite>.pyx</cite> extension, lets say <tt class="file docutils literal"><span class="pre">fib.pyx</span></tt>, then we create the
+<tt class="file docutils literal"><span class="pre">setup.py</span></tt> file. Using the file created for the Hello World example, all
+that you need to change is the name of the Cython filename, and the resulting
+module name, doing this we have:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">from</span> <span class="nn">distutils.core</span> <span class="k">import</span> <span class="n">setup</span>
+<span class="k">from</span> <span class="nn">distutils.extension</span> <span class="k">import</span> <span class="n">Extension</span>
+<span class="k">from</span> <span class="nn">Cython.Distutils</span> <span class="k">import</span> <span class="n">build_ext</span>
+
+<span class="n">setup</span><span class="p">(</span>
+    <span class="n">cmdclass</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;build_ext&#39;</span><span class="p">:</span> <span class="n">build_ext</span><span class="p">},</span>
+    <span class="n">ext_modules</span> <span class="o">=</span> <span class="p">[</span><span class="n">Extension</span><span class="p">(</span><span class="s">&quot;fib&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s">&quot;fib.pyx&quot;</span><span class="p">])]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Build the extension with the same command used for the helloworld.pyx:</p>
+<div class="highlight-text"><div class="highlight"><pre>$ python setup.py build_ext --inplace
+</pre></div>
+</div>
+<p>And use the new extension with:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="o">&gt;&gt;&gt;</span> <span class="k">import</span> <span class="nn">fib</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">fib</span><span class="o">.</span><span class="n">fib</span><span class="p">(</span><span class="mf">2000</span><span class="p">)</span>
+<span class="mf">1</span> <span class="mf">1</span> <span class="mf">2</span> <span class="mf">3</span> <span class="mf">5</span> <span class="mf">8</span> <span class="mf">13</span> <span class="mf">21</span> <span class="mf">34</span> <span class="mf">55</span> <span class="mf">89</span> <span class="mf">144</span> <span class="mf">233</span> <span class="mf">377</span> <span class="mf">610</span> <span class="mf">987</span> <span class="mf">1597</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="primes">
+<h2>Primes<a class="headerlink" href="#primes" title="Permalink to this headline">¶</a></h2>
+<p>Here&#8217;s a small example showing some of what can be done. It&#8217;s a routine for
+finding prime numbers. You tell it how many primes you want, and it returns
+them as a Python list.</p>
+<p><tt class="file docutils literal"><span class="pre">primes.pyx</span></tt>:</p>
+<div class="highlight-cython"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">primes</span><span class="p">(</span><span class="nb">int</span> <span class="n">kmax</span><span class="p">):</span>
+    <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">n</span><span class="p">,</span> <span class="nf">k</span><span class="p">,</span> <span class="nf">i</span>
+    <span class="k">cdef</span> <span class="kt">int</span> <span class="kt">p</span>[1000]
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">kmax</span> <span class="o">&gt;</span> <span class="mf">1000</span><span class="p">:</span>
+        <span class="n">kmax</span> <span class="o">=</span> <span class="mf">1000</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="mf">0</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="mf">2</span>
+    <span class="k">while</span> <span class="n">k</span> <span class="o">&lt;</span> <span class="n">kmax</span><span class="p">:</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mf">0</span>
+        <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">k</span> <span class="ow">and</span> <span class="n">n</span> <span class="o">%</span> <span class="n">p</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="mf">0</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mf">1</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">k</span><span class="p">:</span>
+            <span class="n">p</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="n">k</span> <span class="o">+</span> <span class="mf">1</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="n">n</span> <span class="o">+</span> <span class="mf">1</span>
+    <span class="k">return</span> <span class="n">result</span>
+</pre></div>
+</td></tr></table></div>
+<p>You&#8217;ll see that it starts out just like a normal Python function definition,
+except that the parameter <tt class="docutils literal"><span class="pre">kmax</span></tt> is declared to be of type <tt class="docutils literal"><span class="pre">int</span></tt> . This
+means that the object passed will be converted to a C integer (or a
+<tt class="docutils literal"><span class="pre">TypeError.</span></tt> will be raised if it can&#8217;t be).</p>
+<p>Lines 2 and 3 use the <tt class="docutils literal"><span class="pre">cdef</span></tt> statement to define some local C variables.
+Line 4 creates a Python list which will be used to return the result. You&#8217;ll
+notice that this is done exactly the same way it would be in Python. Because
+the variable result hasn&#8217;t been given a type, it is assumed to hold a Python
+object.</p>
+<p>Lines 7-9 set up for a loop which will test candidate numbers for primeness
+until the required number of primes has been found. Lines 11-12, which try
+dividing a candidate by all the primes found so far, are of particular
+interest. Because no Python objects are referred to, the loop is translated
+entirely into C code, and thus runs very fast.</p>
+<p>When a prime is found, lines 14-15 add it to the p array for fast access by
+the testing loop, and line 16 adds it to the result list. Again, you&#8217;ll notice
+that line 16 looks very much like a Python statement, and in fact it is, with
+the twist that the C parameter <tt class="docutils literal"><span class="pre">n</span></tt> is automatically converted to a Python
+object before being passed to the append method. Finally, at line 18, a normal
+Python return statement returns the result list.</p>
+<p>Compiling primes.pyx with the Cython compiler produces an extension module
+which we can try out in the interactive interpreter as follows:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="o">&gt;&gt;&gt;</span> <span class="k">import</span> <span class="nn">primes</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">primes</span><span class="o">.</span><span class="n">primes</span><span class="p">(</span><span class="mf">10</span><span class="p">)</span>
+<span class="p">[</span><span class="mf">2</span><span class="p">,</span> <span class="mf">3</span><span class="p">,</span> <span class="mf">5</span><span class="p">,</span> <span class="mf">7</span><span class="p">,</span> <span class="mf">11</span><span class="p">,</span> <span class="mf">13</span><span class="p">,</span> <span class="mf">17</span><span class="p">,</span> <span class="mf">19</span><span class="p">,</span> <span class="mf">23</span><span class="p">,</span> <span class="mf">29</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>See, it works! And if you&#8217;re curious about how much work Cython has saved you,
+take a look at the C code generated for this module.</p>
+</div>
+<div class="section" id="language-details">
+<h2>Language Details<a class="headerlink" href="#language-details" title="Permalink to this headline">¶</a></h2>
+<p>For more about the Cython language, see <a class="reference internal" href="../userguide/language_basics.html#language-basics"><em>Language Basics</em></a>.
+To dive right in to using Cython in a numerical computation context,
+see <a class="reference internal" href="../userguide/numpy_tutorial.html#numpy-tutorial"><em>Cython for NumPy users</em></a>.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index-2.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Basic Tutorial</a><ul>
+<li><a class="reference internal" href="#the-basics-of-cython">The Basics of Cython</a></li>
+<li><a class="reference internal" href="#cython-hello-world">Cython Hello World</a></li>
+<li><a class="reference internal" href="#pyximport-cython-compilation-the-easy-way"><tt class="docutils literal"><span class="pre">pyximport</span></tt>: Cython Compilation the Easy Way</a></li>
+<li><a class="reference internal" href="#fibonacci-fun">Fibonacci Fun</a></li>
+<li><a class="reference internal" href="#primes">Primes</a></li>
+<li><a class="reference internal" href="#language-details">Language Details</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Tutorials</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="external.html"
+                        title="next chapter">Calling C functions</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/src/tutorial/cython_tutorial.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="http://docs.cython.org/search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="external.html" title="Calling C functions"
+             >next</a></li>
+        <li class="right" >
+          <a href="index.html" title="Tutorials"
+             >previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer">
+        &copy; Copyright 2014, Stefan Behnel, Robert Bradshaw, Dag Sverre Seljebotn, Greg Ewing, William Stein, Gabriel Gellner, et al..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-6139100-3");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+  </body>
+
+<!-- Mirrored from docs.cython.org/src/tutorial/cython_tutorial.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:56 GMT -->
+</html>

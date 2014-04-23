@@ -1,0 +1,846 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  
+<!-- Mirrored from docs.cython.org/src/userguide/special_methods.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:57 GMT -->
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Special Methods of Extension Types &mdash; Cython 0.20 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.20',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Cython 0.20 documentation" href="../../index-2.html" />
+    <link rel="up" title="Users Guide" href="index.html" />
+    <link rel="next" title="Sharing Declarations Between Cython Modules" href="sharing_declarations.html" />
+    <link rel="prev" title="Extension Types" href="extension_types.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="sharing_declarations.html" title="Sharing Declarations Between Cython Modules"
+             accesskey="N">next</a></li>
+        <li class="right" >
+          <a href="extension_types.html" title="Extension Types"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Users Guide</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="special-methods-of-extension-types">
+<span id="special-methods"></span><h1>Special Methods of Extension Types<a class="headerlink" href="#special-methods-of-extension-types" title="Permalink to this headline">¶</a></h1>
+<p>This page describes the special methods currently supported by Cython extension
+types. A complete list of all the special methods appears in the table at the
+bottom. Some of these methods behave differently from their Python
+counterparts or have no direct Python counterparts, and require special
+mention.</p>
+<div class="section" id="declaration">
+<h2>Declaration<a class="headerlink" href="#declaration" title="Permalink to this headline">¶</a></h2>
+<p>Special methods of extension types must be declared with <a class="reference external" href="http://docs.python.org/3.3/reference/compound_stmts.html#def" title="(in Python v3.3)"><tt class="xref std std-keyword docutils literal"><span class="pre">def</span></tt></a>, not
+<a class="reference internal" href="../reference/language_basics.html#cdef"><tt class="xref std std-keyword docutils literal"><span class="pre">cdef</span></tt></a>. This does not impact their performance&#8211;Python uses different
+calling conventions to invoke these special methods.</p>
+</div>
+<div class="section" id="docstrings">
+<h2>Docstrings<a class="headerlink" href="#docstrings" title="Permalink to this headline">¶</a></h2>
+<p>Currently, docstrings are not fully supported in some special methods of extension
+types. You can place a docstring in the source to serve as a comment, but it
+won&#8217;t show up in the corresponding <tt class="xref py py-attr docutils literal"><span class="pre">__doc__</span></tt> attribute at run time. (This
+seems to be is a Python limitation &#8211; there&#8217;s nowhere in the <cite>PyTypeObject</cite>
+data structure to put such docstrings.)</p>
+</div>
+<div class="section" id="initialisation-methods-cinit-and-init">
+<h2>Initialisation methods: <tt class="xref py py-meth docutils literal"><span class="pre">__cinit__()</span></tt> and <tt class="xref py py-meth docutils literal"><span class="pre">__init__()</span></tt><a class="headerlink" href="#initialisation-methods-cinit-and-init" title="Permalink to this headline">¶</a></h2>
+<p>There are two methods concerned with initialising the object.</p>
+<p>The <tt class="xref py py-meth docutils literal"><span class="pre">__cinit__()</span></tt> method is where you should perform basic C-level
+initialisation of the object, including allocation of any C data structures
+that your object will own. You need to be careful what you do in the
+<tt class="xref py py-meth docutils literal"><span class="pre">__cinit__()</span></tt> method, because the object may not yet be fully valid Python
+object when it is called. Therefore, you should be careful invoking any Python
+operations which might touch the object; in particular, its methods.</p>
+<p>By the time your <tt class="xref py py-meth docutils literal"><span class="pre">__cinit__()</span></tt> method is called, memory has been allocated for the
+object and any C attributes it has have been initialised to 0 or null. (Any
+Python attributes have also been initialised to None, but you probably
+shouldn&#8217;t rely on that.) Your <tt class="xref py py-meth docutils literal"><span class="pre">__cinit__()</span></tt> method is guaranteed to be called
+exactly once.</p>
+<p>If your extension type has a base type, the <tt class="xref py py-meth docutils literal"><span class="pre">__cinit__()</span></tt> method of the base type
+is automatically called before your <tt class="xref py py-meth docutils literal"><span class="pre">__cinit__()</span></tt> method is called; you cannot
+explicitly call the inherited <tt class="xref py py-meth docutils literal"><span class="pre">__cinit__()</span></tt> method. If you need to pass a modified
+argument list to the base type, you will have to do the relevant part of the
+initialisation in the <tt class="xref py py-meth docutils literal"><span class="pre">__init__()</span></tt> method instead (where the normal rules for
+calling inherited methods apply).</p>
+<p>Any initialisation which cannot safely be done in the <tt class="xref py py-meth docutils literal"><span class="pre">__cinit__()</span></tt> method should
+be done in the <tt class="xref py py-meth docutils literal"><span class="pre">__init__()</span></tt> method. By the time <tt class="xref py py-meth docutils literal"><span class="pre">__init__()</span></tt> is called, the object is
+a fully valid Python object and all operations are safe. Under some
+circumstances it is possible for <tt class="xref py py-meth docutils literal"><span class="pre">__init__()</span></tt> to be called more than once or not
+to be called at all, so your other methods should be designed to be robust in
+such situations.</p>
+<p>Any arguments passed to the constructor will be passed to both the
+<tt class="xref py py-meth docutils literal"><span class="pre">__cinit__()</span></tt> method and the <tt class="xref py py-meth docutils literal"><span class="pre">__init__()</span></tt> method. If you anticipate
+subclassing your extension type in Python, you may find it useful to give the
+<tt class="xref py py-meth docutils literal"><span class="pre">__cinit__()</span></tt> method <cite>*</cite> and <cite>**</cite> arguments so that it can accept and
+ignore extra arguments. Otherwise, any Python subclass which has an
+<tt class="xref py py-meth docutils literal"><span class="pre">__init__()</span></tt> with a different signature will have to override
+<tt class="xref py py-meth docutils literal"><span class="pre">__new__()</span></tt> <a class="footnote-reference" href="#id2" id="id1">[1]</a> as well as <tt class="xref py py-meth docutils literal"><span class="pre">__init__()</span></tt>, which the writer of a Python
+class wouldn&#8217;t expect to have to do.  Alternatively, as a convenience, if you declare
+your <tt class="xref py py-meth docutils literal"><span class="pre">__cinit__`()</span></tt> method to take no arguments (other than self) it
+will simply ignore any extra arguments passed to the constructor without
+complaining about the signature mismatch.</p>
+<table class="docutils footnote" frame="void" id="id2" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td><a class="reference external" href="http://docs.python.org/reference/datamodel.html#object.__new__">http://docs.python.org/reference/datamodel.html#object.__new__</a></td></tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="finalization-method-dealloc">
+<h2>Finalization method: <tt class="xref py py-meth docutils literal"><span class="pre">__dealloc__()</span></tt><a class="headerlink" href="#finalization-method-dealloc" title="Permalink to this headline">¶</a></h2>
+<p>The counterpart to the <tt class="xref py py-meth docutils literal"><span class="pre">__cinit__()</span></tt> method is the <tt class="xref py py-meth docutils literal"><span class="pre">__dealloc__()</span></tt>
+method, which should perform the inverse of the <tt class="xref py py-meth docutils literal"><span class="pre">__cinit__()</span></tt> method. Any
+C data that you explicitly allocated (e.g. via malloc) in your
+<tt class="xref py py-meth docutils literal"><span class="pre">__cinit__()</span></tt> method should be freed in your <tt class="xref py py-meth docutils literal"><span class="pre">__dealloc__()</span></tt> method.</p>
+<p>You need to be careful what you do in a <tt class="xref py py-meth docutils literal"><span class="pre">__dealloc__()</span></tt> method. By the time your
+<tt class="xref py py-meth docutils literal"><span class="pre">__dealloc__()</span></tt> method is called, the object may already have been partially
+destroyed and may not be in a valid state as far as Python is concerned, so
+you should avoid invoking any Python operations which might touch the object.
+In particular, don&#8217;t call any other methods of the object or do anything which
+might cause the object to be resurrected. It&#8217;s best if you stick to just
+deallocating C data.</p>
+<p>You don&#8217;t need to worry about deallocating Python attributes of your object,
+because that will be done for you by Cython after your <tt class="xref py py-meth docutils literal"><span class="pre">__dealloc__()</span></tt> method
+returns.</p>
+<p>When subclassing extension types, be aware that the <tt class="xref py py-meth docutils literal"><span class="pre">__dealloc__()</span></tt> method
+of the superclass will always be called, even if it is overridden.  This is in
+contrast to typical Python behavior where superclass methods will not be
+executed unless they are explicitly called by the subclass.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">There is no <tt class="xref py py-meth docutils literal"><span class="pre">__del__()</span></tt> method for extension types.</p>
+</div>
+</div>
+<div class="section" id="arithmetic-methods">
+<h2>Arithmetic methods<a class="headerlink" href="#arithmetic-methods" title="Permalink to this headline">¶</a></h2>
+<p>Arithmetic operator methods, such as <tt class="xref py py-meth docutils literal"><span class="pre">__add__()</span></tt>, behave differently from their
+Python counterparts. There are no separate &#8220;reversed&#8221; versions of these
+methods (<tt class="xref py py-meth docutils literal"><span class="pre">__radd__()</span></tt>, etc.) Instead, if the first operand cannot perform the
+operation, the same method of the second operand is called, with the operands
+in the same order.</p>
+<p>This means that you can&#8217;t rely on the first parameter of these methods being
+&#8220;self&#8221; or being the right type, and you should test the types of both operands
+before deciding what to do. If you can&#8217;t handle the combination of types you&#8217;ve
+been given, you should return <cite>NotImplemented</cite>.</p>
+<p>This also applies to the in-place arithmetic method <tt class="xref py py-meth docutils literal"><span class="pre">__ipow__()</span></tt>. It doesn&#8217;t apply
+to any of the other in-place methods (<tt class="xref py py-meth docutils literal"><span class="pre">__iadd__()</span></tt>, etc.) which always
+take <cite>self</cite> as the first argument.</p>
+</div>
+<div class="section" id="rich-comparisons">
+<h2>Rich comparisons<a class="headerlink" href="#rich-comparisons" title="Permalink to this headline">¶</a></h2>
+<p>There are no separate methods for the individual rich comparison operations
+(<tt class="xref py py-meth docutils literal"><span class="pre">__eq__()</span></tt>, <tt class="xref py py-meth docutils literal"><span class="pre">__le__()</span></tt>, etc.) Instead there is a single method
+<tt class="xref py py-meth docutils literal"><span class="pre">__richcmp__()</span></tt> which takes an integer indicating which operation is to be
+performed, as follows:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="50%" />
+<col width="50%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>&lt;</td>
+<td>0</td>
+</tr>
+<tr class="row-even"><td>==</td>
+<td>2</td>
+</tr>
+<tr class="row-odd"><td>&gt;</td>
+<td>4</td>
+</tr>
+<tr class="row-even"><td>&lt;=</td>
+<td>1</td>
+</tr>
+<tr class="row-odd"><td>!=</td>
+<td>3</td>
+</tr>
+<tr class="row-even"><td>&gt;=</td>
+<td>5</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="the-next-method">
+<h2>The <tt class="xref py py-meth docutils literal"><span class="pre">__next__()</span></tt> method<a class="headerlink" href="#the-next-method" title="Permalink to this headline">¶</a></h2>
+<p>Extension types wishing to implement the iterator interface should define a
+method called <tt class="xref py py-meth docutils literal"><span class="pre">__next__()</span></tt>, not next. The Python system will automatically
+supply a next method which calls your <tt class="xref py py-meth docutils literal"><span class="pre">__next__()</span></tt>. Do <em>NOT</em> explicitly
+give your type a <tt class="xref py py-meth docutils literal"><span class="pre">next()</span></tt> method, or bad things could happen.</p>
+</div>
+<div class="section" id="special-method-table">
+<h2>Special Method Table<a class="headerlink" href="#special-method-table" title="Permalink to this headline">¶</a></h2>
+<p>This table lists all of the special methods together with their parameter and
+return types. In the table below, a parameter name of self is used to indicate
+that the parameter has the type that the method belongs to. Other parameters
+with no type specified in the table are generic Python objects.</p>
+<p>You don&#8217;t have to declare your method as taking these parameter types. If you
+declare different types, conversions will be performed as necessary.</p>
+<div class="section" id="general">
+<h3>General<a class="headerlink" href="#general" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="30%" />
+<col width="10%" />
+<col width="41%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Parameters</th>
+<th class="head">Return type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>__cinit__</td>
+<td>self, ...</td>
+<td>&nbsp;</td>
+<td>Basic initialisation (no direct Python equivalent)</td>
+</tr>
+<tr class="row-odd"><td>__init__</td>
+<td>self, ...</td>
+<td>&nbsp;</td>
+<td>Further initialisation</td>
+</tr>
+<tr class="row-even"><td>__dealloc__</td>
+<td>self</td>
+<td>&nbsp;</td>
+<td>Basic deallocation (no direct Python equivalent)</td>
+</tr>
+<tr class="row-odd"><td>__cmp__</td>
+<td>x, y</td>
+<td>int</td>
+<td>3-way comparison</td>
+</tr>
+<tr class="row-even"><td>__richcmp__</td>
+<td>x, y, int op</td>
+<td>object</td>
+<td>Rich comparison (no direct Python equivalent)</td>
+</tr>
+<tr class="row-odd"><td>__str__</td>
+<td>self</td>
+<td>object</td>
+<td>str(self)</td>
+</tr>
+<tr class="row-even"><td>__repr__</td>
+<td>self</td>
+<td>object</td>
+<td>repr(self)</td>
+</tr>
+<tr class="row-odd"><td>__hash__</td>
+<td>self</td>
+<td>int</td>
+<td>Hash function</td>
+</tr>
+<tr class="row-even"><td>__call__</td>
+<td>self, ...</td>
+<td>object</td>
+<td>self(...)</td>
+</tr>
+<tr class="row-odd"><td>__iter__</td>
+<td>self</td>
+<td>object</td>
+<td>Return iterator for sequence</td>
+</tr>
+<tr class="row-even"><td>__getattr__</td>
+<td>self, name</td>
+<td>object</td>
+<td>Get attribute</td>
+</tr>
+<tr class="row-odd"><td>__getattribute__</td>
+<td>self, name</td>
+<td>object</td>
+<td>Get attribute, unconditionally</td>
+</tr>
+<tr class="row-even"><td>__setattr__</td>
+<td>self, name, val</td>
+<td>&nbsp;</td>
+<td>Set attribute</td>
+</tr>
+<tr class="row-odd"><td>__delattr__</td>
+<td>self, name</td>
+<td>&nbsp;</td>
+<td>Delete attribute</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="arithmetic-operators">
+<h3>Arithmetic operators<a class="headerlink" href="#arithmetic-operators" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="30%" />
+<col width="10%" />
+<col width="41%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Parameters</th>
+<th class="head">Return type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>__add__</td>
+<td>x, y</td>
+<td>object</td>
+<td>binary <cite>+</cite> operator</td>
+</tr>
+<tr class="row-odd"><td>__sub__</td>
+<td>x, y</td>
+<td>object</td>
+<td>binary <cite>-</cite> operator</td>
+</tr>
+<tr class="row-even"><td>__mul__</td>
+<td>x, y</td>
+<td>object</td>
+<td><cite>*</cite> operator</td>
+</tr>
+<tr class="row-odd"><td>__div__</td>
+<td>x, y</td>
+<td>object</td>
+<td><cite>/</cite>  operator for old-style division</td>
+</tr>
+<tr class="row-even"><td>__floordiv__</td>
+<td>x, y</td>
+<td>object</td>
+<td><cite>//</cite>  operator</td>
+</tr>
+<tr class="row-odd"><td>__truediv__</td>
+<td>x, y</td>
+<td>object</td>
+<td><cite>/</cite>  operator for new-style division</td>
+</tr>
+<tr class="row-even"><td>__mod__</td>
+<td>x, y</td>
+<td>object</td>
+<td><cite>%</cite> operator</td>
+</tr>
+<tr class="row-odd"><td>__divmod__</td>
+<td>x, y</td>
+<td>object</td>
+<td>combined div and mod</td>
+</tr>
+<tr class="row-even"><td>__pow__</td>
+<td>x, y, z</td>
+<td>object</td>
+<td><cite>**</cite> operator or pow(x, y, z)</td>
+</tr>
+<tr class="row-odd"><td>__neg__</td>
+<td>self</td>
+<td>object</td>
+<td>unary <cite>-</cite> operator</td>
+</tr>
+<tr class="row-even"><td>__pos__</td>
+<td>self</td>
+<td>object</td>
+<td>unary <cite>+</cite> operator</td>
+</tr>
+<tr class="row-odd"><td>__abs__</td>
+<td>self</td>
+<td>object</td>
+<td>absolute value</td>
+</tr>
+<tr class="row-even"><td>__nonzero__</td>
+<td>self</td>
+<td>int</td>
+<td>convert to boolean</td>
+</tr>
+<tr class="row-odd"><td>__invert__</td>
+<td>self</td>
+<td>object</td>
+<td><cite>~</cite> operator</td>
+</tr>
+<tr class="row-even"><td>__lshift__</td>
+<td>x, y</td>
+<td>object</td>
+<td><cite>&lt;&lt;</cite> operator</td>
+</tr>
+<tr class="row-odd"><td>__rshift__</td>
+<td>x, y</td>
+<td>object</td>
+<td><cite>&gt;&gt;</cite> operator</td>
+</tr>
+<tr class="row-even"><td>__and__</td>
+<td>x, y</td>
+<td>object</td>
+<td><cite>&amp;</cite> operator</td>
+</tr>
+<tr class="row-odd"><td>__or__</td>
+<td>x, y</td>
+<td>object</td>
+<td><cite>|</cite> operator</td>
+</tr>
+<tr class="row-even"><td>__xor__</td>
+<td>x, y</td>
+<td>object</td>
+<td><cite>^</cite> operator</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="numeric-conversions">
+<h3>Numeric conversions<a class="headerlink" href="#numeric-conversions" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="30%" />
+<col width="10%" />
+<col width="41%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Parameters</th>
+<th class="head">Return type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>__int__</td>
+<td>self</td>
+<td>object</td>
+<td>Convert to integer</td>
+</tr>
+<tr class="row-odd"><td>__long__</td>
+<td>self</td>
+<td>object</td>
+<td>Convert to long integer</td>
+</tr>
+<tr class="row-even"><td>__float__</td>
+<td>self</td>
+<td>object</td>
+<td>Convert to float</td>
+</tr>
+<tr class="row-odd"><td>__oct__</td>
+<td>self</td>
+<td>object</td>
+<td>Convert to octal</td>
+</tr>
+<tr class="row-even"><td>__hex__</td>
+<td>self</td>
+<td>object</td>
+<td>Convert to hexadecimal</td>
+</tr>
+<tr class="row-odd"><td>__index__ (2.5+ only)</td>
+<td>self</td>
+<td>object</td>
+<td>Convert to sequence index</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="in-place-arithmetic-operators">
+<h3>In-place arithmetic operators<a class="headerlink" href="#in-place-arithmetic-operators" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="30%" />
+<col width="10%" />
+<col width="41%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Parameters</th>
+<th class="head">Return type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>__iadd__</td>
+<td>self, x</td>
+<td>object</td>
+<td><cite>+=</cite> operator</td>
+</tr>
+<tr class="row-odd"><td>__isub__</td>
+<td>self, x</td>
+<td>object</td>
+<td><cite>-=</cite> operator</td>
+</tr>
+<tr class="row-even"><td>__imul__</td>
+<td>self, x</td>
+<td>object</td>
+<td><cite>*=</cite> operator</td>
+</tr>
+<tr class="row-odd"><td>__idiv__</td>
+<td>self, x</td>
+<td>object</td>
+<td><cite>/=</cite> operator for old-style division</td>
+</tr>
+<tr class="row-even"><td>__ifloordiv__</td>
+<td>self, x</td>
+<td>object</td>
+<td><cite>//=</cite> operator</td>
+</tr>
+<tr class="row-odd"><td>__itruediv__</td>
+<td>self, x</td>
+<td>object</td>
+<td><cite>/=</cite> operator for new-style division</td>
+</tr>
+<tr class="row-even"><td>__imod__</td>
+<td>self, x</td>
+<td>object</td>
+<td><cite>%=</cite> operator</td>
+</tr>
+<tr class="row-odd"><td>__ipow__</td>
+<td>x, y, z</td>
+<td>object</td>
+<td><cite>**=</cite> operator</td>
+</tr>
+<tr class="row-even"><td>__ilshift__</td>
+<td>self, x</td>
+<td>object</td>
+<td><cite>&lt;&lt;=</cite> operator</td>
+</tr>
+<tr class="row-odd"><td>__irshift__</td>
+<td>self, x</td>
+<td>object</td>
+<td><cite>&gt;&gt;=</cite> operator</td>
+</tr>
+<tr class="row-even"><td>__iand__</td>
+<td>self, x</td>
+<td>object</td>
+<td><cite>&amp;=</cite> operator</td>
+</tr>
+<tr class="row-odd"><td>__ior__</td>
+<td>self, x</td>
+<td>object</td>
+<td><cite>|=</cite> operator</td>
+</tr>
+<tr class="row-even"><td>__ixor__</td>
+<td>self, x</td>
+<td>object</td>
+<td><cite>^=</cite> operator</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="sequences-and-mappings">
+<h3>Sequences and mappings<a class="headerlink" href="#sequences-and-mappings" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="30%" />
+<col width="10%" />
+<col width="41%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Parameters</th>
+<th class="head">Return type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>__len__</td>
+<td>self  int</td>
+<td>&nbsp;</td>
+<td>len(self)</td>
+</tr>
+<tr class="row-odd"><td>__getitem__</td>
+<td>self, x</td>
+<td>object</td>
+<td>self[x]</td>
+</tr>
+<tr class="row-even"><td>__setitem__</td>
+<td>self, x, y</td>
+<td>&nbsp;</td>
+<td>self[x] = y</td>
+</tr>
+<tr class="row-odd"><td>__delitem__</td>
+<td>self, x</td>
+<td>&nbsp;</td>
+<td>del self[x]</td>
+</tr>
+<tr class="row-even"><td>__getslice__</td>
+<td>self, Py_ssize_t i, Py_ssize_t j</td>
+<td>object</td>
+<td>self[i:j]</td>
+</tr>
+<tr class="row-odd"><td>__setslice__</td>
+<td>self, Py_ssize_t i, Py_ssize_t j, x</td>
+<td>&nbsp;</td>
+<td>self[i:j] = x</td>
+</tr>
+<tr class="row-even"><td>__delslice__</td>
+<td>self, Py_ssize_t i, Py_ssize_t j</td>
+<td>&nbsp;</td>
+<td>del self[i:j]</td>
+</tr>
+<tr class="row-odd"><td>__contains__</td>
+<td>self, x</td>
+<td>int</td>
+<td>x in self</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="iterators">
+<h3>Iterators<a class="headerlink" href="#iterators" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="30%" />
+<col width="10%" />
+<col width="41%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Parameters</th>
+<th class="head">Return type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>__next__</td>
+<td>self</td>
+<td>object</td>
+<td>Get next item (called next in Python)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="buffer-interface-pep-3118-no-python-equivalents-see-note-1">
+<h3>Buffer interface [PEP 3118] (no Python equivalents - see note 1)<a class="headerlink" href="#buffer-interface-pep-3118-no-python-equivalents-see-note-1" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="30%" />
+<col width="10%" />
+<col width="41%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Parameters</th>
+<th class="head">Return type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>__getbuffer__</td>
+<td>self, Py_buffer <cite>*view</cite>, int flags</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>__releasebuffer__</td>
+<td>self, Py_buffer <cite>*view</cite></td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="buffer-interface-legacy-no-python-equivalents-see-note-1">
+<h3>Buffer interface [legacy] (no Python equivalents - see note 1)<a class="headerlink" href="#buffer-interface-legacy-no-python-equivalents-see-note-1" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="30%" />
+<col width="10%" />
+<col width="41%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Parameters</th>
+<th class="head">Return type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>__getreadbuffer__</td>
+<td>self, Py_ssize_t i, void <cite>**p</cite></td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>__getwritebuffer__</td>
+<td>self, Py_ssize_t i, void <cite>**p</cite></td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-even"><td>__getsegcount__</td>
+<td>self, Py_ssize_t <cite>*p</cite></td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>__getcharbuffer__</td>
+<td>self, Py_ssize_t i, char <cite>**p</cite></td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="descriptor-objects-see-note-2">
+<h3>Descriptor objects (see note 2)<a class="headerlink" href="#descriptor-objects-see-note-2" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="docutils">
+<colgroup>
+<col width="18%" />
+<col width="30%" />
+<col width="10%" />
+<col width="41%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Name</th>
+<th class="head">Parameters</th>
+<th class="head">Return type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>__get__</td>
+<td>self, instance, class</td>
+<td>object</td>
+<td>Get value of attribute</td>
+</tr>
+<tr class="row-odd"><td>__set__</td>
+<td>self, instance, value</td>
+<td>&nbsp;</td>
+<td>Set value of attribute</td>
+</tr>
+<tr class="row-even"><td>__delete__</td>
+<td>self, instance</td>
+<td>&nbsp;</td>
+<td>Delete attribute</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">(1) The buffer interface was intended for use by C code and is not directly
+accessible from Python. It is described in the Python/C API Reference Manual
+of Python 2.x under sections 6.6 and 10.6. It was superseded by the new
+PEP 3118 buffer protocol in Python 2.6 and is no longer available in Python 3.</p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">(2) Descriptor objects are part of the support mechanism for new-style
+Python classes. See the discussion of descriptors in the Python documentation.
+See also PEP 252, &#8220;Making Types Look More Like Classes&#8221;, and PEP 253,
+&#8220;Subtyping Built-In Types&#8221;.</p>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index-2.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Special Methods of Extension Types</a><ul>
+<li><a class="reference internal" href="#declaration">Declaration</a></li>
+<li><a class="reference internal" href="#docstrings">Docstrings</a></li>
+<li><a class="reference internal" href="#initialisation-methods-cinit-and-init">Initialisation methods: <tt class="docutils literal"><span class="pre">__cinit__()</span></tt> and <tt class="docutils literal"><span class="pre">__init__()</span></tt></a></li>
+<li><a class="reference internal" href="#finalization-method-dealloc">Finalization method: <tt class="docutils literal"><span class="pre">__dealloc__()</span></tt></a></li>
+<li><a class="reference internal" href="#arithmetic-methods">Arithmetic methods</a></li>
+<li><a class="reference internal" href="#rich-comparisons">Rich comparisons</a></li>
+<li><a class="reference internal" href="#the-next-method">The <tt class="docutils literal"><span class="pre">__next__()</span></tt> method</a></li>
+<li><a class="reference internal" href="#special-method-table">Special Method Table</a><ul>
+<li><a class="reference internal" href="#general">General</a></li>
+<li><a class="reference internal" href="#arithmetic-operators">Arithmetic operators</a></li>
+<li><a class="reference internal" href="#numeric-conversions">Numeric conversions</a></li>
+<li><a class="reference internal" href="#in-place-arithmetic-operators">In-place arithmetic operators</a></li>
+<li><a class="reference internal" href="#sequences-and-mappings">Sequences and mappings</a></li>
+<li><a class="reference internal" href="#iterators">Iterators</a></li>
+<li><a class="reference internal" href="#buffer-interface-pep-3118-no-python-equivalents-see-note-1">Buffer interface [PEP 3118] (no Python equivalents - see note 1)</a></li>
+<li><a class="reference internal" href="#buffer-interface-legacy-no-python-equivalents-see-note-1">Buffer interface [legacy] (no Python equivalents - see note 1)</a></li>
+<li><a class="reference internal" href="#descriptor-objects-see-note-2">Descriptor objects (see note 2)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="extension_types.html"
+                        title="previous chapter">Extension Types</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="sharing_declarations.html"
+                        title="next chapter">Sharing Declarations Between Cython Modules</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/src/userguide/special_methods.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="http://docs.cython.org/search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="sharing_declarations.html" title="Sharing Declarations Between Cython Modules"
+             >next</a></li>
+        <li class="right" >
+          <a href="extension_types.html" title="Extension Types"
+             >previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Users Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer">
+        &copy; Copyright 2014, Stefan Behnel, Robert Bradshaw, Dag Sverre Seljebotn, Greg Ewing, William Stein, Gabriel Gellner, et al..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-6139100-3");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+  </body>
+
+<!-- Mirrored from docs.cython.org/src/userguide/special_methods.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:57 GMT -->
+</html>

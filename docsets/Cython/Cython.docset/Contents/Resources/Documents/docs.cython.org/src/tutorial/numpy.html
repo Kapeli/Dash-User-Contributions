@@ -1,0 +1,426 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  
+<!-- Mirrored from docs.cython.org/src/tutorial/numpy.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:57 GMT -->
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Working with NumPy &mdash; Cython 0.20 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.20',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Cython 0.20 documentation" href="../../index-2.html" />
+    <link rel="up" title="Tutorials" href="index.html" />
+    <link rel="next" title="Further reading" href="readings.html" />
+    <link rel="prev" title="Pure Python Mode" href="pure.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="readings.html" title="Further reading"
+             accesskey="N">next</a></li>
+        <li class="right" >
+          <a href="pure.html" title="Pure Python Mode"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="working-with-numpy">
+<h1>Working with NumPy<a class="headerlink" href="#working-with-numpy" title="Permalink to this headline">¶</a></h1>
+<p>You can use NumPy from Cython exactly the same as in regular Python, but by
+doing so you are loosing potentially high speedups because Cython has support
+for fast access to NumPy arrays. Let&#8217;s see how this works with a simple
+example.</p>
+<p>The code below does 2D discrete convolution of an image with a filter (and I&#8217;m
+sure you can do better!, let it serve for demonstration purposes). It is both
+valid Python and valid Cython code. I&#8217;ll refer to it as both
+<tt class="file docutils literal"><span class="pre">convolve_py.py</span></tt> for the Python version and <tt class="file docutils literal"><span class="pre">convolve1.pyx</span></tt> for
+the Cython version &#8211; Cython uses &#8221;.pyx&#8221; as its file suffix.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="k">def</span> <span class="nf">naive_convolve</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">g</span><span class="p">):</span>
+    <span class="c"># f is an image and is indexed by (v, w)</span>
+    <span class="c"># g is a filter kernel and is indexed by (s, t),</span>
+    <span class="c">#   it needs odd dimensions</span>
+    <span class="c"># h is the output image and is indexed by (x, y),</span>
+    <span class="c">#   it is not cropped</span>
+    <span class="k">if</span> <span class="n">g</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">g</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Only odd dimensions on filter supported&quot;</span><span class="p">)</span>
+    <span class="c"># smid and tmid are number of pixels between the center pixel</span>
+    <span class="c"># and the edge, ie for a 5x5 filter they will be 2.</span>
+    <span class="c">#</span>
+    <span class="c"># The output size is calculated by adding smid, tmid to each</span>
+    <span class="c"># side of the dimensions of the input image.</span>
+    <span class="n">vmax</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">wmax</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">smax</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">tmax</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">smid</span> <span class="o">=</span> <span class="n">smax</span> <span class="o">//</span> <span class="mi">2</span>
+    <span class="n">tmid</span> <span class="o">=</span> <span class="n">tmax</span> <span class="o">//</span> <span class="mi">2</span>
+    <span class="n">xmax</span> <span class="o">=</span> <span class="n">vmax</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">smid</span>
+    <span class="n">ymax</span> <span class="o">=</span> <span class="n">wmax</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">tmid</span>
+    <span class="c"># Allocate result image.</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">f</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+    <span class="c"># Do convolution</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">xmax</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ymax</span><span class="p">):</span>
+            <span class="c"># Calculate pixel value for h at (x,y). Sum one component</span>
+            <span class="c"># for each pixel (s, t) of the filter g.</span>
+            <span class="n">s_from</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">smid</span> <span class="o">-</span> <span class="n">x</span><span class="p">,</span> <span class="o">-</span><span class="n">smid</span><span class="p">)</span>
+            <span class="n">s_to</span> <span class="o">=</span> <span class="nb">min</span><span class="p">((</span><span class="n">xmax</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">smid</span><span class="p">,</span> <span class="n">smid</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">t_from</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">tmid</span> <span class="o">-</span> <span class="n">y</span><span class="p">,</span> <span class="o">-</span><span class="n">tmid</span><span class="p">)</span>
+            <span class="n">t_to</span> <span class="o">=</span> <span class="nb">min</span><span class="p">((</span><span class="n">ymax</span> <span class="o">-</span> <span class="n">y</span><span class="p">)</span> <span class="o">-</span> <span class="n">tmid</span><span class="p">,</span> <span class="n">tmid</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">s_from</span><span class="p">,</span> <span class="n">s_to</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">t_from</span><span class="p">,</span> <span class="n">t_to</span><span class="p">):</span>
+                    <span class="n">v</span> <span class="o">=</span> <span class="n">x</span> <span class="o">-</span> <span class="n">smid</span> <span class="o">+</span> <span class="n">s</span>
+                    <span class="n">w</span> <span class="o">=</span> <span class="n">y</span> <span class="o">-</span> <span class="n">tmid</span> <span class="o">+</span> <span class="n">t</span>
+                    <span class="n">value</span> <span class="o">+=</span> <span class="n">g</span><span class="p">[</span><span class="n">smid</span> <span class="o">-</span> <span class="n">s</span><span class="p">,</span> <span class="n">tmid</span> <span class="o">-</span> <span class="n">t</span><span class="p">]</span> <span class="o">*</span> <span class="n">f</span><span class="p">[</span><span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">]</span>
+            <span class="n">h</span><span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="n">h</span>
+</pre></div>
+</div>
+<p>This should be compiled to produce <tt class="file docutils literal"><span class="pre">yourmod.so</span></tt> (for Linux systems). We
+run a Python session to test both the Python version (imported from
+<tt class="docutils literal"><span class="pre">.py</span></tt>-file) and the compiled Cython module.</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span class="gp">In [1]: </span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="gp">In [2]: </span><span class="kn">import</span> <span class="nn">convolve_py</span>
+<span class="gp">In [3]: </span><span class="n">convolve_py</span><span class="o">.</span><span class="n">naive_convolve</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">),</span>
+<span class="go">...     np.array([[1],[2],[1]], dtype=np.int))</span>
+<span class="go">Out [3]:</span>
+<span class="go">array([[1, 1, 1],</span>
+<span class="go">    [2, 2, 2],</span>
+<span class="go">    [1, 1, 1]])</span>
+<span class="gp">In [4]: </span><span class="kn">import</span> <span class="nn">convolve1</span>
+<span class="gp">In [4]: </span><span class="n">convolve1</span><span class="o">.</span><span class="n">naive_convolve</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">),</span>
+<span class="go">...     np.array([[1],[2],[1]], dtype=np.int))</span>
+<span class="go">Out [4]:</span>
+<span class="go">array([[1, 1, 1],</span>
+<span class="go">    [2, 2, 2],</span>
+<span class="go">    [1, 1, 1]])</span>
+<span class="gp">In [11]: </span><span class="n">N</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="gp">In [12]: </span><span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">N</span><span class="o">*</span><span class="n">N</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">N</span><span class="p">,</span><span class="n">N</span><span class="p">))</span>
+<span class="gp">In [13]: </span><span class="n">g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">81</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">9</span><span class="p">,</span> <span class="mi">9</span><span class="p">))</span>
+<span class="gp">In [19]: </span><span class="o">%</span><span class="n">timeit</span> <span class="o">-</span><span class="n">n2</span> <span class="o">-</span><span class="n">r3</span> <span class="n">convolve_py</span><span class="o">.</span><span class="n">naive_convolve</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">g</span><span class="p">)</span>
+<span class="go">2 loops, best of 3: 1.86 s per loop</span>
+<span class="gp">In [20]: </span><span class="o">%</span><span class="n">timeit</span> <span class="o">-</span><span class="n">n2</span> <span class="o">-</span><span class="n">r3</span> <span class="n">convolve1</span><span class="o">.</span><span class="n">naive_convolve</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">g</span><span class="p">)</span>
+<span class="go">2 loops, best of 3: 1.41 s per loop</span>
+</pre></div>
+</div>
+<p>There&#8217;s not such a huge difference yet; because the C code still does exactly
+what the Python interpreter does (meaning, for instance, that a new object is
+allocated for each number used). Look at the generated html file and see what
+is needed for even the simplest statements you get the point quickly. We need
+to give Cython more information; we need to add types.</p>
+<div class="section" id="adding-types">
+<h2>Adding types<a class="headerlink" href="#adding-types" title="Permalink to this headline">¶</a></h2>
+<p>To add types we use custom Cython syntax, so we are now breaking Python source
+compatibility. Consider this code (<em>read the comments!</em>)</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
+<span class="k">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="c"># &quot;cimport&quot; is used to import special compile-time information</span>
+<span class="c"># about the numpy module (this is stored in a file numpy.pxd which is</span>
+<span class="c"># currently part of the Cython distribution).</span>
+<span class="k">cimport</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="c"># We now need to fix a datatype for our arrays. I&#39;ve used the variable</span>
+<span class="c"># DTYPE for this, which is assigned to the usual NumPy runtime</span>
+<span class="c"># type info object.</span>
+<span class="n">DTYPE</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">int</span>
+<span class="c"># &quot;ctypedef&quot; assigns a corresponding compile-time type to DTYPE_t. For</span>
+<span class="c"># every type in the numpy module there&#39;s a corresponding compile-time</span>
+<span class="c"># type with a _t-suffix.</span>
+<span class="k">ctypedef</span> <span class="n">np</span><span class="o">.</span><span class="n">int_t</span> <span class="n">DTYPE_t</span>
+<span class="c"># &quot;def&quot; can type its arguments but not have a return type. The type of the</span>
+<span class="c"># arguments for a &quot;def&quot; function is checked at run-time when entering the</span>
+<span class="c"># function.</span>
+<span class="c">#</span>
+<span class="c"># The arrays f, g and h is typed as &quot;np.ndarray&quot; instances. The only effect</span>
+<span class="c"># this has is to a) insert checks that the function arguments really are</span>
+<span class="c"># NumPy arrays, and b) make some attribute access like f.shape[0] much</span>
+<span class="c"># more efficient. (In this example this doesn&#39;t matter though.)</span>
+<span class="k">def</span> <span class="nf">naive_convolve</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="n">f</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="n">g</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">g</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mf">0</span><span class="p">]</span> <span class="o">%</span> <span class="mf">2</span> <span class="o">!=</span> <span class="mf">1</span> <span class="ow">or</span> <span class="n">g</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mf">1</span><span class="p">]</span> <span class="o">%</span> <span class="mf">2</span> <span class="o">!=</span> <span class="mf">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Only odd dimensions on filter supported&quot;</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">f</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">DTYPE</span> <span class="ow">and</span> <span class="n">g</span><span class="o">.</span><span class="n">dtype</span> <span class="o">==</span> <span class="n">DTYPE</span>
+    <span class="c"># The &quot;cdef&quot; keyword is also used within functions to type variables. It</span>
+    <span class="c"># can only be used at the top indendation level (there are non-trivial</span>
+    <span class="c"># problems with allowing them in other places, though we&#39;d love to see</span>
+    <span class="c"># good and thought out proposals for it).</span>
+    <span class="c">#</span>
+    <span class="c"># For the indices, the &quot;int&quot; type is used. This corresponds to a C int,</span>
+    <span class="c"># other C types (like &quot;unsigned int&quot;) could have been used instead.</span>
+    <span class="c"># Purists could use &quot;Py_ssize_t&quot; which is the proper Python type for</span>
+    <span class="c"># array indices.</span>
+    <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">vmax</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mf">0</span><span class="p">]</span>
+    <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">wmax</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mf">1</span><span class="p">]</span>
+    <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">smax</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mf">0</span><span class="p">]</span>
+    <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">tmax</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mf">1</span><span class="p">]</span>
+    <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">smid</span> <span class="o">=</span> <span class="n">smax</span> <span class="o">//</span> <span class="mf">2</span>
+    <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">tmid</span> <span class="o">=</span> <span class="n">tmax</span> <span class="o">//</span> <span class="mf">2</span>
+    <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">xmax</span> <span class="o">=</span> <span class="n">vmax</span> <span class="o">+</span> <span class="mf">2</span><span class="o">*</span><span class="n">smid</span>
+    <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">ymax</span> <span class="o">=</span> <span class="n">wmax</span> <span class="o">+</span> <span class="mf">2</span><span class="o">*</span><span class="n">tmid</span>
+    <span class="k">cdef</span> <span class="kt">np</span>.<span class="kt">ndarray</span> <span class="nf">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">xmax</span><span class="p">,</span> <span class="n">ymax</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>
+    <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">x</span><span class="p">,</span> <span class="nf">y</span><span class="p">,</span> <span class="nf">s</span><span class="p">,</span> <span class="nf">t</span><span class="p">,</span> <span class="nf">v</span><span class="p">,</span> <span class="nf">w</span>
+    <span class="c"># It is very important to type ALL your variables. You do not get any</span>
+    <span class="c"># warnings if not, only much slower code (they are implicitly typed as</span>
+    <span class="c"># Python objects).</span>
+    <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">s_from</span><span class="p">,</span> <span class="nf">s_to</span><span class="p">,</span> <span class="nf">t_from</span><span class="p">,</span> <span class="nf">t_to</span>
+    <span class="c"># For the value variable, we want to use the same data type as is</span>
+    <span class="c"># stored in the array, so we use &quot;DTYPE_t&quot; as defined above.</span>
+    <span class="c"># NB! An important side-effect of this is that if &quot;value&quot; overflows its</span>
+    <span class="c"># datatype size, it will simply wrap around like in C, rather than raise</span>
+    <span class="c"># an error like in Python.</span>
+    <span class="k">cdef</span> <span class="kt">DTYPE_t</span> <span class="nf">value</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">xmax</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ymax</span><span class="p">):</span>
+            <span class="n">s_from</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">smid</span> <span class="o">-</span> <span class="n">x</span><span class="p">,</span> <span class="o">-</span><span class="n">smid</span><span class="p">)</span>
+            <span class="n">s_to</span> <span class="o">=</span> <span class="nb">min</span><span class="p">((</span><span class="n">xmax</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">smid</span><span class="p">,</span> <span class="n">smid</span> <span class="o">+</span> <span class="mf">1</span><span class="p">)</span>
+            <span class="n">t_from</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">tmid</span> <span class="o">-</span> <span class="n">y</span><span class="p">,</span> <span class="o">-</span><span class="n">tmid</span><span class="p">)</span>
+            <span class="n">t_to</span> <span class="o">=</span> <span class="nb">min</span><span class="p">((</span><span class="n">ymax</span> <span class="o">-</span> <span class="n">y</span><span class="p">)</span> <span class="o">-</span> <span class="n">tmid</span><span class="p">,</span> <span class="n">tmid</span> <span class="o">+</span> <span class="mf">1</span><span class="p">)</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="mf">0</span>
+            <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">s_from</span><span class="p">,</span> <span class="n">s_to</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">t_from</span><span class="p">,</span> <span class="n">t_to</span><span class="p">):</span>
+                    <span class="n">v</span> <span class="o">=</span> <span class="n">x</span> <span class="o">-</span> <span class="n">smid</span> <span class="o">+</span> <span class="n">s</span>
+                    <span class="n">w</span> <span class="o">=</span> <span class="n">y</span> <span class="o">-</span> <span class="n">tmid</span> <span class="o">+</span> <span class="n">t</span>
+                    <span class="n">value</span> <span class="o">+=</span> <span class="n">g</span><span class="p">[</span><span class="n">smid</span> <span class="o">-</span> <span class="n">s</span><span class="p">,</span> <span class="n">tmid</span> <span class="o">-</span> <span class="n">t</span><span class="p">]</span> <span class="o">*</span> <span class="n">f</span><span class="p">[</span><span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">]</span>
+            <span class="n">h</span><span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="n">h</span>
+</pre></div>
+</div>
+<p>After building this and continuing my (very informal) benchmarks, I get:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span class="gp">In [21]: </span><span class="kn">import</span> <span class="nn">convolve2</span>
+<span class="gp">In [22]: </span><span class="o">%</span><span class="n">timeit</span> <span class="o">-</span><span class="n">n2</span> <span class="o">-</span><span class="n">r3</span> <span class="n">convolve2</span><span class="o">.</span><span class="n">naive_convolve</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">g</span><span class="p">)</span>
+<span class="go">2 loops, best of 3: 828 ms per loop</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="efficient-indexing">
+<h2>Efficient indexing<a class="headerlink" href="#efficient-indexing" title="Permalink to this headline">¶</a></h2>
+<p>There&#8217;s still a bottleneck killing performance, and that is the array lookups
+and assignments. The <tt class="docutils literal"><span class="pre">[]</span></tt>-operator still uses full Python operations &#8211;
+what we would like to do instead is to access the data buffer directly at C
+speed.</p>
+<p>What we need to do then is to type the contents of the <tt class="xref py py-obj docutils literal"><span class="pre">ndarray</span></tt> objects.
+We do this with a special &#8220;buffer&#8221; syntax which must be told the datatype
+(first argument) and number of dimensions (&#8220;ndim&#8221; keyword-only argument, if
+not provided then one-dimensional is assumed).</p>
+<p>These are the needed changes:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="o">...</span>
+<span class="k">def</span> <span class="nf">naive_convolve</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">DTYPE_t</span><span class="p">,</span> <span class="n">ndim</span><span class="o">=</span><span class="mf">2</span><span class="p">]</span> <span class="n">f</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">DTYPE_t</span><span class="p">,</span> <span class="n">ndim</span><span class="o">=</span><span class="mf">2</span><span class="p">]</span> <span class="n">g</span><span class="p">):</span>
+<span class="o">...</span>
+<span class="k">cdef</span> <span class="kt">np</span>.<span class="kt">ndarray</span>[<span class="nf">DTYPE_t</span><span class="p">,</span> <span class="nf">ndim</span><span class="o">=</span><span class="mf">2</span><span class="p">]</span> <span class="n">h</span> <span class="o">=</span> <span class="o">...</span>
+</pre></div>
+</div>
+<p>Usage:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span class="gp">In [18]: </span><span class="kn">import</span> <span class="nn">convolve3</span>
+<span class="gp">In [19]: </span><span class="o">%</span><span class="n">timeit</span> <span class="o">-</span><span class="n">n3</span> <span class="o">-</span><span class="n">r100</span> <span class="n">convolve3</span><span class="o">.</span><span class="n">naive_convolve</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">g</span><span class="p">)</span>
+<span class="go">3 loops, best of 100: 11.6 ms per loop</span>
+</pre></div>
+</div>
+<p>Note the importance of this change.</p>
+<p><em>Gotcha</em>: This efficient indexing only affects certain index operations,
+namely those with exactly <tt class="docutils literal"><span class="pre">ndim</span></tt> number of typed integer indices. So if
+<tt class="docutils literal"><span class="pre">v</span></tt> for instance isn&#8217;t typed, then the lookup <tt class="docutils literal"><span class="pre">f[v,</span> <span class="pre">w]</span></tt> isn&#8217;t
+optimized. On the other hand this means that you can continue using Python
+objects for sophisticated dynamic slicing etc. just as when the array is not
+typed.</p>
+</div>
+<div class="section" id="tuning-indexing-further">
+<h2>Tuning indexing further<a class="headerlink" href="#tuning-indexing-further" title="Permalink to this headline">¶</a></h2>
+<p>The array lookups are still slowed down by two factors:</p>
+<ol class="arabic">
+<li><p class="first">Bounds checking is performed.</p>
+</li>
+<li><p class="first">Negative indices are checked for and handled correctly.  The code above is
+explicitly coded so that it doesn&#8217;t use negative indices, and it
+(hopefully) always access within bounds. We can add a decorator to disable
+bounds checking:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="o">...</span>
+<span class="k">cimport</span> <span class="nn">cython</span>
+<span class="nd">@cython</span><span class="o">.</span><span class="n">boundscheck</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span> <span class="c"># turn of bounds-checking for entire function</span>
+<span class="k">def</span> <span class="nf">naive_convolve</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">DTYPE_t</span><span class="p">,</span> <span class="n">ndim</span><span class="o">=</span><span class="mf">2</span><span class="p">]</span> <span class="n">f</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">[</span><span class="n">DTYPE_t</span><span class="p">,</span> <span class="n">ndim</span><span class="o">=</span><span class="mf">2</span><span class="p">]</span> <span class="n">g</span><span class="p">):</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+</li>
+</ol>
+<p>Now bounds checking is not performed (and, as a side-effect, if you &#8216;&#8217;do&#8217;&#8217;
+happen to access out of bounds you will in the best case crash your program
+and in the worst case corrupt data). It is possible to switch bounds-checking
+mode in many ways, see [:reference/directives:compiler directives] for more
+information.</p>
+<p>Negative indices are dealt with by ensuring Cython that the indices will be
+positive, by casting the variables to unsigned integer types (if you do have
+negative values, then this casting will create a very large positive value
+instead and you will attempt to access out-of-bounds values). Casting is done
+with a special <tt class="docutils literal"><span class="pre">&lt;&gt;</span></tt>-syntax. The code below is changed to use either
+unsigned ints or casting as appropriate:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="o">...</span>
+<span class="k">cdef</span> <span class="kt">int</span> <span class="nf">s</span><span class="p">,</span> <span class="nf">t</span>                                                                            <span class="c"># changed</span>
+<span class="k">cdef</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="nf">x</span><span class="p">,</span> <span class="nf">y</span><span class="p">,</span> <span class="nf">v</span><span class="p">,</span> <span class="nf">w</span>                                                             <span class="c"># changed</span>
+<span class="k">cdef</span> <span class="kt">int</span> <span class="nf">s_from</span><span class="p">,</span> <span class="nf">s_to</span><span class="p">,</span> <span class="nf">t_from</span><span class="p">,</span> <span class="nf">t_to</span>
+<span class="k">cdef</span> <span class="kt">DTYPE_t</span> <span class="nf">value</span>
+<span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">xmax</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ymax</span><span class="p">):</span>
+        <span class="n">s_from</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">smid</span> <span class="o">-</span> <span class="n">x</span><span class="p">,</span> <span class="o">-</span><span class="n">smid</span><span class="p">)</span>
+        <span class="n">s_to</span> <span class="o">=</span> <span class="nb">min</span><span class="p">((</span><span class="n">xmax</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">smid</span><span class="p">,</span> <span class="n">smid</span> <span class="o">+</span> <span class="mf">1</span><span class="p">)</span>
+        <span class="n">t_from</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">tmid</span> <span class="o">-</span> <span class="n">y</span><span class="p">,</span> <span class="o">-</span><span class="n">tmid</span><span class="p">)</span>
+        <span class="n">t_to</span> <span class="o">=</span> <span class="nb">min</span><span class="p">((</span><span class="n">ymax</span> <span class="o">-</span> <span class="n">y</span><span class="p">)</span> <span class="o">-</span> <span class="n">tmid</span><span class="p">,</span> <span class="n">tmid</span> <span class="o">+</span> <span class="mf">1</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="mf">0</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">s_from</span><span class="p">,</span> <span class="n">s_to</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">t_from</span><span class="p">,</span> <span class="n">t_to</span><span class="p">):</span>
+                <span class="n">v</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">unsigned</span> <span class="nb">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">smid</span> <span class="o">+</span> <span class="n">s</span><span class="p">)</span>                                         <span class="c"># changed</span>
+                <span class="n">w</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">unsigned</span> <span class="nb">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">y</span> <span class="o">-</span> <span class="n">tmid</span> <span class="o">+</span> <span class="n">t</span><span class="p">)</span>                                         <span class="c"># changed</span>
+                <span class="n">value</span> <span class="o">+=</span> <span class="n">g</span><span class="p">[</span><span class="o">&lt;</span><span class="n">unsigned</span> <span class="nb">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">smid</span> <span class="o">-</span> <span class="n">s</span><span class="p">),</span> <span class="o">&lt;</span><span class="n">unsigned</span> <span class="nb">int</span><span class="o">&gt;</span><span class="p">(</span><span class="n">tmid</span> <span class="o">-</span> <span class="n">t</span><span class="p">)]</span> <span class="o">*</span> <span class="n">f</span><span class="p">[</span><span class="n">v</span><span class="p">,</span> <span class="n">w</span><span class="p">]</span> <span class="c"># changed</span>
+        <span class="n">h</span><span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+<p>The function call overhead now starts to play a role, so we compare the latter
+two examples with larger N:</p>
+<div class="highlight-ipython"><div class="highlight"><pre><span class="gp">In [11]: </span><span class="o">%</span><span class="n">timeit</span> <span class="o">-</span><span class="n">n3</span> <span class="o">-</span><span class="n">r100</span> <span class="n">convolve4</span><span class="o">.</span><span class="n">naive_convolve</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">g</span><span class="p">)</span>
+<span class="go">3 loops, best of 100: 5.97 ms per loop</span>
+<span class="gp">In [12]: </span><span class="n">N</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="gp">In [13]: </span><span class="n">f</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">N</span><span class="o">*</span><span class="n">N</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">N</span><span class="p">,</span><span class="n">N</span><span class="p">))</span>
+<span class="gp">In [14]: </span><span class="n">g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">81</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">9</span><span class="p">,</span> <span class="mi">9</span><span class="p">))</span>
+<span class="gp">In [17]: </span><span class="o">%</span><span class="n">timeit</span> <span class="o">-</span><span class="n">n1</span> <span class="o">-</span><span class="n">r10</span> <span class="n">convolve3</span><span class="o">.</span><span class="n">naive_convolve</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">g</span><span class="p">)</span>
+<span class="go">1 loops, best of 10: 1.16 s per loop</span>
+<span class="gp">In [18]: </span><span class="o">%</span><span class="n">timeit</span> <span class="o">-</span><span class="n">n1</span> <span class="o">-</span><span class="n">r10</span> <span class="n">convolve4</span><span class="o">.</span><span class="n">naive_convolve</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">g</span><span class="p">)</span>
+<span class="go">1 loops, best of 10: 597 ms per loop</span>
+</pre></div>
+</div>
+<p>(Also this is a mixed benchmark as the result array is allocated within the
+function call.)</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p>Speed comes with some cost. Especially it can be dangerous to set typed
+objects (like <tt class="docutils literal"><span class="pre">f</span></tt>, <tt class="docutils literal"><span class="pre">g</span></tt> and <tt class="docutils literal"><span class="pre">h</span></tt> in our sample code) to
+<tt class="docutils literal"><span class="pre">None</span></tt>.  Setting such objects to <tt class="docutils literal"><span class="pre">None</span></tt> is entirely
+legal, but all you can do with them is check whether they are None. All
+other use (attribute lookup or indexing) can potentially segfault or
+corrupt data (rather than raising exceptions as they would in Python).</p>
+<p class="last">The actual rules are a bit more complicated but the main message is clear:
+Do not use typed objects without knowing that they are not set to None.</p>
+</div>
+</div>
+<div class="section" id="more-generic-code">
+<h2>More generic code<a class="headerlink" href="#more-generic-code" title="Permalink to this headline">¶</a></h2>
+<p>It would be possible to do:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">def</span> <span class="nf">naive_convolve</span><span class="p">(</span><span class="nb">object</span><span class="p">[</span><span class="n">DTYPE_t</span><span class="p">,</span> <span class="n">ndim</span><span class="o">=</span><span class="mf">2</span><span class="p">]</span> <span class="n">f</span><span class="p">,</span> <span class="o">...</span><span class="p">):</span>
+</pre></div>
+</div>
+<p>i.e. use <a class="reference external" href="http://docs.python.org/3.3/library/functions.html#object" title="(in Python v3.3)"><tt class="xref py py-obj docutils literal"><span class="pre">object</span></tt></a> rather than <tt class="xref py py-obj docutils literal"><span class="pre">np.ndarray</span></tt>. Under Python 3.0 this
+can allow your algorithm to work with any libraries supporting the buffer
+interface; and support for e.g. the Python Imaging Library may easily be added
+if someone is interested also under Python 2.x.</p>
+<p>There is some speed penalty to this though (as one makes more assumptions
+compile-time if the type is set to <tt class="xref py py-obj docutils literal"><span class="pre">np.ndarray</span></tt>, specifically it is
+assumed that the data is stored in pure strided mode and not in indirect
+mode).</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index-2.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Working with NumPy</a><ul>
+<li><a class="reference internal" href="#adding-types">Adding types</a></li>
+<li><a class="reference internal" href="#efficient-indexing">Efficient indexing</a></li>
+<li><a class="reference internal" href="#tuning-indexing-further">Tuning indexing further</a></li>
+<li><a class="reference internal" href="#more-generic-code">More generic code</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="pure.html"
+                        title="previous chapter">Pure Python Mode</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="readings.html"
+                        title="next chapter">Further reading</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/src/tutorial/numpy.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="http://docs.cython.org/search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="readings.html" title="Further reading"
+             >next</a></li>
+        <li class="right" >
+          <a href="pure.html" title="Pure Python Mode"
+             >previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer">
+        &copy; Copyright 2014, Stefan Behnel, Robert Bradshaw, Dag Sverre Seljebotn, Greg Ewing, William Stein, Gabriel Gellner, et al..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-6139100-3");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+  </body>
+
+<!-- Mirrored from docs.cython.org/src/tutorial/numpy.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:57 GMT -->
+</html>

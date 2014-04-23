@@ -1,0 +1,808 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  
+<!-- Mirrored from docs.cython.org/src/tutorial/strings.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:57 GMT -->
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Unicode and passing strings &mdash; Cython 0.20 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.20',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Cython 0.20 documentation" href="../../index-2.html" />
+    <link rel="up" title="Tutorials" href="index.html" />
+    <link rel="next" title="Memory Allocation" href="memory_allocation.html" />
+    <link rel="prev" title="Profiling" href="profiling_tutorial.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="memory_allocation.html" title="Memory Allocation"
+             accesskey="N">next</a></li>
+        <li class="right" >
+          <a href="profiling_tutorial.html" title="Profiling"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="unicode-and-passing-strings">
+<h1>Unicode and passing strings<a class="headerlink" href="#unicode-and-passing-strings" title="Permalink to this headline">¶</a></h1>
+<p>Similar to the string semantics in Python 3, Cython strictly separates
+byte strings and unicode strings.  Above all, this means that by default
+there is no automatic conversion between byte strings and unicode strings
+(except for what Python 2 does in string operations).  All encoding and
+decoding must pass through an explicit encoding/decoding step.  To ease
+conversion between Python and C strings in simple cases, the module-level
+<tt class="docutils literal"><span class="pre">c_string_type</span></tt> and <tt class="docutils literal"><span class="pre">c_string_encoding</span></tt> directives can be used to
+implicitly insert these encoding/decoding steps.</p>
+<div class="section" id="python-string-types-in-cython-code">
+<h2>Python string types in Cython code<a class="headerlink" href="#python-string-types-in-cython-code" title="Permalink to this headline">¶</a></h2>
+<p>Cython supports four Python string types: <tt class="docutils literal"><span class="pre">bytes</span></tt>, <tt class="docutils literal"><span class="pre">str</span></tt>,
+<tt class="docutils literal"><span class="pre">unicode</span></tt> and <tt class="docutils literal"><span class="pre">basestring</span></tt>.  The <tt class="docutils literal"><span class="pre">bytes</span></tt> and <tt class="docutils literal"><span class="pre">unicode</span></tt> types
+are the specific types known from normal Python 2.x (named <tt class="docutils literal"><span class="pre">bytes</span></tt>
+and <tt class="docutils literal"><span class="pre">str</span></tt> in Python 3).  Additionally, Cython also supports the
+<tt class="docutils literal"><span class="pre">bytearray</span></tt> type starting with Python 2.6.  It behaves like the
+<tt class="docutils literal"><span class="pre">bytes</span></tt> type, except that it is mutable.</p>
+<p>The <tt class="docutils literal"><span class="pre">str</span></tt> type is special in that it is the byte string in Python 2
+and the Unicode string in Python 3 (for Cython code compiled with
+language level 2, i.e. the default).  Meaning, it always corresponds
+exactly with the type that the Python runtime itself calls <tt class="docutils literal"><span class="pre">str</span></tt>.
+Thus, in Python 2, both <tt class="docutils literal"><span class="pre">bytes</span></tt> and <tt class="docutils literal"><span class="pre">str</span></tt> represent the byte string
+type, whereas in Python 3, both <tt class="docutils literal"><span class="pre">str</span></tt> and <tt class="docutils literal"><span class="pre">unicode</span></tt> represent the
+Python Unicode string type.  The switch is made at C compile time, the
+Python version that is used to run Cython is not relevant.</p>
+<p>When compiling Cython code with language level 3, the <tt class="docutils literal"><span class="pre">str</span></tt> type is
+identified with exactly the Unicode string type at Cython compile time,
+i.e. it does not identify with <tt class="docutils literal"><span class="pre">bytes</span></tt> when running in Python 2.</p>
+<p>Note that the <tt class="docutils literal"><span class="pre">str</span></tt> type is not compatible with the <tt class="docutils literal"><span class="pre">unicode</span></tt>
+type in Python 2, i.e. you cannot assign a Unicode string to a variable
+or argument that is typed <tt class="docutils literal"><span class="pre">str</span></tt>.  The attempt will result in either
+a compile time error (if detectable) or a <tt class="docutils literal"><span class="pre">TypeError</span></tt> exception at
+runtime.  You should therefore be careful when you statically type a
+string variable in code that must be compatible with Python 2, as this
+Python version allows a mix of byte strings and unicode strings for data
+and users normally expect code to be able to work with both.  Code that
+only targets Python 3 can safely type variables and arguments as either
+<tt class="docutils literal"><span class="pre">bytes</span></tt> or <tt class="docutils literal"><span class="pre">unicode</span></tt>.</p>
+<p>The <tt class="docutils literal"><span class="pre">basestring</span></tt> type represents both the types <tt class="docutils literal"><span class="pre">str</span></tt> and <tt class="docutils literal"><span class="pre">unicode</span></tt>,
+i.e. all Python text string types in Python 2 and Python 3.  This can be
+used for typing text variables that normally contain Unicode text (at
+least in Python 3) but must additionally accept the <tt class="docutils literal"><span class="pre">str</span></tt> type in
+Python 2 for backwards compatibility reasons.  It is not compatible with
+the <tt class="docutils literal"><span class="pre">bytes</span></tt> type.  Its usage should be rare in normal Cython code as
+the generic <tt class="docutils literal"><span class="pre">object</span></tt> type (i.e. untyped code) will normally be good
+enough and has the additional advantage of supporting the assignment of
+string subtypes.  Support for the <tt class="docutils literal"><span class="pre">basestring</span></tt> type is new in Cython
+0.20.</p>
+</div>
+<div class="section" id="general-notes-about-c-strings">
+<h2>General notes about C strings<a class="headerlink" href="#general-notes-about-c-strings" title="Permalink to this headline">¶</a></h2>
+<p>In many use cases, C strings (a.k.a. character pointers) are slow
+and cumbersome.  For one, they usually require manual memory
+management in one way or another, which makes it more likely to
+introduce bugs into your code.</p>
+<p>Then, Python string objects cache their length, so requesting it
+(e.g. to validate the bounds of index access or when concatenating
+two strings into one) is an efficient constant time operation.
+In contrast, calling <tt class="xref c c-func docutils literal"><span class="pre">strlen()</span></tt> to get this information
+from a C string takes linear time, which makes many operations on
+C strings rather costly.</p>
+<p>Regarding text processing, Python has built-in support for Unicode,
+which C lacks completely.  If you are dealing with Unicode text,
+you are usually better off using Python Unicode string objects than
+trying to work with encoded data in C strings.  Cython makes this
+quite easy and efficient.</p>
+<p>Generally speaking: unless you know what you are doing, avoid
+using C strings where possible and use Python string objects instead.
+The obvious exception to this is when passing them back and forth
+from and to external C code.  Also, C++ strings remember their length
+as well, so they can provide a suitable alternative to Python bytes
+objects in some cases, e.g. when reference counting is not needed
+within a well defined context.</p>
+</div>
+<div class="section" id="passing-byte-strings">
+<h2>Passing byte strings<a class="headerlink" href="#passing-byte-strings" title="Permalink to this headline">¶</a></h2>
+<p>It is very easy to pass byte strings between C code and Python.
+When receiving a byte string from a C library, you can let Cython
+convert it into a Python byte string by simply assigning it to a
+Python variable:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">char</span>* <span class="nf">c_string</span> <span class="o">=</span> <span class="n">c_call_returning_a_c_string</span><span class="p">()</span>
+<span class="k">cdef</span> <span class="kt">bytes</span> <span class="nf">py_string</span> <span class="o">=</span> <span class="n">c_string</span>
+</pre></div>
+</div>
+<p>A type cast to <tt class="docutils literal"><span class="pre">object</span></tt> or <tt class="docutils literal"><span class="pre">bytes</span></tt> will do the same thing:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="n">py_string</span> <span class="o">=</span> <span class="p">&lt;</span><span class="kt">bytes</span><span class="p">&gt;</span> <span class="n">c_string</span>
+</pre></div>
+</div>
+<p>This creates a Python byte string object that holds a copy of the
+original C string.  It can be safely passed around in Python code, and
+will be garbage collected when the last reference to it goes out of
+scope.  It is important to remember that null bytes in the string act
+as terminator character, as generally known from C.  The above will
+therefore only work correctly for C strings that do not contain null
+bytes.</p>
+<p>Besides not working for null bytes, the above is also very inefficient
+for long strings, since Cython has to call <tt class="xref c c-func docutils literal"><span class="pre">strlen()</span></tt> on the
+C string first to find out the length by counting the bytes up to the
+terminating null byte.  In many cases, the user code will know the
+length already, e.g. because a C function returned it.  In this case,
+it is much more efficient to tell Cython the exact number of bytes by
+slicing the C string:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">char</span>* <span class="nf">c_string</span> <span class="o">=</span> <span class="bp">NULL</span>
+<span class="k">cdef</span> <span class="kt">Py_ssize_t</span> <span class="nf">length</span> <span class="o">=</span> <span class="mf">0</span>
+
+<span class="c"># get pointer and length from a C function</span>
+<span class="n">get_a_c_string</span><span class="p">(</span><span class="o">&amp;</span><span class="n">c_string</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">length</span><span class="p">)</span>
+
+<span class="n">py_bytes_string</span> <span class="o">=</span> <span class="n">c_string</span><span class="p">[:</span><span class="n">length</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Here, no additional byte counting is required and <tt class="docutils literal"><span class="pre">length</span></tt> bytes from
+the <tt class="docutils literal"><span class="pre">c_string</span></tt> will be copied into the Python bytes object, including
+any null bytes.  Keep in mind that the slice indices are assumed to be
+accurate in this case and no bounds checking is done, so incorrect
+slice indices will lead to data corruption and crashes.</p>
+<p>Note that the creation of the Python bytes string can fail with an
+exception, e.g. due to insufficient memory.  If you need to
+<tt class="xref c c-func docutils literal"><span class="pre">free()</span></tt> the string after the conversion, you should wrap
+the assignment in a try-finally construct:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cimport</span> <span class="nn">stdlib</span>
+<span class="k">cdef</span> <span class="kt">bytes</span> <span class="nf">py_string</span>
+<span class="k">cdef</span> <span class="kt">char</span>* <span class="nf">c_string</span> <span class="o">=</span> <span class="n">c_call_creating_a_new_c_string</span><span class="p">()</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">py_string</span> <span class="o">=</span> <span class="n">c_string</span>
+<span class="k">finally</span><span class="p">:</span>
+    <span class="n">stdlib</span><span class="o">.</span><span class="n">free</span><span class="p">(</span><span class="n">c_string</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>To convert the byte string back into a C <tt class="xref c c-type docutils literal"><span class="pre">char*</span></tt>, use the
+opposite assignment:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">char</span>* <span class="nf">other_c_string</span> <span class="o">=</span> <span class="n">py_string</span>
+</pre></div>
+</div>
+<p>This is a very fast operation after which <tt class="docutils literal"><span class="pre">other_c_string</span></tt> points to
+the byte string buffer of the Python string itself.  It is tied to the
+life time of the Python string.  When the Python string is garbage
+collected, the pointer becomes invalid.  It is therefore important to
+keep a reference to the Python string as long as the <tt class="xref c c-type docutils literal"><span class="pre">char*</span></tt>
+is in use.  Often enough, this only spans the call to a C function that
+receives the pointer as parameter.  Special care must be taken,
+however, when the C function stores the pointer for later use.  Apart
+from keeping a Python reference to the string object, no manual memory
+management is required.</p>
+<p>Starting with Cython 0.20, the <tt class="docutils literal"><span class="pre">bytearray</span></tt> type is supported and
+coerces in the same way as the <tt class="docutils literal"><span class="pre">bytes</span></tt> type.  However, when using it
+in a C context, special care must be taken not to grow or shrink the
+object buffer after converting it to a C string pointer.  These
+modifications can change the internal buffer address, which will make
+the pointer invalid.</p>
+</div>
+<div class="section" id="dealing-with-const">
+<h2>Dealing with &#8220;const&#8221;<a class="headerlink" href="#dealing-with-const" title="Permalink to this headline">¶</a></h2>
+<p>Many C libraries use the <tt class="docutils literal"><span class="pre">const</span></tt> modifier in their API to declare
+that they will not modify a string, or to require that users must
+not modify a string they return, for example:</p>
+<div class="highlight-c"><div class="highlight"><pre><span class="k">typedef</span> <span class="k">const</span> <span class="kt">char</span> <span class="n">specialChar</span><span class="p">;</span>
+<span class="kt">int</span> <span class="n">process_string</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">s</span><span class="p">);</span>
+<span class="k">const</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span> <span class="n">look_up_cached_string</span><span class="p">(</span><span class="k">const</span> <span class="kt">unsigned</span> <span class="kt">char</span><span class="o">*</span> <span class="n">key</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Since version 0.18, Cython has support for the <tt class="docutils literal"><span class="pre">const</span></tt> modifier in
+the language, so you can declare the above functions straight away as
+follows:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">from</span> <span class="s">&quot;someheader.h&quot;</span><span class="p">:</span>
+    <span class="k">ctypedef</span> <span class="n">const</span> <span class="n">char</span> <span class="n">specialChar</span>
+    <span class="nb">int</span> <span class="n">process_string</span><span class="p">(</span><span class="n">const</span> <span class="n">char</span><span class="o">*</span> <span class="n">s</span><span class="p">)</span>
+    <span class="n">const</span> <span class="n">unsigned</span> <span class="n">char</span><span class="o">*</span> <span class="n">look_up_cached_string</span><span class="p">(</span><span class="n">const</span> <span class="n">unsigned</span> <span class="n">char</span><span class="o">*</span> <span class="n">key</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Previous versions required users to make the necessary declarations
+at a textual level.  If you need to support older Cython versions,
+you can use the following approach.</p>
+<p>In general, for arguments of external C functions, the <tt class="docutils literal"><span class="pre">const</span></tt>
+modifier does not matter and can be left out in the Cython
+declaration (e.g. in a .pxd file).  The C compiler will still do
+the right thing, even if you declare this to Cython:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">from</span> <span class="s">&quot;someheader.h&quot;</span><span class="p">:</span>
+    <span class="nb">int</span> <span class="n">process_string</span><span class="p">(</span><span class="n">char</span><span class="o">*</span> <span class="n">s</span><span class="p">)</span>   <span class="c"># note: looses API information!</span>
+</pre></div>
+</div>
+<p>However, in most other situations, such as for return values and
+variables that use specifically typedef-ed API types, it does matter
+and the C compiler will emit at least a warning if used incorrectly.
+To help with this, you can use the type definitions in the
+<tt class="docutils literal"><span class="pre">libc.string</span></tt> module, e.g.:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">from</span> <span class="nn">libc.string</span> <span class="k">cimport</span> <span class="n">const_char</span><span class="p">,</span> <span class="n">const_uchar</span>
+
+<span class="k">cdef</span> <span class="kr">extern</span> <span class="k">from</span> <span class="s">&quot;someheader.h&quot;</span><span class="p">:</span>
+    <span class="k">ctypedef</span> <span class="n">const_char</span> <span class="n">specialChar</span>
+    <span class="nb">int</span> <span class="n">process_string</span><span class="p">(</span><span class="n">const_char</span><span class="o">*</span> <span class="n">s</span><span class="p">)</span>
+    <span class="n">const_uchar</span><span class="o">*</span> <span class="n">look_up_cached_string</span><span class="p">(</span><span class="n">const_uchar</span><span class="o">*</span> <span class="n">key</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note: even if the API only uses <tt class="docutils literal"><span class="pre">const</span></tt> for function arguments,
+it is still preferable to properly declare them using these
+provided <tt class="xref c c-type docutils literal"><span class="pre">const_char</span></tt> types in order to simplify adaptations.
+In Cython 0.18, these standard declarations have been changed to
+use the correct <tt class="docutils literal"><span class="pre">const</span></tt> modifier, so your code will automatically
+benefit from the new <tt class="docutils literal"><span class="pre">const</span></tt> support if it uses them.</p>
+</div>
+<div class="section" id="decoding-bytes-to-text">
+<h2>Decoding bytes to text<a class="headerlink" href="#decoding-bytes-to-text" title="Permalink to this headline">¶</a></h2>
+<p>The initially presented way of passing and receiving C strings is
+sufficient if your code only deals with binary data in the strings.
+When we deal with encoded text, however, it is best practice to decode
+the C byte strings to Python Unicode strings on reception, and to
+encode Python Unicode strings to C byte strings on the way out.</p>
+<p>With a Python byte string object, you would normally just call the
+<tt class="docutils literal"><span class="pre">.decode()</span></tt> method to decode it into a Unicode string:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="n">ustring</span> <span class="o">=</span> <span class="n">byte_string</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;UTF-8&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Cython allows you to do the same for a C string, as long as it
+contains no null bytes:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">char</span>* <span class="nf">some_c_string</span> <span class="o">=</span> <span class="n">c_call_returning_a_c_string</span><span class="p">()</span>
+<span class="n">ustring</span> <span class="o">=</span> <span class="n">some_c_string</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;UTF-8&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>And, more efficiently, for strings where the length is known:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">char</span>* <span class="nf">c_string</span> <span class="o">=</span> <span class="bp">NULL</span>
+<span class="k">cdef</span> <span class="kt">Py_ssize_t</span> <span class="nf">length</span> <span class="o">=</span> <span class="mf">0</span>
+
+<span class="c"># get pointer and length from a C function</span>
+<span class="n">get_a_c_string</span><span class="p">(</span><span class="o">&amp;</span><span class="n">c_string</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">length</span><span class="p">)</span>
+
+<span class="n">ustring</span> <span class="o">=</span> <span class="n">c_string</span><span class="p">[:</span><span class="n">length</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;UTF-8&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The same should be used when the string contains null bytes, e.g. when
+it uses an encoding like UCS-4, where each character is encoded in four
+bytes most of which tend to be 0.</p>
+<p>Again, no bounds checking is done if slice indices are provided, so
+incorrect indices lead to data corruption and crashes.  However, using
+negative indices is possible since Cython 0.17 and will inject a call
+to <tt class="xref c c-func docutils literal"><span class="pre">strlen()</span></tt> in order to determine the string length.
+Obviously, this only works for 0-terminated strings without internal
+null bytes.  Text encoded in UTF-8 or one of the ISO-8859 encodings is
+usually a good candidate.  If in doubt, it&#8217;s better to pass indices
+that are &#8216;obviously&#8217; correct than to rely on the data to be as expected.</p>
+<p>It is common practice to wrap string conversions (and non-trivial type
+conversions in general) in dedicated functions, as this needs to be
+done in exactly the same way whenever receiving text from C.  This
+could look as follows:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cimport</span> <span class="nn">python_unicode</span>
+<span class="k">cimport</span> <span class="nn">stdlib</span>
+
+<span class="k">cdef</span> <span class="kt">unicode</span> <span class="nf">tounicode</span><span class="p">(</span><span class="n">char</span><span class="o">*</span> <span class="n">s</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">s</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;UTF-8&#39;</span><span class="p">,</span> <span class="s">&#39;strict&#39;</span><span class="p">)</span>
+
+<span class="k">cdef</span> <span class="kt">unicode</span> <span class="nf">tounicode_with_length</span><span class="p">(</span>
+        <span class="n">char</span><span class="o">*</span> <span class="n">s</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">length</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">s</span><span class="p">[:</span><span class="n">length</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;UTF-8&#39;</span><span class="p">,</span> <span class="s">&#39;strict&#39;</span><span class="p">)</span>
+
+<span class="k">cdef</span> <span class="kt">unicode</span> <span class="nf">tounicode_with_length_and_free</span><span class="p">(</span>
+        <span class="n">char</span><span class="o">*</span> <span class="n">s</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">length</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">s</span><span class="p">[:</span><span class="n">length</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;UTF-8&#39;</span><span class="p">,</span> <span class="s">&#39;strict&#39;</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">stdlib</span><span class="o">.</span><span class="n">free</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Most likely, you will prefer shorter function names in your code based
+on the kind of string being handled.  Different types of content often
+imply different ways of handling them on reception.  To make the code
+more readable and to anticipate future changes, it is good practice to
+use separate conversion functions for different types of strings.</p>
+</div>
+<div class="section" id="encoding-text-to-bytes">
+<h2>Encoding text to bytes<a class="headerlink" href="#encoding-text-to-bytes" title="Permalink to this headline">¶</a></h2>
+<p>The reverse way, converting a Python unicode string to a C
+<tt class="xref c c-type docutils literal"><span class="pre">char*</span></tt>, is pretty efficient by itself, assuming that what
+you actually want is a memory managed byte string:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="n">py_byte_string</span> <span class="o">=</span> <span class="n">py_unicode_string</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&#39;UTF-8&#39;</span><span class="p">)</span>
+<span class="k">cdef</span> <span class="kt">char</span>* <span class="nf">c_string</span> <span class="o">=</span> <span class="n">py_byte_string</span>
+</pre></div>
+</div>
+<p>As noted before, this takes the pointer to the byte buffer of the
+Python byte string.  Trying to do the same without keeping a reference
+to the Python byte string will fail with a compile error:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="c"># this will not compile !</span>
+<span class="k">cdef</span> <span class="kt">char</span>* <span class="nf">c_string</span> <span class="o">=</span> <span class="n">py_unicode_string</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&#39;UTF-8&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Here, the Cython compiler notices that the code takes a pointer to a
+temporary string result that will be garbage collected after the
+assignment.  Later access to the invalidated pointer will read invalid
+memory and likely result in a segfault.  Cython will therefore refuse
+to compile this code.</p>
+</div>
+<div class="section" id="c-strings">
+<h2>C++ strings<a class="headerlink" href="#c-strings" title="Permalink to this headline">¶</a></h2>
+<p>When wrapping a C++ library, strings will usually come in the form of
+the <tt class="xref c c-type docutils literal"><span class="pre">std::string</span></tt> class.  As with C strings, Python byte strings
+automatically coerce from and to C++ strings:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="c"># distutils: language = c++</span>
+
+<span class="k">from</span> <span class="nn">libcpp.string</span> <span class="k">cimport</span> <span class="n">string</span>
+
+<span class="k">cdef</span> <span class="kt">string</span> <span class="nf">s</span> <span class="o">=</span> <span class="n">py_bytes_object</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;abc&#39;</span><span class="p">)</span>
+    <span class="n">py_bytes_object</span> <span class="o">=</span> <span class="n">s</span>
+<span class="k">finally</span><span class="p">:</span>
+    <span class="k">del</span> <span class="n">s</span>
+</pre></div>
+</div>
+<p>The memory management situation is different than in C because the
+creation of a C++ string makes an independent copy of the string
+buffer which the string object then owns.  It is therefore possible
+to convert temporarily created Python objects directly into C++
+strings.  A common way to make use of this is when encoding a Python
+unicode string into a C++ string:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">string</span> <span class="nf">cpp_string</span> <span class="o">=</span> <span class="n">py_unicode_string</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&#39;UTF-8&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that this involves a bit of overhead because it first encodes
+the Unicode string into a temporarily created Python bytes object
+and then copies its buffer into a new C++ string.</p>
+<p>For the other direction, efficient decoding support is available
+in Cython 0.17 and later:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">string</span> <span class="nf">s</span> <span class="o">=</span> <span class="n">string</span><span class="p">(</span><span class="s">&#39;abcdefg&#39;</span><span class="p">)</span>
+
+<span class="n">ustring1</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;UTF-8&#39;</span><span class="p">)</span>
+<span class="n">ustring2</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="mf">2</span><span class="p">:</span><span class="o">-</span><span class="mf">2</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;UTF-8&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>For C++ strings, decoding slices will always take the proper length
+of the string into account and apply Python slicing semantics (e.g.
+return empty strings for out-of-bounds indices).</p>
+</div>
+<div class="section" id="auto-encoding-and-decoding">
+<h2>Auto encoding and decoding<a class="headerlink" href="#auto-encoding-and-decoding" title="Permalink to this headline">¶</a></h2>
+<p>Cython 0.19 comes with two new directives: <tt class="docutils literal"><span class="pre">c_string_type</span></tt> and
+<tt class="docutils literal"><span class="pre">c_string_encoding</span></tt>.  They can be used to change the Python string
+types that C/C++ strings coerce from and to.  By default, they only
+coerce from and to the bytes type, and encoding or decoding must
+be done explicitly, as described above.</p>
+<p>There are two use cases where this is inconvenient.  First, if all
+C strings that are being processed (or the large majority) contain
+text, automatic encoding and decoding from and to Python unicode
+objects can reduce the code overhead a little.  In this case, you
+can set the <tt class="docutils literal"><span class="pre">c_string_type</span></tt> directive in your module to <tt class="docutils literal"><span class="pre">unicode</span></tt>
+and the <tt class="docutils literal"><span class="pre">c_string_encoding</span></tt> to the encoding that your C code uses,
+for example:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="c"># cython: c_string_type=unicode, c_string_encoding=utf8</span>
+
+<span class="k">cdef</span> <span class="kt">char</span>* <span class="nf">c_string</span> <span class="o">=</span> <span class="s">&#39;abcdefg&#39;</span>
+
+<span class="c"># implicit decoding:</span>
+<span class="k">cdef</span> <span class="kt">object</span> <span class="nf">py_unicode_object</span> <span class="o">=</span> <span class="n">c_string</span>
+
+<span class="c"># explicit conversion to Python bytes:</span>
+<span class="n">py_bytes_object</span> <span class="o">=</span> <span class="p">&lt;</span><span class="kt">bytes</span><span class="p">&gt;</span><span class="n">c_string</span>
+</pre></div>
+</div>
+<p>The second use case is when all C strings that are being processed
+only contain ASCII encodable characters (e.g. numbers) and you want
+your code to use the native legacy string type in Python 2 for them,
+instead of always using Unicode. In this case, you can set the
+string type to <tt class="docutils literal"><span class="pre">str</span></tt>:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="c"># cython: c_string_type=str, c_string_encoding=ascii</span>
+
+<span class="k">cdef</span> <span class="kt">char</span>* <span class="nf">c_string</span> <span class="o">=</span> <span class="s">&#39;abcdefg&#39;</span>
+
+<span class="c"># implicit decoding in Py3, bytes conversion in Py2:</span>
+<span class="k">cdef</span> <span class="kt">object</span> <span class="nf">py_str_object</span> <span class="o">=</span> <span class="n">c_string</span>
+
+<span class="c"># explicit conversion to Python bytes:</span>
+<span class="n">py_bytes_object</span> <span class="o">=</span> <span class="p">&lt;</span><span class="kt">bytes</span><span class="p">&gt;</span><span class="n">c_string</span>
+
+<span class="c"># explicit conversion to Python unicode:</span>
+<span class="n">py_bytes_object</span> <span class="o">=</span> <span class="p">&lt;</span><span class="kt">unicode</span><span class="p">&gt;</span><span class="n">c_string</span>
+</pre></div>
+</div>
+<p>The other direction, i.e. automatic encoding to C strings, is only
+supported for the ASCII codec (and the &#8220;default encoding&#8221;, which is
+runtime specific and may or may not be ASCII).  This is because
+CPython handles the memory management in this case by keeping an
+encoded copy of the string alive together with the original unicode
+string.  Otherwise, there would be no way to limit the lifetime of
+the encoded string in any sensible way, thus rendering any attempt to
+extract a C string pointer from it a dangerous endeavour.  As long
+as you stick to the ASCII encoding for the <tt class="docutils literal"><span class="pre">c_string_encoding</span></tt>
+directive, though, the following will work:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="c"># cython: c_string_type=unicode, c_string_encoding=ascii</span>
+
+<span class="k">def</span> <span class="nf">func</span><span class="p">():</span>
+    <span class="n">ustring</span> <span class="o">=</span> <span class="s">u&#39;abc&#39;</span>
+    <span class="k">cdef</span> <span class="kt">char</span>* <span class="nf">s</span> <span class="o">=</span> <span class="n">ustring</span>
+    <span class="k">return</span> <span class="n">s</span><span class="p">[</span><span class="mf">0</span><span class="p">]</span>    <span class="c"># returns u&#39;a&#39;</span>
+</pre></div>
+</div>
+<p>(This example uses a function context in order to safely control the
+lifetime of the Unicode string.  Global Python variables can be
+modified from the outside, which makes it dangerous to rely on the
+lifetime of their values.)</p>
+</div>
+<div class="section" id="source-code-encoding">
+<h2>Source code encoding<a class="headerlink" href="#source-code-encoding" title="Permalink to this headline">¶</a></h2>
+<p>When string literals appear in the code, the source code encoding is
+important.  It determines the byte sequence that Cython will store in
+the C code for bytes literals, and the Unicode code points that Cython
+builds for unicode literals when parsing the byte encoded source file.
+Following <a class="reference external" href="http://www.python.org/dev/peps/pep-0263/">PEP 263</a>, Cython supports the explicit declaration of
+source file encodings.  For example, putting the following comment at
+the top of an <tt class="docutils literal"><span class="pre">ISO-8859-15</span></tt> (Latin-9) encoded source file (into the
+first or second line) is required to enable <tt class="docutils literal"><span class="pre">ISO-8859-15</span></tt> decoding
+in the parser:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="c"># -*- coding: ISO-8859-15 -*-</span>
+</pre></div>
+</div>
+<p>When no explicit encoding declaration is provided, the source code is
+parsed as UTF-8 encoded text, as specified by <a class="reference external" href="http://www.python.org/dev/peps/pep-3120/">PEP 3120</a>.  <a class="reference external" href="http://en.wikipedia.org/wiki/UTF-8">UTF-8</a>
+is a very common encoding that can represent the entire Unicode set of
+characters and is compatible with plain ASCII encoded text that it
+encodes efficiently.  This makes it a very good choice for source code
+files which usually consist mostly of ASCII characters.</p>
+<p>As an example, putting the following line into a UTF-8 encoded source
+file will print <tt class="docutils literal"><span class="pre">5</span></tt>, as UTF-8 encodes the letter <tt class="docutils literal"><span class="pre">'ö'</span></tt> in the two
+byte sequence <tt class="docutils literal"><span class="pre">'\xc3\xb6'</span></tt>:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">print</span><span class="p">(</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="s">&#39;abcö&#39;</span><span class="p">)</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>whereas the following <tt class="docutils literal"><span class="pre">ISO-8859-15</span></tt> encoded source file will print
+<tt class="docutils literal"><span class="pre">4</span></tt>, as the encoding uses only 1 byte for this letter:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="c"># -*- coding: ISO-8859-15 -*-</span>
+<span class="k">print</span><span class="p">(</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="s">&#39;abcö&#39;</span><span class="p">)</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that the unicode literal <tt class="docutils literal"><span class="pre">u'abcö'</span></tt> is a correctly decoded four
+character Unicode string in both cases, whereas the unprefixed Python
+<tt class="docutils literal"><span class="pre">str</span></tt> literal <tt class="docutils literal"><span class="pre">'abcö'</span></tt> will become a byte string in Python 2 (thus
+having length 4 or 5 in the examples above), and a 4 character Unicode
+string in Python 3.  If you are not familiar with encodings, this may
+not appear obvious at first read.  See <a class="reference external" href="http://wiki.cython.org/enhancements/stringliterals">CEP 108</a> for details.</p>
+<p>As a rule of thumb, it is best to avoid unprefixed non-ASCII <tt class="docutils literal"><span class="pre">str</span></tt>
+literals and to use unicode string literals for all text.  Cython also
+supports the <tt class="docutils literal"><span class="pre">__future__</span></tt> import <tt class="docutils literal"><span class="pre">unicode_literals</span></tt> that instructs
+the parser to read all unprefixed <tt class="docutils literal"><span class="pre">str</span></tt> literals in a source file as
+unicode string literals, just like Python 3.</p>
+</div>
+<div class="section" id="single-bytes-and-characters">
+<h2>Single bytes and characters<a class="headerlink" href="#single-bytes-and-characters" title="Permalink to this headline">¶</a></h2>
+<p>The Python C-API uses the normal C <tt class="xref c c-type docutils literal"><span class="pre">char</span></tt> type to represent
+a byte value, but it has two special integer types for a Unicode code
+point value, i.e. a single Unicode character: <a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UNICODE" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UNICODE</span></tt></a>
+and <a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UCS4" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UCS4</span></tt></a>.  Since version 0.13, Cython supports the
+first natively, support for <a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UCS4" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UCS4</span></tt></a> is new in Cython 0.15.
+<a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UNICODE" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UNICODE</span></tt></a> is either defined as an unsigned 2-byte or
+4-byte integer, or as <tt class="xref c c-type docutils literal"><span class="pre">wchar_t</span></tt>, depending on the platform.
+The exact type is a compile time option in the build of the CPython
+interpreter and extension modules inherit this definition at C
+compile time.  The advantage of <a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UCS4" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UCS4</span></tt></a> is that it is
+guaranteed to be large enough for any Unicode code point value,
+regardless of the platform.  It is defined as a 32bit unsigned int
+or long.</p>
+<p>In Cython, the <tt class="xref c c-type docutils literal"><span class="pre">char</span></tt> type behaves differently from the
+<a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UNICODE" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UNICODE</span></tt></a> and <a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UCS4" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UCS4</span></tt></a> types when coercing
+to Python objects.  Similar to the behaviour of the bytes type in
+Python 3, the <tt class="xref c c-type docutils literal"><span class="pre">char</span></tt> type coerces to a Python integer
+value by default, so that the following prints 65 and not <tt class="docutils literal"><span class="pre">A</span></tt>:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="c"># -*- coding: ASCII -*-</span>
+
+<span class="k">cdef</span> <span class="kt">char</span> <span class="nf">char_val</span> <span class="o">=</span> <span class="s">&#39;A&#39;</span>
+<span class="k">assert</span> <span class="n">char_val</span> <span class="o">==</span> <span class="mf">65</span>   <span class="c"># ASCII encoded byte value of &#39;A&#39;</span>
+<span class="k">print</span><span class="p">(</span> <span class="n">char_val</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>If you want a Python bytes string instead, you have to request it
+explicitly, and the following will print <tt class="docutils literal"><span class="pre">A</span></tt> (or <tt class="docutils literal"><span class="pre">b'A'</span></tt> in Python
+3):</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">print</span><span class="p">(</span> <span class="p">&lt;</span><span class="kt">bytes</span><span class="p">&gt;</span><span class="n">char_val</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>The explicit coercion works for any C integer type.  Values outside of
+the range of a <tt class="xref c c-type docutils literal"><span class="pre">char</span></tt> or <tt class="xref c c-type docutils literal"><span class="pre">unsigned</span> <span class="pre">char</span></tt> will raise an
+<tt class="docutils literal"><span class="pre">OverflowError</span></tt> at runtime.  Coercion will also happen automatically
+when assigning to a typed variable, e.g.:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">bytes</span> <span class="nf">py_byte_string</span>
+<span class="n">py_byte_string</span> <span class="o">=</span> <span class="n">char_val</span>
+</pre></div>
+</div>
+<p>On the other hand, the <a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UNICODE" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UNICODE</span></tt></a> and <a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UCS4" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UCS4</span></tt></a>
+types are rarely used outside of the context of a Python unicode string,
+so their default behaviour is to coerce to a Python unicode object.  The
+following will therefore print the character <tt class="docutils literal"><span class="pre">A</span></tt>, as would the same
+code with the <a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UNICODE" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UNICODE</span></tt></a> type:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">Py_UCS4</span> <span class="nf">uchar_val</span> <span class="o">=</span> <span class="s">u&#39;A&#39;</span>
+<span class="k">assert</span> <span class="n">uchar_val</span> <span class="o">==</span> <span class="mf">65</span> <span class="c"># character point value of u&#39;A&#39;</span>
+<span class="k">print</span><span class="p">(</span> <span class="n">uchar_val</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>Again, explicit casting will allow users to override this behaviour.
+The following will print 65:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">Py_UCS4</span> <span class="nf">uchar_val</span> <span class="o">=</span> <span class="s">u&#39;A&#39;</span>
+<span class="k">print</span><span class="p">(</span> <span class="p">&lt;</span><span class="kt">long</span><span class="p">&gt;</span><span class="n">uchar_val</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that casting to a C <tt class="docutils literal"><span class="pre">long</span></tt> (or <tt class="docutils literal"><span class="pre">unsigned</span> <span class="pre">long</span></tt>) will work
+just fine, as the maximum code point value that a Unicode character
+can have is 1114111 (<tt class="docutils literal"><span class="pre">0x10FFFF</span></tt>).  On platforms with 32bit or more,
+<tt class="docutils literal"><span class="pre">int</span></tt> is just as good.</p>
+</div>
+<div class="section" id="narrow-unicode-builds">
+<h2>Narrow Unicode builds<a class="headerlink" href="#narrow-unicode-builds" title="Permalink to this headline">¶</a></h2>
+<p>In narrow Unicode builds of CPython before version 3.3, i.e. builds
+where <tt class="docutils literal"><span class="pre">sys.maxunicode</span></tt> is 65535 (such as all Windows builds, as
+opposed to 1114111 in wide builds), it is still possible to use
+Unicode character code points that do not fit into the 16 bit wide
+<a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UNICODE" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UNICODE</span></tt></a> type.  For example, such a CPython build will
+accept the unicode literal <tt class="docutils literal"><span class="pre">u'\U00012345'</span></tt>.  However, the
+underlying system level encoding leaks into Python space in this
+case, so that the length of this literal becomes 2 instead of 1.
+This also shows when iterating over it or when indexing into it.
+The visible substrings are <tt class="docutils literal"><span class="pre">u'\uD808'</span></tt> and <tt class="docutils literal"><span class="pre">u'\uDF45'</span></tt> in this
+example.  They form a so-called surrogate pair that represents the
+above character.</p>
+<p>For more information on this topic, it is worth reading the <a class="reference external" href="http://en.wikipedia.org/wiki/UTF-16/UCS-2">Wikipedia
+article about the UTF-16 encoding</a>.</p>
+<p>The same properties apply to Cython code that gets compiled for a
+narrow CPython runtime environment.  In most cases, e.g. when
+searching for a substring, this difference can be ignored as both the
+text and the substring will contain the surrogates.  So most Unicode
+processing code will work correctly also on narrow builds.  Encoding,
+decoding and printing will work as expected, so that the above literal
+turns into exactly the same byte sequence on both narrow and wide
+Unicode platforms.</p>
+<p>However, programmers should be aware that a single <a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UNICODE" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UNICODE</span></tt></a>
+value (or single &#8216;character&#8217; unicode string in CPython) may not be
+enough to represent a complete Unicode character on narrow platforms.
+For example, if an independent search for <tt class="docutils literal"><span class="pre">u'\uD808'</span></tt> and
+<tt class="docutils literal"><span class="pre">u'\uDF45'</span></tt> in a unicode string succeeds, this does not necessarily
+mean that the character <tt class="docutils literal"><span class="pre">u'\U00012345</span></tt> is part of that string.  It
+may well be that two different characters are in the string that just
+happen to share a code unit with the surrogate pair of the character
+in question.  Looking for substrings works correctly because the two
+code units in the surrogate pair use distinct value ranges, so the
+pair is always identifiable in a sequence of code points.</p>
+<p>As of version 0.15, Cython has extended support for surrogate pairs so
+that you can safely use an <tt class="docutils literal"><span class="pre">in</span></tt> test to search character values from
+the full <a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UCS4" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UCS4</span></tt></a> range even on narrow platforms:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">Py_UCS4</span> <span class="nf">uchar</span> <span class="o">=</span> <span class="mf">0</span><span class="n">x12345</span>
+<span class="k">print</span><span class="p">(</span> <span class="n">uchar</span> <span class="ow">in</span> <span class="n">some_unicode_string</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>Similarly, it can coerce a one character string with a high Unicode
+code point value to a Py_UCS4 value on both narrow and wide Unicode
+platforms:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">Py_UCS4</span> <span class="nf">uchar</span> <span class="o">=</span> <span class="s">u&#39;</span><span class="se">\U00012345</span><span class="s">&#39;</span>
+<span class="k">assert</span> <span class="n">uchar</span> <span class="o">==</span> <span class="mf">0</span><span class="n">x12345</span>
+</pre></div>
+</div>
+<p>In CPython 3.3 and later, the <a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UNICODE" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UNICODE</span></tt></a> type is an alias
+for the system specific <tt class="xref c c-type docutils literal"><span class="pre">wchar_t</span></tt> type and is no longer tied
+to the internal representation of the Unicode string.  Instead, any
+Unicode character can be represented on all platforms without
+resorting to surrogate pairs.  This implies that narrow builds no
+longer exist from that version on, regardless of the size of
+<a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UNICODE" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UNICODE</span></tt></a>.  See
+<a class="reference external" href="http://www.python.org/dev/peps/pep-0393/">PEP 393</a>  for details.</p>
+<p>Cython 0.16 and later handles this change internally and does the right
+thing also for single character values as long as either type inference
+is applied to untyped variables or the portable <a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UCS4" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UCS4</span></tt></a> type
+is explicitly used in the source code instead of the platform specific
+<a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UNICODE" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UNICODE</span></tt></a> type.  Optimisations that Cython applies to the
+Python unicode type will automatically adapt to PEP 393 at C compile
+time, as usual.</p>
+</div>
+<div class="section" id="iteration">
+<h2>Iteration<a class="headerlink" href="#iteration" title="Permalink to this headline">¶</a></h2>
+<p>Cython 0.13 supports efficient iteration over <tt class="xref c c-type docutils literal"><span class="pre">char*</span></tt>,
+bytes and unicode strings, as long as the loop variable is
+appropriately typed. So the following will generate the expected
+C code:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">char</span>* <span class="nf">c_string</span> <span class="o">=</span> <span class="o">...</span>
+
+<span class="k">cdef</span> <span class="kt">char</span> <span class="nf">c</span>
+<span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">c_string</span><span class="p">[:</span><span class="mf">100</span><span class="p">]:</span>
+    <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;A&#39;</span><span class="p">:</span> <span class="o">...</span>
+</pre></div>
+</div>
+<p>The same applies to bytes objects:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">bytes</span> <span class="nf">bytes_string</span> <span class="o">=</span> <span class="o">...</span>
+
+<span class="k">cdef</span> <span class="kt">char</span> <span class="nf">c</span>
+<span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">bytes_string</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;A&#39;</span><span class="p">:</span> <span class="o">...</span>
+</pre></div>
+</div>
+<p>For unicode objects, Cython will automatically infer the type of the
+loop variable as <a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UCS4" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UCS4</span></tt></a>:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">unicode</span> <span class="nf">ustring</span> <span class="o">=</span> <span class="o">...</span>
+
+<span class="c"># NOTE: no typing required for &#39;uchar&#39; !</span>
+<span class="k">for</span> <span class="n">uchar</span> <span class="ow">in</span> <span class="n">ustring</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">uchar</span> <span class="o">==</span> <span class="s">u&#39;A&#39;</span><span class="p">:</span> <span class="o">...</span>
+</pre></div>
+</div>
+<p>The automatic type inference usually leads to much more efficient code
+here.  However, note that some unicode operations still require the
+value to be a Python object, so Cython may end up generating redundant
+conversion code for the loop variable value inside of the loop.  If
+this leads to a performance degradation for a specific piece of code,
+you can either type the loop variable as a Python object explicitly,
+or assign its value to a Python typed variable somewhere inside of the
+loop to enforce one-time coercion before running Python operations on
+it.</p>
+<p>There are also optimisations for <tt class="docutils literal"><span class="pre">in</span></tt> tests, so that the following
+code will run in plain C code, (actually using a switch statement):</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">Py_UCS4</span> <span class="nf">uchar_val</span> <span class="o">=</span> <span class="n">get_a_unicode_character</span><span class="p">()</span>
+<span class="k">if</span> <span class="n">uchar_val</span> <span class="ow">in</span> <span class="s">u&#39;abcABCxY&#39;</span><span class="p">:</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>Combined with the looping optimisation above, this can result in very
+efficient character switching code, e.g. in unicode parsers.</p>
+</div>
+<div class="section" id="windows-and-wide-character-apis">
+<h2>Windows and wide character APIs<a class="headerlink" href="#windows-and-wide-character-apis" title="Permalink to this headline">¶</a></h2>
+<p>Windows system APIs natively support Unicode in the form of
+zero-terminated UTF-16 encoded <tt class="xref c c-type docutils literal"><span class="pre">wchar_t*</span></tt> strings, so called
+&#8220;wide strings&#8221;.</p>
+<p>By default, Windows builds of CPython define <a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UNICODE" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UNICODE</span></tt></a> as
+a synonym for <tt class="xref c c-type docutils literal"><span class="pre">wchar_t</span></tt>. This makes internal <tt class="docutils literal"><span class="pre">unicode</span></tt>
+representation compatible with UTF-16 and allows for efficient zero-copy
+conversions. This also means that Windows builds are always
+<a class="reference internal" href="#narrow-unicode-builds">Narrow Unicode builds</a> with all the caveats.</p>
+<p>To aid interoperation with Windows APIs, Cython 0.19 supports wide
+strings (in the form of <tt class="xref c c-type docutils literal"><span class="pre">Py_UNICODE*</span></tt>) and implicitly converts
+them to and from <tt class="docutils literal"><span class="pre">unicode</span></tt> string objects.  These conversions behave the
+same way as they do for <tt class="xref c c-type docutils literal"><span class="pre">char*</span></tt> and <tt class="docutils literal"><span class="pre">bytes</span></tt> as described in
+<a class="reference internal" href="#passing-byte-strings">Passing byte strings</a>.</p>
+<p>In addition to automatic conversion, unicode literals that appear
+in C context become C-level wide string literals and <a class="reference external" href="http://docs.python.org/3.3/library/functions.html#len" title="(in Python v3.3)"><tt class="xref py py-func docutils literal"><span class="pre">len()</span></tt></a>
+built-in function is specialized to compute the length of zero-terminated
+<tt class="xref c c-type docutils literal"><span class="pre">Py_UNICODE*</span></tt> string or array.</p>
+<p>Here is an example of how one would call a Unicode API on Windows:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">from</span> <span class="s">&quot;Windows.h&quot;</span><span class="p">:</span>
+
+    <span class="k">ctypedef</span> <span class="n">Py_UNICODE</span> <span class="n">WCHAR</span>
+    <span class="k">ctypedef</span> <span class="n">const</span> <span class="n">WCHAR</span><span class="o">*</span> <span class="n">LPCWSTR</span>
+    <span class="k">ctypedef</span> <span class="n">void</span><span class="o">*</span> <span class="n">HWND</span>
+
+    <span class="nb">int</span> <span class="n">MessageBoxW</span><span class="p">(</span><span class="n">HWND</span> <span class="n">hWnd</span><span class="p">,</span> <span class="n">LPCWSTR</span> <span class="n">lpText</span><span class="p">,</span> <span class="n">LPCWSTR</span> <span class="n">lpCaption</span><span class="p">,</span> <span class="nb">int</span> <span class="n">uType</span><span class="p">)</span>
+
+<span class="n">title</span> <span class="o">=</span> <span class="s">u&quot;Windows Interop Demo - Python </span><span class="si">%d</span><span class="s">.</span><span class="si">%d</span><span class="s">.</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[:</span><span class="mf">3</span><span class="p">]</span>
+<span class="n">MessageBoxW</span><span class="p">(</span><span class="bp">NULL</span><span class="p">,</span> <span class="s">u&quot;Hello Cython </span><span class="se">\u263a</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="mf">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p>The use of <tt class="xref c c-type docutils literal"><span class="pre">Py_UNICODE*</span></tt> strings outside of Windows is
+strongly discouraged. <a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UNICODE" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UNICODE</span></tt></a> is inherently not
+portable between different platforms and Python versions.</p>
+<p class="last">CPython 3.3 has moved to a flexible internal representation of
+unicode strings (<span class="target" id="index-0"></span><a class="pep reference external" href="http://www.python.org/dev/peps/pep-0393"><strong>PEP 393</strong></a>), making all <a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#Py_UNICODE" title="(in Python v3.3)"><tt class="xref c c-type docutils literal"><span class="pre">Py_UNICODE</span></tt></a> related
+APIs deprecated and inefficient.</p>
+</div>
+<p>One consequence of CPython 3.3 changes is that <a class="reference external" href="http://docs.python.org/3.3/library/functions.html#len" title="(in Python v3.3)"><tt class="xref py py-func docutils literal"><span class="pre">len()</span></tt></a> of
+<tt class="docutils literal"><span class="pre">unicode</span></tt> strings is always measured in <em>code points</em> (&#8220;characters&#8221;),
+while Windows API expect the number of UTF-16 <em>code units</em>
+(where each surrogate is counted individually). To always get the number
+of code units, call <a class="reference external" href="http://docs.python.org/3.3/c-api/unicode.html#PyUnicode_GetSize" title="(in Python v3.3)"><tt class="xref c c-func docutils literal"><span class="pre">PyUnicode_GetSize()</span></tt></a> directly.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index-2.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Unicode and passing strings</a><ul>
+<li><a class="reference internal" href="#python-string-types-in-cython-code">Python string types in Cython code</a></li>
+<li><a class="reference internal" href="#general-notes-about-c-strings">General notes about C strings</a></li>
+<li><a class="reference internal" href="#passing-byte-strings">Passing byte strings</a></li>
+<li><a class="reference internal" href="#dealing-with-const">Dealing with &#8220;const&#8221;</a></li>
+<li><a class="reference internal" href="#decoding-bytes-to-text">Decoding bytes to text</a></li>
+<li><a class="reference internal" href="#encoding-text-to-bytes">Encoding text to bytes</a></li>
+<li><a class="reference internal" href="#c-strings">C++ strings</a></li>
+<li><a class="reference internal" href="#auto-encoding-and-decoding">Auto encoding and decoding</a></li>
+<li><a class="reference internal" href="#source-code-encoding">Source code encoding</a></li>
+<li><a class="reference internal" href="#single-bytes-and-characters">Single bytes and characters</a></li>
+<li><a class="reference internal" href="#narrow-unicode-builds">Narrow Unicode builds</a></li>
+<li><a class="reference internal" href="#iteration">Iteration</a></li>
+<li><a class="reference internal" href="#windows-and-wide-character-apis">Windows and wide character APIs</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="profiling_tutorial.html"
+                        title="previous chapter">Profiling</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="memory_allocation.html"
+                        title="next chapter">Memory Allocation</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/src/tutorial/strings.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="http://docs.cython.org/search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="memory_allocation.html" title="Memory Allocation"
+             >next</a></li>
+        <li class="right" >
+          <a href="profiling_tutorial.html" title="Profiling"
+             >previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer">
+        &copy; Copyright 2014, Stefan Behnel, Robert Bradshaw, Dag Sverre Seljebotn, Greg Ewing, William Stein, Gabriel Gellner, et al..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-6139100-3");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+  </body>
+
+<!-- Mirrored from docs.cython.org/src/tutorial/strings.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:57 GMT -->
+</html>
