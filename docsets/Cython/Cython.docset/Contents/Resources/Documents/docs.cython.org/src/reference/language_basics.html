@@ -1,0 +1,1294 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  
+<!-- Mirrored from docs.cython.org/src/reference/language_basics.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:58 GMT -->
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Language Basics &mdash; Cython 0.20 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.20',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Cython 0.20 documentation" href="../../index-2.html" />
+    <link rel="up" title="Reference Guide" href="index.html" />
+    <link rel="next" title="Extension Types" href="extension_types.html" />
+    <link rel="prev" title="Compilation" href="compilation.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="extension_types.html" title="Extension Types"
+             accesskey="N">next</a></li>
+        <li class="right" >
+          <a href="compilation.html" title="Compilation"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Reference Guide</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="language-basics">
+<span id="id1"></span><h1>Language Basics<a class="headerlink" href="#language-basics" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="cython-file-types">
+<h2>Cython File Types<a class="headerlink" href="#cython-file-types" title="Permalink to this headline">¶</a></h2>
+<p>There are three file types in Cython:</p>
+<ul class="simple">
+<li>Implementation files carry a <tt class="docutils literal"><span class="pre">.pyx</span></tt> suffix</li>
+<li>Definition files carry a <tt class="docutils literal"><span class="pre">.pxd</span></tt> suffix</li>
+<li>Include files which carry a <tt class="docutils literal"><span class="pre">.pxi</span></tt> suffix</li>
+</ul>
+<div class="section" id="implementation-file">
+<h3>Implementation File<a class="headerlink" href="#implementation-file" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="what-can-it-contain">
+<h4>What can it contain?<a class="headerlink" href="#what-can-it-contain" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li>Basically anything Cythonic, but see below.</li>
+</ul>
+</div>
+<div class="section" id="what-can-t-it-contain">
+<h4>What can&#8217;t it contain?<a class="headerlink" href="#what-can-t-it-contain" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li>There are some restrictions when it comes to <strong>extension types</strong>, if the extension type is
+already defined else where... <strong>more on this later</strong></li>
+</ul>
+</div>
+</div>
+<div class="section" id="definition-file">
+<h3>Definition File<a class="headerlink" href="#definition-file" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id2">
+<h4>What can it contain?<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li>Any kind of C type declaration.</li>
+<li><tt class="docutils literal"><span class="pre">extern</span></tt> C function or variable declarations.</li>
+<li>Declarations for module implementations.</li>
+<li>The definition parts of <strong>extension types</strong>.</li>
+<li>All declarations of functions, etc., for an <strong>external library</strong></li>
+</ul>
+</div>
+<div class="section" id="id3">
+<h4>What can&#8217;t it contain?<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li>Any non-extern C variable declaration.</li>
+<li>Implementations of C or Python functions.</li>
+<li>Python class definitions</li>
+<li>Python executable statements.</li>
+<li>Any declaration that is defined as <strong>public</strong> to make it accessible to other Cython modules.</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>This is not necessary, as it is automatic.</li>
+<li>a <strong>public</strong> declaration is only needed to make it accessible to <strong>external C code</strong>.</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="what-else">
+<h4>What else?<a class="headerlink" href="#what-else" title="Permalink to this headline">¶</a></h4>
+<div class="section" id="cimport">
+<h5>cimport<a class="headerlink" href="#cimport" title="Permalink to this headline">¶</a></h5>
+<ul class="simple">
+<li>Use the <strong>cimport</strong> statement, as you would Python&#8217;s import statement, to access these files
+from other definition or implementation files.</li>
+<li><strong>cimport</strong> does not need to be called in <tt class="docutils literal"><span class="pre">.pyx</span></tt> file for for <tt class="docutils literal"><span class="pre">.pxd</span></tt> file that has the
+same name, as they are already in the same namespace.</li>
+<li>For cimport to find the stated definition file, the path to the file must be appended to the
+<tt class="docutils literal"><span class="pre">-I</span></tt> option of the <strong>Cython compile command</strong>.</li>
+</ul>
+</div>
+<div class="section" id="compilation-order">
+<h5>compilation order<a class="headerlink" href="#compilation-order" title="Permalink to this headline">¶</a></h5>
+<ul class="simple">
+<li>When a <tt class="docutils literal"><span class="pre">.pyx</span></tt> file is to be compiled, Cython first checks to see if a corresponding <tt class="docutils literal"><span class="pre">.pxd</span></tt> file
+exits and processes it first.</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="section" id="include-file">
+<h3>Include File<a class="headerlink" href="#include-file" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id4">
+<h4>What can it contain?<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li>Any Cythonic code really, because the entire file is textually embedded at the location
+you prescribe.</li>
+</ul>
+</div>
+<div class="section" id="how-do-i-use-it">
+<h4>How do I use it?<a class="headerlink" href="#how-do-i-use-it" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li>Include the <tt class="docutils literal"><span class="pre">.pxi</span></tt> file with an <tt class="docutils literal"><span class="pre">include</span></tt> statement like: <tt class="docutils literal"><span class="pre">include</span> <span class="pre">&quot;spamstuff.pxi</span></tt></li>
+<li>The <tt class="docutils literal"><span class="pre">include</span></tt> statement can appear anywhere in your Cython file and at any indentation level</li>
+<li>The code in the <tt class="docutils literal"><span class="pre">.pxi</span></tt> file needs to be rooted at the &#8220;zero&#8221; indentation level.</li>
+<li>The included code can itself contain other <tt class="docutils literal"><span class="pre">include</span></tt> statements.</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="section" id="declaring-data-types">
+<h2>Declaring Data Types<a class="headerlink" href="#declaring-data-types" title="Permalink to this headline">¶</a></h2>
+<p>As a dynamic language, Python encourages a programming style of considering classes and objects in terms of their methods and attributes, more than where they fit into the class hierarchy.</p>
+<p>This can make Python a very relaxed and comfortable language for rapid development, but with a price - the &#8216;red tape&#8217; of managing data types is dumped onto the interpreter. At run time, the interpreter does a lot of work searching namespaces, fetching attributes and parsing argument and keyword tuples. This run-time ‘late binding’ is a major cause of Python’s relative slowness compared to ‘early binding’ languages such as C++.</p>
+<p>However with Cython it is possible to gain significant speed-ups through the use of ‘early binding’ programming techniques.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Typing is not a necessity</p>
+<p class="last">Providing static typing to parameters and variables is convenience to speed up your code, but it is not a necessity. Optimize where and when needed.</p>
+</div>
+<div class="section" id="the-cdef-statement">
+<h3>The cdef Statement<a class="headerlink" href="#the-cdef-statement" title="Permalink to this headline">¶</a></h3>
+<p>The <tt class="docutils literal"><span class="pre">cdef</span></tt> statement is used to make C level declarations for:</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Variables:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">int</span> <span class="nf">i</span><span class="p">,</span> <span class="nf">j</span><span class="p">,</span> <span class="nf">k</span>
+<span class="k">cdef</span> <span class="kt">float</span> <span class="nf">f</span><span class="p">,</span> <span class="kt">g</span>[42], *<span class="nf">h</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Structs:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">struct</span> <span class="nf">Grail</span><span class="p">:</span>
+    <span class="nb">int</span> <span class="n">age</span>
+    <span class="nb">float</span> <span class="n">volume</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Unions:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">union</span> <span class="nf">Food</span><span class="p">:</span>
+    <span class="n">char</span> <span class="o">*</span><span class="n">spam</span>
+    <span class="nb">float</span> <span class="o">*</span><span class="n">eggs</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Enums:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">enum</span> <span class="nf">CheeseType</span><span class="p">:</span>
+    <span class="n">cheddar</span><span class="p">,</span> <span class="n">edam</span><span class="p">,</span>
+    <span class="n">camembert</span>
+
+<span class="k">cdef</span> <span class="k">enum</span> <span class="nf">CheeseState</span><span class="p">:</span>
+    <span class="n">hard</span> <span class="o">=</span> <span class="mf">1</span>
+    <span class="n">soft</span> <span class="o">=</span> <span class="mf">2</span>
+    <span class="n">runny</span> <span class="o">=</span> <span class="mf">3</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Functions:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">int</span> <span class="nf">eggs</span><span class="p">(</span><span class="n">unsigned</span> <span class="nb">long</span> <span class="n">l</span><span class="p">,</span> <span class="nb">float</span> <span class="n">f</span><span class="p">):</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name" colspan="2">Extension Types:</th></tr>
+<tr><td>&nbsp;</td><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">class</span> <span class="nf">Spam</span><span class="p">:</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Constants</p>
+<p>Constants can be defined by using an anonymous enum:</p>
+<div class="last highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">enum</span><span class="p">:</span>
+    <span class="n">tons_of_spam</span> <span class="o">=</span> <span class="mf">3</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="grouping-cdef-declarations">
+<h3>Grouping cdef Declarations<a class="headerlink" href="#grouping-cdef-declarations" title="Permalink to this headline">¶</a></h3>
+<p>A series of declarations can grouped into a <tt class="docutils literal"><span class="pre">cdef</span></tt> block:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="n">cdef</span><span class="p">:</span>
+    <span class="k">struct</span> <span class="nc">Spam</span><span class="p">:</span>
+        <span class="nb">int</span> <span class="n">tons</span>
+
+    <span class="nb">int</span> <span class="n">i</span>
+    <span class="nb">float</span> <span class="n">f</span>
+    <span class="n">Spam</span> <span class="o">*</span><span class="n">p</span>
+
+    <span class="n">void</span> <span class="n">f</span><span class="p">(</span><span class="n">Spam</span> <span class="o">*</span><span class="n">s</span><span class="p">):</span>
+    <span class="k">print</span> <span class="n">s</span><span class="o">.</span><span class="n">tons</span><span class="p">,</span> <span class="s">&quot;Tons of spam&quot;</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>ctypedef statement</p>
+<p>The <tt class="docutils literal"><span class="pre">ctypedef</span></tt> statement is provided for naming types:</p>
+<div class="last highlight-cython"><div class="highlight"><pre><span class="k">ctypedef</span> <span class="n">unsigned</span> <span class="nb">long</span> <span class="n">ULong</span>
+
+<span class="k">ctypedef</span> <span class="nb">int</span> <span class="o">*</span><span class="n">IntPtr</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="parameters">
+<h3>Parameters<a class="headerlink" href="#parameters" title="Permalink to this headline">¶</a></h3>
+<ul>
+<li><p class="first">Both C and Python <strong>function</strong> types can be declared to have parameters C data types.</p>
+</li>
+<li><p class="first">Use normal C declaration syntax:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">def</span> <span class="nf">spam</span><span class="p">(</span><span class="nb">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">char</span> <span class="o">*</span><span class="n">s</span><span class="p">):</span>
+    <span class="o">...</span>
+
+    <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">eggs</span><span class="p">(</span><span class="n">unsigned</span> <span class="nb">long</span> <span class="n">l</span><span class="p">,</span> <span class="nb">float</span> <span class="n">f</span><span class="p">):</span>
+        <span class="o">...</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">As these parameters are passed into a Python declared function, they are magically <strong>converted</strong> to the specified C type value.</p>
+</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>This holds true for only numeric and string types</li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li>If no type is specified for a parameter or a return value, it is assumed to be a Python object</li>
+</ul>
+<blockquote>
+<div><ul>
+<li><p class="first">The following takes two Python objects as parameters and returns a Python object:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="nf">spamobjs</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<blockquote>
+<div><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>&#8211;</p>
+<p class="last">This is different then C language behavior, where  it is an int by default.</p>
+</div>
+</div></blockquote>
+</div></blockquote>
+<ul class="simple">
+<li>Python object types have reference counting performed according to the standard Python C-API rules:</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>Borrowed references are taken as parameters</li>
+<li>New references are returned</li>
+</ul>
+</div></blockquote>
+<div class="admonition-todo admonition " id="index-0">
+<p class="first admonition-title">Todo</p>
+<p class="last">link or label here the one ref count caveat for NumPy.</p>
+</div>
+<ul class="simple">
+<li>The name <tt class="docutils literal"><span class="pre">object</span></tt> can be used to explicitly declare something as a Python Object.</li>
+</ul>
+<blockquote>
+<div><ul>
+<li><p class="first">For sake of code clarity, it recommended to always use <tt class="docutils literal"><span class="pre">object</span></tt> explicitly in your code.</p>
+</li>
+<li><p class="first">This is also useful for cases where the name being declared would otherwise be taken for a type:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="nf">foo</span><span class="p">(</span><span class="nb">object</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">As a return type:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">object</span> <span class="nf">foo</span><span class="p">(</span><span class="nb">object</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</div></blockquote>
+<div class="admonition-todo admonition " id="index-1">
+<p class="first admonition-title">Todo</p>
+<p class="last">Do a see also here ..??</p>
+</div>
+<div class="section" id="optional-arguments">
+<h4>Optional Arguments<a class="headerlink" href="#optional-arguments" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li>Are supported for <tt class="docutils literal"><span class="pre">cdef</span></tt> and <tt class="docutils literal"><span class="pre">cpdef</span></tt> functions</li>
+<li>There differences though whether you declare them in a <tt class="docutils literal"><span class="pre">.pyx</span></tt> file or a <tt class="docutils literal"><span class="pre">.pxd</span></tt> file</li>
+</ul>
+<blockquote>
+<div><ul>
+<li><p class="first">When in a <tt class="docutils literal"><span class="pre">.pyx</span></tt> file, the signature is the same as it is in Python itself:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">class</span> <span class="nf">A</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="nf">foo</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span> <span class="s">&quot;A&quot;</span>
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">B</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+    <span class="k">cdef</span> <span class="nf">foo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;B&quot;</span><span class="p">,</span> <span class="n">x</span>
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">C</span><span class="p">(</span><span class="n">B</span><span class="p">):</span>
+    <span class="k">cpdef</span> <span class="nf">foo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="nb">int</span> <span class="n">k</span><span class="o">=</span><span class="mf">3</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;C&quot;</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">k</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">When in a <tt class="docutils literal"><span class="pre">.pxd</span></tt> file, the signature is different like this example: <tt class="docutils literal"><span class="pre">cdef</span> <span class="pre">foo(x=*)</span></tt>:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">class</span> <span class="nf">A</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="nf">foo</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">B</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+    <span class="k">cdef</span> <span class="nf">foo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="o">=*</span><span class="p">)</span>
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">C</span><span class="p">(</span><span class="n">B</span><span class="p">):</span>
+    <span class="k">cpdef</span> <span class="nf">foo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="o">=*</span><span class="p">,</span> <span class="nb">int</span> <span class="n">k</span><span class="o">=*</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>The number of arguments may increase when subclassing, but the arg types and order must be the same.</li>
+</ul>
+</div></blockquote>
+</div></blockquote>
+<ul class="simple">
+<li>There may be a slight performance penalty when the optional arg is overridden with one that does not have default values.</li>
+</ul>
+</div>
+</div>
+<div class="section" id="keyword-only-arguments">
+<h3>Keyword-only Arguments<a class="headerlink" href="#keyword-only-arguments" title="Permalink to this headline">¶</a></h3>
+<ul>
+<li><p class="first">As in Python 3, <tt class="docutils literal"><span class="pre">def</span></tt> functions can have keyword-only argurments listed after a <tt class="docutils literal"><span class="pre">&quot;*&quot;</span></tt> parameter and before a <tt class="docutils literal"><span class="pre">&quot;**&quot;</span></tt> parameter if any:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">d</span> <span class="o">=</span> <span class="mf">42</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="o">**</span><span class="n">kwds</span><span class="p">):</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>Shown above, the <tt class="docutils literal"><span class="pre">c</span></tt>, <tt class="docutils literal"><span class="pre">d</span></tt> and <tt class="docutils literal"><span class="pre">e</span></tt> arguments can not be passed as positional arguments and must be passed as keyword arguments.</li>
+<li>Furthermore, <tt class="docutils literal"><span class="pre">c</span></tt> and <tt class="docutils literal"><span class="pre">e</span></tt> are required keyword arguments since they do not have a default value.</li>
+</ul>
+</div></blockquote>
+<ul>
+<li><p class="first">If the parameter name after the <tt class="docutils literal"><span class="pre">&quot;*&quot;</span></tt> is omitted, the function will not accept any extra positional arguments:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">def</span> <span class="nf">g</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">d</span><span class="p">):</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>Shown above, the signature takes exactly two positional parameters and has two required keyword parameters</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="automatic-type-conversion">
+<h3>Automatic Type Conversion<a class="headerlink" href="#automatic-type-conversion" title="Permalink to this headline">¶</a></h3>
+<ul>
+<li><p class="first">For basic numeric and string types, in most situations, when a Python object is used in the context of a C value and vice versa.</p>
+</li>
+<li><p class="first">The following table summarizes the conversion possibilities, assuming <tt class="docutils literal"><span class="pre">sizeof(int)</span> <span class="pre">==</span> <span class="pre">sizeof(long)</span></tt>:</p>
+<blockquote>
+<div><table border="1" class="docutils">
+<colgroup>
+<col width="42%" />
+<col width="30%" />
+<col width="27%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head"><p class="first last">C types</p>
+</th>
+<th class="head"><p class="first last">From Python types</p>
+</th>
+<th class="head"><p class="first last">To Python types</p>
+</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><p class="first last">[unsigned] char</p>
+</td>
+<td rowspan="3"><p class="first last">int, long</p>
+</td>
+<td rowspan="3"><p class="first last">int</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p class="first last">[unsigned] short</p>
+</td>
+</tr>
+<tr class="row-even"><td><p class="first last">int, long</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p class="first last">unsigned int</p>
+</td>
+<td rowspan="3"><p class="first last">int, long</p>
+</td>
+<td rowspan="3"><p class="first last">long</p>
+</td>
+</tr>
+<tr class="row-even"><td><p class="first last">unsigned long</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p class="first last">[unsigned] long long</p>
+</td>
+</tr>
+<tr class="row-even"><td><p class="first last">float, double, long double</p>
+</td>
+<td><p class="first last">int, long, float</p>
+</td>
+<td><p class="first last">float</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p class="first last">char *</p>
+</td>
+<td><p class="first last">str/bytes</p>
+</td>
+<td><p class="first last">str/bytes <a class="footnote-reference" href="#id6" id="id5">[1]</a></p>
+</td>
+</tr>
+<tr class="row-even"><td><p class="first last">struct</p>
+</td>
+<td>&nbsp;</td>
+<td><p class="first last">dict</p>
+</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</li>
+</ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p><strong>Python String in a C Context</strong></p>
+<ul>
+<li><p class="first">A Python string, passed to C context expecting a <tt class="docutils literal"><span class="pre">char*</span></tt>, is only valid as long as the Python string exists.</p>
+</li>
+<li><p class="first">A reference to the Python string must be kept around for as long as the C string is needed.</p>
+</li>
+<li><p class="first">If this can&#8217;t be guaranteed, then make a copy of the C string.</p>
+</li>
+<li><p class="first">Cython may produce an error message: <tt class="docutils literal"><span class="pre">Obtaining</span> <span class="pre">char*</span> <span class="pre">from</span> <span class="pre">a</span> <span class="pre">temporary</span> <span class="pre">Python</span> <span class="pre">value</span></tt> and will not resume compiling in situations like this:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">char</span> *<span class="nf">s</span>
+<span class="n">s</span> <span class="o">=</span> <span class="n">pystring1</span> <span class="o">+</span> <span class="n">pystring2</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">The reason is that concatenating to strings in Python produces a temporary variable.</p>
+</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>The variable is decrefed, and the Python string deallocated as soon as the statement has finished,</li>
+<li>Therefore the lvalue <strong>``s``</strong> is left dangling.</li>
+</ul>
+</div></blockquote>
+<ul>
+<li><p class="first">The solution is to assign the result of the concatenation to a Python variable, and then obtain the <tt class="docutils literal"><span class="pre">char*</span></tt> from that:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">char</span> *<span class="nf">s</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">pystring1</span> <span class="o">+</span> <span class="n">pystring2</span>
+<span class="n">s</span> <span class="o">=</span> <span class="n">p</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<div class="last admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last"><strong>It is up to you to be aware of this, and not to depend on Cython&#8217;s error message, as it is not guaranteed to be generated for every situation.</strong></p>
+</div>
+</div>
+</div>
+<div class="section" id="type-casting">
+<h3>Type Casting<a class="headerlink" href="#type-casting" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>The syntax used in type casting are <tt class="docutils literal"><span class="pre">&quot;&lt;&quot;</span></tt> and <tt class="docutils literal"><span class="pre">&quot;&gt;&quot;</span></tt></li>
+</ul>
+<blockquote>
+<div><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The syntax is different from C convention</p>
+</div>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">char</span> *<span class="nf">p</span><span class="p">,</span> <span class="kt">float</span> *<span class="nf">q</span>
+<span class="n">p</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">char</span><span class="o">*&gt;</span><span class="n">q</span>
+</pre></div>
+</div>
+</div></blockquote>
+<ul class="simple">
+<li>If one of the types is a python object for <tt class="docutils literal"><span class="pre">&lt;type&gt;x</span></tt>, Cython will try and do a coercion.</li>
+</ul>
+<blockquote>
+<div><div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Cython will not stop a casting where there is no conversion, but it will emit a warning.</p>
+</div>
+</div></blockquote>
+<ul class="simple">
+<li>If the address is what is wanted, cast to a <tt class="docutils literal"><span class="pre">void*</span></tt> first.</li>
+</ul>
+<div class="section" id="type-checking">
+<h4>Type Checking<a class="headerlink" href="#type-checking" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li>A cast like <tt class="docutils literal"><span class="pre">&lt;MyExtensionType&gt;x</span></tt> will cast x to type <tt class="docutils literal"><span class="pre">MyExtensionType</span></tt> without type checking at all.</li>
+<li>To have a cast type checked, use the syntax like: <tt class="docutils literal"><span class="pre">&lt;MyExtensionType?&gt;x</span></tt>.</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>In this case, Cython will throw an error if <tt class="docutils literal"><span class="pre">&quot;x&quot;</span></tt> is not a (subclass) of <tt class="docutils literal"><span class="pre">MyExtensionType</span></tt></li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li>Automatic type checking for extension types can be obtained whenever <tt class="docutils literal"><span class="pre">isinstance()</span></tt> is used as the second parameter</li>
+</ul>
+</div>
+</div>
+<div class="section" id="python-objects">
+<h3>Python Objects<a class="headerlink" href="#python-objects" title="Permalink to this headline">¶</a></h3>
+</div>
+</div>
+<div class="section" id="statements-and-expressions">
+<h2>Statements and Expressions<a class="headerlink" href="#statements-and-expressions" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>For the most part, control structures and expressions follow Python syntax.</li>
+<li>When applied to Python objects, the semantics are the same unless otherwise noted.</li>
+<li>Most Python operators can be applied to C values with the obvious semantics.</li>
+<li>An expression with mixed Python and C values will have <strong>conversions</strong> performed automatically.</li>
+<li>Python operations are automatically checked for errors, with the appropriate action taken.</li>
+</ul>
+<div class="section" id="differences-between-cython-and-c">
+<h3>Differences Between Cython and C<a class="headerlink" href="#differences-between-cython-and-c" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Most notable are C constructs which have no direct equivalent in Python.</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>An integer literal is treated as a C constant</li>
+</ul>
+<blockquote>
+<div><ul>
+<li><p class="first">It will be truncated to whatever size your C compiler thinks appropriate.</p>
+</li>
+<li><p class="first">Cast to a Python object like this:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="p">&lt;</span><span class="kt">object</span><span class="p">&gt;</span><span class="mf">10000000000000000000</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">The <tt class="docutils literal"><span class="pre">&quot;L&quot;</span></tt>, <tt class="docutils literal"><span class="pre">&quot;LL&quot;</span></tt> and the <tt class="docutils literal"><span class="pre">&quot;U&quot;</span></tt> suffixes have the same meaning as in C</p>
+</li>
+</ul>
+</div></blockquote>
+</div></blockquote>
+<ul class="simple">
+<li>There is no <tt class="docutils literal"><span class="pre">-&gt;</span></tt> operator in Cython.. instead of <tt class="docutils literal"><span class="pre">p-&gt;x</span></tt>, use <tt class="docutils literal"><span class="pre">p.x</span></tt>.</li>
+<li>There is no <tt class="docutils literal"><span class="pre">*</span></tt> operator in Cython.. instead of <tt class="docutils literal"><span class="pre">*p</span></tt>, use <tt class="docutils literal"><span class="pre">p[0]</span></tt>.</li>
+<li><tt class="docutils literal"><span class="pre">&amp;</span></tt> is permissible and has the same semantics as in C.</li>
+<li><tt class="docutils literal"><span class="pre">NULL</span></tt> is the null C pointer.</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>Do NOT use 0.</li>
+<li><tt class="docutils literal"><span class="pre">NULL</span></tt> is a reserved word in Cython</li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li>Syntax for <strong>Type casts</strong> are <tt class="docutils literal"><span class="pre">&lt;type&gt;value</span></tt>.</li>
+</ul>
+</div>
+<div class="section" id="scope-rules">
+<h3>Scope Rules<a class="headerlink" href="#scope-rules" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>All determination of scoping (local, module, built-in) in Cython is determined statically.</li>
+<li>As with Python, a variable assignment which is not declared explicitly is implicitly declared to be a Python variable residing in the scope where it was assigned.</li>
+</ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<ul class="simple">
+<li>Module-level scope behaves the same way as a Python local scope if you refer to the variable before assigning to it.</li>
+</ul>
+<blockquote class="last">
+<div><ul>
+<li><p class="first">Tricks, like the following will NOT work in Cython:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">try</span><span class="p">:</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
+    <span class="bp">True</span> <span class="o">=</span> <span class="mf">1</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">The above example will not work because <tt class="docutils literal"><span class="pre">True</span></tt> will always be looked up in the module-level scope. Do the following instead:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">import</span> <span class="nn">__builtin__</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="bp">True</span> <span class="o">=</span> <span class="n">__builtin__</span><span class="o">.</span><span class="n">True</span>
+<span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+    <span class="bp">True</span> <span class="o">=</span> <span class="mf">1</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</div></blockquote>
+</div>
+</div>
+<div class="section" id="built-in-constants">
+<h3>Built-in Constants<a class="headerlink" href="#built-in-constants" title="Permalink to this headline">¶</a></h3>
+<p>Predefined Python built-in constants:</p>
+<ul class="simple">
+<li>None</li>
+<li>True</li>
+<li>False</li>
+</ul>
+</div>
+<div class="section" id="operator-precedence">
+<h3>Operator Precedence<a class="headerlink" href="#operator-precedence" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Cython uses Python precedence order, not C</li>
+</ul>
+</div>
+<div class="section" id="for-loops">
+<h3>For-loops<a class="headerlink" href="#for-loops" title="Permalink to this headline">¶</a></h3>
+<p>The &#8220;for ... in iterable&#8221; loop works as in Python, but is even more versatile
+in Cython as it can additionally be used on C types.</p>
+<ul>
+<li><p class="first"><tt class="docutils literal"><span class="pre">range()</span></tt> is C optimized when the index value has been declared by <tt class="docutils literal"><span class="pre">cdef</span></tt>,
+for example:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">size_t</span> <span class="nf">i</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Iteration over C arrays and sliced pointers is supported and automatically
+infers the type of the loop variable, e.g.:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">double</span>* <span class="nf">data</span> <span class="o">=</span> <span class="o">...</span>
+<span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[:</span><span class="mf">10</span><span class="p">]:</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Iterating over many builtin types such as lists and tuples is optimized.</p>
+</li>
+<li><p class="first">There is also a more verbose C-style for-from syntax which, however, is
+deprecated in favour of the normal Python &#8220;for ... in range()&#8221; loop.  You
+might still find it in legacy code that was written for Pyrex, though.</p>
+</li>
+</ul>
+<blockquote>
+<div><ul>
+<li><p class="first">The target expression must be a plain variable name.</p>
+</li>
+<li><p class="first">The name between the lower and upper bounds must be the same as the target name.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>for i from 0 &lt;= i &lt; n:</dt>
+<dd><p class="first last">...</p>
+</dd>
+</dl>
+</div></blockquote>
+</li>
+<li><p class="first">Or when using a step size:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">for</span> <span class="n">i</span> <span class="k">from</span> <span class="mf">0</span> <span class="o">&lt;=</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span> <span class="k">by</span> <span class="n">s</span><span class="p">:</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">To reverse the direction, reverse the conditional operation:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">for</span> <span class="n">i</span> <span class="k">from</span> <span class="nn">n</span> <span class="o">&gt;</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="mf">0</span><span class="p">:</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li>The <tt class="docutils literal"><span class="pre">break</span></tt> and <tt class="docutils literal"><span class="pre">continue</span></tt> statements are permissible.</li>
+<li>Can contain an else clause.</li>
+</ul>
+</div>
+</div>
+<div class="section" id="functions-and-methods">
+<h2>Functions and Methods<a class="headerlink" href="#functions-and-methods" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>There are three types of function declarations in Cython as the sub-sections show below.</li>
+<li>Only &#8220;Python&#8221; functions can be called outside a Cython module from <em>Python interpreted code</em>.</li>
+</ul>
+<div class="section" id="callable-from-python">
+<h3>Callable from Python<a class="headerlink" href="#callable-from-python" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Are declared with the <tt class="docutils literal"><span class="pre">def</span></tt> statement</li>
+<li>Are called with Python objects</li>
+<li>Return Python objects</li>
+<li>See <strong>Parameters</strong> for special consideration</li>
+</ul>
+</div>
+<div class="section" id="callable-from-c">
+<span id="cdef"></span><h3>Callable from C<a class="headerlink" href="#callable-from-c" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Are declared with the <tt class="docutils literal"><span class="pre">cdef</span></tt> statement.</li>
+<li>Are called with either Python objects or C values.</li>
+<li>Can return either Python objects or C values.</li>
+</ul>
+</div>
+<div class="section" id="callable-from-both-python-and-c">
+<span id="cpdef"></span><h3>Callable from both Python and C<a class="headerlink" href="#callable-from-both-python-and-c" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Are declared with the <tt class="docutils literal"><span class="pre">cpdef</span></tt> statement.</li>
+<li>Can be called from anywhere, because it uses a little Cython magic.</li>
+<li>Uses the faster C calling conventions when being called from other Cython code.</li>
+</ul>
+</div>
+<div class="section" id="overriding">
+<h3>Overriding<a class="headerlink" href="#overriding" title="Permalink to this headline">¶</a></h3>
+<p><tt class="docutils literal"><span class="pre">cpdef</span></tt> functions can override <tt class="docutils literal"><span class="pre">cdef</span></tt> functions:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">class</span> <span class="nf">A</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="nf">foo</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span> <span class="s">&quot;A&quot;</span>
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">B</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+    <span class="k">cdef</span> <span class="nf">foo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;B&quot;</span><span class="p">,</span> <span class="n">x</span>
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">C</span><span class="p">(</span><span class="n">B</span><span class="p">):</span>
+    <span class="k">cpdef</span> <span class="nf">foo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="nb">int</span> <span class="n">k</span><span class="o">=</span><span class="mf">3</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;C&quot;</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">k</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="function-pointers">
+<h3>Function Pointers<a class="headerlink" href="#function-pointers" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Functions declared in a <tt class="docutils literal"><span class="pre">struct</span></tt> are automatically converted to function pointers.</li>
+<li>see <strong>using exceptions with function pointers</strong></li>
+</ul>
+</div>
+<div class="section" id="python-built-ins">
+<h3>Python Built-ins<a class="headerlink" href="#python-built-ins" title="Permalink to this headline">¶</a></h3>
+<p>Cython compiles calls to most built-in functions into direct calls to
+the corresponding Python/C API routines, making them particularly fast.</p>
+<p>Only direct function calls using these names are optimised. If you do
+something else with one of these names that assumes it&#8217;s a Python object,
+such as assign it to a Python variable, and later call it, the call will
+be made as a Python function call.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="42%" />
+<col width="18%" />
+<col width="39%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Function and arguments</th>
+<th class="head">Return type</th>
+<th class="head">Python/C API Equivalent</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>abs(obj)</td>
+<td>object,
+double, ...</td>
+<td>PyNumber_Absolute, fabs,
+fabsf, ...</td>
+</tr>
+<tr class="row-odd"><td>callable(obj)</td>
+<td>bint</td>
+<td>PyObject_Callable</td>
+</tr>
+<tr class="row-even"><td>delattr(obj, name)</td>
+<td>None</td>
+<td>PyObject_DelAttr</td>
+</tr>
+<tr class="row-odd"><td>exec(code, [glob, [loc]])</td>
+<td>object</td>
+<td><ul class="first last simple">
+<li></li>
+</ul>
+</td>
+</tr>
+<tr class="row-even"><td>dir(obj)</td>
+<td>list</td>
+<td>PyObject_Dir</td>
+</tr>
+<tr class="row-odd"><td>divmod(a, b)</td>
+<td>tuple</td>
+<td>PyNumber_Divmod</td>
+</tr>
+<tr class="row-even"><td>getattr(obj, name, [default])
+(Note 1)</td>
+<td>object</td>
+<td>PyObject_GetAttr</td>
+</tr>
+<tr class="row-odd"><td>hasattr(obj, name)</td>
+<td>bint</td>
+<td>PyObject_HasAttr</td>
+</tr>
+<tr class="row-even"><td>hash(obj)</td>
+<td>int / long</td>
+<td>PyObject_Hash</td>
+</tr>
+<tr class="row-odd"><td>intern(obj)</td>
+<td>object</td>
+<td>Py*_InternFromString</td>
+</tr>
+<tr class="row-even"><td>isinstance(obj, type)</td>
+<td>bint</td>
+<td>PyObject_IsInstance</td>
+</tr>
+<tr class="row-odd"><td>issubclass(obj, type)</td>
+<td>bint</td>
+<td>PyObject_IsSubclass</td>
+</tr>
+<tr class="row-even"><td>iter(obj, [sentinel])</td>
+<td>object</td>
+<td>PyObject_GetIter</td>
+</tr>
+<tr class="row-odd"><td>len(obj)</td>
+<td>Py_ssize_t</td>
+<td>PyObject_Length</td>
+</tr>
+<tr class="row-even"><td>pow(x, y, [z])</td>
+<td>object</td>
+<td>PyNumber_Power</td>
+</tr>
+<tr class="row-odd"><td>reload(obj)</td>
+<td>object</td>
+<td>PyImport_ReloadModule</td>
+</tr>
+<tr class="row-even"><td>repr(obj)</td>
+<td>object</td>
+<td>PyObject_Repr</td>
+</tr>
+<tr class="row-odd"><td>setattr(obj, name)</td>
+<td>void</td>
+<td>PyObject_SetAttr</td>
+</tr>
+</tbody>
+</table>
+<p>Note 1: Pyrex originally provided a function <tt class="xref py py-func docutils literal"><span class="pre">getattr3(obj,</span> <span class="pre">name,</span> <span class="pre">default)()</span></tt>
+corresponding to the three-argument form of the Python builtin <a class="reference external" href="http://docs.python.org/3.3/library/functions.html#getattr" title="(in Python v3.3)"><tt class="xref py py-func docutils literal"><span class="pre">getattr()</span></tt></a>.
+Cython still supports this function, but the usage is deprecated in favour of
+the normal builtin, which Cython can optimise in both forms.</p>
+</div>
+</div>
+<div class="section" id="error-and-exception-handling">
+<h2>Error and Exception Handling<a class="headerlink" href="#error-and-exception-handling" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>A plain <tt class="docutils literal"><span class="pre">cdef</span></tt> declared function, that does not return a Python object...</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>Has no way of reporting a Python exception to it&#8217;s caller.</li>
+<li>Will only print a warning message and the exception is ignored.</li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li>In order to propagate exceptions like this to it&#8217;s caller, you need to declare an exception value for it.</li>
+<li>There are three forms of declaring an exception for a C compiled program.</li>
+</ul>
+<blockquote>
+<div><ul>
+<li><p class="first">First:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">int</span> <span class="nf">spam</span><span class="p">()</span> <span class="k">except</span> <span class="o">-</span><span class="mf">1</span><span class="p">:</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>In the example above, if an error occurs inside spam, it will immediately return with the value of <tt class="docutils literal"><span class="pre">-1</span></tt>, causing an exception to be propagated to it&#8217;s caller.</li>
+<li>Functions declared with an exception value, should explicitly prevent a return of that value.</li>
+</ul>
+</div></blockquote>
+<ul>
+<li><p class="first">Second:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">int</span> <span class="nf">spam</span><span class="p">()</span> <span class="k">except</span><span class="o">?</span> <span class="o">-</span><span class="mf">1</span><span class="p">:</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>Used when a <tt class="docutils literal"><span class="pre">-1</span></tt> may possibly be returned and is not to be considered an error.</li>
+<li>The <tt class="docutils literal"><span class="pre">&quot;?&quot;</span></tt> tells Cython that <tt class="docutils literal"><span class="pre">-1</span></tt> only indicates a <em>possible</em> error.</li>
+<li>Now, each time <tt class="docutils literal"><span class="pre">-1</span></tt> is returned, Cython generates a call to <tt class="docutils literal"><span class="pre">PyErr_Occurred</span></tt> to verify it is an actual error.</li>
+</ul>
+</div></blockquote>
+<ul>
+<li><p class="first">Third:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">int</span> <span class="nf">spam</span><span class="p">()</span> <span class="k">except</span> <span class="o">*</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<blockquote>
+<div><ul>
+<li><p class="first">A call to <tt class="docutils literal"><span class="pre">PyErr_Occurred</span></tt> happens <em>every</em> time the function gets called.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Returning <tt class="docutils literal"><span class="pre">void</span></tt></p>
+<p class="last">A need to propagate errors when returning <tt class="docutils literal"><span class="pre">void</span></tt> must use this version.</p>
+</div>
+</li>
+</ul>
+</div></blockquote>
+</div></blockquote>
+<ul class="simple">
+<li>Exception values can only be declared for functions returning an..</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>integer</li>
+<li>enum</li>
+<li>float</li>
+<li>pointer type</li>
+<li>Must be a constant expression</li>
+</ul>
+</div></blockquote>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Function pointers</p>
+<ul class="last">
+<li><p class="first">Require the same exception value specification as it&#8217;s user has declared.</p>
+</li>
+<li><p class="first">Use cases here are when used as parameters and when assigned to a variable:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="nb">int</span> <span class="p">(</span><span class="o">*</span><span class="n">grail</span><span class="p">)(</span><span class="nb">int</span><span class="p">,</span> <span class="n">char</span> <span class="o">*</span><span class="p">)</span> <span class="k">except</span> <span class="o">-</span><span class="mf">1</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Python Objects</p>
+<ul class="last simple">
+<li>Declared exception values are <strong>not</strong> need.</li>
+<li>Remember that Cython assumes that a function function without a declared return value, returns a Python object.</li>
+<li>Exceptions on such functions are implicitly propagated by returning <tt class="docutils literal"><span class="pre">NULL</span></tt></li>
+</ul>
+</div>
+<div class="last admonition note">
+<p class="first admonition-title">Note</p>
+<p>C++</p>
+<ul class="last simple">
+<li>For exceptions from C++ compiled programs, see <strong>Wrapping C++ Classes</strong></li>
+</ul>
+</div>
+</div>
+<div class="section" id="checking-return-values-for-non-cython-functions">
+<h3>Checking return values for non-Cython functions..<a class="headerlink" href="#checking-return-values-for-non-cython-functions" title="Permalink to this headline">¶</a></h3>
+<ul>
+<li><p class="first">Do not try to raise exceptions by returning the specified value.. Example:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="kt">FILE</span> *<span class="nf">fopen</span><span class="p">(</span><span class="n">char</span> <span class="o">*</span><span class="n">filename</span><span class="p">,</span> <span class="n">char</span> <span class="o">*</span><span class="n">mode</span><span class="p">)</span> <span class="k">except</span> <span class="bp">NULL</span> <span class="c"># WRONG!</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>The except clause does not work that way.</li>
+<li>It&#8217;s only purpose is to propagate Python exceptions that have already been raised by either...</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>A Cython function</li>
+<li>A C function that calls Python/C API routines.</li>
+</ul>
+</div></blockquote>
+</div></blockquote>
+<ul>
+<li><p class="first">To propagate an exception for these circumstances you need to raise it yourself:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">FILE</span> *<span class="nf">p</span>
+<span class="n">p</span> <span class="o">=</span> <span class="n">fopen</span><span class="p">(</span><span class="s">&quot;spam.txt&quot;</span><span class="p">,</span> <span class="s">&quot;r&quot;</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">p</span> <span class="o">==</span> <span class="bp">NULL</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="n">SpamError</span><span class="p">(</span><span class="s">&quot;Couldn&#39;t open the spam file&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="conditional-compilation">
+<h2>Conditional Compilation<a class="headerlink" href="#conditional-compilation" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>The expressions in the following sub-sections must be valid compile-time expressions.</li>
+<li>They can evaluate to any Python value.</li>
+<li>The <em>truth</em> of the result is determined in the usual Python way.</li>
+</ul>
+<div class="section" id="compile-time-definitions">
+<h3>Compile-Time Definitions<a class="headerlink" href="#compile-time-definitions" title="Permalink to this headline">¶</a></h3>
+<ul>
+<li><p class="first">Defined using the <tt class="docutils literal"><span class="pre">DEF</span></tt> statement:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="cp">DEF</span> <span class="n">FavouriteFood</span> <span class="o">=</span> <span class="s">&quot;spam&quot;</span>
+<span class="cp">DEF</span> <span class="n">ArraySize</span> <span class="o">=</span> <span class="mf">42</span>
+<span class="cp">DEF</span> <span class="n">OtherArraySize</span> <span class="o">=</span> <span class="mf">2</span> <span class="o">*</span> <span class="n">ArraySize</span> <span class="o">+</span> <span class="mf">17</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">The right hand side must be a valid compile-time expression made up of either:</p>
+</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>Literal values</li>
+<li>Names defined by other <tt class="docutils literal"><span class="pre">DEF</span></tt> statements</li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li>They can be combined using any of the Python expression syntax</li>
+<li>Cython provides the following predefined names</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>Corresponding to the values returned by <tt class="docutils literal"><span class="pre">os.uname()</span></tt></li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>UNAME_SYSNAME</li>
+<li>UNAME_NODENAME</li>
+<li>UNAME_RELEASE</li>
+<li>UNAME_VERSION</li>
+<li>UNAME_MACHINE</li>
+</ul>
+</div></blockquote>
+</div></blockquote>
+<ul class="simple">
+<li>A name defined by <tt class="docutils literal"><span class="pre">DEF</span></tt> can appear anywhere an identifier can appear.</li>
+<li>Cython replaces the name with the literal value before compilation.</li>
+</ul>
+<blockquote>
+<div><ul>
+<li><p class="first">The compile-time expression, in this case, must evaluate to a Python value of <tt class="docutils literal"><span class="pre">int</span></tt>, <tt class="docutils literal"><span class="pre">long</span></tt>, <tt class="docutils literal"><span class="pre">float</span></tt>, or <tt class="docutils literal"><span class="pre">str</span></tt>:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">int</span> <span class="kt">a1</span>[<span class="kt">ArraySize</span>]
+<span class="k">cdef</span> <span class="kt">int</span> <span class="kt">a2</span>[<span class="kt">OtherArraySize</span>]
+<span class="k">print</span> <span class="s">&quot;I like&quot;</span><span class="p">,</span> <span class="n">FavouriteFood</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="conditional-statements">
+<h3>Conditional Statements<a class="headerlink" href="#conditional-statements" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li>Similar semantics of the C pre-processor</li>
+<li>The following statements can be used to conditionally include or exclude sections of code to compile.</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li><tt class="docutils literal"><span class="pre">IF</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">ELIF</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">ELSE</span></tt></li>
+</ul>
+</div></blockquote>
+<div class="highlight-cython"><div class="highlight"><pre><span class="cp">IF</span> <span class="n">UNAME_SYSNAME</span> <span class="o">==</span> <span class="s">&quot;Windows&quot;</span><span class="p">:</span>
+    <span class="k">include</span> <span class="s">&quot;icky_definitions.pxi&quot;</span>
+<span class="cp">ELIF</span> <span class="n">UNAME_SYSNAME</span> <span class="o">==</span> <span class="s">&quot;Darwin&quot;</span><span class="p">:</span>
+    <span class="k">include</span> <span class="s">&quot;nice_definitions.pxi&quot;</span>
+<span class="cp">ELIF</span> <span class="n">UNAME_SYSNAME</span> <span class="o">==</span> <span class="s">&quot;Linux&quot;</span><span class="p">:</span>
+    <span class="k">include</span> <span class="s">&quot;penguin_definitions.pxi&quot;</span>
+<span class="cp">ELSE</span><span class="p">:</span>
+    <span class="k">include</span> <span class="s">&quot;other_definitions.pxi&quot;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">ELIF</span></tt> and  <tt class="docutils literal"><span class="pre">ELSE</span></tt> are optional.</li>
+<li><tt class="docutils literal"><span class="pre">IF</span></tt> can appear anywhere that a normal statement or declaration can appear</li>
+<li>It can contain any statements or declarations that would be valid in that context.</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>This includes other <tt class="docutils literal"><span class="pre">IF</span></tt> and <tt class="docutils literal"><span class="pre">DEF</span></tt> statements</li>
+</ul>
+</div></blockquote>
+<table class="docutils footnote" frame="void" id="id6" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id5">[1]</a></td><td>The conversion is to/from str for Python 2.x, and bytes for Python 3.x.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index-2.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Language Basics</a><ul>
+<li><a class="reference internal" href="#cython-file-types">Cython File Types</a><ul>
+<li><a class="reference internal" href="#implementation-file">Implementation File</a><ul>
+<li><a class="reference internal" href="#what-can-it-contain">What can it contain?</a></li>
+<li><a class="reference internal" href="#what-can-t-it-contain">What can&#8217;t it contain?</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#definition-file">Definition File</a><ul>
+<li><a class="reference internal" href="#id2">What can it contain?</a></li>
+<li><a class="reference internal" href="#id3">What can&#8217;t it contain?</a></li>
+<li><a class="reference internal" href="#what-else">What else?</a><ul>
+<li><a class="reference internal" href="#cimport">cimport</a></li>
+<li><a class="reference internal" href="#compilation-order">compilation order</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#include-file">Include File</a><ul>
+<li><a class="reference internal" href="#id4">What can it contain?</a></li>
+<li><a class="reference internal" href="#how-do-i-use-it">How do I use it?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#declaring-data-types">Declaring Data Types</a><ul>
+<li><a class="reference internal" href="#the-cdef-statement">The cdef Statement</a></li>
+<li><a class="reference internal" href="#grouping-cdef-declarations">Grouping cdef Declarations</a></li>
+<li><a class="reference internal" href="#parameters">Parameters</a><ul>
+<li><a class="reference internal" href="#optional-arguments">Optional Arguments</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#keyword-only-arguments">Keyword-only Arguments</a></li>
+<li><a class="reference internal" href="#automatic-type-conversion">Automatic Type Conversion</a></li>
+<li><a class="reference internal" href="#type-casting">Type Casting</a><ul>
+<li><a class="reference internal" href="#type-checking">Type Checking</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#python-objects">Python Objects</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#statements-and-expressions">Statements and Expressions</a><ul>
+<li><a class="reference internal" href="#differences-between-cython-and-c">Differences Between Cython and C</a></li>
+<li><a class="reference internal" href="#scope-rules">Scope Rules</a></li>
+<li><a class="reference internal" href="#built-in-constants">Built-in Constants</a></li>
+<li><a class="reference internal" href="#operator-precedence">Operator Precedence</a></li>
+<li><a class="reference internal" href="#for-loops">For-loops</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#functions-and-methods">Functions and Methods</a><ul>
+<li><a class="reference internal" href="#callable-from-python">Callable from Python</a></li>
+<li><a class="reference internal" href="#callable-from-c">Callable from C</a></li>
+<li><a class="reference internal" href="#callable-from-both-python-and-c">Callable from both Python and C</a></li>
+<li><a class="reference internal" href="#overriding">Overriding</a></li>
+<li><a class="reference internal" href="#function-pointers">Function Pointers</a></li>
+<li><a class="reference internal" href="#python-built-ins">Python Built-ins</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#error-and-exception-handling">Error and Exception Handling</a><ul>
+<li><a class="reference internal" href="#checking-return-values-for-non-cython-functions">Checking return values for non-Cython functions..</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#conditional-compilation">Conditional Compilation</a><ul>
+<li><a class="reference internal" href="#compile-time-definitions">Compile-Time Definitions</a></li>
+<li><a class="reference internal" href="#conditional-statements">Conditional Statements</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="compilation.html"
+                        title="previous chapter">Compilation</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="extension_types.html"
+                        title="next chapter">Extension Types</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/src/reference/language_basics.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="http://docs.cython.org/search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="extension_types.html" title="Extension Types"
+             >next</a></li>
+        <li class="right" >
+          <a href="compilation.html" title="Compilation"
+             >previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Reference Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer">
+        &copy; Copyright 2014, Stefan Behnel, Robert Bradshaw, Dag Sverre Seljebotn, Greg Ewing, William Stein, Gabriel Gellner, et al..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-6139100-3");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+  </body>
+
+<!-- Mirrored from docs.cython.org/src/reference/language_basics.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:58 GMT -->
+</html>

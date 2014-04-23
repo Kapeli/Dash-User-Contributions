@@ -1,0 +1,736 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  
+<!-- Mirrored from docs.cython.org/src/userguide/wrapping_CPlusPlus.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:58 GMT -->
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Using C++ in Cython &mdash; Cython 0.20 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.20',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Cython 0.20 documentation" href="../../index-2.html" />
+    <link rel="up" title="Users Guide" href="index.html" />
+    <link rel="next" title="Fused Types (Templates)" href="fusedtypes.html" />
+    <link rel="prev" title="Early Binding for Speed" href="early_binding_for_speed.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="fusedtypes.html" title="Fused Types (Templates)"
+             accesskey="N">next</a></li>
+        <li class="right" >
+          <a href="early_binding_for_speed.html" title="Early Binding for Speed"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Users Guide</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="using-c-in-cython">
+<span id="wrapping-cplusplus"></span><h1>Using C++ in Cython<a class="headerlink" href="#using-c-in-cython" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
+<p>Cython v0.13 introduces native support for most of the C++ language.
+This means that the previous tricks that were used to wrap C++ classes
+(as described in <a class="reference external" href="http://wiki.cython.org/WrappingCPlusPlus_ForCython012AndLower">http://wiki.cython.org/WrappingCPlusPlus_ForCython012AndLower</a>)
+are no longer needed.</p>
+<p>Wrapping C++ classes with Cython is now much more straightforward.
+This document describe in details the new way of wrapping C++ code.</p>
+<div class="section" id="what-s-new-in-cython-v0-13-about-c">
+<h3>What&#8217;s new in Cython v0.13 about C++<a class="headerlink" href="#what-s-new-in-cython-v0-13-about-c" title="Permalink to this headline">¶</a></h3>
+<p>For users of previous Cython versions, here is a brief overview of the
+main new features of Cython v0.13 regarding C++ support:</p>
+<ul class="simple">
+<li>C++ objects can now be dynamically allocated with <tt class="docutils literal"><span class="pre">new</span></tt> and <tt class="docutils literal"><span class="pre">del</span></tt> keywords.</li>
+<li>C++ objects can be stack-allocated.</li>
+<li>C++ classes can be declared with the new keyword <tt class="docutils literal"><span class="pre">cppclass</span></tt>.</li>
+<li>Templated classes and functions are supported.</li>
+<li>Overloaded functions are supported.</li>
+<li>Overloading of C++ operators (such as operator+, operator[],...) is supported.</li>
+</ul>
+</div>
+<div class="section" id="procedure-overview">
+<h3>Procedure Overview<a class="headerlink" href="#procedure-overview" title="Permalink to this headline">¶</a></h3>
+<p>The general procedure for wrapping a C++ file can now be described as follows:</p>
+<ul class="simple">
+<li>Specify C++ language in <tt class="file docutils literal"><span class="pre">setup.py</span></tt> script or locally in a source file.</li>
+<li>Create one or more .pxd files with <tt class="docutils literal"><span class="pre">cdef</span> <span class="pre">extern</span> <span class="pre">from</span></tt> blocks and
+(if existing) the C++ namespace name.  In these blocks,<ul>
+<li>declare classes as <tt class="docutils literal"><span class="pre">cdef</span> <span class="pre">cppclass</span></tt> blocks</li>
+<li>declare public names (variables, methods and constructors)</li>
+</ul>
+</li>
+<li>Write an extension modules, <tt class="docutils literal"><span class="pre">cimport</span></tt> from the .pxd file and use
+the declarations.</li>
+</ul>
+</div>
+</div>
+<div class="section" id="a-simple-tutorial">
+<h2>A simple Tutorial<a class="headerlink" href="#a-simple-tutorial" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="an-example-c-api">
+<h3>An example C++ API<a class="headerlink" href="#an-example-c-api" title="Permalink to this headline">¶</a></h3>
+<p>Here is a tiny C++ API which we will use as an example throughout this
+document. Let&#8217;s assume it will be in a header file called
+<tt class="file docutils literal"><span class="pre">Rectangle.h</span></tt>:</p>
+<div class="highlight-c++"><div class="highlight"><pre><span class="k">namespace</span> <span class="n">shapes</span> <span class="p">{</span>
+    <span class="k">class</span> <span class="nc">Rectangle</span> <span class="p">{</span>
+    <span class="k">public</span><span class="o">:</span>
+        <span class="kt">int</span> <span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">;</span>
+        <span class="n">Rectangle</span><span class="p">(</span><span class="kt">int</span> <span class="n">x0</span><span class="p">,</span> <span class="kt">int</span> <span class="n">y0</span><span class="p">,</span> <span class="kt">int</span> <span class="n">x1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">y1</span><span class="p">);</span>
+        <span class="o">~</span><span class="n">Rectangle</span><span class="p">();</span>
+        <span class="kt">int</span> <span class="n">getLength</span><span class="p">();</span>
+        <span class="kt">int</span> <span class="n">getHeight</span><span class="p">();</span>
+        <span class="kt">int</span> <span class="n">getArea</span><span class="p">();</span>
+        <span class="kt">void</span> <span class="n">move</span><span class="p">(</span><span class="kt">int</span> <span class="n">dx</span><span class="p">,</span> <span class="kt">int</span> <span class="n">dy</span><span class="p">);</span>
+    <span class="p">};</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>and the implementation in the file called <tt class="file docutils literal"><span class="pre">Rectangle.cpp</span></tt>:</p>
+<div class="highlight-c++"><div class="highlight"><pre><span class="cp">#include &quot;Rectangle.h&quot;</span>
+
+<span class="k">using</span> <span class="k">namespace</span> <span class="n">shapes</span><span class="p">;</span>
+
+<span class="n">Rectangle</span><span class="o">::</span><span class="n">Rectangle</span><span class="p">(</span><span class="kt">int</span> <span class="n">X0</span><span class="p">,</span> <span class="kt">int</span> <span class="n">Y0</span><span class="p">,</span> <span class="kt">int</span> <span class="n">X1</span><span class="p">,</span> <span class="kt">int</span> <span class="n">Y1</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">x0</span> <span class="o">=</span> <span class="n">X0</span><span class="p">;</span>
+    <span class="n">y0</span> <span class="o">=</span> <span class="n">Y0</span><span class="p">;</span>
+    <span class="n">x1</span> <span class="o">=</span> <span class="n">X1</span><span class="p">;</span>
+    <span class="n">y1</span> <span class="o">=</span> <span class="n">Y1</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">Rectangle</span><span class="o">::~</span><span class="n">Rectangle</span><span class="p">()</span>
+<span class="p">{</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="n">Rectangle</span><span class="o">::</span><span class="n">getLength</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">x1</span> <span class="o">-</span> <span class="n">x0</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="n">Rectangle</span><span class="o">::</span><span class="n">getHeight</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">y1</span> <span class="o">-</span> <span class="n">y0</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">int</span> <span class="n">Rectangle</span><span class="o">::</span><span class="n">getArea</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">x1</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">y1</span> <span class="o">-</span> <span class="n">y0</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="n">Rectangle</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="kt">int</span> <span class="n">dx</span><span class="p">,</span> <span class="kt">int</span> <span class="n">dy</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">x0</span> <span class="o">+=</span> <span class="n">dx</span><span class="p">;</span>
+    <span class="n">y0</span> <span class="o">+=</span> <span class="n">dy</span><span class="p">;</span>
+    <span class="n">x1</span> <span class="o">+=</span> <span class="n">dx</span><span class="p">;</span>
+    <span class="n">y1</span> <span class="o">+=</span> <span class="n">dy</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This is pretty dumb, but should suffice to demonstrate the steps involved.</p>
+</div>
+<div class="section" id="specify-c-language-in-setup-py">
+<h3>Specify C++ language in setup.py<a class="headerlink" href="#specify-c-language-in-setup-py" title="Permalink to this headline">¶</a></h3>
+<p>The best way to build Cython code from <tt class="file docutils literal"><span class="pre">setup.py</span></tt> scripts is the
+<tt class="docutils literal"><span class="pre">cythonize()</span></tt> function.  To make Cython generate and compile C++ code
+with distutils, you just need to pass the option <tt class="docutils literal"><span class="pre">language=&quot;c++&quot;</span></tt>:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">from</span> <span class="nn">distutils.core</span> <span class="k">import</span> <span class="n">setup</span>
+<span class="k">from</span> <span class="nn">Cython.Build</span> <span class="k">import</span> <span class="n">cythonize</span>
+
+<span class="n">setup</span><span class="p">(</span><span class="n">ext_modules</span> <span class="o">=</span> <span class="n">cythonize</span><span class="p">(</span>
+           <span class="s">&quot;rect.pyx&quot;</span><span class="p">,</span>                 <span class="c"># our Cython source</span>
+           <span class="n">sources</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;Rectangle.cpp&quot;</span><span class="p">],</span>  <span class="c"># additional source file(s)</span>
+           <span class="n">language</span><span class="o">=</span><span class="s">&quot;c++&quot;</span><span class="p">,</span>             <span class="c"># generate C++ code</span>
+      <span class="p">))</span>
+</pre></div>
+</div>
+<p>Cython will generate and compile the <tt class="file docutils literal"><span class="pre">rect.cpp</span></tt> file (from the
+<tt class="file docutils literal"><span class="pre">rect.pyx</span></tt>), then it will compile <tt class="file docutils literal"><span class="pre">Rectangle.cpp</span></tt>
+(implementation of the <tt class="docutils literal"><span class="pre">Rectangle</span></tt> class) and link both objects files
+together into <tt class="file docutils literal"><span class="pre">rect.so</span></tt>, which you can then import in Python using
+<tt class="docutils literal"><span class="pre">import</span> <span class="pre">rect</span></tt> (if you forget to link the <tt class="file docutils literal"><span class="pre">Rectangle.o</span></tt>, you will
+get missing symbols while importing the library in Python).</p>
+<p>The options can also be passed directly from the source file, which is
+often preferable.  Starting with version 0.17, Cython also allows to
+pass external source files into the <tt class="docutils literal"><span class="pre">cythonize()</span></tt> command this way.
+Here is a simplified setup.py file:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">from</span> <span class="nn">distutils.core</span> <span class="k">import</span> <span class="n">setup</span>
+<span class="k">from</span> <span class="nn">Cython.Build</span> <span class="k">import</span> <span class="n">cythonize</span>
+
+<span class="n">setup</span><span class="p">(</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;rectangleapp&quot;</span><span class="p">,</span>
+    <span class="n">ext_modules</span> <span class="o">=</span> <span class="n">cythonize</span><span class="p">(</span><span class="s">&#39;*.pyx&#39;</span><span class="p">),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>And in the .pyx source file, write this into the first comment block, before
+any source code, to compile it in C++ mode and link it statically against the
+<tt class="file docutils literal"><span class="pre">Rectange.cpp</span></tt> code file:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="c"># distutils: language = c++</span>
+<span class="c"># distutils: sources = Rectangle.cpp</span>
+</pre></div>
+</div>
+<p>To compile manually (e.g. using <tt class="docutils literal"><span class="pre">make</span></tt>), the <tt class="docutils literal"><span class="pre">cython</span></tt> command-line
+utility can be used to generate a C++ <tt class="docutils literal"><span class="pre">.cpp</span></tt> file, and then compile it
+into a python extension.  C++ mode for the <tt class="docutils literal"><span class="pre">cython</span></tt> command is turned
+on with the <tt class="docutils literal"><span class="pre">--cplus</span></tt> option.</p>
+</div>
+<div class="section" id="declaring-a-c-class-interface">
+<h3>Declaring a C++ class interface<a class="headerlink" href="#declaring-a-c-class-interface" title="Permalink to this headline">¶</a></h3>
+<p>The procedure for wrapping a C++ class is quite similar to that for wrapping
+normal C structs, with a couple of additions. Let&#8217;s start here by creating the
+basic <tt class="docutils literal"><span class="pre">cdef</span> <span class="pre">extern</span> <span class="pre">from</span></tt> block:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">from</span> <span class="s">&quot;Rectangle.h&quot;</span> <span class="n">namespace</span> <span class="s">&quot;shapes&quot;</span><span class="p">:</span>
+</pre></div>
+</div>
+<p>This will make the C++ class def for Rectangle available. Note the namespace declaration.
+Namespaces are simply used to make the fully qualified name of the object, and can be nested (e.g. <tt class="docutils literal"><span class="pre">&quot;outer::inner&quot;</span></tt>) or even refer to classes (e.g. <tt class="docutils literal"><span class="pre">&quot;namespace::MyClass</span></tt> to declare static members on MyClass).</p>
+<div class="section" id="declare-class-with-cdef-cppclass">
+<h4>Declare class with cdef cppclass<a class="headerlink" href="#declare-class-with-cdef-cppclass" title="Permalink to this headline">¶</a></h4>
+<p>Now, let&#8217;s add the Rectangle class to this extern from block - just copy the
+class name from Rectangle.h and adjust for Cython syntax, so now it becomes:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">from</span> <span class="s">&quot;Rectangle.h&quot;</span> <span class="n">namespace</span> <span class="s">&quot;shapes&quot;</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="kt">cppclass</span> <span class="nf">Rectangle</span><span class="p">:</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="add-public-attributes">
+<h4>Add public attributes<a class="headerlink" href="#add-public-attributes" title="Permalink to this headline">¶</a></h4>
+<p>We now need to declare the attributes and methods for use on Cython:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">from</span> <span class="s">&quot;Rectangle.h&quot;</span> <span class="n">namespace</span> <span class="s">&quot;shapes&quot;</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="kt">cppclass</span> <span class="nf">Rectangle</span><span class="p">:</span>
+        <span class="n">Rectangle</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="k">except</span> <span class="o">+</span>
+        <span class="nb">int</span> <span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">y1</span>
+        <span class="nb">int</span> <span class="n">getLength</span><span class="p">()</span>
+        <span class="nb">int</span> <span class="n">getHeight</span><span class="p">()</span>
+        <span class="nb">int</span> <span class="n">getArea</span><span class="p">()</span>
+        <span class="n">void</span> <span class="n">move</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that the constructor is declared as &#8220;except +&#8221;.  If the C++ code or
+the initial memory allocation raises an exception due to a failure, this
+will let Cython safely raise an appropriate Python exception instead
+(see below).  Without this declaration, C++ exceptions originating from
+the constructor will not be handled by Cython.</p>
+</div>
+<div class="section" id="declare-a-var-with-the-wrapped-c-class">
+<h4>Declare a var with the wrapped C++ class<a class="headerlink" href="#declare-a-var-with-the-wrapped-c-class" title="Permalink to this headline">¶</a></h4>
+<p>Now, we use cdef to declare a var of the class with the C++ <tt class="docutils literal"><span class="pre">new</span></tt> statement:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">Rectangle</span> *<span class="nf">rec</span> <span class="o">=</span> <span class="n">new</span> <span class="n">Rectangle</span><span class="p">(</span><span class="mf">1</span><span class="p">,</span> <span class="mf">2</span><span class="p">,</span> <span class="mf">3</span><span class="p">,</span> <span class="mf">4</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">recLength</span> <span class="o">=</span> <span class="n">rec</span><span class="o">.</span><span class="n">getLength</span><span class="p">()</span>
+    <span class="o">...</span>
+<span class="k">finally</span><span class="p">:</span>
+    <span class="k">del</span> <span class="n">rec</span>     <span class="c"># delete heap allocated object</span>
+</pre></div>
+</div>
+<p>It&#8217;s also possible to declare a stack allocated object, as long as it has
+a &#8220;default&#8221; constructor:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">from</span> <span class="s">&quot;Foo.h&quot;</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="kt">cppclass</span> <span class="nf">Foo</span><span class="p">:</span>
+        <span class="n">Foo</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">func</span><span class="p">():</span>
+    <span class="k">cdef</span> <span class="kt">Foo</span> <span class="nf">foo</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>Note that, like C++, if the class has only one constructor and it
+is a default one, it&#8217;s not necessary to declare it.</p>
+</div>
+</div>
+<div class="section" id="create-cython-wrapper-class">
+<h3>Create Cython wrapper class<a class="headerlink" href="#create-cython-wrapper-class" title="Permalink to this headline">¶</a></h3>
+<p>At this point, we have exposed into our pyx file&#8217;s namespace the interface
+of the C++ Rectangle type.  Now, we need to make this accessible from
+external Python code (which is our whole point).</p>
+<p>Common programming practice is to create a Cython extension type which
+holds a C++ instance pointer as an attribute <tt class="docutils literal"><span class="pre">thisptr</span></tt>, and create a bunch of
+forwarding methods. So we can implement the Python extension type as:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">class</span> <span class="nf">PyRectangle</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="kt">Rectangle</span> *<span class="nf">thisptr</span>      <span class="c"># hold a C++ instance which we&#39;re wrapping</span>
+    <span class="k">def</span> <span class="nf">__cinit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">int</span> <span class="n">x0</span><span class="p">,</span> <span class="nb">int</span> <span class="n">y0</span><span class="p">,</span> <span class="nb">int</span> <span class="n">x1</span><span class="p">,</span> <span class="nb">int</span> <span class="n">y1</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thisptr</span> <span class="o">=</span> <span class="n">new</span> <span class="n">Rectangle</span><span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">x1</span><span class="p">,</span> <span class="n">y1</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__dealloc__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">thisptr</span>
+    <span class="k">def</span> <span class="nf">getLength</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">thisptr</span><span class="o">.</span><span class="n">getLength</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">getHeight</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">thisptr</span><span class="o">.</span><span class="n">getHeight</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">getArea</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">thisptr</span><span class="o">.</span><span class="n">getArea</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">move</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thisptr</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>And there we have it. From a Python perspective, this extension type will look
+and feel just like a natively defined Rectangle class. If you want to give
+attribute access, you could just implement some properties:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">property</span> <span class="nf">x0</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">thisptr</span><span class="o">.</span><span class="n">x0</span>
+    <span class="k">def</span> <span class="nf">__set__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x0</span><span class="p">):</span> <span class="bp">self</span><span class="o">.</span><span class="n">thisptr</span><span class="o">.</span><span class="n">x0</span> <span class="o">=</span> <span class="n">x0</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="advanced-c-features">
+<h2>Advanced C++ features<a class="headerlink" href="#advanced-c-features" title="Permalink to this headline">¶</a></h2>
+<p>We describe here all the C++ features that were not discussed in the above tutorial.</p>
+<div class="section" id="overloading">
+<h3>Overloading<a class="headerlink" href="#overloading" title="Permalink to this headline">¶</a></h3>
+<p>Overloading is very simple. Just declare the method with different parameters
+and use any of them:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">from</span> <span class="s">&quot;Foo.h&quot;</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="kt">cppclass</span> <span class="nf">Foo</span><span class="p">:</span>
+        <span class="n">Foo</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">Foo</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
+        <span class="n">Foo</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
+        <span class="n">Foo</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="overloading-operators">
+<h3>Overloading operators<a class="headerlink" href="#overloading-operators" title="Permalink to this headline">¶</a></h3>
+<p>Cython uses C++ for overloading operators:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">from</span> <span class="s">&quot;foo.h&quot;</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="kt">cppclass</span> <span class="nf">Foo</span><span class="p">:</span>
+        <span class="n">Foo</span><span class="p">()</span>
+        <span class="n">Foo</span><span class="o">*</span> <span class="n">operator</span><span class="o">+</span><span class="p">(</span><span class="n">Foo</span><span class="o">*</span><span class="p">)</span>
+        <span class="n">Foo</span><span class="o">*</span> <span class="n">operator</span><span class="o">-</span><span class="p">(</span><span class="n">Foo</span><span class="p">)</span>
+        <span class="nb">int</span> <span class="n">operator</span><span class="o">*</span><span class="p">(</span><span class="n">Foo</span><span class="o">*</span><span class="p">)</span>
+        <span class="nb">int</span> <span class="n">operator</span><span class="o">/</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+<span class="k">cdef</span> <span class="kt">Foo</span>* <span class="nf">foo</span> <span class="o">=</span> <span class="n">new</span> <span class="n">Foo</span><span class="p">()</span>
+<span class="k">cdef</span> <span class="kt">int</span> <span class="nf">x</span>
+
+<span class="k">cdef</span> <span class="kt">Foo</span>* <span class="nf">foo2</span> <span class="o">=</span> <span class="n">foo</span><span class="p">[</span><span class="mf">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">foo</span>
+<span class="n">foo2</span> <span class="o">=</span> <span class="n">foo</span><span class="p">[</span><span class="mf">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">foo</span><span class="p">[</span><span class="mf">0</span><span class="p">]</span>
+
+<span class="n">x</span> <span class="o">=</span> <span class="n">foo</span><span class="p">[</span><span class="mf">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">foo2</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">foo</span><span class="p">[</span><span class="mf">0</span><span class="p">]</span> <span class="o">/</span> <span class="mf">1</span>
+
+<span class="k">cdef</span> <span class="kt">Foo</span> <span class="nf">f</span>
+<span class="n">foo</span> <span class="o">=</span> <span class="n">f</span> <span class="o">+</span> <span class="o">&amp;</span><span class="n">f</span>
+<span class="n">foo2</span> <span class="o">=</span> <span class="n">f</span> <span class="o">-</span> <span class="n">f</span>
+
+<span class="k">del</span> <span class="n">foo</span><span class="p">,</span> <span class="n">foo2</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="nested-class-declarations">
+<h3>Nested class declarations<a class="headerlink" href="#nested-class-declarations" title="Permalink to this headline">¶</a></h3>
+<p>C++ allows nested class declaration. Class declarations can also be
+nested in Cython:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">from</span> <span class="s">&quot;&lt;vector&gt;&quot;</span> <span class="n">namespace</span> <span class="s">&quot;std&quot;</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="kt">cppclass</span> <span class="kt">vector</span>[<span class="kt">T</span>]<span class="p">:</span>
+        <span class="n">cppclass</span> <span class="n">iterator</span><span class="p">:</span>
+            <span class="n">T</span> <span class="n">operator</span><span class="o">*</span><span class="p">()</span>
+            <span class="n">iterator</span> <span class="n">operator</span><span class="o">++</span><span class="p">()</span>
+            <span class="n">bint</span> <span class="n">operator</span><span class="o">==</span><span class="p">(</span><span class="n">iterator</span><span class="p">)</span>
+            <span class="n">bint</span> <span class="n">operator</span><span class="o">!=</span><span class="p">(</span><span class="n">iterator</span><span class="p">)</span>
+        <span class="n">vector</span><span class="p">()</span>
+        <span class="n">void</span> <span class="n">push_back</span><span class="p">(</span><span class="n">T</span><span class="o">&amp;</span><span class="p">)</span>
+        <span class="n">T</span><span class="o">&amp;</span> <span class="n">operator</span><span class="p">[](</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">iterator</span> <span class="n">begin</span><span class="p">()</span>
+        <span class="n">iterator</span> <span class="n">end</span><span class="p">()</span>
+
+<span class="k">cdef</span> <span class="kt">vector</span>[<span class="kt">int</span>].<span class="kt">iterator</span> <span class="nf">iter</span>  <span class="c">#iter is declared as being of type vector&lt;int&gt;::iterator</span>
+</pre></div>
+</div>
+<p>Note that the nested class is declared with a <tt class="docutils literal"><span class="pre">cppclass</span></tt> but without a <tt class="docutils literal"><span class="pre">cdef</span></tt>.</p>
+</div>
+<div class="section" id="c-operators-not-compatible-with-python-syntax">
+<h3>C++ operators not compatible with Python syntax<a class="headerlink" href="#c-operators-not-compatible-with-python-syntax" title="Permalink to this headline">¶</a></h3>
+<p>Cython try to keep a syntax as close as possible to standard Python.
+Because of this, certain C++ operators, like the preincrement <tt class="docutils literal"><span class="pre">++foo</span></tt>
+or the dereferencing operator <tt class="docutils literal"><span class="pre">*foo</span></tt> cannot be used with the same
+syntax as C++. Cython provides functions replacing these operators in
+a special module <tt class="docutils literal"><span class="pre">cython.operator</span></tt>. The functions provided are:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">cython.operator.dereference</span></tt> for dereferencing. <tt class="docutils literal"><span class="pre">dereference(foo)</span></tt>
+will produce the C++ code <tt class="docutils literal"><span class="pre">*(foo)</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">cython.operator.preincrement</span></tt> for pre-incrementation. <tt class="docutils literal"><span class="pre">preincrement(foo)</span></tt>
+will produce the C++ code <tt class="docutils literal"><span class="pre">++(foo)</span></tt></li>
+<li>...</li>
+</ul>
+<p>These functions need to be cimported. Of course, one can use a
+<tt class="docutils literal"><span class="pre">from</span> <span class="pre">...</span> <span class="pre">cimport</span> <span class="pre">...</span> <span class="pre">as</span></tt> to have shorter and more readable functions.
+For example: <tt class="docutils literal"><span class="pre">from</span> <span class="pre">cython.operator</span> <span class="pre">cimport</span> <span class="pre">dereference</span> <span class="pre">as</span> <span class="pre">deref</span></tt>.</p>
+</div>
+<div class="section" id="templates">
+<h3>Templates<a class="headerlink" href="#templates" title="Permalink to this headline">¶</a></h3>
+<p>Cython uses a bracket syntax for templating. A simple example for wrapping C++ vector:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="c"># import dereference and increment operators</span>
+<span class="k">from</span> <span class="nn">cython.operator</span> <span class="k">cimport</span> <span class="n">dereference</span> <span class="k">as</span> <span class="n">deref</span><span class="p">,</span> <span class="n">preincrement</span> <span class="k">as</span> <span class="n">inc</span>
+
+<span class="k">cdef</span> <span class="kr">extern</span> <span class="k">from</span> <span class="s">&quot;&lt;vector&gt;&quot;</span> <span class="n">namespace</span> <span class="s">&quot;std&quot;</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="kt">cppclass</span> <span class="kt">vector</span>[<span class="kt">T</span>]<span class="p">:</span>
+        <span class="n">cppclass</span> <span class="n">iterator</span><span class="p">:</span>
+            <span class="n">T</span> <span class="n">operator</span><span class="o">*</span><span class="p">()</span>
+            <span class="n">iterator</span> <span class="n">operator</span><span class="o">++</span><span class="p">()</span>
+            <span class="n">bint</span> <span class="n">operator</span><span class="o">==</span><span class="p">(</span><span class="n">iterator</span><span class="p">)</span>
+            <span class="n">bint</span> <span class="n">operator</span><span class="o">!=</span><span class="p">(</span><span class="n">iterator</span><span class="p">)</span>
+        <span class="n">vector</span><span class="p">()</span>
+        <span class="n">void</span> <span class="n">push_back</span><span class="p">(</span><span class="n">T</span><span class="o">&amp;</span><span class="p">)</span>
+        <span class="n">T</span><span class="o">&amp;</span> <span class="n">operator</span><span class="p">[](</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">T</span><span class="o">&amp;</span> <span class="n">at</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">iterator</span> <span class="n">begin</span><span class="p">()</span>
+        <span class="n">iterator</span> <span class="n">end</span><span class="p">()</span>
+
+<span class="k">cdef</span> <span class="kt">vector</span>[<span class="kt">int</span>] *<span class="nf">v</span> <span class="o">=</span> <span class="n">new</span> <span class="n">vector</span><span class="p">[</span><span class="nb">int</span><span class="p">]()</span>
+<span class="k">cdef</span> <span class="kt">int</span> <span class="nf">i</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mf">10</span><span class="p">):</span>
+    <span class="n">v</span><span class="o">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+<span class="k">cdef</span> <span class="kt">vector</span>[<span class="kt">int</span>].<span class="kt">iterator</span> <span class="nf">it</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">begin</span><span class="p">()</span>
+<span class="k">while</span> <span class="n">it</span> <span class="o">!=</span> <span class="n">v</span><span class="o">.</span><span class="n">end</span><span class="p">():</span>
+    <span class="k">print</span> <span class="n">deref</span><span class="p">(</span><span class="n">it</span><span class="p">)</span>
+    <span class="n">inc</span><span class="p">(</span><span class="n">it</span><span class="p">)</span>
+
+<span class="k">del</span> <span class="n">v</span>
+</pre></div>
+</div>
+<p>Multiple template parameters can be defined as a list, such as [T, U, V]
+or [int, bool, char].  Template functions are defined similarly, with
+the template parameter list following the function name:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">from</span> <span class="s">&quot;&lt;algorithm&gt;&quot;</span> <span class="n">namespace</span> <span class="s">&quot;std&quot;</span><span class="p">:</span>
+    <span class="n">T</span> <span class="nb">max</span><span class="p">[</span><span class="n">T</span><span class="p">](</span><span class="n">T</span> <span class="n">a</span><span class="p">,</span> <span class="n">T</span> <span class="n">b</span><span class="p">)</span>
+
+<span class="k">print</span> <span class="nb">max</span><span class="p">[</span><span class="nb">long</span><span class="p">](</span><span class="mf">3</span><span class="p">,</span> <span class="mf">4</span><span class="p">)</span>
+<span class="k">print</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.5</span><span class="p">,</span> <span class="mf">2.5</span><span class="p">)</span>  <span class="c"># simple template argument deduction</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="standard-library">
+<h3>Standard library<a class="headerlink" href="#standard-library" title="Permalink to this headline">¶</a></h3>
+<p>Most of the containers of the C++ Standard Library have been declared
+in pxd files located in <tt class="docutils literal"><span class="pre">/Cython/Includes/libcpp</span></tt>.  These containers
+are: deque, list, map,  pair,  queue,  set,  stack,  vector.</p>
+<p>For example:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">from</span> <span class="nn">libcpp.vector</span> <span class="k">cimport</span> <span class="n">vector</span>
+
+<span class="k">cdef</span> <span class="kt">vector</span>[<span class="kt">int</span>] <span class="nf">vect</span>
+<span class="k">cdef</span> <span class="kt">int</span> <span class="nf">i</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mf">10</span><span class="p">):</span>
+    <span class="n">vect</span><span class="o">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mf">10</span><span class="p">):</span>
+    <span class="k">print</span> <span class="n">vect</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The pxd files in <tt class="docutils literal"><span class="pre">/Cython/Includes/libcpp</span></tt> also work as good examples on
+how to declare C++ classes.</p>
+<p>Since Cython 0.17, the STL containers coerce from and to the
+corresponding Python builtin types.  The conversion is triggered
+either by an assignment to a typed variable (including typed function
+arguments) or by an explicit cast, e.g.:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">from</span> <span class="nn">libcpp.string</span> <span class="k">cimport</span> <span class="n">string</span>
+<span class="k">from</span> <span class="nn">libcpp.vector</span> <span class="k">cimport</span> <span class="n">vector</span>
+
+<span class="k">cdef</span> <span class="kt">string</span> <span class="nf">s</span> <span class="o">=</span> <span class="n">py_bytes_object</span>
+<span class="k">print</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="n">cpp_string</span> <span class="o">=</span> <span class="p">&lt;</span><span class="kt">string</span><span class="p">&gt;</span> <span class="n">py_unicode_object</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&#39;utf-8&#39;</span><span class="p">)</span>
+
+<span class="k">cdef</span> <span class="kt">vector</span>[<span class="kt">int</span>] <span class="nf">vect</span> <span class="o">=</span> <span class="nb">xrange</span><span class="p">(</span><span class="mf">1</span><span class="p">,</span> <span class="mf">10</span><span class="p">,</span> <span class="mf">2</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">vect</span><span class="p">)</span>              <span class="c"># [1, 3, 5, 7, 9]</span>
+
+<span class="k">cdef</span> <span class="kt">vector</span>[<span class="kt">string</span>] <span class="nf">cpp_strings</span> <span class="o">=</span> <span class="n">b</span><span class="s">&#39;ab cd ef gh&#39;</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+<span class="k">print</span><span class="p">(</span><span class="n">cpp_strings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mf">1</span><span class="p">))</span>   <span class="c"># b&#39;cd&#39;</span>
+</pre></div>
+</div>
+<p>The following coercions are available:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="35%" />
+<col width="31%" />
+<col width="33%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Python type =&gt;</th>
+<th class="head"><em>C++ type</em></th>
+<th class="head">=&gt; Python type</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>bytes</td>
+<td>std::string</td>
+<td>bytes</td>
+</tr>
+<tr class="row-odd"><td>iterable</td>
+<td>std::vector</td>
+<td>list</td>
+</tr>
+<tr class="row-even"><td>iterable</td>
+<td>std::list</td>
+<td>list</td>
+</tr>
+<tr class="row-odd"><td>iterable</td>
+<td>std::set</td>
+<td>set</td>
+</tr>
+<tr class="row-even"><td>iterable (len 2)</td>
+<td>std::pair</td>
+<td>tuple (len 2)</td>
+</tr>
+</tbody>
+</table>
+<p>All conversions create a new container and copy the data into it.
+The items in the containers are converted to a corresponding type
+automatically, which includes recursively converting containers
+inside of containers, e.g. a C++ vector of maps of strings.</p>
+</div>
+<div class="section" id="exceptions">
+<h3>Exceptions<a class="headerlink" href="#exceptions" title="Permalink to this headline">¶</a></h3>
+<p>Cython cannot throw C++ exceptions, or catch them with a try-except statement,
+but it is possible to declare a function as potentially raising an C++
+exception and converting it into a Python exception. For example,</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">from</span> <span class="s">&quot;some_file.h&quot;</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">foo</span><span class="p">()</span> <span class="k">except</span> <span class="o">+</span>
+</pre></div>
+</div>
+<p>This will translate try and the C++ error into an appropriate Python exception.
+The translation is performed according to the following table
+(the <tt class="docutils literal"><span class="pre">std::</span></tt> prefix is omitted from the C++ identifiers):</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="52%" />
+<col width="48%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">C++</th>
+<th class="head">Python</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><tt class="docutils literal"><span class="pre">bad_alloc</span></tt></td>
+<td><tt class="docutils literal"><span class="pre">MemoryError</span></tt></td>
+</tr>
+<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">bad_cast</span></tt></td>
+<td><tt class="docutils literal"><span class="pre">TypeError</span></tt></td>
+</tr>
+<tr class="row-even"><td><tt class="docutils literal"><span class="pre">domain_error</span></tt></td>
+<td><tt class="docutils literal"><span class="pre">ValueError</span></tt></td>
+</tr>
+<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">invalid_argument</span></tt></td>
+<td><tt class="docutils literal"><span class="pre">ValueError</span></tt></td>
+</tr>
+<tr class="row-even"><td><tt class="docutils literal"><span class="pre">ios_base::failure</span></tt></td>
+<td><tt class="docutils literal"><span class="pre">IOError</span></tt></td>
+</tr>
+<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">out_of_range</span></tt></td>
+<td><tt class="docutils literal"><span class="pre">IndexError</span></tt></td>
+</tr>
+<tr class="row-even"><td><tt class="docutils literal"><span class="pre">overflow_error</span></tt></td>
+<td><tt class="docutils literal"><span class="pre">OverflowError</span></tt></td>
+</tr>
+<tr class="row-odd"><td><tt class="docutils literal"><span class="pre">range_error</span></tt></td>
+<td><tt class="docutils literal"><span class="pre">ArithmeticError</span></tt></td>
+</tr>
+<tr class="row-even"><td><tt class="docutils literal"><span class="pre">underflow_error</span></tt></td>
+<td><tt class="docutils literal"><span class="pre">ArithmeticError</span></tt></td>
+</tr>
+<tr class="row-odd"><td>(all others)</td>
+<td><tt class="docutils literal"><span class="pre">RuntimeError</span></tt></td>
+</tr>
+</tbody>
+</table>
+<p>The <tt class="docutils literal"><span class="pre">what()</span></tt> message, if any, is preserved. Note that a C++
+<tt class="docutils literal"><span class="pre">ios_base_failure</span></tt> can denote EOF, but does not carry enough information
+for Cython to discern that, so watch out with exception masks on IO streams.</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">int</span> <span class="nf">bar</span><span class="p">()</span> <span class="k">except</span> <span class="o">+</span><span class="ne">MemoryError</span>
+</pre></div>
+</div>
+<p>This will catch any C++ error and raise a Python MemoryError in its place.
+(Any Python exception is valid here.)</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">int</span> <span class="nf">raise_py_error</span><span class="p">()</span>
+<span class="k">cdef</span> <span class="kt">int</span> <span class="nf">something_dangerous</span><span class="p">()</span> <span class="k">except</span> <span class="o">+</span><span class="n">raise_py_error</span>
+</pre></div>
+</div>
+<p>If something_dangerous raises a C++ exception then raise_py_error will be
+called, which allows one to do custom C++ to Python error &#8220;translations.&#8221; If
+raise_py_error does not actually raise an exception a RuntimeError will be
+raised.</p>
+</div>
+<div class="section" id="static-member-method">
+<h3>Static member method<a class="headerlink" href="#static-member-method" title="Permalink to this headline">¶</a></h3>
+<p>If the Rectangle class has a static member:</p>
+<div class="highlight-c++"><div class="highlight"><pre><span class="k">namespace</span> <span class="n">shapes</span> <span class="p">{</span>
+    <span class="k">class</span> <span class="nc">Rectangle</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">public</span><span class="o">:</span>
+        <span class="k">static</span> <span class="kt">void</span> <span class="n">do_something</span><span class="p">();</span>
+
+    <span class="p">};</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>you can declare it as a function living in the class namespace, i.e.:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">extern</span> <span class="k">from</span> <span class="s">&quot;Rectangle.h&quot;</span> <span class="n">namespace</span> <span class="s">&quot;shapes::Rectangle&quot;</span><span class="p">:</span>
+    <span class="n">void</span> <span class="n">do_something</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="caveats-and-limitations">
+<h2>Caveats and Limitations<a class="headerlink" href="#caveats-and-limitations" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="access-to-c-only-functions">
+<h3>Access to C-only functions<a class="headerlink" href="#access-to-c-only-functions" title="Permalink to this headline">¶</a></h3>
+<p>Whenever generating C++ code, Cython generates declarations of and calls
+to functions assuming these functions are C++ (ie, not declared as <tt class="docutils literal"><span class="pre">extern</span> <span class="pre">&quot;C&quot;</span>
+<span class="pre">{...}</span></tt>. This is ok if the C functions have C++ entry points, but if they&#8217;re C
+only, you will hit a roadblock. If you have a C++ Cython module needing
+to make calls to pure-C functions, you will need to write a small C++ shim
+module which:</p>
+<ul class="simple">
+<li>includes the needed C headers in an extern &#8220;C&#8221; block</li>
+<li>contains minimal forwarding functions in C++, each of which calls the
+respective pure-C function</li>
+</ul>
+</div>
+<div class="section" id="declaring-using-references">
+<h3>Declaring/Using References<a class="headerlink" href="#declaring-using-references" title="Permalink to this headline">¶</a></h3>
+<p>Question: How do you declare and call a function that takes a reference as an argument?</p>
+</div>
+<div class="section" id="c-left-values">
+<h3>C++ left-values<a class="headerlink" href="#c-left-values" title="Permalink to this headline">¶</a></h3>
+<p>C++ allows functions returning a reference to be left-values.  This is currently
+not supported in Cython. <tt class="docutils literal"><span class="pre">cython.operator.dereference(foo)</span></tt> is also not
+considered a left-value.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index-2.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Using C++ in Cython</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a><ul>
+<li><a class="reference internal" href="#what-s-new-in-cython-v0-13-about-c">What&#8217;s new in Cython v0.13 about C++</a></li>
+<li><a class="reference internal" href="#procedure-overview">Procedure Overview</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#a-simple-tutorial">A simple Tutorial</a><ul>
+<li><a class="reference internal" href="#an-example-c-api">An example C++ API</a></li>
+<li><a class="reference internal" href="#specify-c-language-in-setup-py">Specify C++ language in setup.py</a></li>
+<li><a class="reference internal" href="#declaring-a-c-class-interface">Declaring a C++ class interface</a><ul>
+<li><a class="reference internal" href="#declare-class-with-cdef-cppclass">Declare class with cdef cppclass</a></li>
+<li><a class="reference internal" href="#add-public-attributes">Add public attributes</a></li>
+<li><a class="reference internal" href="#declare-a-var-with-the-wrapped-c-class">Declare a var with the wrapped C++ class</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#create-cython-wrapper-class">Create Cython wrapper class</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#advanced-c-features">Advanced C++ features</a><ul>
+<li><a class="reference internal" href="#overloading">Overloading</a></li>
+<li><a class="reference internal" href="#overloading-operators">Overloading operators</a></li>
+<li><a class="reference internal" href="#nested-class-declarations">Nested class declarations</a></li>
+<li><a class="reference internal" href="#c-operators-not-compatible-with-python-syntax">C++ operators not compatible with Python syntax</a></li>
+<li><a class="reference internal" href="#templates">Templates</a></li>
+<li><a class="reference internal" href="#standard-library">Standard library</a></li>
+<li><a class="reference internal" href="#exceptions">Exceptions</a></li>
+<li><a class="reference internal" href="#static-member-method">Static member method</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#caveats-and-limitations">Caveats and Limitations</a><ul>
+<li><a class="reference internal" href="#access-to-c-only-functions">Access to C-only functions</a></li>
+<li><a class="reference internal" href="#declaring-using-references">Declaring/Using References</a></li>
+<li><a class="reference internal" href="#c-left-values">C++ left-values</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="early_binding_for_speed.html"
+                        title="previous chapter">Early Binding for Speed</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="fusedtypes.html"
+                        title="next chapter">Fused Types (Templates)</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/src/userguide/wrapping_CPlusPlus.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="http://docs.cython.org/search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="fusedtypes.html" title="Fused Types (Templates)"
+             >next</a></li>
+        <li class="right" >
+          <a href="early_binding_for_speed.html" title="Early Binding for Speed"
+             >previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Users Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer">
+        &copy; Copyright 2014, Stefan Behnel, Robert Bradshaw, Dag Sverre Seljebotn, Greg Ewing, William Stein, Gabriel Gellner, et al..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-6139100-3");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+  </body>
+
+<!-- Mirrored from docs.cython.org/src/userguide/wrapping_CPlusPlus.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:58 GMT -->
+</html>

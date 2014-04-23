@@ -1,0 +1,701 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  
+<!-- Mirrored from docs.cython.org/src/tutorial/clibraries.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:56 GMT -->
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Using C libraries &mdash; Cython 0.20 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.20',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Cython 0.20 documentation" href="../../index-2.html" />
+    <link rel="up" title="Tutorials" href="index.html" />
+    <link rel="next" title="Extension types (aka. cdef classes)" href="cdef_classes.html" />
+    <link rel="prev" title="Calling C functions" href="external.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="cdef_classes.html" title="Extension types (aka. cdef classes)"
+             accesskey="N">next</a></li>
+        <li class="right" >
+          <a href="external.html" title="Calling C functions"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="using-c-libraries">
+<h1>Using C libraries<a class="headerlink" href="#using-c-libraries" title="Permalink to this headline">¶</a></h1>
+<p>Apart from writing fast code, one of the main use cases of Cython is
+to call external C libraries from Python code.  As Cython code
+compiles down to C code itself, it is actually trivial to call C
+functions directly in the code.  The following gives a complete
+example for using (and wrapping) an external C library in Cython code,
+including appropriate error handling and considerations about
+designing a suitable API for Python and Cython code.</p>
+<p>Imagine you need an efficient way to store integer values in a FIFO
+queue.  Since memory really matters, and the values are actually
+coming from C code, you cannot afford to create and store Python
+<tt class="docutils literal"><span class="pre">int</span></tt> objects in a list or deque.  So you look out for a queue
+implementation in C.</p>
+<p>After some web search, you find the C-algorithms library <a class="reference internal" href="#calg">[CAlg]</a> and
+decide to use its double ended queue implementation.  To make the
+handling easier, however, you decide to wrap it in a Python extension
+type that can encapsulate all memory management.</p>
+<table class="docutils citation" frame="void" id="calg" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[CAlg]</a></td><td>Simon Howard, C Algorithms library, <a class="reference external" href="http://c-algorithms.sourceforge.net/">http://c-algorithms.sourceforge.net/</a></td></tr>
+</tbody>
+</table>
+<div class="section" id="defining-external-declarations">
+<h2>Defining external declarations<a class="headerlink" href="#defining-external-declarations" title="Permalink to this headline">¶</a></h2>
+<p>The C API of the queue implementation, which is defined in the header
+file <tt class="docutils literal"><span class="pre">libcalg/queue.h</span></tt>, essentially looks like this:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="o">/*</span> <span class="nb">file</span><span class="p">:</span> <span class="n">queue</span><span class="o">.</span><span class="n">h</span> <span class="o">*/</span>
+
+<span class="n">typedef</span> <span class="k">struct</span> <span class="nc">_Queue</span> <span class="n">Queue</span><span class="p">;</span>
+<span class="n">typedef</span> <span class="n">void</span> <span class="o">*</span><span class="n">QueueValue</span><span class="p">;</span>
+
+<span class="n">Queue</span> <span class="o">*</span><span class="n">queue_new</span><span class="p">(</span><span class="n">void</span><span class="p">);</span>
+<span class="n">void</span> <span class="n">queue_free</span><span class="p">(</span><span class="n">Queue</span> <span class="o">*</span><span class="n">queue</span><span class="p">);</span>
+
+<span class="nb">int</span> <span class="n">queue_push_head</span><span class="p">(</span><span class="n">Queue</span> <span class="o">*</span><span class="n">queue</span><span class="p">,</span> <span class="n">QueueValue</span> <span class="n">data</span><span class="p">);</span>
+<span class="n">QueueValue</span> <span class="n">queue_pop_head</span><span class="p">(</span><span class="n">Queue</span> <span class="o">*</span><span class="n">queue</span><span class="p">);</span>
+<span class="n">QueueValue</span> <span class="n">queue_peek_head</span><span class="p">(</span><span class="n">Queue</span> <span class="o">*</span><span class="n">queue</span><span class="p">);</span>
+
+<span class="nb">int</span> <span class="n">queue_push_tail</span><span class="p">(</span><span class="n">Queue</span> <span class="o">*</span><span class="n">queue</span><span class="p">,</span> <span class="n">QueueValue</span> <span class="n">data</span><span class="p">);</span>
+<span class="n">QueueValue</span> <span class="n">queue_pop_tail</span><span class="p">(</span><span class="n">Queue</span> <span class="o">*</span><span class="n">queue</span><span class="p">);</span>
+<span class="n">QueueValue</span> <span class="n">queue_peek_tail</span><span class="p">(</span><span class="n">Queue</span> <span class="o">*</span><span class="n">queue</span><span class="p">);</span>
+
+<span class="nb">int</span> <span class="n">queue_is_empty</span><span class="p">(</span><span class="n">Queue</span> <span class="o">*</span><span class="n">queue</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>To get started, the first step is to redefine the C API in a <tt class="docutils literal"><span class="pre">.pxd</span></tt>
+file, say, <tt class="docutils literal"><span class="pre">cqueue.pxd</span></tt>:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="c"># file: cqueue.pxd</span>
+
+<span class="k">cdef</span> <span class="kr">extern</span> <span class="k">from</span> <span class="s">&quot;libcalg/queue.h&quot;</span><span class="p">:</span>
+    <span class="k">ctypedef</span> <span class="k">struct</span> <span class="nc">Queue</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">ctypedef</span> <span class="n">void</span><span class="o">*</span> <span class="n">QueueValue</span>
+
+    <span class="n">Queue</span><span class="o">*</span> <span class="n">queue_new</span><span class="p">()</span>
+    <span class="n">void</span> <span class="n">queue_free</span><span class="p">(</span><span class="n">Queue</span><span class="o">*</span> <span class="n">queue</span><span class="p">)</span>
+
+    <span class="nb">int</span> <span class="n">queue_push_head</span><span class="p">(</span><span class="n">Queue</span><span class="o">*</span> <span class="n">queue</span><span class="p">,</span> <span class="n">QueueValue</span> <span class="n">data</span><span class="p">)</span>
+    <span class="n">QueueValue</span>  <span class="n">queue_pop_head</span><span class="p">(</span><span class="n">Queue</span><span class="o">*</span> <span class="n">queue</span><span class="p">)</span>
+    <span class="n">QueueValue</span> <span class="n">queue_peek_head</span><span class="p">(</span><span class="n">Queue</span><span class="o">*</span> <span class="n">queue</span><span class="p">)</span>
+
+    <span class="nb">int</span> <span class="n">queue_push_tail</span><span class="p">(</span><span class="n">Queue</span><span class="o">*</span> <span class="n">queue</span><span class="p">,</span> <span class="n">QueueValue</span> <span class="n">data</span><span class="p">)</span>
+    <span class="n">QueueValue</span> <span class="n">queue_pop_tail</span><span class="p">(</span><span class="n">Queue</span><span class="o">*</span> <span class="n">queue</span><span class="p">)</span>
+    <span class="n">QueueValue</span> <span class="n">queue_peek_tail</span><span class="p">(</span><span class="n">Queue</span><span class="o">*</span> <span class="n">queue</span><span class="p">)</span>
+
+    <span class="n">bint</span> <span class="n">queue_is_empty</span><span class="p">(</span><span class="n">Queue</span><span class="o">*</span> <span class="n">queue</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note how these declarations are almost identical to the header file
+declarations, so you can often just copy them over.  However, you do
+not need to provide <em>all</em> declarations as above, just those that you
+use in your code or in other declarations, so that Cython gets to see
+a sufficient and consistent subset of them.  Then, consider adapting
+them somewhat to make them more comfortable to work with in Cython.</p>
+<p>Specifically, you should take care of choosing good argument names
+for the C functions, as Cython allows you to pass them as keyword
+arguments.  Changing them later on is a backwards incompatible API
+modification.  Choosing good names right away will make these
+functions more pleasant to work with from Cython code.</p>
+<p>One noteworthy difference to the header file that we use above is the
+declaration of the <tt class="docutils literal"><span class="pre">Queue</span></tt> struct in the first line.  <tt class="docutils literal"><span class="pre">Queue</span></tt> is
+in this case used as an <em>opaque handle</em>; only the library that is
+called knows what is really inside.  Since no Cython code needs to
+know the contents of the struct, we do not need to declare its
+contents, so we simply provide an empty definition (as we do not want
+to declare the <tt class="docutils literal"><span class="pre">_Queue</span></tt> type which is referenced in the C header)
+<a class="footnote-reference" href="#id3" id="id2">[1]</a>.</p>
+<table class="docutils footnote" frame="void" id="id3" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id2">[1]</a></td><td>There&#8217;s a subtle difference between <tt class="docutils literal"><span class="pre">cdef</span> <span class="pre">struct</span> <span class="pre">Queue:</span> <span class="pre">pass</span></tt>
+and <tt class="docutils literal"><span class="pre">ctypedef</span> <span class="pre">struct</span> <span class="pre">Queue:</span> <span class="pre">pass</span></tt>.  The former declares a
+type which is referenced in C code as <tt class="docutils literal"><span class="pre">struct</span> <span class="pre">Queue</span></tt>, while
+the latter is referenced in C as <tt class="docutils literal"><span class="pre">Queue</span></tt>.  This is a C
+language quirk that Cython is not able to hide.  Most modern C
+libraries use the <tt class="docutils literal"><span class="pre">ctypedef</span></tt> kind of struct.</td></tr>
+</tbody>
+</table>
+<p>Another exception is the last line.  The integer return value of the
+<tt class="docutils literal"><span class="pre">queue_is_empty()</span></tt> function is actually a C boolean value, i.e. the
+only interesting thing about it is whether it is non-zero or zero,
+indicating if the queue is empty or not.  This is best expressed by
+Cython&#8217;s <tt class="docutils literal"><span class="pre">bint</span></tt> type, which is a normal <tt class="docutils literal"><span class="pre">int</span></tt> type when used in C
+but maps to Python&#8217;s boolean values <tt class="docutils literal"><span class="pre">True</span></tt> and <tt class="docutils literal"><span class="pre">False</span></tt> when
+converted to a Python object.  This way of tightening declarations in
+a <tt class="docutils literal"><span class="pre">.pxd</span></tt> file can often simplify the code that uses them.</p>
+<p>It is good practice to define one <tt class="docutils literal"><span class="pre">.pxd</span></tt> file for each library that
+you use, and sometimes even for each header file (or functional group)
+if the API is large.  That simplifies their reuse in other projects.
+Sometimes, you may need to use C functions from the standard C
+library, or want to call C-API functions from CPython directly.  For
+common needs like this, Cython ships with a set of standard <tt class="docutils literal"><span class="pre">.pxd</span></tt>
+files that provide these declarations in a readily usable way that is
+adapted to their use in Cython.  The main packages are <tt class="docutils literal"><span class="pre">cpython</span></tt>,
+<tt class="docutils literal"><span class="pre">libc</span></tt> and <tt class="docutils literal"><span class="pre">libcpp</span></tt>.  The NumPy library also has a standard
+<tt class="docutils literal"><span class="pre">.pxd</span></tt> file <tt class="docutils literal"><span class="pre">numpy</span></tt>, as it is often used in Cython code.  See
+Cython&#8217;s <tt class="docutils literal"><span class="pre">Cython/Includes/</span></tt> source package for a complete list of
+provided <tt class="docutils literal"><span class="pre">.pxd</span></tt> files.</p>
+</div>
+<div class="section" id="writing-a-wrapper-class">
+<h2>Writing a wrapper class<a class="headerlink" href="#writing-a-wrapper-class" title="Permalink to this headline">¶</a></h2>
+<p>After declaring our C library&#8217;s API, we can start to design the Queue
+class that should wrap the C queue.  It will live in a file called
+<tt class="docutils literal"><span class="pre">queue.pyx</span></tt>. <a class="footnote-reference" href="#id5" id="id4">[2]</a></p>
+<table class="docutils footnote" frame="void" id="id5" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id4">[2]</a></td><td>Note that the name of the <tt class="docutils literal"><span class="pre">.pyx</span></tt> file must be different from
+the <tt class="docutils literal"><span class="pre">cqueue.pxd</span></tt> file with declarations from the C library,
+as both do not describe the same code.  A <tt class="docutils literal"><span class="pre">.pxd</span></tt> file next to
+a <tt class="docutils literal"><span class="pre">.pyx</span></tt> file with the same name defines exported
+declarations for code in the <tt class="docutils literal"><span class="pre">.pyx</span></tt> file.  As the
+<tt class="docutils literal"><span class="pre">cqueue.pxd</span></tt> file contains declarations of a regular C
+library, there must not be a <tt class="docutils literal"><span class="pre">.pyx</span></tt> file with the same name
+that Cython associates with it.</td></tr>
+</tbody>
+</table>
+<p>Here is a first start for the Queue class:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="c"># file: queue.pyx</span>
+
+<span class="k">cimport</span> <span class="nn">cqueue</span>
+
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">Queue</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="kt">cqueue</span>.<span class="kt">Queue</span>* <span class="nf">_c_queue</span>
+    <span class="k">def</span> <span class="nf">__cinit__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span> <span class="o">=</span> <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_new</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Note that it says <tt class="docutils literal"><span class="pre">__cinit__</span></tt> rather than <tt class="docutils literal"><span class="pre">__init__</span></tt>.  While
+<tt class="docutils literal"><span class="pre">__init__</span></tt> is available as well, it is not guaranteed to be run (for
+instance, one could create a subclass and forget to call the
+ancestor&#8217;s constructor).  Because not initializing C pointers often
+leads to hard crashes of the Python interpreter, Cython provides
+<tt class="docutils literal"><span class="pre">__cinit__</span></tt> which is <em>always</em> called immediately on construction,
+before CPython even considers calling <tt class="docutils literal"><span class="pre">__init__</span></tt>, and which
+therefore is the right place to initialise <tt class="docutils literal"><span class="pre">cdef</span></tt> fields of the new
+instance.  However, as <tt class="docutils literal"><span class="pre">__cinit__</span></tt> is called during object
+construction, <tt class="docutils literal"><span class="pre">self</span></tt> is not fully constructed yet, and one must
+avoid doing anything with <tt class="docutils literal"><span class="pre">self</span></tt> but assigning to <tt class="docutils literal"><span class="pre">cdef</span></tt> fields.</p>
+<p>Note also that the above method takes no parameters, although subtypes
+may want to accept some.  A no-arguments <tt class="docutils literal"><span class="pre">__cinit__()</span></tt> method is a
+special case here that simply does not receive any parameters that
+were passed to a constructor, so it does not prevent subclasses from
+adding parameters.  If parameters are used in the signature of
+<tt class="docutils literal"><span class="pre">__cinit__()</span></tt>, they must match those of any declared <tt class="docutils literal"><span class="pre">__init__</span></tt>
+method of classes in the class hierarchy that are used to instantiate
+the type.</p>
+</div>
+<div class="section" id="memory-management">
+<h2>Memory management<a class="headerlink" href="#memory-management" title="Permalink to this headline">¶</a></h2>
+<p>Before we continue implementing the other methods, it is important to
+understand that the above implementation is not safe.  In case
+anything goes wrong in the call to <tt class="docutils literal"><span class="pre">queue_new()</span></tt>, this code will
+simply swallow the error, so we will likely run into a crash later on.
+According to the documentation of the <tt class="docutils literal"><span class="pre">queue_new()</span></tt> function, the
+only reason why the above can fail is due to insufficient memory.  In
+that case, it will return <tt class="docutils literal"><span class="pre">NULL</span></tt>, whereas it would normally return a
+pointer to the new queue.</p>
+<p>The Python way to get out of this is to raise a <tt class="docutils literal"><span class="pre">MemoryError</span></tt> <a class="footnote-reference" href="#id7" id="id6">[3]</a>.
+We can thus change the init function as follows:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cimport</span> <span class="nn">cqueue</span>
+
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">Queue</span><span class="p">:</span>
+    <span class="k">cdef</span> <span class="kt">cqueue</span>.<span class="kt">Queue</span>* <span class="nf">_c_queue</span>
+    <span class="k">def</span> <span class="nf">__cinit__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span> <span class="o">=</span> <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_new</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span> <span class="ow">is</span> <span class="bp">NULL</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">MemoryError</span><span class="p">()</span>
+</pre></div>
+</div>
+<table class="docutils footnote" frame="void" id="id7" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id6">[3]</a></td><td>In the specific case of a <tt class="docutils literal"><span class="pre">MemoryError</span></tt>, creating a new
+exception instance in order to raise it may actually fail because
+we are running out of memory.  Luckily, CPython provides a C-API
+function <tt class="docutils literal"><span class="pre">PyErr_NoMemory()</span></tt> that safely raises the right
+exception for us.  Since version 0.14.1, Cython automatically
+substitutes this C-API call whenever you write <tt class="docutils literal"><span class="pre">raise</span>
+<span class="pre">MemoryError</span></tt> or <tt class="docutils literal"><span class="pre">raise</span> <span class="pre">MemoryError()</span></tt>.  If you use an older
+version, you have to cimport the C-API function from the standard
+package <tt class="docutils literal"><span class="pre">cpython.exc</span></tt> and call it directly.</td></tr>
+</tbody>
+</table>
+<p>The next thing to do is to clean up when the Queue instance is no
+longer used (i.e. all references to it have been deleted).  To this
+end, CPython provides a callback that Cython makes available as a
+special method <tt class="docutils literal"><span class="pre">__dealloc__()</span></tt>.  In our case, all we have to do is
+to free the C Queue, but only if we succeeded in initialising it in
+the init method:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">def</span> <span class="nf">__dealloc__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">NULL</span><span class="p">:</span>
+        <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_free</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="compiling-and-linking">
+<h2>Compiling and linking<a class="headerlink" href="#compiling-and-linking" title="Permalink to this headline">¶</a></h2>
+<p>At this point, we have a working Cython module that we can test.  To
+compile it, we need to configure a <tt class="docutils literal"><span class="pre">setup.py</span></tt> script for distutils.
+Here is the most basic script for compiling a Cython module:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">from</span> <span class="nn">distutils.core</span> <span class="k">import</span> <span class="n">setup</span>
+<span class="k">from</span> <span class="nn">distutils.extension</span> <span class="k">import</span> <span class="n">Extension</span>
+<span class="k">from</span> <span class="nn">Cython.Distutils</span> <span class="k">import</span> <span class="n">build_ext</span>
+
+<span class="n">setup</span><span class="p">(</span>
+    <span class="n">cmdclass</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;build_ext&#39;</span><span class="p">:</span> <span class="n">build_ext</span><span class="p">},</span>
+    <span class="n">ext_modules</span> <span class="o">=</span> <span class="p">[</span><span class="n">Extension</span><span class="p">(</span><span class="s">&quot;queue&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s">&quot;queue.pyx&quot;</span><span class="p">])]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>To build against the external C library, we must extend this script to
+include the necessary setup.  Assuming the library is installed in the
+usual places (e.g. under <tt class="docutils literal"><span class="pre">/usr/lib</span></tt> and <tt class="docutils literal"><span class="pre">/usr/include</span></tt> on a
+Unix-like system), we could simply change the extension setup from</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="n">ext_modules</span> <span class="o">=</span> <span class="p">[</span><span class="n">Extension</span><span class="p">(</span><span class="s">&quot;queue&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s">&quot;queue.pyx&quot;</span><span class="p">])]</span>
+</pre></div>
+</div>
+<p>to</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="n">ext_modules</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">Extension</span><span class="p">(</span><span class="s">&quot;queue&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s">&quot;queue.pyx&quot;</span><span class="p">],</span>
+              <span class="n">libraries</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;calg&quot;</span><span class="p">])</span>
+    <span class="p">]</span>
+</pre></div>
+</div>
+<p>If it is not installed in a &#8216;normal&#8217; location, users can provide the
+required parameters externally by passing appropriate C compiler
+flags, such as:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="n">CFLAGS</span><span class="o">=</span><span class="s">&quot;-I/usr/local/otherdir/calg/include&quot;</span>  \
+<span class="n">LDFLAGS</span><span class="o">=</span><span class="s">&quot;-L/usr/local/otherdir/calg/lib&quot;</span>     \
+    <span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">build_ext</span> <span class="o">-</span><span class="n">i</span>
+</pre></div>
+</div>
+<p>Once we have compiled the module for the first time, we can now import
+it and instantiate a new Queue:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="err">$</span> <span class="n">export</span> <span class="n">PYTHONPATH</span><span class="o">=.</span>
+<span class="err">$</span> <span class="n">python</span> <span class="o">-</span><span class="n">c</span> <span class="s">&#39;import queue.Queue as Q ; Q()&#39;</span>
+</pre></div>
+</div>
+<p>However, this is all our Queue class can do so far, so let&#8217;s make it
+more usable.</p>
+</div>
+<div class="section" id="mapping-functionality">
+<h2>Mapping functionality<a class="headerlink" href="#mapping-functionality" title="Permalink to this headline">¶</a></h2>
+<p>Before implementing the public interface of this class, it is good
+practice to look at what interfaces Python offers, e.g. in its
+<tt class="docutils literal"><span class="pre">list</span></tt> or <tt class="docutils literal"><span class="pre">collections.deque</span></tt> classes.  Since we only need a FIFO
+queue, it&#8217;s enough to provide the methods <tt class="docutils literal"><span class="pre">append()</span></tt>, <tt class="docutils literal"><span class="pre">peek()</span></tt> and
+<tt class="docutils literal"><span class="pre">pop()</span></tt>, and additionally an <tt class="docutils literal"><span class="pre">extend()</span></tt> method to add multiple
+values at once.  Also, since we already know that all values will be
+coming from C, it&#8217;s best to provide only <tt class="docutils literal"><span class="pre">cdef</span></tt> methods for now, and
+to give them a straight C interface.</p>
+<p>In C, it is common for data structures to store data as a <tt class="docutils literal"><span class="pre">void*</span></tt> to
+whatever data item type.  Since we only want to store <tt class="docutils literal"><span class="pre">int</span></tt> values,
+which usually fit into the size of a pointer type, we can avoid
+additional memory allocations through a trick: we cast our <tt class="docutils literal"><span class="pre">int</span></tt> values
+to <tt class="docutils literal"><span class="pre">void*</span></tt> and vice versa, and store the value directly as the
+pointer value.</p>
+<p>Here is a simple implementation for the <tt class="docutils literal"><span class="pre">append()</span></tt> method:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">int</span> <span class="n">value</span><span class="p">):</span>
+    <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_push_tail</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">,</span> <span class="o">&lt;</span><span class="n">void</span><span class="o">*&gt;</span><span class="n">value</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Again, the same error handling considerations as for the
+<tt class="docutils literal"><span class="pre">__cinit__()</span></tt> method apply, so that we end up with this
+implementation instead:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">int</span> <span class="n">value</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_push_tail</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">,</span>
+                                  <span class="o">&lt;</span><span class="n">void</span><span class="o">*&gt;</span><span class="n">value</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">MemoryError</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Adding an <tt class="docutils literal"><span class="pre">extend()</span></tt> method should now be straight forward:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="nf">extend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">int</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">count</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Append all ints to the queue.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">cdef</span> <span class="kt">size_t</span> <span class="nf">i</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">count</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_push_tail</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">,</span> <span class="o">&lt;</span><span class="n">void</span><span class="o">*&gt;</span><span class="n">values</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">MemoryError</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>This becomes handy when reading values from a NumPy array, for
+example.</p>
+<p>So far, we can only add data to the queue.  The next step is to write
+the two methods to get the first element: <tt class="docutils literal"><span class="pre">peek()</span></tt> and <tt class="docutils literal"><span class="pre">pop()</span></tt>,
+which provide read-only and destructive read access respectively:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">int</span> <span class="nf">peek</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">&lt;</span><span class="kt">int</span><span class="p">&gt;</span><span class="n">cqueue</span><span class="o">.</span><span class="n">queue_peek_head</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">)</span>
+
+<span class="k">cdef</span> <span class="kt">int</span> <span class="nf">pop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">&lt;</span><span class="kt">int</span><span class="p">&gt;</span><span class="n">cqueue</span><span class="o">.</span><span class="n">queue_pop_head</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="handling-errors">
+<h2>Handling errors<a class="headerlink" href="#handling-errors" title="Permalink to this headline">¶</a></h2>
+<p>Now, what happens when the queue is empty?  According to the
+documentation, the functions return a <tt class="docutils literal"><span class="pre">NULL</span></tt> pointer, which is
+typically not a valid value.  Since we are simply casting to and
+from ints, we cannot distinguish anymore if the return value was
+<tt class="docutils literal"><span class="pre">NULL</span></tt> because the queue was empty or because the value stored in
+the queue was <tt class="docutils literal"><span class="pre">0</span></tt>.  However, in Cython code, we would expect the
+first case to raise an exception, whereas the second case should
+simply return <tt class="docutils literal"><span class="pre">0</span></tt>.  To deal with this, we need to special case this
+value, and check if the queue really is empty or not:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">int</span> <span class="nf">peek</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="k">except</span><span class="o">?</span> <span class="o">-</span><span class="mf">1</span><span class="p">:</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="p">&lt;</span><span class="kt">int</span><span class="p">&gt;</span><span class="n">cqueue</span><span class="o">.</span><span class="n">queue_peek_head</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="mf">0</span><span class="p">:</span>
+        <span class="c"># this may mean that the queue is empty, or</span>
+        <span class="c"># that it happens to contain a 0 value</span>
+        <span class="k">if</span> <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_is_empty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s">&quot;Queue is empty&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span>
+</pre></div>
+</div>
+<p>Note how we have effectively created a fast path through the method in
+the hopefully common cases that the return value is not <tt class="docutils literal"><span class="pre">0</span></tt>.  Only
+that specific case needs an additional check if the queue is empty.</p>
+<p>The <tt class="docutils literal"><span class="pre">except?</span> <span class="pre">-1</span></tt> declaration in the method signature falls into the
+same category.  If the function was a Python function returning a
+Python object value, CPython would simply return <tt class="docutils literal"><span class="pre">NULL</span></tt> internally
+instead of a Python object to indicate an exception, which would
+immediately be propagated by the surrounding code.  The problem is
+that the return type is <tt class="docutils literal"><span class="pre">int</span></tt> and any <tt class="docutils literal"><span class="pre">int</span></tt> value is a valid queue
+item value, so there is no way to explicitly signal an error to the
+calling code.  In fact, without such a declaration, there is no
+obvious way for Cython to know what to return on exceptions and for
+calling code to even know that this method <em>may</em> exit with an
+exception.</p>
+<p>The only way calling code can deal with this situation is to call
+<tt class="docutils literal"><span class="pre">PyErr_Occurred()</span></tt> when returning from a function to check if an
+exception was raised, and if so, propagate the exception.  This
+obviously has a performance penalty.  Cython therefore allows you to
+declare which value it should implicitly return in the case of an
+exception, so that the surrounding code only needs to check for an
+exception when receiving this exact value.</p>
+<p>We chose to use <tt class="docutils literal"><span class="pre">-1</span></tt> as the exception return value as we expect it
+to be an unlikely value to be put into the queue.  The question mark
+in the <tt class="docutils literal"><span class="pre">except?</span> <span class="pre">-1</span></tt> declaration indicates that the return value is
+ambiguous (there <em>may</em> be a <tt class="docutils literal"><span class="pre">-1</span></tt> value in the queue, after all) and
+that an additional exception check using <tt class="docutils literal"><span class="pre">PyErr_Occurred()</span></tt> is
+needed in calling code.  Without it, Cython code that calls this
+method and receives the exception return value would silently (and
+sometimes incorrectly) assume that an exception has been raised.  In
+any case, all other return values will be passed through almost
+without a penalty, thus again creating a fast path for &#8216;normal&#8217;
+values.</p>
+<p>Now that the <tt class="docutils literal"><span class="pre">peek()</span></tt> method is implemented, the <tt class="docutils literal"><span class="pre">pop()</span></tt> method
+also needs adaptation.  Since it removes a value from the queue,
+however, it is not enough to test if the queue is empty <em>after</em> the
+removal.  Instead, we must test it on entry:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">int</span> <span class="nf">pop</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="k">except</span><span class="o">?</span> <span class="o">-</span><span class="mf">1</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_is_empty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s">&quot;Queue is empty&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">&lt;</span><span class="kt">int</span><span class="p">&gt;</span><span class="n">cqueue</span><span class="o">.</span><span class="n">queue_pop_head</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The return value for exception propagation is declared exactly as for
+<tt class="docutils literal"><span class="pre">peek()</span></tt>.</p>
+<p>Lastly, we can provide the Queue with an emptiness indicator in the
+normal Python way by implementing the <tt class="docutils literal"><span class="pre">__bool__()</span></tt> special method
+(note that Python 2 calls this method <tt class="docutils literal"><span class="pre">__nonzero__</span></tt>, whereas Cython
+code can use either name):</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">def</span> <span class="nf">__bool__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="ow">not</span> <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_is_empty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that this method returns either <tt class="docutils literal"><span class="pre">True</span></tt> or <tt class="docutils literal"><span class="pre">False</span></tt> as we
+declared the return type of the <tt class="docutils literal"><span class="pre">queue_is_empty()</span></tt> function as
+<tt class="docutils literal"><span class="pre">bint</span></tt> in <tt class="docutils literal"><span class="pre">cqueue.pxd</span></tt>.</p>
+</div>
+<div class="section" id="testing-the-result">
+<h2>Testing the result<a class="headerlink" href="#testing-the-result" title="Permalink to this headline">¶</a></h2>
+<p>Now that the implementation is complete, you may want to write some
+tests for it to make sure it works correctly.  Especially doctests are
+very nice for this purpose, as they provide some documentation at the
+same time.  To enable doctests, however, you need a Python API that
+you can call.  C methods are not visible from Python code, and thus
+not callable from doctests.</p>
+<p>A quick way to provide a Python API for the class is to change the
+methods from <tt class="docutils literal"><span class="pre">cdef</span></tt> to <tt class="docutils literal"><span class="pre">cpdef</span></tt>.  This will let Cython generate two
+entry points, one that is callable from normal Python code using the
+Python call semantics and Python objects as arguments, and one that is
+callable from C code with fast C semantics and without requiring
+intermediate argument conversion from or to Python types. Note that <tt class="docutils literal"><span class="pre">cpdef</span></tt>
+methods ensure that they can be appropriately overridden by Python
+methods even when they are called from Cython. This adds a tiny overhead
+compared to <tt class="docutils literal"><span class="pre">cdef</span></tt> methods.</p>
+<p>The following listing shows the complete implementation that uses
+<tt class="docutils literal"><span class="pre">cpdef</span></tt> methods where possible:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cimport</span> <span class="nn">cqueue</span>
+
+<span class="k">cdef</span> <span class="k">class</span> <span class="nf">Queue</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;A queue class for C integer values.</span>
+
+<span class="sd">    &gt;&gt;&gt; q = Queue()</span>
+<span class="sd">    &gt;&gt;&gt; q.append(5)</span>
+<span class="sd">    &gt;&gt;&gt; q.peek()</span>
+<span class="sd">    5</span>
+<span class="sd">    &gt;&gt;&gt; q.pop()</span>
+<span class="sd">    5</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">cdef</span> <span class="kt">cqueue</span>.<span class="kt">Queue</span>* <span class="nf">_c_queue</span>
+    <span class="k">def</span> <span class="nf">__cinit__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span> <span class="o">=</span> <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_new</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span> <span class="ow">is</span> <span class="bp">NULL</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">MemoryError</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__dealloc__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">NULL</span><span class="p">:</span>
+            <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_free</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">)</span>
+
+    <span class="k">cpdef</span> <span class="nf">append</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">int</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_push_tail</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">,</span>
+                                      <span class="o">&lt;</span><span class="n">void</span><span class="o">*&gt;</span><span class="n">value</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">MemoryError</span><span class="p">()</span>
+
+    <span class="k">cdef</span> <span class="nf">extend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">int</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">count</span><span class="p">):</span>
+        <span class="k">cdef</span> <span class="kt">size_t</span> <span class="nf">i</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">count</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_push_tail</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">,</span> <span class="o">&lt;</span><span class="n">void</span><span class="o">*&gt;</span><span class="n">values</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+                <span class="k">raise</span> <span class="ne">MemoryError</span><span class="p">()</span>
+
+    <span class="k">cpdef</span> <span class="kt">int</span> <span class="nf">peek</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="k">except</span><span class="o">?</span> <span class="o">-</span><span class="mf">1</span><span class="p">:</span>
+        <span class="k">cdef</span> <span class="kt">int</span> <span class="nf">value</span> <span class="o">=</span> \
+            <span class="p">&lt;</span><span class="kt">int</span><span class="p">&gt;</span><span class="n">cqueue</span><span class="o">.</span><span class="n">queue_peek_head</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="mf">0</span><span class="p">:</span>
+            <span class="c"># this may mean that the queue is empty,</span>
+            <span class="c"># or that it happens to contain a 0 value</span>
+            <span class="k">if</span> <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_is_empty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s">&quot;Queue is empty&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="k">cpdef</span> <span class="kt">int</span> <span class="nf">pop</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="k">except</span><span class="o">?</span> <span class="o">-</span><span class="mf">1</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_is_empty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s">&quot;Queue is empty&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">&lt;</span><span class="kt">int</span><span class="p">&gt;</span><span class="n">cqueue</span><span class="o">.</span><span class="n">queue_pop_head</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__bool__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_is_empty</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The <tt class="docutils literal"><span class="pre">cpdef</span></tt> feature is obviously not available for the <tt class="docutils literal"><span class="pre">extend()</span></tt>
+method, as the method signature is incompatible with Python argument
+types.  However, if wanted, we can rename the C-ish <tt class="docutils literal"><span class="pre">extend()</span></tt>
+method to e.g. <tt class="docutils literal"><span class="pre">c_extend()</span></tt>, and write a new <tt class="docutils literal"><span class="pre">extend()</span></tt> method
+instead that accepts an arbitrary Python iterable:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="nf">c_extend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">int</span><span class="o">*</span> <span class="n">values</span><span class="p">,</span> <span class="n">size_t</span> <span class="n">count</span><span class="p">):</span>
+    <span class="k">cdef</span> <span class="kt">size_t</span> <span class="nf">i</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">count</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_push_tail</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">,</span> <span class="o">&lt;</span><span class="n">void</span><span class="o">*&gt;</span><span class="n">values</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">MemoryError</span><span class="p">()</span>
+
+<span class="k">cpdef</span> <span class="nf">extend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>As a quick test with 10000 numbers on the author&#8217;s machine indicates,
+using this Queue from Cython code with C <tt class="docutils literal"><span class="pre">int</span></tt> values is about five
+times as fast as using it from Cython code with Python object values,
+almost eight times faster than using it from Python code in a Python
+loop, and still more than twice as fast as using Python&#8217;s highly
+optimised <tt class="docutils literal"><span class="pre">collections.deque</span></tt> type from Cython code with Python
+integers.</p>
+</div>
+<div class="section" id="callbacks">
+<h2>Callbacks<a class="headerlink" href="#callbacks" title="Permalink to this headline">¶</a></h2>
+<p>Let&#8217;s say you want to provide a way for users to pop values from the
+queue up to a certain user defined event occurs.  To this end, you
+want to allow them to pass a predicate function that determines when
+to stop, e.g.:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">def</span> <span class="nf">pop_until</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">predicate</span><span class="p">):</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">predicate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">peek</span><span class="p">()):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Now, let us assume for the sake of argument that the C queue
+provides such a function that takes a C callback function as
+predicate.  The API could look as follows:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="o">/*</span> <span class="n">C</span> <span class="nb">type</span> <span class="n">of</span> <span class="n">a</span> <span class="n">predicate</span> <span class="n">function</span> <span class="n">that</span> <span class="n">takes</span> <span class="n">a</span> <span class="n">queue</span> <span class="n">value</span> <span class="ow">and</span> <span class="n">returns</span>
+ <span class="o">*</span> <span class="o">-</span><span class="mf">1</span> <span class="k">for</span> <span class="n">errors</span>
+ <span class="o">*</span>  <span class="mf">0</span> <span class="k">for</span> <span class="n">reject</span>
+ <span class="o">*</span>  <span class="mf">1</span> <span class="k">for</span> <span class="n">accept</span>
+ <span class="o">*/</span>
+<span class="n">typedef</span> <span class="nb">int</span> <span class="p">(</span><span class="o">*</span><span class="n">predicate_func</span><span class="p">)(</span><span class="n">void</span><span class="o">*</span> <span class="n">user_context</span><span class="p">,</span> <span class="n">QueueValue</span> <span class="n">data</span><span class="p">);</span>
+
+<span class="o">/*</span> <span class="n">Pop</span> <span class="n">values</span> <span class="k">as</span> <span class="nb">long</span> <span class="k">as</span> <span class="n">the</span> <span class="n">predicate</span> <span class="n">evaluates</span> <span class="n">to</span> <span class="n">true</span> <span class="k">for</span> <span class="n">them</span><span class="p">,</span>
+ <span class="o">*</span> <span class="n">returns</span> <span class="o">-</span><span class="mf">1</span> <span class="k">if</span> <span class="n">the</span> <span class="n">predicate</span> <span class="n">failed</span> <span class="k">with</span> <span class="n">an</span> <span class="n">error</span> <span class="ow">and</span> <span class="mf">0</span> <span class="n">otherwise</span><span class="o">.</span>
+ <span class="o">*/</span>
+<span class="nb">int</span> <span class="n">queue_pop_head_until</span><span class="p">(</span><span class="n">Queue</span> <span class="o">*</span><span class="n">queue</span><span class="p">,</span> <span class="n">predicate_func</span> <span class="n">predicate</span><span class="p">,</span>
+                         <span class="n">void</span><span class="o">*</span> <span class="n">user_context</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>It is normal for C callback functions to have a generic <tt class="xref c c-type docutils literal"><span class="pre">void*</span></tt>
+argument that allows passing any kind of context or state through the
+C-API into the callback function.  We will use this to pass our Python
+predicate function.</p>
+<p>First, we have to define a callback function with the expected
+signature that we can pass into the C-API function:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kt">int</span> <span class="nf">evaluate_predicate</span><span class="p">(</span><span class="n">void</span><span class="o">*</span> <span class="n">context</span><span class="p">,</span> <span class="n">cqueue</span><span class="o">.</span><span class="n">QueueValue</span> <span class="n">value</span><span class="p">):</span>
+    <span class="s">&quot;Callback function that can be passed as predicate_func&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c"># recover Python function object from void* argument</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="p">&lt;</span><span class="kt">object</span><span class="p">&gt;</span><span class="n">context</span>
+        <span class="c"># call function, convert result into 0/1 for True/False</span>
+        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">func</span><span class="p">(&lt;</span><span class="kt">int</span><span class="p">&gt;</span><span class="n">value</span><span class="p">))</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="c"># catch any Python errors and return error indicator</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mf">1</span>
+</pre></div>
+</div>
+<p>The main idea is to pass a pointer (a.k.a. borrowed reference) to the
+function object as the user context argument. We will call the C-API
+function as follows:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">def</span> <span class="nf">pop_until</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">python_predicate_function</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">cqueue</span><span class="o">.</span><span class="n">queue_pop_head_until</span><span class="p">(</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_c_queue</span><span class="p">,</span> <span class="n">evaluate_predicate</span><span class="p">,</span>
+        <span class="o">&lt;</span><span class="n">void</span><span class="o">*&gt;</span><span class="n">python_predicate_function</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">result</span> <span class="o">==</span> <span class="o">-</span><span class="mf">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;an error occurred&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The usual pattern is to first cast the Python object reference into
+a <tt class="xref c c-type docutils literal"><span class="pre">void*</span></tt> to pass it into the C-API function, and then cast
+it back into a Python object in the C predicate callback function.
+The cast to <tt class="xref c c-type docutils literal"><span class="pre">void*</span></tt> creates a borrowed reference.  On the cast
+to <tt class="docutils literal"><span class="pre">&lt;object&gt;</span></tt>, Cython increments the reference count of the object
+and thus converts the borrowed reference back into an owned reference.
+At the end of the predicate function, the owned reference goes out
+of scope again and Cython discards it.</p>
+<p>The error handling in the code above is a bit simplistic. Specifically,
+any exceptions that the predicate function raises will essentially be
+discarded and only result in a plain <tt class="docutils literal"><span class="pre">RuntimeError()</span></tt> being raised
+after the fact.  This can be improved by storing away the exception
+in an object passed through the context parameter and re-raising it
+after the C-API function has returned <tt class="docutils literal"><span class="pre">-1</span></tt> to indicate the error.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index-2.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Using C libraries</a><ul>
+<li><a class="reference internal" href="#defining-external-declarations">Defining external declarations</a></li>
+<li><a class="reference internal" href="#writing-a-wrapper-class">Writing a wrapper class</a></li>
+<li><a class="reference internal" href="#memory-management">Memory management</a></li>
+<li><a class="reference internal" href="#compiling-and-linking">Compiling and linking</a></li>
+<li><a class="reference internal" href="#mapping-functionality">Mapping functionality</a></li>
+<li><a class="reference internal" href="#handling-errors">Handling errors</a></li>
+<li><a class="reference internal" href="#testing-the-result">Testing the result</a></li>
+<li><a class="reference internal" href="#callbacks">Callbacks</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="external.html"
+                        title="previous chapter">Calling C functions</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="cdef_classes.html"
+                        title="next chapter">Extension types (aka. cdef classes)</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/src/tutorial/clibraries.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="http://docs.cython.org/search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="cdef_classes.html" title="Extension types (aka. cdef classes)"
+             >next</a></li>
+        <li class="right" >
+          <a href="external.html" title="Calling C functions"
+             >previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer">
+        &copy; Copyright 2014, Stefan Behnel, Robert Bradshaw, Dag Sverre Seljebotn, Greg Ewing, William Stein, Gabriel Gellner, et al..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-6139100-3");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+  </body>
+
+<!-- Mirrored from docs.cython.org/src/tutorial/clibraries.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:57 GMT -->
+</html>

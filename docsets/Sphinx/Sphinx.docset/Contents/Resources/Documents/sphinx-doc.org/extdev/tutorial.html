@@ -1,0 +1,547 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  
+<!-- Mirrored from sphinx-doc.org/extdev/tutorial.html by HTTrack Website Copier/3.x [XR&CO'2013], Wed, 23 Apr 2014 00:53:57 GMT -->
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Tutorial: Writing a simple extension &mdash; Sphinx 1.2.2 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/sphinx13.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.2.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="search" type="application/opensearchdescription+xml"
+          title="Search within Sphinx 1.2.2 documentation"
+          href="../_static/opensearch.xml"/>
+    <link rel="top" title="Sphinx 1.2.2 documentation" href="../index-2.html" />
+    <link rel="up" title="Developing extensions for Sphinx" href="index.html" />
+    <link rel="next" title="Application API" href="appapi.html" />
+    <link rel="prev" title="Developing extensions for Sphinx" href="index.html" />
+    <link href='../../fonts.googleapis.com/css8a7c.css?family=Open+Sans:300,400,700'
+          rel='stylesheet' type='text/css' />
+ 
+    <style type="text/css">
+      table.right { float: right; margin-left: 20px; }
+      table.right td { border: 1px solid #ccc; }
+      
+    </style>
+    <script type="text/javascript">
+      // intelligent scrolling of the sidebar content
+      $(window).scroll(function() {
+        var sb = $('.sphinxsidebarwrapper');
+        var win = $(window);
+        var sbh = sb.height();
+        var offset = $('.sphinxsidebar').position()['top'];
+        var wintop = win.scrollTop();
+        var winbot = wintop + win.innerHeight();
+        var curtop = sb.position()['top'];
+        var curbot = curtop + sbh;
+        // does sidebar fit in window?
+        if (sbh < win.innerHeight()) {
+          // yes: easy case -- always keep at the top
+          sb.css('top', $u.min([$u.max([0, wintop - offset - 10]),
+                                $(document).height() - sbh - 200]));
+        } else {
+          // no: only scroll if top/bottom edge of sidebar is at
+          // top/bottom edge of window
+          if (curtop > wintop && curbot > winbot) {
+            sb.css('top', $u.max([wintop - offset - 10, 0]));
+          } else if (curtop < wintop && curbot < winbot) {
+            sb.css('top', $u.min([winbot - sbh - offset - 20,
+                                  $(document).height() - sbh - 200]));
+          }
+        }
+      });
+    </script>
+
+  </head>
+  <body>
+<div class="pageheader">
+  <ul>
+    <li><a href="../index-2.html">Home</a></li>
+    <li><a href="../install.html">Get it</a></li>
+    <li><a href="../contents.html">Docs</a></li>
+    <li><a href="../develop.html">Extend/Develop</a></li>
+  </ul>
+  <div>
+    <a href="../index-2.html">
+      <img src="../_static/sphinxheader.png" alt="SPHINX" />
+    </a>
+  </div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="appapi.html" title="Application API"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Developing extensions for Sphinx"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index-2.html">Sphinx home</a>&nbsp;|</li>
+        <li><a href="../contents.html">Documentation</a> &raquo;</li>
+
+          <li><a href="index.html" accesskey="U">Developing extensions for Sphinx</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../contents.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Tutorial: Writing a simple extension</a><ul>
+<li><a class="reference internal" href="#important-objects">Important objects</a></li>
+<li><a class="reference internal" href="#build-phases">Build Phases</a></li>
+<li><a class="reference internal" href="#extension-design">Extension Design</a></li>
+<li><a class="reference internal" href="#the-setup-function">The Setup Function</a></li>
+<li><a class="reference internal" href="#the-node-classes">The Node Classes</a></li>
+<li><a class="reference internal" href="#the-directive-classes">The Directive Classes</a></li>
+<li><a class="reference internal" href="#the-event-handlers">The Event Handlers</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Developing extensions for Sphinx</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="appapi.html"
+                        title="next chapter">Application API</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/extdev/tutorial.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="http://sphinx-doc.org/search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="tutorial-writing-a-simple-extension">
+<span id="exttut"></span><h1>Tutorial: Writing a simple extension<a class="headerlink" href="#tutorial-writing-a-simple-extension" title="Permalink to this headline">¶</a></h1>
+<p>This section is intended as a walkthrough for the creation of custom extensions.
+It covers the basics of writing and activating an extensions, as well as
+commonly used features of extensions.</p>
+<p>As an example, we will cover a &#8220;todo&#8221; extension that adds capabilities to
+include todo entries in the documentation, and collecting these in a central
+place.  (A similar &#8220;todo&#8221; extension is distributed with Sphinx.)</p>
+<div class="section" id="important-objects">
+<h2>Important objects<a class="headerlink" href="#important-objects" title="Permalink to this headline">¶</a></h2>
+<p>There are several key objects whose API you will use while writing an
+extension.  These are:</p>
+<dl class="docutils">
+<dt><strong>Application</strong></dt>
+<dd><p class="first">The application object (usually called <tt class="docutils literal"><span class="pre">app</span></tt>) is an instance of
+<a class="reference internal" href="appapi.html#sphinx.application.Sphinx" title="sphinx.application.Sphinx"><tt class="xref py py-class docutils literal"><span class="pre">Sphinx</span></tt></a>.  It controls the most high-level functionality, such as the
+setup of extensions, event dispatching and producing output (logging).</p>
+<p class="last">If you have the environment object, the application is available as
+<tt class="docutils literal"><span class="pre">env.app</span></tt>.</p>
+</dd>
+<dt><strong>Environment</strong></dt>
+<dd><p class="first">The build environment object (usually called <tt class="docutils literal"><span class="pre">env</span></tt>) is an instance of
+<a class="reference internal" href="envapi.html#sphinx.environment.BuildEnvironment" title="sphinx.environment.BuildEnvironment"><tt class="xref py py-class docutils literal"><span class="pre">BuildEnvironment</span></tt></a>.  It is responsible for parsing the source
+documents stores all metadata about the document collection and is serialized
+after each build.</p>
+<p>Its API provides methods to do with access to metadata, resolving references,
+etc.  It can also be used by extensions to cache information that should
+persist for incremental rebuilds.</p>
+<p class="last">If you have the application or builder object, the environment is available
+as <tt class="docutils literal"><span class="pre">app.env</span></tt> or <tt class="docutils literal"><span class="pre">builder.env</span></tt>.</p>
+</dd>
+<dt><strong>Builder</strong></dt>
+<dd><p class="first">The builder object (usually called <tt class="docutils literal"><span class="pre">builder</span></tt>) is an instance of a specific
+subclass of <a class="reference internal" href="builderapi.html#sphinx.builders.Builder" title="sphinx.builders.Builder"><tt class="xref py py-class docutils literal"><span class="pre">Builder</span></tt></a>.  Each builder class knows how to convert the
+parsed documents into an output format, or otherwise process them (e.g. check
+external links).</p>
+<p class="last">If you have the application object, the environment is available as
+<tt class="docutils literal"><span class="pre">app.builder</span></tt>.</p>
+</dd>
+<dt><strong>Config</strong></dt>
+<dd><p class="first">The config object (usually called <tt class="docutils literal"><span class="pre">config</span></tt>) provides the values of
+configuration values set in <tt class="file docutils literal"><span class="pre">conf.py</span></tt> as attributes.  It is an instance
+of <a class="reference internal" href="appapi.html#sphinx.config.Config" title="sphinx.config.Config"><tt class="xref py py-class docutils literal"><span class="pre">Config</span></tt></a>.</p>
+<p class="last">The config is available as <tt class="docutils literal"><span class="pre">app.config</span></tt> or <tt class="docutils literal"><span class="pre">env.config</span></tt>.</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="build-phases">
+<h2>Build Phases<a class="headerlink" href="#build-phases" title="Permalink to this headline">¶</a></h2>
+<p>One thing that is vital in order to understand extension mechanisms is the way
+in which a Sphinx project is built: this works in several phases.</p>
+<p><strong>Phase 0: Initialization</strong></p>
+<blockquote>
+<div>In this phase, almost nothing interesting for us happens.  The source
+directory is searched for source files, and extensions are initialized.
+Should a stored build environment exist, it is loaded, otherwise a new one is
+created.</div></blockquote>
+<p><strong>Phase 1: Reading</strong></p>
+<blockquote>
+<div><p>In Phase 1, all source files (and on subsequent builds, those that are new or
+changed) are read and parsed.  This is the phase where directives and roles
+are encountered by the docutils, and the corresponding code is executed.  The
+output of this phase is a <em>doctree</em> for each source files, that is a tree of
+docutils nodes.  For document elements that aren&#8217;t fully known until all
+existing files are read, temporary nodes are created.</p>
+<p>There are nodes provided by docutils, which are documented <a class="reference external" href="http://docutils.sourceforge.net/docs/ref/doctree.html">in the docutils
+documentation</a>.
+Additional nodes are provided by Sphinx and <a class="reference internal" href="nodes.html#nodes"><em>documented here</em></a>.</p>
+<p>During reading, the build environment is updated with all meta- and cross
+reference data of the read documents, such as labels, the names of headings,
+described Python objects and index entries.  This will later be used to
+replace the temporary nodes.</p>
+<p>The parsed doctrees are stored on the disk, because it is not possible to
+hold all of them in memory.</p>
+</div></blockquote>
+<p><strong>Phase 2: Consistency checks</strong></p>
+<blockquote>
+<div>Some checking is done to ensure no surprises in the built documents.</div></blockquote>
+<p><strong>Phase 3: Resolving</strong></p>
+<blockquote>
+<div>Now that the metadata and cross-reference data of all existing documents is
+known, all temporary nodes are replaced by nodes that can be converted into
+output.  For example, links are created for object references that exist, and
+simple literal nodes are created for those that don&#8217;t.</div></blockquote>
+<p><strong>Phase 4: Writing</strong></p>
+<blockquote>
+<div>This phase converts the resolved doctrees to the desired output format, such
+as HTML or LaTeX.  This happens via a so-called docutils writer that visits
+the individual nodes of each doctree and produces some output in the process.</div></blockquote>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Some builders deviate from this general build plan, for example, the builder
+that checks external links does not need anything more than the parsed
+doctrees and therefore does not have phases 2&#8211;4.</p>
+</div>
+</div>
+<div class="section" id="extension-design">
+<h2>Extension Design<a class="headerlink" href="#extension-design" title="Permalink to this headline">¶</a></h2>
+<p>We want the extension to add the following to Sphinx:</p>
+<ul class="simple">
+<li>A &#8220;todo&#8221; directive, containing some content that is marked with &#8220;TODO&#8221;, and
+only shown in the output if a new config value is set.  (Todo entries should
+not be in the output by default.)</li>
+<li>A &#8220;todolist&#8221; directive that creates a list of all todo entries throughout the
+documentation.</li>
+</ul>
+<p>For that, we will need to add the following elements to Sphinx:</p>
+<ul class="simple">
+<li>New directives, called <tt class="docutils literal"><span class="pre">todo</span></tt> and <tt class="docutils literal"><span class="pre">todolist</span></tt>.</li>
+<li>New document tree nodes to represent these directives, conventionally also
+called <tt class="docutils literal"><span class="pre">todo</span></tt> and <tt class="docutils literal"><span class="pre">todolist</span></tt>.  We wouldn&#8217;t need new nodes if the new
+directives only produced some content representable by existing nodes.</li>
+<li>A new config value <tt class="docutils literal"><span class="pre">todo_include_todos</span></tt> (config value names should start
+with the extension name, in order to stay unique) that controls whether todo
+entries make it into the output.</li>
+<li>New event handlers: one for the <a class="reference internal" href="appapi.html#event-doctree-resolved"><tt class="xref std std-event docutils literal"><span class="pre">doctree-resolved</span></tt></a> event, to replace
+the todo and todolist nodes, and one for <a class="reference internal" href="appapi.html#event-env-purge-doc"><tt class="xref std std-event docutils literal"><span class="pre">env-purge-doc</span></tt></a> (the reason
+for that will be covered later).</li>
+</ul>
+</div>
+<div class="section" id="the-setup-function">
+<h2>The Setup Function<a class="headerlink" href="#the-setup-function" title="Permalink to this headline">¶</a></h2>
+<p>The new elements are added in the extension&#8217;s setup function.  Let us create a
+new Python module called <tt class="file docutils literal"><span class="pre">todo.py</span></tt> and add the setup function:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">setup</span><span class="p">(</span><span class="n">app</span><span class="p">):</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">add_config_value</span><span class="p">(</span><span class="s">&#39;todo_include_todos&#39;</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="bp">False</span><span class="p">)</span>
+
+    <span class="n">app</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">todolist</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">todo</span><span class="p">,</span>
+                 <span class="n">html</span><span class="o">=</span><span class="p">(</span><span class="n">visit_todo_node</span><span class="p">,</span> <span class="n">depart_todo_node</span><span class="p">),</span>
+                 <span class="n">latex</span><span class="o">=</span><span class="p">(</span><span class="n">visit_todo_node</span><span class="p">,</span> <span class="n">depart_todo_node</span><span class="p">),</span>
+                 <span class="n">text</span><span class="o">=</span><span class="p">(</span><span class="n">visit_todo_node</span><span class="p">,</span> <span class="n">depart_todo_node</span><span class="p">))</span>
+
+    <span class="n">app</span><span class="o">.</span><span class="n">add_directive</span><span class="p">(</span><span class="s">&#39;todo&#39;</span><span class="p">,</span> <span class="n">TodoDirective</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">add_directive</span><span class="p">(</span><span class="s">&#39;todolist&#39;</span><span class="p">,</span> <span class="n">TodolistDirective</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&#39;doctree-resolved&#39;</span><span class="p">,</span> <span class="n">process_todo_nodes</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s">&#39;env-purge-doc&#39;</span><span class="p">,</span> <span class="n">purge_todos</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The calls in this function refer to classes and functions not yet written.  What
+the individual calls do is the following:</p>
+<ul>
+<li><p class="first"><a class="reference internal" href="appapi.html#sphinx.application.Sphinx.add_config_value" title="sphinx.application.Sphinx.add_config_value"><tt class="xref py py-meth docutils literal"><span class="pre">add_config_value()</span></tt></a> lets Sphinx know that it should recognize the
+new <em>config value</em> <tt class="docutils literal"><span class="pre">todo_include_todos</span></tt>, whose default value should be
+<tt class="docutils literal"><span class="pre">False</span></tt> (this also tells Sphinx that it is a boolean value).</p>
+<p>If the third argument was <tt class="docutils literal"><span class="pre">True</span></tt>, all documents would be re-read if the
+config value changed its value.  This is needed for config values that
+influence reading (build phase 1).</p>
+</li>
+<li><p class="first"><a class="reference internal" href="appapi.html#sphinx.application.Sphinx.add_node" title="sphinx.application.Sphinx.add_node"><tt class="xref py py-meth docutils literal"><span class="pre">add_node()</span></tt></a> adds a new <em>node class</em> to the build system.  It also
+can specify visitor functions for each supported output format.  These visitor
+functions are needed when the new nodes stay until phase 4 &#8211; since the
+<tt class="docutils literal"><span class="pre">todolist</span></tt> node is always replaced in phase 3, it doesn&#8217;t need any.</p>
+<p>We need to create the two node classes <tt class="docutils literal"><span class="pre">todo</span></tt> and <tt class="docutils literal"><span class="pre">todolist</span></tt> later.</p>
+</li>
+<li><p class="first"><a class="reference internal" href="appapi.html#sphinx.application.Sphinx.add_directive" title="sphinx.application.Sphinx.add_directive"><tt class="xref py py-meth docutils literal"><span class="pre">add_directive()</span></tt></a> adds a new <em>directive</em>, given by name and class.</p>
+<p>The handler functions are created later.</p>
+</li>
+<li><p class="first">Finally, <a class="reference internal" href="appapi.html#sphinx.application.Sphinx.connect" title="sphinx.application.Sphinx.connect"><tt class="xref py py-meth docutils literal"><span class="pre">connect()</span></tt></a> adds an <em>event handler</em> to the event whose
+name is given by the first argument.  The event handler function is called
+with several arguments which are documented with the event.</p>
+</li>
+</ul>
+</div>
+<div class="section" id="the-node-classes">
+<h2>The Node Classes<a class="headerlink" href="#the-node-classes" title="Permalink to this headline">¶</a></h2>
+<p>Let&#8217;s start with the node classes:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">docutils</span> <span class="kn">import</span> <span class="n">nodes</span>
+
+<span class="k">class</span> <span class="nc">todo</span><span class="p">(</span><span class="n">nodes</span><span class="o">.</span><span class="n">Admonition</span><span class="p">,</span> <span class="n">nodes</span><span class="o">.</span><span class="n">Element</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<span class="k">class</span> <span class="nc">todolist</span><span class="p">(</span><span class="n">nodes</span><span class="o">.</span><span class="n">General</span><span class="p">,</span> <span class="n">nodes</span><span class="o">.</span><span class="n">Element</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<span class="k">def</span> <span class="nf">visit_todo_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">visit_admonition</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">depart_todo_node</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">depart_admonition</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Node classes usually don&#8217;t have to do anything except inherit from the standard
+docutils classes defined in <tt class="xref py py-mod docutils literal"><span class="pre">docutils.nodes</span></tt>.  <tt class="docutils literal"><span class="pre">todo</span></tt> inherits from
+<tt class="docutils literal"><span class="pre">Admonition</span></tt> because it should be handled like a note or warning, <tt class="docutils literal"><span class="pre">todolist</span></tt>
+is just a &#8220;general&#8221; node.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Many extensions will not have to create their own node classes and work fine
+with the nodes already provided by <a class="reference external" href="http://docutils.sourceforge.net/docs/ref/doctree.html">docutils</a> and <a class="reference internal" href="nodes.html#nodes"><em>Sphinx</em></a>.</p>
+</div>
+</div>
+<div class="section" id="the-directive-classes">
+<h2>The Directive Classes<a class="headerlink" href="#the-directive-classes" title="Permalink to this headline">¶</a></h2>
+<p>A directive class is a class deriving usually from
+<a class="reference internal" href="markupapi.html#docutils.parsers.rst.Directive" title="docutils.parsers.rst.Directive"><tt class="xref py py-class docutils literal"><span class="pre">docutils.parsers.rst.Directive</span></tt></a>.  The directive interface is also
+covered in detail in the <a class="reference external" href="http://docutils.sourceforge.net/docs/ref/rst/directives.html">docutils documentation</a>; the important thing is that
+the class has attributes that configure the allowed markup and a method <tt class="docutils literal"><span class="pre">run</span></tt>
+that returns a list of nodes.</p>
+<p>The <tt class="docutils literal"><span class="pre">todolist</span></tt> directive is quite simple:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">docutils.parsers.rst</span> <span class="kn">import</span> <span class="n">Directive</span>
+
+<span class="k">class</span> <span class="nc">TodolistDirective</span><span class="p">(</span><span class="n">Directive</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">todolist</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)]</span>
+</pre></div>
+</div>
+<p>An instance of our <tt class="docutils literal"><span class="pre">todolist</span></tt> node class is created and returned.  The
+todolist directive has neither content nor arguments that need to be handled.</p>
+<p>The <tt class="docutils literal"><span class="pre">todo</span></tt> directive function looks like this:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">sphinx.util.compat</span> <span class="kn">import</span> <span class="n">make_admonition</span>
+
+<span class="k">class</span> <span class="nc">TodoDirective</span><span class="p">(</span><span class="n">Directive</span><span class="p">):</span>
+
+    <span class="c"># this enables content in the directive</span>
+    <span class="n">has_content</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">env</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="o">.</span><span class="n">document</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">env</span>
+
+        <span class="n">targetid</span> <span class="o">=</span> <span class="s">&quot;todo-</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">env</span><span class="o">.</span><span class="n">new_serialno</span><span class="p">(</span><span class="s">&#39;todo&#39;</span><span class="p">)</span>
+        <span class="n">targetnode</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">.</span><span class="n">target</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="n">targetid</span><span class="p">])</span>
+
+        <span class="n">ad</span> <span class="o">=</span> <span class="n">make_admonition</span><span class="p">(</span><span class="n">todo</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="p">[</span><span class="n">_</span><span class="p">(</span><span class="s">&#39;Todo&#39;</span><span class="p">)],</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">,</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">content</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lineno</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">content_offset</span><span class="p">,</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">block_text</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_machine</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="s">&#39;todo_all_todos&#39;</span><span class="p">):</span>
+            <span class="n">env</span><span class="o">.</span><span class="n">todo_all_todos</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">env</span><span class="o">.</span><span class="n">todo_all_todos</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+            <span class="s">&#39;docname&#39;</span><span class="p">:</span> <span class="n">env</span><span class="o">.</span><span class="n">docname</span><span class="p">,</span>
+            <span class="s">&#39;lineno&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">lineno</span><span class="p">,</span>
+            <span class="s">&#39;todo&#39;</span><span class="p">:</span> <span class="n">ad</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(),</span>
+            <span class="s">&#39;target&#39;</span><span class="p">:</span> <span class="n">targetnode</span><span class="p">,</span>
+        <span class="p">})</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">targetnode</span><span class="p">]</span> <span class="o">+</span> <span class="n">ad</span>
+</pre></div>
+</div>
+<p>Several important things are covered here. First, as you can see, you can refer
+to the build environment instance using <tt class="docutils literal"><span class="pre">self.state.document.settings.env</span></tt>.</p>
+<p>Then, to act as a link target (from the todolist), the todo directive needs to
+return a target node in addition to the todo node.  The target ID (in HTML, this
+will be the anchor name) is generated by using <tt class="docutils literal"><span class="pre">env.new_serialno</span></tt> which
+returns a new unique integer on each call and therefore leads to unique target
+names.  The target node is instantiated without any text (the first two
+arguments).</p>
+<p>An admonition is created using a standard docutils function (wrapped in Sphinx
+for docutils cross-version compatibility).  The first argument gives the node
+class, in our case <tt class="docutils literal"><span class="pre">todo</span></tt>.  The third argument gives the admonition title (use
+<tt class="docutils literal"><span class="pre">arguments</span></tt> here to let the user specify the title).  A list of nodes is
+returned from <tt class="docutils literal"><span class="pre">make_admonition</span></tt>.</p>
+<p>Then, the todo node is added to the environment.  This is needed to be able to
+create a list of all todo entries throughout the documentation, in the place
+where the author puts a <tt class="docutils literal"><span class="pre">todolist</span></tt> directive.  For this case, the environment
+attribute <tt class="docutils literal"><span class="pre">todo_all_todos</span></tt> is used (again, the name should be unique, so it is
+prefixed by the extension name).  It does not exist when a new environment is
+created, so the directive must check and create it if necessary.  Various
+information about the todo entry&#8217;s location are stored along with a copy of the
+node.</p>
+<p>In the last line, the nodes that should be put into the doctree are returned:
+the target node and the admonition node.</p>
+<p>The node structure that the directive returns looks like this:</p>
+<div class="highlight-python"><div class="highlight"><pre>+--------------------+
+| target node        |
++--------------------+
++--------------------+
+| todo node          |
++--------------------+
+  \__+--------------------+
+     | admonition title   |
+     +--------------------+
+     | paragraph          |
+     +--------------------+
+     | ...                |
+     +--------------------+
+</pre></div>
+</div>
+</div>
+<div class="section" id="the-event-handlers">
+<h2>The Event Handlers<a class="headerlink" href="#the-event-handlers" title="Permalink to this headline">¶</a></h2>
+<p>Finally, let&#8217;s look at the event handlers.  First, the one for the
+<a class="reference internal" href="appapi.html#event-env-purge-doc"><tt class="xref std std-event docutils literal"><span class="pre">env-purge-doc</span></tt></a> event:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">purge_todos</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">env</span><span class="p">,</span> <span class="n">docname</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="s">&#39;todo_all_todos&#39;</span><span class="p">):</span>
+        <span class="k">return</span>
+    <span class="n">env</span><span class="o">.</span><span class="n">todo_all_todos</span> <span class="o">=</span> <span class="p">[</span><span class="n">todo</span> <span class="k">for</span> <span class="n">todo</span> <span class="ow">in</span> <span class="n">env</span><span class="o">.</span><span class="n">todo_all_todos</span>
+                          <span class="k">if</span> <span class="n">todo</span><span class="p">[</span><span class="s">&#39;docname&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">docname</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Since we store information from source files in the environment, which is
+persistent, it may become out of date when the source file changes.  Therefore,
+before each source file is read, the environment&#8217;s records of it are cleared,
+and the <a class="reference internal" href="appapi.html#event-env-purge-doc"><tt class="xref std std-event docutils literal"><span class="pre">env-purge-doc</span></tt></a> event gives extensions a chance to do the same.
+Here we clear out all todos whose docname matches the given one from the
+<tt class="docutils literal"><span class="pre">todo_all_todos</span></tt> list.  If there are todos left in the document, they will be
+added again during parsing.</p>
+<p>The other handler belongs to the <a class="reference internal" href="appapi.html#event-doctree-resolved"><tt class="xref std std-event docutils literal"><span class="pre">doctree-resolved</span></tt></a> event.  This event is
+emitted at the end of phase 3 and allows custom resolving to be done:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">process_todo_nodes</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">doctree</span><span class="p">,</span> <span class="n">fromdocname</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">todo_include_todos</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">doctree</span><span class="o">.</span><span class="n">traverse</span><span class="p">(</span><span class="n">todo</span><span class="p">):</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
+
+    <span class="c"># Replace all todolist nodes with a list of the collected todos.</span>
+    <span class="c"># Augment each todo with a backlink to the original location.</span>
+    <span class="n">env</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">env</span>
+
+    <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">doctree</span><span class="o">.</span><span class="n">traverse</span><span class="p">(</span><span class="n">todolist</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">todo_include_todos</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">replace_self</span><span class="p">([])</span>
+            <span class="k">continue</span>
+
+        <span class="n">content</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">todo_info</span> <span class="ow">in</span> <span class="n">env</span><span class="o">.</span><span class="n">todo_all_todos</span><span class="p">:</span>
+            <span class="n">para</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">.</span><span class="n">paragraph</span><span class="p">()</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">doc2path</span><span class="p">(</span><span class="n">todo_info</span><span class="p">[</span><span class="s">&#39;docname&#39;</span><span class="p">],</span> <span class="n">base</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+            <span class="n">description</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">_</span><span class="p">(</span><span class="s">&#39;(The original entry is located in </span><span class="si">%s</span><span class="s">, line </span><span class="si">%d</span><span class="s"> and can be found &#39;</span><span class="p">)</span> <span class="o">%</span>
+                <span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">todo_info</span><span class="p">[</span><span class="s">&#39;lineno&#39;</span><span class="p">]))</span>
+            <span class="n">para</span> <span class="o">+=</span> <span class="n">nodes</span><span class="o">.</span><span class="n">Text</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="n">description</span><span class="p">)</span>
+
+            <span class="c"># Create a reference</span>
+            <span class="n">newnode</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">.</span><span class="n">reference</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+            <span class="n">innernode</span> <span class="o">=</span> <span class="n">nodes</span><span class="o">.</span><span class="n">emphasis</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s">&#39;here&#39;</span><span class="p">),</span> <span class="n">_</span><span class="p">(</span><span class="s">&#39;here&#39;</span><span class="p">))</span>
+            <span class="n">newnode</span><span class="p">[</span><span class="s">&#39;refdocname&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">todo_info</span><span class="p">[</span><span class="s">&#39;docname&#39;</span><span class="p">]</span>
+            <span class="n">newnode</span><span class="p">[</span><span class="s">&#39;refuri&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">get_relative_uri</span><span class="p">(</span>
+                <span class="n">fromdocname</span><span class="p">,</span> <span class="n">todo_info</span><span class="p">[</span><span class="s">&#39;docname&#39;</span><span class="p">])</span>
+            <span class="n">newnode</span><span class="p">[</span><span class="s">&#39;refuri&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="s">&#39;#&#39;</span> <span class="o">+</span> <span class="n">todo_info</span><span class="p">[</span><span class="s">&#39;target&#39;</span><span class="p">][</span><span class="s">&#39;refid&#39;</span><span class="p">]</span>
+            <span class="n">newnode</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">innernode</span><span class="p">)</span>
+            <span class="n">para</span> <span class="o">+=</span> <span class="n">newnode</span>
+            <span class="n">para</span> <span class="o">+=</span> <span class="n">nodes</span><span class="o">.</span><span class="n">Text</span><span class="p">(</span><span class="s">&#39;.)&#39;</span><span class="p">,</span> <span class="s">&#39;.)&#39;</span><span class="p">)</span>
+
+            <span class="c"># Insert into the todolist</span>
+            <span class="n">content</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">todo_info</span><span class="p">[</span><span class="s">&#39;todo&#39;</span><span class="p">])</span>
+            <span class="n">content</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">para</span><span class="p">)</span>
+
+        <span class="n">node</span><span class="o">.</span><span class="n">replace_self</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>It is a bit more involved.  If our new &#8220;todo_include_todos&#8221; config value is
+false, all todo and todolist nodes are removed from the documents.</p>
+<p>If not, todo nodes just stay where and how they are.  Todolist nodes are
+replaced by a list of todo entries, complete with backlinks to the location
+where they come from.  The list items are composed of the nodes from the todo
+entry and docutils nodes created on the fly: a paragraph for each entry,
+containing text that gives the location, and a link (reference node containing
+an italic node) with the backreference.  The reference URI is built by
+<tt class="docutils literal"><span class="pre">app.builder.get_relative_uri</span></tt> which creates a suitable URI depending on the
+used builder, and appending the todo node&#8217;s (the target&#8217;s) ID as the anchor
+name.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="appapi.html" title="Application API"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Developing extensions for Sphinx"
+             >previous</a> |</li>
+        <li><a href="../index-2.html">Sphinx home</a>&nbsp;|</li>
+        <li><a href="../contents.html">Documentation</a> &raquo;</li>
+
+          <li><a href="index.html" >Developing extensions for Sphinx</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2007-2014, Georg Brandl and the Sphinx team.
+      Created using <a href="../index.html">Sphinx</a> 1.2.2+/3247bcb4b69d.
+    </div>
+  </body>
+
+<!-- Mirrored from sphinx-doc.org/extdev/tutorial.html by HTTrack Website Copier/3.x [XR&CO'2013], Wed, 23 Apr 2014 00:53:57 GMT -->
+</html>

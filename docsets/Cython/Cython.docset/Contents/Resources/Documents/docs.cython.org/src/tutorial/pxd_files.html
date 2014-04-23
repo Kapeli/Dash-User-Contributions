@@ -1,0 +1,169 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  
+<!-- Mirrored from docs.cython.org/src/tutorial/pxd_files.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:57 GMT -->
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pxd files &mdash; Cython 0.20 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.20',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="Cython 0.20 documentation" href="../../index-2.html" />
+    <link rel="up" title="Tutorials" href="index.html" />
+    <link rel="next" title="Caveats" href="caveats.html" />
+    <link rel="prev" title="Extension types (aka. cdef classes)" href="cdef_classes.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="caveats.html" title="Caveats"
+             accesskey="N">next</a></li>
+        <li class="right" >
+          <a href="cdef_classes.html" title="Extension types (aka. cdef classes)"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="pxd-files">
+<h1>pxd files<a class="headerlink" href="#pxd-files" title="Permalink to this headline">¶</a></h1>
+<p>In addition to the <tt class="docutils literal"><span class="pre">.pyx</span></tt> source files, Cython uses <tt class="docutils literal"><span class="pre">.pxd</span></tt> files
+which work like C header files &#8211; they contain Cython declarations
+(and sometimes code sections) which are only meant for inclusion by
+Cython modules.  A <tt class="docutils literal"><span class="pre">pxd</span></tt> file is imported into a <tt class="docutils literal"><span class="pre">pyx</span></tt> module by
+using the <tt class="docutils literal"><span class="pre">cimport</span></tt> keyword.</p>
+<p><tt class="docutils literal"><span class="pre">pxd</span></tt> files have many use-cases:</p>
+<blockquote>
+<div><ol class="arabic">
+<li><p class="first">They can be used for sharing external C declarations.</p>
+</li>
+<li><p class="first">They can contain functions which are well suited for inlining by
+the C compiler. Such functions should be marked <tt class="docutils literal"><span class="pre">inline</span></tt>, example:</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="kr">inline</span> <span class="kt">int</span> <span class="nf">int_min</span><span class="p">(</span><span class="nb">int</span> <span class="n">a</span><span class="p">,</span> <span class="nb">int</span> <span class="n">b</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">b</span> <span class="k">if</span> <span class="n">b</span> <span class="o">&lt;</span> <span class="n">a</span> <span class="k">else</span> <span class="n">a</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">When accompanying an equally named <tt class="docutils literal"><span class="pre">pyx</span></tt> file, they
+provide a Cython interface to the Cython module so that other
+Cython modules can communicate with it using a more efficient
+protocol than the Python one.</p>
+</li>
+</ol>
+</div></blockquote>
+<p>In our integration example, we might break it up into <tt class="docutils literal"><span class="pre">pxd</span></tt> files like this:</p>
+<blockquote>
+<div><ol class="arabic">
+<li><p class="first">Add a <tt class="docutils literal"><span class="pre">cmath.pxd</span></tt> function which defines the C functions available from
+the C <tt class="docutils literal"><span class="pre">math.h</span></tt> header file, like <tt class="docutils literal"><span class="pre">sin</span></tt>. Then one would simply do
+<tt class="docutils literal"><span class="pre">from</span> <span class="pre">cmath</span> <span class="pre">cimport</span> <span class="pre">sin</span></tt> in <tt class="docutils literal"><span class="pre">integrate.pyx</span></tt>.</p>
+</li>
+<li><p class="first">Add a <tt class="docutils literal"><span class="pre">integrate.pxd</span></tt> so that other modules written in Cython
+can define fast custom functions to integrate.</p>
+<div class="highlight-cython"><div class="highlight"><pre><span class="k">cdef</span> <span class="k">class</span> <span class="nf">Function</span><span class="p">:</span>
+    <span class="k">cpdef</span> <span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">double</span> <span class="n">x</span><span class="p">)</span>
+<span class="k">cpdef</span> <span class="nf">integrate</span><span class="p">(</span><span class="n">Function</span> <span class="n">f</span><span class="p">,</span> <span class="n">double</span> <span class="n">a</span><span class="p">,</span>
+                <span class="n">double</span> <span class="n">b</span><span class="p">,</span> <span class="nb">int</span> <span class="n">N</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that if you have a cdef class with attributes, the attributes must
+be declared in the class declaration <tt class="docutils literal"><span class="pre">pxd</span></tt> file (if you use one), not
+the <tt class="docutils literal"><span class="pre">pyx</span></tt> file. The compiler will tell you about this.</p>
+</li>
+</ol>
+</div></blockquote>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="cdef_classes.html"
+                        title="previous chapter">Extension types (aka. cdef classes)</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="caveats.html"
+                        title="next chapter">Caveats</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../../_sources/src/tutorial/pxd_files.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="http://docs.cython.org/search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="caveats.html" title="Caveats"
+             >next</a></li>
+        <li class="right" >
+          <a href="cdef_classes.html" title="Extension types (aka. cdef classes)"
+             >previous</a> |</li>
+        <li><a href="../../index-2.html">Cython 0.20 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer">
+        &copy; Copyright 2014, Stefan Behnel, Robert Bradshaw, Dag Sverre Seljebotn, Greg Ewing, William Stein, Gabriel Gellner, et al..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-6139100-3");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+  </body>
+
+<!-- Mirrored from docs.cython.org/src/tutorial/pxd_files.html by HTTrack Website Copier/3.x [XR&CO'2013], Tue, 22 Apr 2014 23:32:57 GMT -->
+</html>
