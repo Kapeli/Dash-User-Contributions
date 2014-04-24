@@ -7,7 +7,7 @@ You can find me on EFnet #c++ or Freenode ##OpenGL
 
 GitHub Project link https://github.com/ttvd/dash-glsl-docset
 
-OpenGL 4 GLSL Docset for Dash.
+OpenGL 4.30 GLSL Docset for Dash.
 
 All data was pulled from https://www.opengl.org/sdk/docs/man4/html/indexflat.php
 All non-glsl entries were ignored, there's a separate docset for GL specific entries.
