@@ -122,7 +122,7 @@ fdupes -1 -r ./|{
             dpath="${dup%/$dname}"
             if test "$dpath" == "$fpath"
                 then
-                link=$fname
+                link="$fname"
             else
                 i=0; darr=''; for pathc in ${dpath//\// }; do darr[$((i++))]=$pathc; done
                 ddepth=$(($i-1))
