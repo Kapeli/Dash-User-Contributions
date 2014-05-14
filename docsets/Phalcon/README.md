@@ -30,7 +30,5 @@
 	  the files. At least 5-15 minutes will be necessary. It depends on the connection speed.
 	  
 - Known Issues:
-    - The table of contents isn't working.
-    - The guides aren't encoded/decoded properly.
-    - A "¶" symbol appears on every class, method, constant or guide. 
-	  It appears to be concatenated when the documentation is parsed.
+    - The guides aren't encoded/decoded properly. See also [#2](https://github.com/simioprg/dash-phalcon/issues/2)
+    - A "¶" symbol appears on every class, method, constant or guide. It appears to be concatenated when the documentation is parsed. See also [#3](https://github.com/simioprg/dash-phalcon/issues/3)
