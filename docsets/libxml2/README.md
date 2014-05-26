@@ -1,4 +1,4 @@
-JUCE Dash Docset
+libxml2 Dash Docset
 =======================
 
 * Author: [Scott Talbot](https://twitter.com/cyspio)
