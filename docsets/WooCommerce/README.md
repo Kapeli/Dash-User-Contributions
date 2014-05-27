@@ -1,6 +1,6 @@
 # WooCommerce Dash Docset
 
-This is an unofficial Dash Docset for the [WooCommerce][1] plugin for [WordPress][2].
+An unofficial Dash Docset for the [WooCommerce][1] plugin for [WordPress][2].
 
 ## Installation
 
@@ -33,11 +33,41 @@ To install the dependencies, run the following command line instructions from yo
 
 To generate the PHP Docset from source, run `apigen.php` and point at to the location of your WooCommerce plugin directory:
 
-`php -d memory_limit=512M /usr/local/src/apigen/apigen.php --groups "none" --title "WooCommerce" --template-config /usr/local/src/apigen/templates/bootstrap/config.neon -s ~/Sites/example.dev/wp-content/plugins/woocommerce -d ~/Desktop/woocommerce`
+`php -d memory_limit=512M /usr/local/src/apigen/apigen.php --groups "none" --title "WooCommerce" --template-config /usr/local/src/apigen/templates/bootstrap/config.neon -s ~/Sites/example.dev/wp-content/plugins/woocommerce -d ~/Desktop/WooCommerce`
 
 To generate the Dash Docset, run `apigen2docset` and specify the location where you output the above PHP Docset:
 
-`/usr/local/src/apigen2docset/apigen2docset.sh ~/Desktop/woocommerce`
+`/usr/local/src/apigen2docset/apigen2docset.sh ~/Desktop/WooCommerce`
+
+The resulting docset from ApiGen2Docset uses a generic bundle file template. I modify the original file, `~/Desktop/WooCommerce.docset/Contents/Info.plist`, to better suit Dash with the following:
+
+```
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+	<dict>
+		<key>CFBundleIdentifier</key>
+		<string>woocommerce</string>
+		
+		<key>CFBundleName</key>
+		<string>WooCommerce</string>
+		
+		<key>DocSetPlatformFamily</key>
+		<string>woocommerce</string>
+		
+		<key>dashIndexFilePath</key>
+		<string>package-WooCommerce.html</string>
+		
+		<key>isJavaScriptEnabled</key>
+		<true />
+	</dict>
+</plist>
+```
+
+To build the final tar archive for consideration as a User-Contributed Docset for Dash, run the following:
+
+`tar --exclude='.DS_Store' -cvzf WooCommerce.tgz WooCommerce.docset`
 
 ## Support
 
@@ -45,7 +75,8 @@ For support, please refer to the official [Github repository][6].
 
 ### Changelog
 
-Version 2.1.8 (30 April 2014)
+* 2.1.9 — 27 May 2014
+* 2.1.8 — 30 April 2014
 
 [1]: http://woothemes.com/woocommerce/
 [2]: http://wordpress.org/
