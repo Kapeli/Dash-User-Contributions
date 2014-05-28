@@ -1,7 +1,8 @@
 Plone
 ======
 
-Plone is an open source CMS written in Python and developed by a excellent community
+Plone is an open source CMS written in Python and developed by an excellent community. The project has been actively developed since 2001, is available in more than 40 languages, and has the best security track record of any major CMS.
+It is owned by the Plone Foundation, a 501(c)(3) not-for-profit organization, and is available for all major operating systems.
 
 Author
 -------
