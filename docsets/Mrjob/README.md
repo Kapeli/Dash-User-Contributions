@@ -9,9 +9,9 @@ mrjob docset
 
 - __How to generate the docset__:
     - fetch html: 
-    	- `httrack "https://pythonhosted.org/mrjob/" -O "handjob" "+*pythonhosted.org/mrjob/*" -v`
+    	- `httrack "https://pythonhosted.org/mrjob/" -O "mrjob" "+*pythonhosted.org/mrjob/*" -v`
     - generate docset: 
-    	- `doc2dash -v -n Handjob handjob/pythonhosted.org/mrjob/`
+    	- `doc2dash -v -n Mrjob mrjob/pythonhosted.org/mrjob/`
     - Set Info.plist to index page: 
     	- `dashIndexFilePath: index.html`
     - Add icon.
