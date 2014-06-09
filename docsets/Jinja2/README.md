@@ -20,4 +20,7 @@ $ cd jinja2-docset
 $ ./generate.sh
 ```
 
-Once generated, the Jinja2 docset can be found under the `dist` folder. Double click on the docset to install it.
+Once generated, the Jinja2 docset can be found under the `dist` folder. To install the docset, execute the following command:
+```bash
+$ ./install.sh
+```
