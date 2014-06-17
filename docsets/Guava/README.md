@@ -22,10 +22,9 @@ Documentation for Google's [Guava](https://code.google.com/p/guava-libraries/) l
 3. Generate the Javadoc using Maven.
 
     ```bash
-    $ mvn javadoc:javadoc -Dwindowtitle=""
+    $ mvn javadoc:javadoc
     ```
 
-    **Note:** The `-Dwindowtitle=""` flag is optional, and will prevent the Javadoc HTML title tags from containing the library name and version.
 4. Convert to a Dash docset using javadocset
 
     ```bash
