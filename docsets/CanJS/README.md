@@ -1,30 +1,71 @@
-# TODO
+# CanJS Dash Docset
 
-- look at the instructions for other projects to see how their docs are generated
-- add any details needed where appropriate
+The Official Docset for the [CanJS JavaScript Library][canjs].
 
-# CanJS
+## Installation
 
-- Preamble for what CanJS is, etc. 
-- By Bitovi (with link to corp site and canjs.com)
-- Link to Bitovi Repo. for CanJS
+- To build the docsets, you'll need the following:
+	- [CanJS][canjs] *
+	- [Git][git]
+	- [NodeJS][nodejs]
+	- [DocumentJS][documentjs] *
+	- [Grunt][npm]
+	- [NPM][npm] 
 
-# Prerequisites for Generating Docs
+**Note**: Items with `*` are submodules of the canjs.com repository. 
 
-- Mention Repo for canjs (gh-pages branch)
-- Mention dependencies (DocumentJS, Grunt, etc.)
-	- Appropriate links to each project in the MD file
-- Mention other submodules, initializing them, etc.
+## Generating Docs
 
-# Generating Docs
+**Clone the canjs.com repository**
 
-- Mention command `grunt docjs` (to generate the *.docset file for master)
-- Mention instructions for generating docs for each tag version
-	- go to the `can` subdirectory, and `git checkout vx.y.z` where x.y.z is the tag you want to generate docs for
-	- get the *.docset file from the appropriate subdirectories
-	- mention the oddities for CanJS v1.1 (fix with the .jshintrc directory) (known bug)
+Once cloned, checkout the `gh-pages` branch:
+
+	git clone https://github.com/bitovi/canjs.com.git
+	cd canjs.com
+	git checkout gh-pages
+
+**Setup Submodules**
+
+	git submodule init
+	git submodule update
+
+**Install NPM packages**
+
+	npm install
+
+**Generate the Docs**
+
+Once all prerequisites, submodules, and packages are installed, run the following:
+
+	grunt docjs
+
+This will set up the docset for the current version of CanJS, and will appear in the appropriate subdirectory (e.g., `2.1`). Once generated, you can archive the docset by running:
+	
+	cd 2.1 # or whichever directory is the latest major.minor version of CanJS
+	tar --exclude='.DS_Store' -cvzf CanJS.tgz CanJS.docset
+
+To generate the docs for any legacy version, you can change the CanJS submodule. For example, to generate the latest 2.0.x docs for that version of CanJS:
+
+	cd /path/to/canjs.com/can
+	git checkout v2.0.7 # or another tagged version number
+	cd ..
+	grunt docjs
+
+**Note**: at the time of this writing, there is a small bug with the 1.1.x tagged versions of CanJS in a support file `.jshintrc`. The fix is to remove the single-line comments from this file, then re-run:
+	
+	grunt docjs
+ 
+## Support
+
+Fixes and support for any documentation bugs in [CanJS][canjs] should be submitted to the [CanJS Github Repository](https://github.com/bitovi/canjs/).
 
 # About
 
-- include any licensing and other infornation here
-- include any copyright and other legal stuff here
+- Changelog for CanJS can be viewed [here](https://github.com/bitovi/canjs/blob/master/changelog.md).
+
+[canjs]: http://canjs.com
+[documentjs]: http://javascriptmvc.com/docs/DocumentJS.html
+[git]: http://git-scm.com
+[nodejs]: http://nodejs.org
+[grunt]: http://gruntjs.com
+[npm]: https://www.npmjs.org
