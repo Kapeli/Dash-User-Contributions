@@ -39,12 +39,12 @@ Once all prerequisites, submodules, and packages are installed, run the followin
 
 	grunt docjs
 
-This will set up the docset for the current version of CanJS, and will appear in the appropriate subdirectory (e.g., `2.1`). Once generated, you can archive the docset by running:
+This will set up the docset for the master version of CanJS, and will appear in the appropriate subdirectory (e.g., `2.1`). Once generated, you can archive the docset by running:
 	
 	cd 2.1 # or whichever directory is the latest major.minor version of CanJS
 	tar --exclude='.DS_Store' -cvzf CanJS.tgz CanJS.docset
 
-To generate the docs for any legacy version, you can change the CanJS submodule. For example, to generate the latest 2.0.x docs for that version of CanJS:
+To generate the docs for any particular version, you can change the CanJS submodule. For example, to generate the latest 2.0.x docs for that version of CanJS:
 
 	cd /path/to/canjs.com/can
 	git checkout v2.0.7 # or another tagged version number
