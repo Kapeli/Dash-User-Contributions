@@ -1,12 +1,12 @@
-Sample Docset
+OpenUI5 Docset
 =======================
 
-When you contribute a docset, you need to edit this README to include the following:
-* Who are you (GitHub and/or Twitter username)
-* Complete instructions on how to generate the docset, including:
-  * List of any prerequisites (especially your docset generation script!)
-  * Where or how to download the initial HTML documentation for the docset
-  * How to run the generation script
-  * Any other notes that might be useful
-* List of any known bugs (links to GitHub issues)
-* Anything else you think is relevant
+* Author: Constantin Lebrecht<constantin@monavari>
+* Website: www.monavari.de
+* GitHub: https://github.com/hijolan/
+* Xing: https://www.xing.com/profile/Constantin_Lebrecht
+
+A new NodeJS parser will be released soon to parse JSDocSets.
+The DocSet is self compiled with JSDoc from Sources shipped with Eclipse-Plugin.
+Maybe I will release a DashDocset based on the original precompiled Documentation of OpenUI5 
+that is shipped with the OpenUI5SDK.
