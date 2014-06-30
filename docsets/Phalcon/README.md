@@ -6,15 +6,15 @@
 	  performance and lower resource consumption.
 
 - __Author:__
-    - [Simon Ortego](https://github.com/simioprg)
+    - [Saimus Dev](https://github.com/saimusdev)
 
 - __Docset repo__:
-    - [https://github.com/simioprg/dash-phalcon](https://github.com/simioprg/dash-phalcon)
+    - [https://github.com/saimusdev/dash-phalcon](https://github.com/saimusdev/dash-phalcon)
 
 - Instructions to generate the docset:
     - Execute the following commands:
    ```
-   git clone https://github.com/simioprg/dash-phalcon.git
+   git clone https://github.com/saimusdev/dash-phalcon.git
    cd dash-foundation
    ./create_docset.sh
    cd ..
@@ -30,5 +30,5 @@
 	  the files. At least 5-15 minutes will be necessary. It depends on the connection speed.
 	  
 - Known Issues:
-    - The guides aren't encoded/decoded properly. See also [#2](https://github.com/simioprg/dash-phalcon/issues/2)
-    - A "¶" symbol appears on every class, method, constant or guide. It appears to be concatenated when the documentation is parsed. See also [#3](https://github.com/simioprg/dash-phalcon/issues/3)
+    - The guides aren't encoded/decoded properly. See also [#2](https://github.com/saimusdev/dash-phalcon/issues/2)
+    - A "¶" symbol appears on every class, method, constant or guide. It appears to be concatenated when the documentation is parsed. See also [#3](https://github.com/saimusdev/dash-phalcon/issues/3)
