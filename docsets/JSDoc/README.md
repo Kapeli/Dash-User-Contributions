@@ -1,4 +1,4 @@
-# jsdoc3 Docset
+# JSDoc Docset
 
 ## Author
 
