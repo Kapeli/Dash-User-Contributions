@@ -1,0 +1,211 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Writing CasperJS modules &mdash; CasperJS 1.1.0-DEV documentation</title>
+    
+    <link rel="stylesheet" href="_static/basic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.1.0-DEV',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="shortcut icon" href="_static/casperjs-favicon.ico"/>
+    <link rel="top" title="CasperJS 1.1.0-DEV documentation" href="index.html" />
+    <link rel="next" title="Events &amp; filters" href="events-filters.html" />
+    <link rel="prev" title="The utils module" href="modules/utils.html" />
+    <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Asap:400,700,400italic,700italic&amp;subset=latin,latin-ext">
+    <link rel="stylesheet" title="Dark theme" href="_static/casperjs-dark.css">
+    <link rel="alternate stylesheet" title="Light theme" href="_static/casperjs-light.css">
+    <script type="text/javascript" src="_static/style-switcher.js"></script>
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="events-filters.html" title="Events &amp; filters"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="modules/utils.html" title="The utils module"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">CasperJS 1.1.0-DEV documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <span class="target" id="writing-modules"></span><div class="section" id="writing-casperjs-modules">
+<span id="index-0"></span><h1>Writing CasperJS modules<a class="headerlink" href="#writing-casperjs-modules" title="Permalink to this headline">¶</a></h1>
+<p>As of 1.1, CasperJS relies on PhantomJS&#8217; native <tt class="docutils literal"><span class="pre">require()</span></tt> function internally though it had to be patched in order to allow requiring casper modules using their full name, eg. <tt class="docutils literal"><span class="pre">require('casper')</span></tt>.</p>
+<p>So if you plan to write your own modules and uses casperjs&#8217; ones from them, be sure to call the <tt class="docutils literal"><span class="pre">patchRequire()</span></tt> function:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="c1">// my module, stored in universe.js</span>
+<span class="c1">// patching phantomjs&#39; require()</span>
+<span class="kd">var</span> <span class="nx">require</span> <span class="o">=</span> <span class="nx">patchRequire</span><span class="p">(</span><span class="nx">require</span><span class="p">);</span>
+
+<span class="c1">// now you&#39;re ready to go</span>
+<span class="kd">var</span> <span class="nx">utils</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;utils&#39;</span><span class="p">);</span>
+<span class="kd">var</span> <span class="nx">magic</span> <span class="o">=</span> <span class="mi">42</span><span class="p">;</span>
+<span class="nx">exports</span><span class="p">.</span><span class="nx">answer</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">utils</span><span class="p">.</span><span class="nx">format</span><span class="p">(</span><span class="s2">&quot;it&#39;s %d&quot;</span><span class="p">,</span> <span class="nx">magic</span><span class="p">);</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">When using CoffeeScript <tt class="docutils literal"><span class="pre">global.require</span></tt> must be passed to <tt class="docutils literal"><span class="pre">patchRequire()</span></tt> instead of just <tt class="docutils literal"><span class="pre">require</span></tt>.</p>
+</div>
+<p>From your root casper script:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">var</span> <span class="nx">universe</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;./universe&#39;</span><span class="p">);</span>
+<span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">universe</span><span class="p">.</span><span class="nx">answer</span><span class="p">());</span> <span class="c1">// prints &quot;It&#39;s 42&quot;</span>
+</pre></div>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 1.1..</span></p>
+</div>
+<div class="admonition hint">
+<p class="first admonition-title">Hint</p>
+<p class="last">Like PhantomJS, CasperJS allows using nodejs modules installed through <a class="reference external" href="https://npmjs.org/">npm</a>.</p>
+</div>
+<p>As an example, let&#8217;s install the <a class="reference external" href="http://underscorejs.org/">underscore</a> library:</p>
+<div class="highlight-text"><div class="highlight"><pre>$ npm install underscore
+</pre></div>
+</div>
+<p>Then, <tt class="docutils literal"><span class="pre">require</span></tt> it like you would with any other nodejs compliant module:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="c1">//npm-underscore-test.js</span>
+<span class="kd">var</span> <span class="nx">_</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;underscore&#39;</span><span class="p">);</span>
+<span class="kd">var</span> <span class="nx">casper</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">&#39;casper&#39;</span><span class="p">).</span><span class="nx">create</span><span class="p">();</span>
+<span class="kd">var</span> <span class="nx">urls</span> <span class="o">=</span> <span class="nx">_</span><span class="p">.</span><span class="nx">uniq</span><span class="p">([</span>
+  <span class="s1">&#39;http://google.com/&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;http://docs.casperjs.org/&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;http://google.com/&#39;</span>
+<span class="p">]);</span>
+
+<span class="nx">casper</span><span class="p">.</span><span class="nx">start</span><span class="p">().</span><span class="nx">eachThen</span><span class="p">(</span><span class="nx">urls</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">response</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">this</span><span class="p">.</span><span class="nx">thenOpen</span><span class="p">(</span><span class="nx">response</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">response</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">this</span><span class="p">.</span><span class="nx">echo</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">getTitle</span><span class="p">());</span>
+  <span class="p">});</span>
+<span class="p">});</span>
+
+<span class="nx">casper</span><span class="p">.</span><span class="nx">run</span><span class="p">();</span>
+</pre></div>
+</div>
+<p>Finaly, you’ll probably get something like this:</p>
+<div class="highlight-text"><div class="highlight"><pre>$ casperjs npm-underscore-test.js
+Google
+CasperJS documentation | CasperJS 1.1.0-DEV documentation
+</pre></div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="index.html">Table Of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Using the command line</a></li>
+<li class="toctree-l1"><a class="reference internal" href="selectors.html">Selectors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modules/index.html">API Documentation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Writing CasperJS modules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="events-filters.html">Events &amp; filters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="logging.html">Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="extending.html">Extending</a></li>
+<li class="toctree-l1"><a class="reference internal" href="debugging.html">Debugging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="upgrading/index.html">Upgrading</a></li>
+<li class="toctree-l1"><a class="reference internal" href="credits.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="modules/utils.html"
+                        title="previous chapter">The <tt class="docutils literal"><span class="pre">utils</span></tt> module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="events-filters.html"
+                        title="next chapter">Events &amp; filters</a></p><h3>Index</h3>
+<p><a href="genindex.html">Thesaurus</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/writing_modules.txt"
+           rel="nofollow">Show Source</a></li>
+   
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script><h3>Donate</h3>
+<div class="donate">
+    <div class="paypal">
+        <form action="https://www.paypal.com/cgi-bin/webscr" method="post">
+            <input type="hidden" name="cmd" value="_s-xclick">
+            <input type="hidden" name="encrypted" value="-----BEGIN PKCS7-----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-----END PKCS7-----">
+            <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif" border="0" name="submit" alt="Donate" title="Donate">
+            <img alt="" border="0" src="https://www.paypalobjects.com/fr_FR/i/scr/pixel.gif" width="1" height="1">
+        </form>
+        <small>(ghosts have bills, you know)</small>
+    </div>
+    <div class="flattr">
+        <a href="http://flattr.com/thing/586241/CasperJS-a-navigation-scripting-and-testing-utility-for-PhantomJS" class="flattr" target="_blank"><img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0"></a>
+    </div>
+</div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="events-filters.html" title="Events &amp; filters"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="modules/utils.html" title="The utils module"
+             >previous</a> |</li>
+        <li><a href="index.html">CasperJS 1.1.0-DEV documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2011-2014 Nicolas Perriault and contributors. CasperJS logo by Jeremy Forveille.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>
