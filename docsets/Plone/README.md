@@ -12,7 +12,7 @@ Plone Documentation Team
 
 Generate docset
 ---------------
-To generate the Pyramid docset for Dash:
+To generate the Plone docset for Dash:
 
 1. [Generate the docs for Plone using Sphinx](https://github.com/plone/papyrus).
 
