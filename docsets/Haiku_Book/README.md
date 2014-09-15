@@ -14,7 +14,7 @@ This is the docset version of the [Haiku Book](http://api.haiku-os.org) which wa
 
 ### Building the docset
 
-1. Clone the main Haiku repository that contains the docset:
+1. Clone the main Haiku repository that contains the documentation:
 
 	```bash
 	$ git clone https://git.haiku-os.org/haiku
