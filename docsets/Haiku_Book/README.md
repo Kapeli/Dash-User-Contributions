@@ -1,28 +1,27 @@
 Haiku Book Docset
 =================
 
-## Information
+### Information
 
 This is the docset version of the [Haiku Book](http://api.haiku-os.org) which was generated from the Haiku [source](https://github.com/haiku/haiku) under (hrev47839).
 
 **Author:** [Joseph Hill](http://github.com/return)
 
 
-## Prerequisites:
+### Prerequisites
 * Doxygen - To generate docsets from source.
 
 
-## Building the docset:
+### Building the docset
 
 1. Clone the main Haiku repository that contains the docset:
 
 	```bash
 	$ git clone https://git.haiku-os.org/haiku
 	```
-2. Create a folder called "***generated***"
+2. Create a new folder called "***generated***"
 
 3. Navigate to the documentation directory:
-
 
 	```bash
 	$ cd haiku/docs/user/
@@ -30,7 +29,8 @@ This is the docset version of the [Haiku Book](http://api.haiku-os.org) which wa
 	
 4. Edit the ```Doxyfile``` to enable docset generation: 
 
-	```GENERATE_DOCSET   = YES
+	```
+	GENERATE_DOCSET   = YES
 	```
 	
 5. Run ```doxygen``` 
@@ -44,12 +44,12 @@ This is the docset version of the [Haiku Book](http://api.haiku-os.org) which wa
 	
 7. Run ```make```
 
-## Credits:
+### Credits
 [Original maintainers](https://api.haiku-os.org/credits.html)
  
 
 
-## License
+### License
 The MIT License (MIT)
 
 Copyright © 2001 - 2014 Haiku, Inc.
