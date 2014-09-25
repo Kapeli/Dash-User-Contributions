@@ -1,4 +1,4 @@
-Brk fonts v1.0.0 Altamira Oriole Docset
+Brk Fonts v1.0.0 Altamira Oriole Docset
 =======================================
 
 Brk fonts is an icon package formed by vectorial glyphs
@@ -15,4 +15,4 @@ icon packs (AKA Awesome Font)
 
 ## Docset
 
-The docset is inside Source project repo. It's plain HTML5 with some JS
+The docset is inside Source project repository. It's plain HTML5 with some JS
