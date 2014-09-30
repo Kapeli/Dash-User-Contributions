@@ -1,5 +1,5 @@
 
-Scikit docset
+Scikit-learn docset
 =============
 __Docset description__:
 	[Scikit-learn](http://scikit-learn.org/stable/) is an awesome Machine Learning library in Python.
