@@ -3,7 +3,7 @@ Haiku Book Docset
 
 ### Information
 
-This is the docset version of the [Haiku Book](http://api.haiku-os.org) which was generated from the Haiku [source](https://github.com/haiku/haiku) under (hrev47882).
+This is the docset version of the [Haiku Book](http://api.haiku-os.org) which was generated from the Haiku [source](https://github.com/haiku/haiku) under (hrev47946).
 
 **Author:** [Joseph Hill](http://github.com/return)
 
