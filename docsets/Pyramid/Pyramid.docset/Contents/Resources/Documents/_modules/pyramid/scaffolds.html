@@ -1,0 +1,185 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.scaffolds &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.scaffolds</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">binascii</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">textwrap</span> <span class="kn">import</span> <span class="n">dedent</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.compat</span> <span class="kn">import</span> <span class="n">native_</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.scaffolds.template</span> <span class="kn">import</span> <span class="n">Template</span> <span class="c"># API</span>
+
+<div class="viewcode-block" id="PyramidTemplate"><a class="viewcode-back" href="../../api/scaffolds.html#pyramid.scaffolds.PyramidTemplate">[docs]</a><span class="k">class</span> <span class="nc">PyramidTemplate</span><span class="p">(</span><span class="n">Template</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">     A class that can be used as a base class for Pyramid scaffolding</span>
+<span class="sd">     templates.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="PyramidTemplate.pre"><a class="viewcode-back" href="../../api/scaffolds.html#pyramid.scaffolds.PyramidTemplate.pre">[docs]</a>    <span class="k">def</span> <span class="nf">pre</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">command</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="nb">vars</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Overrides :meth:`pyramid.scaffolds.template.Template.pre`, adding</span>
+<span class="sd">        several variables to the default variables list (including</span>
+<span class="sd">        ``random_string``, and ``package_logger``).  It also prevents common</span>
+<span class="sd">        misnamings (such as naming a package &quot;site&quot; or naming a package</span>
+<span class="sd">        logger &quot;root&quot;.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">vars</span><span class="p">[</span><span class="s">&#39;package&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;site&#39;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Sorry, you may not name your package &quot;site&quot;. &#39;</span>
+                             <span class="s">&#39;The package name &quot;site&quot; has a special meaning in &#39;</span>
+                             <span class="s">&#39;Python.  Please name it anything except &quot;site&quot;.&#39;</span><span class="p">)</span>
+        <span class="nb">vars</span><span class="p">[</span><span class="s">&#39;random_string&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">native_</span><span class="p">(</span><span class="n">binascii</span><span class="o">.</span><span class="n">hexlify</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">urandom</span><span class="p">(</span><span class="mi">20</span><span class="p">)))</span>
+        <span class="n">package_logger</span> <span class="o">=</span> <span class="nb">vars</span><span class="p">[</span><span class="s">&#39;package&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">package_logger</span> <span class="o">==</span> <span class="s">&#39;root&#39;</span><span class="p">:</span>
+            <span class="c"># Rename the app logger in the rare case a project is named &#39;root&#39;</span>
+            <span class="n">package_logger</span> <span class="o">=</span> <span class="s">&#39;app&#39;</span>
+        <span class="nb">vars</span><span class="p">[</span><span class="s">&#39;package_logger&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">package_logger</span>
+        <span class="k">return</span> <span class="n">Template</span><span class="o">.</span><span class="n">pre</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">command</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="nb">vars</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PyramidTemplate.post"><a class="viewcode-back" href="../../api/scaffolds.html#pyramid.scaffolds.PyramidTemplate.post">[docs]</a>    <span class="k">def</span> <span class="nf">post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">command</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="nb">vars</span><span class="p">):</span> <span class="c"># pragma: no cover</span>
+        <span class="sd">&quot;&quot;&quot; Overrides :meth:`pyramid.scaffolds.template.Template.post`, to</span>
+<span class="sd">        print &quot;Welcome to Pyramid.  Sorry for the convenience.&quot; after a</span>
+<span class="sd">        successful scaffolding rendering.&quot;&quot;&quot;</span>
+
+        <span class="n">separator</span> <span class="o">=</span> <span class="s">&quot;=&quot;</span> <span class="o">*</span> <span class="mi">79</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">dedent</span><span class="p">(</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            %(separator)s</span>
+<span class="sd">            Tutorials: http://docs.pylonsproject.org/projects/pyramid_tutorials</span>
+<span class="sd">            Documentation: http://docs.pylonsproject.org/projects/pyramid</span>
+
+<span class="sd">            Twitter (tips &amp; updates): http://twitter.com/pylons</span>
+<span class="sd">            Mailing List: http://groups.google.com/group/pylons-discuss</span>
+
+<span class="sd">            Welcome to Pyramid.  Sorry for the convenience.</span>
+<span class="sd">            %(separator)s</span>
+<span class="sd">        &quot;&quot;&quot;</span> <span class="o">%</span> <span class="p">{</span><span class="s">&#39;separator&#39;</span><span class="p">:</span> <span class="n">separator</span><span class="p">})</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">out</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Template</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">command</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="nb">vars</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">out</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span> <span class="c"># pragma: no cover (replaceable testing hook)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+</div>
+<span class="k">class</span> <span class="nc">StarterProjectTemplate</span><span class="p">(</span><span class="n">PyramidTemplate</span><span class="p">):</span>
+    <span class="n">_template_dir</span> <span class="o">=</span> <span class="s">&#39;starter&#39;</span>
+    <span class="n">summary</span> <span class="o">=</span> <span class="s">&#39;Pyramid starter project&#39;</span>
+
+<span class="k">class</span> <span class="nc">ZODBProjectTemplate</span><span class="p">(</span><span class="n">PyramidTemplate</span><span class="p">):</span>
+    <span class="n">_template_dir</span> <span class="o">=</span> <span class="s">&#39;zodb&#39;</span>
+    <span class="n">summary</span> <span class="o">=</span> <span class="s">&#39;Pyramid ZODB project using traversal&#39;</span>
+
+<span class="k">class</span> <span class="nc">AlchemyProjectTemplate</span><span class="p">(</span><span class="n">PyramidTemplate</span><span class="p">):</span>
+    <span class="n">_template_dir</span> <span class="o">=</span> <span class="s">&#39;alchemy&#39;</span>
+    <span class="n">summary</span> <span class="o">=</span> <span class="s">&#39;Pyramid SQLAlchemy project using url dispatch&#39;</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

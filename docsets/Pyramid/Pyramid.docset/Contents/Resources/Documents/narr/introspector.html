@@ -1,0 +1,652 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Pyramid Configuration Introspection &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="next" title="Extending An Existing Pyramid Application" href="extending.html" />
+    <link rel="prev" title="Using Hooks" href="hooks.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="extending.html" title="Extending An Existing Pyramid Application"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="hooks.html" title="Using Hooks"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="pyramid-configuration-introspection">
+<span id="using-introspection"></span><span id="index-0"></span><h1>Pyramid Configuration Introspection<a class="headerlink" href="#pyramid-configuration-introspection" title="Permalink to this headline">¶</a></h1>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 1.3.</span></p>
+</div>
+<p>When Pyramid starts up, each call to a <a class="reference internal" href="../glossary.html#term-configuration-directive"><em class="xref std std-term">configuration directive</em></a> causes
+one or more <a class="reference internal" href="../glossary.html#term-introspectable"><em class="xref std std-term">introspectable</em></a> objects to be registered with an
+<a class="reference internal" href="../glossary.html#term-introspector"><em class="xref std std-term">introspector</em></a>.  The introspector can be queried by application code to
+obtain information about the configuration of the running application.  This
+feature is useful for debug toolbars, command-line scripts which show some
+aspect of configuration, and for runtime reporting of startup-time
+configuration settings.</p>
+<div class="section" id="using-the-introspector">
+<h2>Using the Introspector<a class="headerlink" href="#using-the-introspector" title="Permalink to this headline">¶</a></h2>
+<p>Here's an example of using Pyramid's introspector from within a view
+callable:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.view</span> <span class="kn">import</span> <span class="n">view_config</span>
+<span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+
+<span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;bar&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">show_current_route_pattern</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">introspector</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">introspector</span>
+    <span class="n">route_name</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">matched_route</span><span class="o">.</span><span class="n">name</span>
+    <span class="n">route_intr</span> <span class="o">=</span> <span class="n">introspector</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;routes&#39;</span><span class="p">,</span> <span class="n">route_name</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">route_intr</span><span class="p">[</span><span class="s">&#39;pattern&#39;</span><span class="p">]))</span>
+</pre></div>
+</td></tr></table></div>
+<p>This view will return a response that contains the &quot;pattern&quot; argument
+provided to the <tt class="docutils literal"><span class="pre">add_route</span></tt> method of the route which matched when the view
+was called.  It uses the <a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.IIntrospector.get" title="pyramid.interfaces.IIntrospector.get"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.interfaces.IIntrospector.get()</span></tt></a> method
+to return an introspectable in the category <tt class="docutils literal"><span class="pre">routes</span></tt> with a
+<a class="reference internal" href="../glossary.html#term-discriminator"><em class="xref std std-term">discriminator</em></a> equal to the matched route name.  It then uses the
+returned introspectable to obtain a &quot;pattern&quot; value.</p>
+<p>The introspectable returned by the query methods of the introspector has
+methods and attributes described by
+<a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.IIntrospectable" title="pyramid.interfaces.IIntrospectable"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.IIntrospectable</span></tt></a>.  In particular, the
+<a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.IIntrospector.get" title="pyramid.interfaces.IIntrospector.get"><tt class="xref py py-meth docutils literal"><span class="pre">get()</span></tt></a>,
+<a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.IIntrospector.get_category" title="pyramid.interfaces.IIntrospector.get_category"><tt class="xref py py-meth docutils literal"><span class="pre">get_category()</span></tt></a>,
+<a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.IIntrospector.categories" title="pyramid.interfaces.IIntrospector.categories"><tt class="xref py py-meth docutils literal"><span class="pre">categories()</span></tt></a>,
+<a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.IIntrospector.categorized" title="pyramid.interfaces.IIntrospector.categorized"><tt class="xref py py-meth docutils literal"><span class="pre">categorized()</span></tt></a>, and
+<a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.IIntrospector.related" title="pyramid.interfaces.IIntrospector.related"><tt class="xref py py-meth docutils literal"><span class="pre">related()</span></tt></a> methods of an introspector
+can be used to query for introspectables.</p>
+</div>
+<div class="section" id="introspectable-objects">
+<h2>Introspectable Objects<a class="headerlink" href="#introspectable-objects" title="Permalink to this headline">¶</a></h2>
+<p>Introspectable objects are returned from query methods of an introspector.
+Each introspectable object implements the attributes and methods
+documented at <a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.IIntrospectable" title="pyramid.interfaces.IIntrospectable"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.IIntrospectable</span></tt></a>.</p>
+<p>The important attributes shared by all introspectables are the following:</p>
+<p><tt class="docutils literal"><span class="pre">title</span></tt></p>
+<blockquote>
+<div>A human-readable text title describing the introspectable</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">category_name</span></tt></p>
+<blockquote>
+<div>A text category name describing the introspection category to which this
+introspectable belongs.  It is often a plural if there are expected to be
+more than one introspectable registered within the category.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">discriminator</span></tt></p>
+<blockquote>
+<div>A hashable object representing the unique value of this introspectable
+within its category.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">discriminator_hash</span></tt></p>
+<blockquote>
+<div>The integer hash of the discriminator (useful for using in HTML links).</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">type_name</span></tt></p>
+<blockquote>
+<div>The text name of a subtype within this introspectable's category.  If there
+is only one type name in this introspectable's category, this value will
+often be a singular version of the category name but it can be an arbitrary
+value.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">action_info</span></tt></p>
+<blockquote>
+<div>An object describing the directive call site which caused this
+introspectable to be registered; contains attributes described in
+<a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.IActionInfo" title="pyramid.interfaces.IActionInfo"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.IActionInfo</span></tt></a>.</div></blockquote>
+<p>Besides having the attributes described above, an introspectable is a
+dictionary-like object.  An introspectable can be queried for data values via
+its <tt class="docutils literal"><span class="pre">__getitem__</span></tt>, <tt class="docutils literal"><span class="pre">get</span></tt>, <tt class="docutils literal"><span class="pre">keys</span></tt>, <tt class="docutils literal"><span class="pre">values</span></tt>, or <tt class="docutils literal"><span class="pre">items</span></tt> methods.
+For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">route_intr</span> <span class="o">=</span> <span class="n">introspector</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;routes&#39;</span><span class="p">,</span> <span class="s">&#39;edit_user&#39;</span><span class="p">)</span>
+<span class="n">pattern</span> <span class="o">=</span> <span class="n">route_intr</span><span class="p">[</span><span class="s">&#39;pattern&#39;</span><span class="p">]</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+<div class="section" id="pyramid-introspection-categories">
+<h2>Pyramid Introspection Categories<a class="headerlink" href="#pyramid-introspection-categories" title="Permalink to this headline">¶</a></h2>
+<p>The list of concrete introspection categories provided by built-in Pyramid
+configuration directives follows.  Add-on packages may supply other
+introspectables in categories not described here.</p>
+<p><tt class="docutils literal"><span class="pre">subscribers</span></tt></p>
+<blockquote>
+<div><p>Each introspectable in the <tt class="docutils literal"><span class="pre">subscribers</span></tt> category represents a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_subscriber" title="pyramid.config.Configurator.add_subscriber"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_subscriber()</span></tt></a> (or the decorator
+equivalent); each will have the following data.</p>
+<p><tt class="docutils literal"><span class="pre">subscriber</span></tt></p>
+<blockquote>
+<div>The subscriber callable object (the resolution of the <tt class="docutils literal"><span class="pre">subscriber</span></tt>
+argument passed to <tt class="docutils literal"><span class="pre">add_susbcriber</span></tt>).</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">interfaces</span></tt></p>
+<blockquote>
+<div>A sequence of interfaces (or classes) that are subscribed to (the
+resolution of the <tt class="docutils literal"><span class="pre">ifaces</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_subscriber</span></tt>).</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">derived_subscriber</span></tt></p>
+<blockquote>
+<div>A wrapper around the subscriber used internally by the system so it can
+call it with more than one argument if your original subscriber accepts
+only one.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">predicates</span></tt></p>
+<blockquote>
+<div>The predicate objects created as the result of passing predicate arguments
+to <tt class="docutils literal"><span class="pre">add_susbcriber</span></tt></div></blockquote>
+<p><tt class="docutils literal"><span class="pre">derived_predicates</span></tt></p>
+<blockquote>
+<div>Wrappers around the predicate objects created as the result of passing
+predicate arguments to <tt class="docutils literal"><span class="pre">add_susbcriber</span></tt> (to be used when predicates take
+only one value but must be passed more than one).</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">response</span> <span class="pre">adapters</span></tt></p>
+<blockquote>
+<div><p>Each introspectable in the <tt class="docutils literal"><span class="pre">response</span> <span class="pre">adapters</span></tt> category represents a call
+to <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_response_adapter" title="pyramid.config.Configurator.add_response_adapter"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_response_adapter()</span></tt></a> (or a decorator
+equivalent); each will have the following data.</p>
+<p><tt class="docutils literal"><span class="pre">adapter</span></tt></p>
+<blockquote>
+<div>The adapter object (the resolved <tt class="docutils literal"><span class="pre">adapter</span></tt> argument to
+<tt class="docutils literal"><span class="pre">add_response_adapter</span></tt>).</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">type</span></tt></p>
+<blockquote>
+<div>The resolved <tt class="docutils literal"><span class="pre">type_or_iface</span></tt> argument passed to
+<tt class="docutils literal"><span class="pre">add_response_adapter</span></tt>.</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">root</span> <span class="pre">factories</span></tt></p>
+<blockquote>
+<div><p>Each introspectable in the <tt class="docutils literal"><span class="pre">root</span> <span class="pre">factories</span></tt> category represents a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_root_factory" title="pyramid.config.Configurator.set_root_factory"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.set_root_factory()</span></tt></a> (or the Configurator
+constructor equivalent) <em>or</em> a <tt class="docutils literal"><span class="pre">factory</span></tt> argument passed to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_route()</span></tt></a>; each will have the following
+data.</p>
+<p><tt class="docutils literal"><span class="pre">factory</span></tt></p>
+<blockquote>
+<div>The factory object (the resolved <tt class="docutils literal"><span class="pre">factory</span></tt> argument to
+<tt class="docutils literal"><span class="pre">set_root_factory</span></tt>).</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">route_name</span></tt></p>
+<blockquote>
+<div>The name of the route which will use this factory.  If this is the
+<em>default</em> root factory (if it's registered during a call to
+<tt class="docutils literal"><span class="pre">set_root_factory</span></tt>), this value will be <tt class="docutils literal"><span class="pre">None</span></tt>.</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">session</span> <span class="pre">factory</span></tt></p>
+<blockquote>
+<div><p>Only one introspectable will exist in the <tt class="docutils literal"><span class="pre">session</span> <span class="pre">factory</span></tt> category.  It
+represents a call to <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_session_factory" title="pyramid.config.Configurator.set_session_factory"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.set_session_factory()</span></tt></a>
+(or the Configurator constructor equivalent); it will have the following
+data.</p>
+<p><tt class="docutils literal"><span class="pre">factory</span></tt></p>
+<blockquote>
+<div>The factory object (the resolved <tt class="docutils literal"><span class="pre">factory</span></tt> argument to
+<tt class="docutils literal"><span class="pre">set_session_factory</span></tt>).</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">request</span> <span class="pre">factory</span></tt></p>
+<blockquote>
+<div><p>Only one introspectable will exist in the <tt class="docutils literal"><span class="pre">request</span> <span class="pre">factory</span></tt> category.  It
+represents a call to <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_request_factory" title="pyramid.config.Configurator.set_request_factory"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.set_request_factory()</span></tt></a>
+(or the Configurator constructor equivalent); it will have the following
+data.</p>
+<p><tt class="docutils literal"><span class="pre">factory</span></tt></p>
+<blockquote>
+<div>The factory object (the resolved <tt class="docutils literal"><span class="pre">factory</span></tt> argument to
+<tt class="docutils literal"><span class="pre">set_request_factory</span></tt>).</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">locale</span> <span class="pre">negotiator</span></tt></p>
+<blockquote>
+<div><p>Only one introspectable will exist in the <tt class="docutils literal"><span class="pre">locale</span> <span class="pre">negotiator</span></tt> category.
+It represents a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_locale_negotiator" title="pyramid.config.Configurator.set_locale_negotiator"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.set_locale_negotiator()</span></tt></a> (or the
+Configurator constructor equivalent); it will have the following data.</p>
+<p><tt class="docutils literal"><span class="pre">negotiator</span></tt></p>
+<blockquote>
+<div>The factory object (the resolved <tt class="docutils literal"><span class="pre">negotiator</span></tt> argument to
+<tt class="docutils literal"><span class="pre">set_locale_negotiator</span></tt>).</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">renderer</span> <span class="pre">factories</span></tt></p>
+<blockquote>
+<div><p>Each introspectable in the <tt class="docutils literal"><span class="pre">renderer</span> <span class="pre">factories</span></tt> category represents a
+call to <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_renderer" title="pyramid.config.Configurator.add_renderer"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_renderer()</span></tt></a> (or the
+Configurator constructor equivalent); each will have the following data.</p>
+<p><tt class="docutils literal"><span class="pre">name</span></tt></p>
+<blockquote>
+<div>The name of the renderer (the value of the <tt class="docutils literal"><span class="pre">name</span></tt> argument to
+<tt class="docutils literal"><span class="pre">add_renderer</span></tt>).</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">factory</span></tt></p>
+<blockquote>
+<div>The factory object (the resolved <tt class="docutils literal"><span class="pre">factory</span></tt> argument to
+<tt class="docutils literal"><span class="pre">add_renderer</span></tt>).</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">routes</span></tt></p>
+<blockquote>
+<div><p>Each introspectable in the <tt class="docutils literal"><span class="pre">routes</span></tt> category represents a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_route()</span></tt></a>; each will have the following
+data.</p>
+<p><tt class="docutils literal"><span class="pre">name</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">name</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_route</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">pattern</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">pattern</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_route</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">factory</span></tt></p>
+<blockquote>
+<div>The (resolved) <tt class="docutils literal"><span class="pre">factory</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_route</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">xhr</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">xhr</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_route</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">request_method</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">request_method</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_route</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">request_methods</span></tt></p>
+<blockquote>
+<div>A sequence of request method names implied by the <tt class="docutils literal"><span class="pre">request_method</span></tt>
+argument passed to <tt class="docutils literal"><span class="pre">add_route</span></tt> or the value <tt class="docutils literal"><span class="pre">None</span></tt> if a
+<tt class="docutils literal"><span class="pre">request_method</span></tt> argument was not supplied.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">path_info</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">path_info</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_route</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">request_param</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">request_param</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_route</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">header</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">header</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_route</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">accept</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">accept</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_route</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">traverse</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">traverse</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_route</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">custom_predicates</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">custom_predicates</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_route</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">pregenerator</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">pregenerator</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_route</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">static</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">static</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_route</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">use_global_views</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">use_global_views</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_route</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">object</span></tt></p>
+<blockquote>
+<div>The <a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.IRoute" title="pyramid.interfaces.IRoute"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.IRoute</span></tt></a> object that is used to perform
+matching and generation for this route.</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">authentication</span> <span class="pre">policy</span></tt></p>
+<blockquote>
+<div><p>There will be one and only one introspectable in the <tt class="docutils literal"><span class="pre">authentication</span>
+<span class="pre">policy</span></tt> category.  It represents a call to the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_authentication_policy" title="pyramid.config.Configurator.set_authentication_policy"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.set_authentication_policy()</span></tt></a> method (or
+its Configurator constructor equivalent); it will have the following data.</p>
+<p><tt class="docutils literal"><span class="pre">policy</span></tt></p>
+<blockquote>
+<div>The policy object (the resolved <tt class="docutils literal"><span class="pre">policy</span></tt> argument to
+<tt class="docutils literal"><span class="pre">set_authentication_policy</span></tt>).</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">authorization</span> <span class="pre">policy</span></tt></p>
+<blockquote>
+<div><p>There will be one and only one introspectable in the <tt class="docutils literal"><span class="pre">authorization</span>
+<span class="pre">policy</span></tt> category.  It represents a call to the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_authorization_policy" title="pyramid.config.Configurator.set_authorization_policy"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.set_authorization_policy()</span></tt></a> method (or its
+Configurator constructor equivalent); it will have the following data.</p>
+<p><tt class="docutils literal"><span class="pre">policy</span></tt></p>
+<blockquote>
+<div>The policy object (the resolved <tt class="docutils literal"><span class="pre">policy</span></tt> argument to
+<tt class="docutils literal"><span class="pre">set_authorization_policy</span></tt>).</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">default</span> <span class="pre">permission</span></tt></p>
+<blockquote>
+<div><p>There will be one and only one introspectable in the <tt class="docutils literal"><span class="pre">default</span> <span class="pre">permission</span></tt>
+category.  It represents a call to the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_default_permission" title="pyramid.config.Configurator.set_default_permission"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.set_default_permission()</span></tt></a> method (or its
+Configurator constructor equivalent); it will have the following data.</p>
+<p><tt class="docutils literal"><span class="pre">value</span></tt></p>
+<blockquote>
+<div>The permission name passed to <tt class="docutils literal"><span class="pre">set_default_permission</span></tt>.</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">views</span></tt></p>
+<blockquote>
+<div><p>Each introspectable in the <tt class="docutils literal"><span class="pre">views</span></tt> category represents a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_view" title="pyramid.config.Configurator.add_view"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_view()</span></tt></a>; each will have the following
+data.</p>
+<p><tt class="docutils literal"><span class="pre">name</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">name</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_view</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">context</span></tt></p>
+<blockquote>
+<div>The (resolved) <tt class="docutils literal"><span class="pre">context</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_view</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">containment</span></tt></p>
+<blockquote>
+<div>The (resolved) <tt class="docutils literal"><span class="pre">containment</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_view</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">request_param</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">request_param</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_view</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">request_methods</span></tt></p>
+<blockquote>
+<div>A sequence of request method names implied by the <tt class="docutils literal"><span class="pre">request_method</span></tt>
+argument passed to <tt class="docutils literal"><span class="pre">add_view</span></tt> or the value <tt class="docutils literal"><span class="pre">None</span></tt> if a
+<tt class="docutils literal"><span class="pre">request_method</span></tt> argument was not supplied.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">route_name</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">route_name</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_view</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">attr</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">attr</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_view</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">xhr</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">xhr</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_view</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">accept</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">accept</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_view</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">header</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">header</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_view</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">path_info</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">path_info</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_view</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">match_param</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">match_param</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_view</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">csrf_token</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">csrf_token</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_view</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">callable</span></tt></p>
+<blockquote>
+<div>The (resolved) <tt class="docutils literal"><span class="pre">view</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_view</span></tt>.  Represents the
+&quot;raw&quot; view callable.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">derived_callable</span></tt></p>
+<blockquote>
+<div>The view callable derived from the <tt class="docutils literal"><span class="pre">view</span></tt> argument passed to
+<tt class="docutils literal"><span class="pre">add_view</span></tt>.  Represents the view callable which Pyramid itself calls
+(wrapped in security and other wrappers).</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">mapper</span></tt></p>
+<blockquote>
+<div>The (resolved) <tt class="docutils literal"><span class="pre">mapper</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_view</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">decorator</span></tt></p>
+<blockquote>
+<div>The (resolved) <tt class="docutils literal"><span class="pre">decorator</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_view</span></tt>.</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">permissions</span></tt></p>
+<blockquote>
+<div><p>Each introspectable in the <tt class="docutils literal"><span class="pre">permissions</span></tt> category represents a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_view" title="pyramid.config.Configurator.add_view"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_view()</span></tt></a> that has an explicit
+<tt class="docutils literal"><span class="pre">permission</span></tt> argument to <em>or</em> a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_default_permission" title="pyramid.config.Configurator.set_default_permission"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.set_default_permission()</span></tt></a>; each will have
+the following data.</p>
+<p><tt class="docutils literal"><span class="pre">value</span></tt></p>
+<blockquote>
+<div>The permission name passed to <tt class="docutils literal"><span class="pre">add_view</span></tt> or <tt class="docutils literal"><span class="pre">set_default_permission</span></tt>.</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">templates</span></tt></p>
+<blockquote>
+<div><p>Each introspectable in the <tt class="docutils literal"><span class="pre">templates</span></tt> category represents a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_view" title="pyramid.config.Configurator.add_view"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_view()</span></tt></a> that has a <tt class="docutils literal"><span class="pre">renderer</span></tt>
+argument which points to a template; each will have the following data.</p>
+<p><tt class="docutils literal"><span class="pre">name</span></tt></p>
+<blockquote>
+<div>The renderer's name (a string).</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">type</span></tt></p>
+<blockquote>
+<div>The renderer's type (a string).</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">renderer</span></tt></p>
+<blockquote>
+<div>The <a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.IRendererInfo" title="pyramid.interfaces.IRendererInfo"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.IRendererInfo</span></tt></a> object which represents
+this template's renderer.</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">view</span> <span class="pre">mapper</span></tt></p>
+<blockquote>
+<div><p>Each introspectable in the <tt class="docutils literal"><span class="pre">permissions</span></tt> category represents a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_view" title="pyramid.config.Configurator.add_view"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_view()</span></tt></a> that has an explicit
+<tt class="docutils literal"><span class="pre">mapper</span></tt> argument to <em>or</em> a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_view_mapper" title="pyramid.config.Configurator.set_view_mapper"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.set_view_mapper()</span></tt></a>; each will have
+the following data.</p>
+<p><tt class="docutils literal"><span class="pre">mapper</span></tt></p>
+<blockquote>
+<div>The (resolved) <tt class="docutils literal"><span class="pre">mapper</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_view</span></tt> or
+<tt class="docutils literal"><span class="pre">set_view_mapper</span></tt>.</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">asset</span> <span class="pre">overrides</span></tt></p>
+<blockquote>
+<div><p>Each introspectable in the <tt class="docutils literal"><span class="pre">asset</span> <span class="pre">overrides</span></tt> category represents a call
+to <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.override_asset" title="pyramid.config.Configurator.override_asset"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.override_asset()</span></tt></a>; each will have the
+following data.</p>
+<p><tt class="docutils literal"><span class="pre">to_override</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">to_override</span></tt> argument (an asset spec) passed to
+<tt class="docutils literal"><span class="pre">override_asset</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">override_with</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">override_with</span></tt> argument (an asset spec) passed to
+<tt class="docutils literal"><span class="pre">override_asset</span></tt>.</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">translation</span> <span class="pre">directories</span></tt></p>
+<blockquote>
+<div><p>Each introspectable in the <tt class="docutils literal"><span class="pre">asset</span> <span class="pre">overrides</span></tt> category represents an
+individual element in a <tt class="docutils literal"><span class="pre">specs</span></tt> argument passed to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_translation_dirs" title="pyramid.config.Configurator.add_translation_dirs"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_translation_dirs()</span></tt></a>; each will have
+the following data.</p>
+<p><tt class="docutils literal"><span class="pre">directory</span></tt></p>
+<blockquote>
+<div>The absolute path of the translation directory.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">spec</span></tt></p>
+<blockquote>
+<div>The asset specification passed to <tt class="docutils literal"><span class="pre">add_translation_dirs</span></tt>.</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">tweens</span></tt></p>
+<blockquote>
+<div><p>Each introspectable in the <tt class="docutils literal"><span class="pre">tweens</span></tt> category represents a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_tween" title="pyramid.config.Configurator.add_tween"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_tween()</span></tt></a>; each will have the following
+data.</p>
+<p><tt class="docutils literal"><span class="pre">name</span></tt></p>
+<blockquote>
+<div>The dotted name to the tween factory as a string (passed as
+the <tt class="docutils literal"><span class="pre">tween_factory</span></tt> argument to <tt class="docutils literal"><span class="pre">add_tween</span></tt>).</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">factory</span></tt></p>
+<blockquote>
+<div>The (resolved) tween factory object.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">type</span></tt></p>
+<blockquote>
+<div><tt class="docutils literal"><span class="pre">implict</span></tt> or <tt class="docutils literal"><span class="pre">explicit</span></tt> as a string.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">under</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">under</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_tween</span></tt> (a string).</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">over</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">over</span></tt> argument passed to <tt class="docutils literal"><span class="pre">add_tween</span></tt> (a string).</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">static</span> <span class="pre">views</span></tt></p>
+<blockquote>
+<div><p>Each introspectable in the <tt class="docutils literal"><span class="pre">static</span> <span class="pre">views</span></tt> category represents a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_static_view()</span></tt></a>; each will have the
+following data.</p>
+<p><tt class="docutils literal"><span class="pre">name</span></tt></p>
+<blockquote>
+<div>The <tt class="docutils literal"><span class="pre">name</span></tt> argument provided to <tt class="docutils literal"><span class="pre">add_static_view</span></tt>.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">spec</span></tt></p>
+<blockquote>
+<div>A normalized version of the <tt class="docutils literal"><span class="pre">spec</span></tt> argument provided to
+<tt class="docutils literal"><span class="pre">add_static_view</span></tt>.</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">traversers</span></tt></p>
+<blockquote>
+<div><p>Each introspectable in the <tt class="docutils literal"><span class="pre">traversers</span></tt> category represents a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_traverser" title="pyramid.config.Configurator.add_traverser"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_traverser()</span></tt></a>; each will have the
+following data.</p>
+<p><tt class="docutils literal"><span class="pre">iface</span></tt></p>
+<blockquote>
+<div>The (resolved) interface or class object that represents the return value
+of a root factory that this traverser will be used for.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">adapter</span></tt></p>
+<blockquote>
+<div>The (resolved) traverser class.</div></blockquote>
+</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">resource</span> <span class="pre">url</span> <span class="pre">adapters</span></tt></p>
+<blockquote>
+<div><p>Each introspectable in the <tt class="docutils literal"><span class="pre">resource</span> <span class="pre">url</span> <span class="pre">adapters</span></tt> category represents a
+call to <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_resource_url_adapter" title="pyramid.config.Configurator.add_resource_url_adapter"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_resource_url_adapter()</span></tt></a>; each
+will have the following data.</p>
+<p><tt class="docutils literal"><span class="pre">adapter</span></tt></p>
+<blockquote>
+<div>The (resolved) resource URL adapter class.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">resource_iface</span></tt></p>
+<blockquote>
+<div>The (resolved) interface or class object that represents the resource
+interface that this url adapter is registered for.</div></blockquote>
+<p><tt class="docutils literal"><span class="pre">request_iface</span></tt></p>
+<blockquote>
+<div>The (resolved) interface or class object that represents the request
+interface that this url adapter is registered for.</div></blockquote>
+</div></blockquote>
+</div>
+<div class="section" id="introspection-in-the-toolbar">
+<h2>Introspection in the Toolbar<a class="headerlink" href="#introspection-in-the-toolbar" title="Permalink to this headline">¶</a></h2>
+<p>The Pyramid debug toolbar (part of the <tt class="docutils literal"><span class="pre">pyramid_debugtoolbar</span></tt> package)
+provides a canned view of all registered introspectables and their
+relationships.  It looks something like this:</p>
+<img alt="../_images/tb_introspector.png" src="../_images/tb_introspector.png" />
+</div>
+<div class="section" id="disabling-introspection">
+<h2>Disabling Introspection<a class="headerlink" href="#disabling-introspection" title="Permalink to this headline">¶</a></h2>
+<p>You can disable Pyramid introspection by passing the flag
+<tt class="docutils literal"><span class="pre">introspection=False</span></tt> to the <a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">Configurator</em></a> constructor in your
+application setup:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">introspection</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>When <tt class="docutils literal"><span class="pre">introspection</span></tt> is <tt class="docutils literal"><span class="pre">False</span></tt>, all introspectables generated by
+configuration directives are thrown away.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Pyramid Configuration Introspection</a><ul>
+<li><a class="reference internal" href="#using-the-introspector">Using the Introspector</a></li>
+<li><a class="reference internal" href="#introspectable-objects">Introspectable Objects</a></li>
+<li><a class="reference internal" href="#pyramid-introspection-categories">Pyramid Introspection Categories</a></li>
+<li><a class="reference internal" href="#introspection-in-the-toolbar">Introspection in the Toolbar</a></li>
+<li><a class="reference internal" href="#disabling-introspection">Disabling Introspection</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="hooks.html"
+                        title="previous chapter">Using Hooks</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="extending.html"
+                        title="next chapter">Extending An Existing <span>Pyramid</span> Application</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="extending.html" title="Extending An Existing Pyramid Application"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="hooks.html" title="Using Hooks"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

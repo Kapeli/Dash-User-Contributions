@@ -1,0 +1,271 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Defining the Domain Model &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="ZODB + Traversal Wiki Tutorial" href="index.html" />
+    <link rel="next" title="Defining Views" href="definingviews.html" />
+    <link rel="prev" title="Basic Layout" href="basiclayout.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="definingviews.html" title="Defining Views"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="basiclayout.html" title="Basic Layout"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">ZODB + Traversal Wiki Tutorial</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="defining-the-domain-model">
+<h1>Defining the Domain Model<a class="headerlink" href="#defining-the-domain-model" title="Permalink to this headline">¶</a></h1>
+<p>The first change we'll make to our stock pcreate-generated application will be
+to define two <a class="reference internal" href="../../glossary.html#term-resource"><em class="xref std std-term">resource</em></a> constructors, one representing a wiki page,
+and another representing the wiki as a mapping of wiki page names to page
+objects.  We'll do this inside our <tt class="docutils literal"><span class="pre">models.py</span></tt> file.</p>
+<p>Because we're using <a class="reference internal" href="../../glossary.html#term-zodb"><em class="xref std std-term">ZODB</em></a> to represent our
+<a class="reference internal" href="../../glossary.html#term-resource-tree"><em class="xref std std-term">resource tree</em></a>, each of these resource constructors represents a
+<a class="reference internal" href="../../glossary.html#term-domain-model"><em class="xref std std-term">domain model</em></a> object, so we'll call these constructors &quot;model
+constructors&quot;. Both our Page and Wiki constructors will be class objects.  A
+single instance of the &quot;Wiki&quot; class will serve as a container for &quot;Page&quot;
+objects, which will be instances of the &quot;Page&quot; class.</p>
+<div class="section" id="delete-the-database">
+<h2>Delete the Database<a class="headerlink" href="#delete-the-database" title="Permalink to this headline">¶</a></h2>
+<p>In the next step, we're going to remove the <tt class="docutils literal"><span class="pre">MyModel</span></tt> Python model
+class from our <tt class="docutils literal"><span class="pre">models.py</span></tt> file.  Since this class is referred to within
+our persistent storage (represented on disk as a file named <tt class="docutils literal"><span class="pre">Data.fs</span></tt>),
+we'll have strange things happen the next time we want to visit the
+application in a browser.  Remove the <tt class="docutils literal"><span class="pre">Data.fs</span></tt> from the <tt class="docutils literal"><span class="pre">tutorial</span></tt>
+directory before proceeding any further.  It's always fine to do this as long
+as you don't care about the content of the database; the database itself will
+be recreated as necessary.</p>
+</div>
+<div class="section" id="edit-models-py">
+<h2>Edit <tt class="docutils literal"><span class="pre">models.py</span></tt><a class="headerlink" href="#edit-models-py" title="Permalink to this headline">¶</a></h2>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">There is nothing automagically special about the filename <tt class="docutils literal"><span class="pre">models.py</span></tt>.  A
+project may have many models throughout its codebase in arbitrarily named
+files.  Files implementing models often have <tt class="docutils literal"><span class="pre">model</span></tt> in their filenames,
+or they may live in a Python subpackage of your application package named
+<tt class="docutils literal"><span class="pre">models</span></tt>, but this is only by convention.</p>
+</div>
+<p>The first thing we want to do is remove the <tt class="docutils literal"><span class="pre">MyModel</span></tt> class from the
+generated <tt class="docutils literal"><span class="pre">models.py</span></tt> file.  The <tt class="docutils literal"><span class="pre">MyModel</span></tt> class is only a sample and
+we're not going to use it.</p>
+<p>Then, we'll add a <tt class="docutils literal"><span class="pre">Wiki</span></tt> class.  We want it to inherit from the
+<tt class="xref py py-class docutils literal"><span class="pre">persistent.mapping.PersistentMapping</span></tt> class because it provides
+mapping behavior, and it makes sure that our Wiki page is stored as a
+&quot;first-class&quot; persistent object in our ZODB database.</p>
+<p>Our <tt class="docutils literal"><span class="pre">Wiki</span></tt> class should have two attributes set to <tt class="docutils literal"><span class="pre">None</span></tt> at
+class scope: <tt class="docutils literal"><span class="pre">__parent__</span></tt> and <tt class="docutils literal"><span class="pre">__name__</span></tt>.  If a model has a
+<tt class="docutils literal"><span class="pre">__parent__</span></tt> attribute of <tt class="docutils literal"><span class="pre">None</span></tt> in a traversal-based <span>Pyramid</span>
+application, it means that it's the <a class="reference internal" href="../../glossary.html#term-root"><em class="xref std std-term">root</em></a> model.  The <tt class="docutils literal"><span class="pre">__name__</span></tt>
+of the root model is also always <tt class="docutils literal"><span class="pre">None</span></tt>.</p>
+<p>Then we'll add a <tt class="docutils literal"><span class="pre">Page</span></tt> class.  This class should inherit from the
+<tt class="xref py py-class docutils literal"><span class="pre">persistent.Persistent</span></tt> class.  We'll also give it an <tt class="docutils literal"><span class="pre">__init__</span></tt>
+method that accepts a single parameter named <tt class="docutils literal"><span class="pre">data</span></tt>.  This parameter will
+contain the <a class="reference internal" href="../../glossary.html#term-restructuredtext"><em class="xref std std-term">reStructuredText</em></a> body representing the wiki page content.
+Note that <tt class="docutils literal"><span class="pre">Page</span></tt> objects don't have an initial <tt class="docutils literal"><span class="pre">__name__</span></tt> or
+<tt class="docutils literal"><span class="pre">__parent__</span></tt> attribute.  All objects in a traversal graph must have a
+<tt class="docutils literal"><span class="pre">__name__</span></tt> and a <tt class="docutils literal"><span class="pre">__parent__</span></tt> attribute.  We don't specify these here
+because both <tt class="docutils literal"><span class="pre">__name__</span></tt> and <tt class="docutils literal"><span class="pre">__parent__</span></tt> will be set by a <a class="reference internal" href="../../glossary.html#term-view"><em class="xref std std-term">view</em></a>
+function when a Page is added to our Wiki mapping.</p>
+<p>As a last step, we want to change the <tt class="docutils literal"><span class="pre">appmaker</span></tt> function in our
+<tt class="docutils literal"><span class="pre">models.py</span></tt> file so that the <a class="reference internal" href="../../glossary.html#term-root"><em class="xref std std-term">root</em></a> <a class="reference internal" href="../../glossary.html#term-resource"><em class="xref std std-term">resource</em></a> of our
+application is a Wiki instance.  We'll also slot a single page object (the
+front page) into the Wiki within the <tt class="docutils literal"><span class="pre">appmaker</span></tt>.  This will provide
+<a class="reference internal" href="../../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> a <a class="reference internal" href="../../glossary.html#term-resource-tree"><em class="xref std std-term">resource tree</em></a> to work against when it attempts to
+resolve URLs to resources.</p>
+</div>
+<div class="section" id="look-at-the-result-of-our-edits-to-models-py">
+<h2>Look at the Result of Our Edits to <tt class="docutils literal"><span class="pre">models.py</span></tt><a class="headerlink" href="#look-at-the-result-of-our-edits-to-models-py" title="Permalink to this headline">¶</a></h2>
+<p>The result of all of our edits to <tt class="docutils literal"><span class="pre">models.py</span></tt> will end up looking
+something like this:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">persistent</span> <span class="kn">import</span> <span class="n">Persistent</span>
+<span class="kn">from</span> <span class="nn">persistent.mapping</span> <span class="kn">import</span> <span class="n">PersistentMapping</span>
+
+<span class="k">class</span> <span class="nc">Wiki</span><span class="p">(</span><span class="n">PersistentMapping</span><span class="p">):</span>
+    <span class="n">__name__</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">__parent__</span> <span class="o">=</span> <span class="bp">None</span>
+
+<span class="k">class</span> <span class="nc">Page</span><span class="p">(</span><span class="n">Persistent</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span>
+
+<span class="k">def</span> <span class="nf">appmaker</span><span class="p">(</span><span class="n">zodb_root</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="s">&#39;app_root&#39;</span> <span class="ow">in</span> <span class="n">zodb_root</span><span class="p">:</span>
+        <span class="n">app_root</span> <span class="o">=</span> <span class="n">Wiki</span><span class="p">()</span>
+        <span class="n">frontpage</span> <span class="o">=</span> <span class="n">Page</span><span class="p">(</span><span class="s">&#39;This is the front page&#39;</span><span class="p">)</span>
+        <span class="n">app_root</span><span class="p">[</span><span class="s">&#39;FrontPage&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">frontpage</span>
+        <span class="n">frontpage</span><span class="o">.</span><span class="n">__name__</span> <span class="o">=</span> <span class="s">&#39;FrontPage&#39;</span>
+        <span class="n">frontpage</span><span class="o">.</span><span class="n">__parent__</span> <span class="o">=</span> <span class="n">app_root</span>
+        <span class="n">zodb_root</span><span class="p">[</span><span class="s">&#39;app_root&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">app_root</span>
+        <span class="kn">import</span> <span class="nn">transaction</span>
+        <span class="n">transaction</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">zodb_root</span><span class="p">[</span><span class="s">&#39;app_root&#39;</span><span class="p">]</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+<div class="section" id="view-the-application-in-a-browser">
+<h2>View the Application in a Browser<a class="headerlink" href="#view-the-application-in-a-browser" title="Permalink to this headline">¶</a></h2>
+<p>We can't.  At this point, our system is in a &quot;non-runnable&quot; state; we'll need
+to change view-related files in the next chapter to be able to start the
+application successfully.  If you try to start the application (See
+<a class="reference internal" href="installation.html#wiki-start-the-application"><em>Start the Application</em></a>), you'll wind
+up with a Python traceback on your console that ends with this exception:</p>
+<div class="highlight-text"><div class="highlight"><pre>ImportError: cannot import name MyModel
+</pre></div>
+</div>
+<p>This will also happen if you attempt to run the tests.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Defining the Domain Model</a><ul>
+<li><a class="reference internal" href="#delete-the-database">Delete the Database</a></li>
+<li><a class="reference internal" href="#edit-models-py">Edit <tt class="docutils literal"><span class="pre">models.py</span></tt></a></li>
+<li><a class="reference internal" href="#look-at-the-result-of-our-edits-to-models-py">Look at the Result of Our Edits to <tt class="docutils literal"><span class="pre">models.py</span></tt></a></li>
+<li><a class="reference internal" href="#view-the-application-in-a-browser">View the Application in a Browser</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="basiclayout.html"
+                        title="previous chapter">Basic Layout</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="definingviews.html"
+                        title="next chapter">Defining Views</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="definingviews.html" title="Defining Views"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="basiclayout.html" title="Basic Layout"
+             >previous</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" >ZODB + Traversal Wiki Tutorial</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

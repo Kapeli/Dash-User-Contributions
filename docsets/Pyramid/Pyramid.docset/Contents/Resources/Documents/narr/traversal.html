@@ -1,0 +1,628 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Traversal &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="next" title="Security" href="security.html" />
+    <link rel="prev" title="Much Ado About Traversal" href="muchadoabouttraversal.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="security.html" title="Security"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="muchadoabouttraversal.html" title="Much Ado About Traversal"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="traversal">
+<span id="traversal-chapter"></span><h1>Traversal<a class="headerlink" href="#traversal" title="Permalink to this headline">¶</a></h1>
+<p>This chapter explains the technical details of how traversal works in
+Pyramid.</p>
+<p>For a quick example, see <a class="reference internal" href="hellotraversal.html"><em>Hello Traversal World</em></a>.</p>
+<p>For more about <em>why</em> you might use traversal, see <a class="reference internal" href="muchadoabouttraversal.html"><em>Much Ado About Traversal</em></a>.</p>
+<p>A <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> uses the URL (Universal Resource Locator) to find a
+<a class="reference internal" href="../glossary.html#term-resource"><em class="xref std std-term">resource</em></a> located in a <a class="reference internal" href="../glossary.html#term-resource-tree"><em class="xref std std-term">resource tree</em></a>, which is a set of
+nested dictionary-like objects.  Traversal is done by using each segment
+of the path portion of the URL to navigate through the <a class="reference internal" href="../glossary.html#term-resource-tree"><em class="xref std std-term">resource
+tree</em></a>.  You might think of this as looking up files and directories in a
+file system.  Traversal walks down the path until it finds a published
+resource, analogous to a file system &quot;directory&quot; or &quot;file&quot;.  The
+resource found as the result of a traversal becomes the
+<a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> of the <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a>.  Then, the <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a>
+subsystem is used to find some view code willing to &quot;publish&quot; this
+resource by generating a <a class="reference internal" href="../glossary.html#term-response"><em class="xref std std-term">response</em></a>.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Using <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">Traversal</em></a> to map a URL to code is optional.  If you're creating
+your first Pyramid application it probably makes more sense to use <a class="reference internal" href="../glossary.html#term-url-dispatch"><em class="xref std std-term">URL
+dispatch</em></a> to map URLs to code instead of traversal, as new Pyramid developers
+tend to find URL dispatch slightly easier to understand.  If you use URL
+dispatch, you needn't read this chapter.</p>
+</div>
+<div class="section" id="traversal-details">
+<span id="index-0"></span><h2>Traversal Details<a class="headerlink" href="#traversal-details" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">Traversal</em></a> is dependent on information in a <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a>
+object.  Every <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> object contains URL path information in
+the <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> portion of the <a class="reference internal" href="../glossary.html#term-wsgi"><em class="xref std std-term">WSGI</em></a> environment.  The
+<tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> string is the portion of a request's URL following the
+hostname and port number, but before any query string elements or
+fragment element.  For example the <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> portion of the URL
+<tt class="docutils literal"><span class="pre">http://example.com:8080/a/b/c?foo=1</span></tt> is <tt class="docutils literal"><span class="pre">/a/b/c</span></tt>.</p>
+<p>Traversal treats the <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> segment of a URL as a sequence of
+path segments.  For example, the <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> string <tt class="docutils literal"><span class="pre">/a/b/c</span></tt> is
+converted to the sequence <tt class="docutils literal"><span class="pre">['a',</span> <span class="pre">'b',</span> <span class="pre">'c']</span></tt>.</p>
+<p>This path sequence is then used to descend through the <a class="reference internal" href="../glossary.html#term-resource-tree"><em class="xref std std-term">resource
+tree</em></a>, looking up a resource for each path segment. Each lookup uses the
+<tt class="docutils literal"><span class="pre">__getitem__</span></tt> method of a resource in the tree.</p>
+<p>For example, if the path info sequence is <tt class="docutils literal"><span class="pre">['a',</span> <span class="pre">'b',</span> <span class="pre">'c']</span></tt>:</p>
+<ul class="simple">
+<li><a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">Traversal</em></a> starts by acquiring the <a class="reference internal" href="../glossary.html#term-root"><em class="xref std std-term">root</em></a> resource of the
+application by calling the <a class="reference internal" href="../glossary.html#term-root-factory"><em class="xref std std-term">root factory</em></a>. The <a class="reference internal" href="../glossary.html#term-root-factory"><em class="xref std std-term">root factory</em></a>
+can be configured to return whatever object is appropriate as the
+traversal root of your application.</li>
+<li>Next, the first element (<tt class="docutils literal"><span class="pre">'a'</span></tt>) is popped from the path segment
+sequence and is used as a key to lookup the corresponding resource
+in the root. This invokes the root resource's <tt class="docutils literal"><span class="pre">__getitem__</span></tt> method
+using that value (<tt class="docutils literal"><span class="pre">'a'</span></tt>) as an argument.</li>
+<li>If the root resource &quot;contains&quot; a resource with key <tt class="docutils literal"><span class="pre">'a'</span></tt>, its
+<tt class="docutils literal"><span class="pre">__getitem__</span></tt> method will return it. The <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> temporarily
+becomes the &quot;A&quot; resource.</li>
+<li>The next segment (<tt class="docutils literal"><span class="pre">'b'</span></tt>) is popped from the path sequence, and the &quot;A&quot;
+resource's <tt class="docutils literal"><span class="pre">__getitem__</span></tt> is called with that value (<tt class="docutils literal"><span class="pre">'b'</span></tt>) as an
+argument; we'll presume it succeeds.</li>
+<li>The &quot;A&quot; resource's <tt class="docutils literal"><span class="pre">__getitem__</span></tt> returns another resource, which
+we'll call &quot;B&quot;.  The <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> temporarily becomes the &quot;B&quot;
+resource.</li>
+</ul>
+<p>Traversal continues until the path segment sequence is exhausted or a
+path element cannot be resolved to a resource.  In either case, the
+<a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource is the last object that the traversal
+successfully resolved.  If any resource found during traversal lacks a
+<tt class="docutils literal"><span class="pre">__getitem__</span></tt> method, or if its <tt class="docutils literal"><span class="pre">__getitem__</span></tt> method raises a
+<a class="reference external" href="http://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.4)"><tt class="xref py py-exc docutils literal"><span class="pre">KeyError</span></tt></a>, traversal ends immediately, and that resource becomes
+the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a>.</p>
+<p>The results of a <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> also include a <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a>. If
+traversal ends before the path segment sequence is exhausted, the
+<a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a> is the <em>next</em> remaining path segment element. If the
+<a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> expends all of the path segments, then the <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view
+name</em></a> is the empty string (<tt class="docutils literal"><span class="pre">''</span></tt>).</p>
+<p>The combination of the context resource and the <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a> found
+via traversal is used later in the same request by the <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view
+lookup</em></a> subsystem to find a <a class="reference internal" href="../glossary.html#term-view-callable"><em class="xref std std-term">view callable</em></a>.  How <span>Pyramid</span>
+performs view lookup is explained within the <a class="reference internal" href="viewconfig.html#view-config-chapter"><em>View Configuration</em></a>
+chapter.</p>
+</div>
+<div class="section" id="the-resource-tree">
+<span id="index-1"></span><span id="id1"></span><h2>The Resource Tree<a class="headerlink" href="#the-resource-tree" title="Permalink to this headline">¶</a></h2>
+<p>The resource tree is a set of nested dictionary-like resource objects
+that begins with a <a class="reference internal" href="../glossary.html#term-root"><em class="xref std std-term">root</em></a> resource. In order to use
+<a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> to resolve URLs to code, your application must supply
+a <a class="reference internal" href="../glossary.html#term-resource-tree"><em class="xref std std-term">resource tree</em></a> to <span>Pyramid</span>.</p>
+<p>In order to supply a root resource for an application the <span>Pyramid</span>
+<a class="reference internal" href="../glossary.html#term-router"><em class="xref std std-term">Router</em></a> is configured with a callback known as a <a class="reference internal" href="../glossary.html#term-root-factory"><em class="xref std std-term">root
+factory</em></a>.  The root factory is supplied by the application, at startup
+time, as the <tt class="docutils literal"><span class="pre">root_factory</span></tt> argument to the <a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">Configurator</em></a>.</p>
+<p>The root factory is a Python callable that accepts a <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a>
+object, and returns the root object of the <a class="reference internal" href="../glossary.html#term-resource-tree"><em class="xref std std-term">resource tree</em></a>. A
+function, or class is typically used as an application's root factory.
+Here's an example of a simple root factory class:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">class</span> <span class="nc">Root</span><span class="p">(</span><span class="nb">dict</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="k">pass</span>
+</pre></div>
+</td></tr></table></div>
+<p>Here's an example of using this root factory within startup configuration, by
+passing it to an instance of a <a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">Configurator</em></a> named <tt class="docutils literal"><span class="pre">config</span></tt>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">(</span><span class="n">root_factory</span><span class="o">=</span><span class="n">Root</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The <tt class="docutils literal"><span class="pre">root_factory</span></tt> argument to the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator" title="pyramid.config.Configurator"><tt class="xref py py-class docutils literal"><span class="pre">Configurator</span></tt></a> constructor registers this root
+factory to be called to generate a root resource whenever a request
+enters the application.  The root factory registered this way is also
+known as the global root factory.  A root factory can alternately be
+passed to the <tt class="docutils literal"><span class="pre">Configurator</span></tt> as a <a class="reference internal" href="../glossary.html#term-dotted-python-name"><em class="xref std std-term">dotted Python name</em></a> which can
+refer to a root factory defined in a different module.</p>
+<p>If no <a class="reference internal" href="../glossary.html#term-root-factory"><em class="xref std std-term">root factory</em></a> is passed to the <span>Pyramid</span>
+<a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">Configurator</em></a> constructor, or if the <tt class="docutils literal"><span class="pre">root_factory</span></tt> value
+specified is <tt class="docutils literal"><span class="pre">None</span></tt>, a <a class="reference internal" href="../glossary.html#term-default-root-factory"><em class="xref std std-term">default root factory</em></a> is used.  The default
+root factory always returns a resource that has no child resources; it
+is effectively empty.</p>
+<p>Usually a root factory for a traversal-based application will be more
+complicated than the above <tt class="docutils literal"><span class="pre">Root</span></tt> class; in particular it may be associated
+with a database connection or another persistence mechanism.  The above
+<tt class="docutils literal"><span class="pre">Root</span></tt> class is analogous to the default root factory present in Pyramid. The
+default root factory is very simple and not very useful.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If the items contained within the resource tree are &quot;persistent&quot; (they
+have state that lasts longer than the execution of a single process), they
+become analogous to the concept of <a class="reference internal" href="../glossary.html#term-domain-model"><em class="xref std std-term">domain model</em></a> objects used by
+many other frameworks.</p>
+</div>
+<p>The resource tree consists of <em>container</em> resources and <em>leaf</em> resources.
+There is only one difference between a <em>container</em> resource and a <em>leaf</em>
+resource: <em>container</em> resources possess a <tt class="docutils literal"><span class="pre">__getitem__</span></tt> method (making it
+&quot;dictionary-like&quot;) while <em>leaf</em> resources do not.  The <tt class="docutils literal"><span class="pre">__getitem__</span></tt> method
+was chosen as the signifying difference between the two types of resources
+because the presence of this method is how Python itself typically determines
+whether an object is &quot;containerish&quot; or not (dictionary objects are
+&quot;containerish&quot;).</p>
+<p>Each container resource is presumed to be willing to return a child resource
+or raise a <tt class="docutils literal"><span class="pre">KeyError</span></tt> based on a name passed to its <tt class="docutils literal"><span class="pre">__getitem__</span></tt>.</p>
+<p>Leaf-level instances must not have a <tt class="docutils literal"><span class="pre">__getitem__</span></tt>.  If instances that
+you'd like to be leaves already happen to have a <tt class="docutils literal"><span class="pre">__getitem__</span></tt> through some
+historical inequity, you should subclass these resource types and cause their
+<tt class="docutils literal"><span class="pre">__getitem__</span></tt> methods to simply raise a <tt class="docutils literal"><span class="pre">KeyError</span></tt>.  Or just disuse them
+and think up another strategy.</p>
+<p>Usually, the traversal root is a <em>container</em> resource, and as such it
+contains other resources.  However, it doesn't <em>need</em> to be a container.
+Your resource tree can be as shallow or as deep as you require.</p>
+<p>In general, the resource tree is traversed beginning at its root resource
+using a sequence of path elements described by the <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> of the
+current request; if there are path segments, the root resource's
+<tt class="docutils literal"><span class="pre">__getitem__</span></tt> is called with the next path segment, and it is expected to
+return another resource.  The resulting resource's <tt class="docutils literal"><span class="pre">__getitem__</span></tt> is called
+with the very next path segment, and it is expected to return another
+resource.  This happens <em>ad infinitum</em> until all path segments are exhausted.</p>
+</div>
+<div class="section" id="the-traversal-algorithm">
+<span id="traversal-algorithm"></span><span id="index-2"></span><h2>The Traversal Algorithm<a class="headerlink" href="#the-traversal-algorithm" title="Permalink to this headline">¶</a></h2>
+<p>This section will attempt to explain the <span>Pyramid</span> traversal algorithm.
+We'll provide a description of the algorithm, a diagram of how the algorithm
+works, and some example traversal scenarios that might help you understand
+how the algorithm operates against a specific resource tree.</p>
+<p>We'll also talk a bit about <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a>.  The
+<a class="reference internal" href="viewconfig.html#view-config-chapter"><em>View Configuration</em></a> chapter discusses <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a> in
+detail, and it is the canonical source for information about views.
+Technically, <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a> is a <span>Pyramid</span> subsystem that is
+separated from traversal entirely.  However, we'll describe the
+fundamental behavior of view lookup in the examples in the next few
+sections to give you an idea of how traversal and view lookup cooperate,
+because they are almost always used together.</p>
+<div class="section" id="a-description-of-the-traversal-algorithm">
+<span id="index-3"></span><h3>A Description of The Traversal Algorithm<a class="headerlink" href="#a-description-of-the-traversal-algorithm" title="Permalink to this headline">¶</a></h3>
+<p>When a user requests a page from your traversal-powered application, the
+system uses this algorithm to find a <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource and a
+<a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a>.</p>
+<ol class="arabic">
+<li><p class="first">The request for the page is presented to the <span>Pyramid</span>
+<a class="reference internal" href="../glossary.html#term-router"><em class="xref std std-term">router</em></a> in terms of a standard <a class="reference internal" href="../glossary.html#term-wsgi"><em class="xref std std-term">WSGI</em></a> request, which is
+represented by a WSGI environment and a WSGI <tt class="docutils literal"><span class="pre">start_response</span></tt> callable.</p>
+</li>
+<li><p class="first">The router creates a <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> object based on the WSGI
+environment.</p>
+</li>
+<li><p class="first">The <a class="reference internal" href="../glossary.html#term-root-factory"><em class="xref std std-term">root factory</em></a> is called with the <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a>.  It returns
+a <a class="reference internal" href="../glossary.html#term-root"><em class="xref std std-term">root</em></a> resource.</p>
+</li>
+<li><p class="first">The router uses the WSGI environment's <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> information to
+determine the path segments to traverse.  The leading slash is stripped
+off <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt>, and the remaining path segments are split on the slash
+character to form a traversal sequence.</p>
+<p>The traversal algorithm by default attempts to first URL-unquote and then
+Unicode-decode each path segment derived from <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> from its
+natural byte string (<tt class="docutils literal"><span class="pre">str</span></tt> type) representation.  URL unquoting is
+performed using the Python standard library <tt class="docutils literal"><span class="pre">urllib.unquote</span></tt> function.
+Conversion from a URL-decoded string into Unicode is attempted using the
+UTF-8 encoding.  If any URL-unquoted path segment in <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> is not
+decodeable using the UTF-8 decoding, a <a class="reference external" href="http://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.4)"><tt class="xref py py-exc docutils literal"><span class="pre">TypeError</span></tt></a> is raised.  A
+segment will be fully URL-unquoted and UTF8-decoded before it is passed
+in to the <tt class="docutils literal"><span class="pre">__getitem__</span></tt> of any resource during traversal.</p>
+<p>Thus, a request with a <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> variable of <tt class="docutils literal"><span class="pre">/a/b/c</span></tt> maps to the
+traversal sequence <tt class="docutils literal"><span class="pre">[u'a',</span> <span class="pre">u'b',</span> <span class="pre">u'c']</span></tt>.</p>
+</li>
+<li><p class="first"><a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">Traversal</em></a> begins at the root resource returned by the root
+factory.  For the traversal sequence <tt class="docutils literal"><span class="pre">[u'a',</span> <span class="pre">u'b',</span> <span class="pre">u'c']</span></tt>, the root
+resource's <tt class="docutils literal"><span class="pre">__getitem__</span></tt> is called with the name <tt class="docutils literal"><span class="pre">'a'</span></tt>.  Traversal
+continues through the sequence.  In our example, if the root resource's
+<tt class="docutils literal"><span class="pre">__getitem__</span></tt> called with the name <tt class="docutils literal"><span class="pre">a</span></tt> returns a resource (aka
+resource &quot;A&quot;), that resource's <tt class="docutils literal"><span class="pre">__getitem__</span></tt> is called with the name
+<tt class="docutils literal"><span class="pre">'b'</span></tt>.  If resource &quot;A&quot; returns a resource &quot;B&quot; when asked for <tt class="docutils literal"><span class="pre">'b'</span></tt>,
+resource B's <tt class="docutils literal"><span class="pre">__getitem__</span></tt> is then asked for the name <tt class="docutils literal"><span class="pre">'c'</span></tt>, and may
+return resource &quot;C&quot;.</p>
+</li>
+<li><p class="first">Traversal ends when a) the entire path is exhausted or b) when any
+resource raises a <a class="reference external" href="http://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.4)"><tt class="xref py py-exc docutils literal"><span class="pre">KeyError</span></tt></a> from its <tt class="docutils literal"><span class="pre">__getitem__</span></tt> or c) when any
+non-final path element traversal does not have a <tt class="docutils literal"><span class="pre">__getitem__</span></tt> method
+(resulting in a <a class="reference external" href="http://docs.python.org/3/library/exceptions.html#AttributeError" title="(in Python v3.4)"><tt class="xref py py-exc docutils literal"><span class="pre">AttributeError</span></tt></a>) or d) when any path element is
+prefixed with the set of characters <tt class="docutils literal"><span class="pre">&#64;&#64;</span></tt> (indicating that the characters
+following the <tt class="docutils literal"><span class="pre">&#64;&#64;</span></tt> token should be treated as a <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a>).</p>
+</li>
+<li><p class="first">When traversal ends for any of the reasons in the previous step, the last
+resource found during traversal is deemed to be the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a>.  If
+the path has been exhausted when traversal ends, the <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a> is
+deemed to be the empty string (<tt class="docutils literal"><span class="pre">''</span></tt>).  However, if the path was <em>not</em>
+exhausted before traversal terminated, the first remaining path segment
+is treated as the view name.</p>
+</li>
+<li><p class="first">Any subsequent path elements after the <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a> is found are
+deemed the <a class="reference internal" href="../glossary.html#term-subpath"><em class="xref std std-term">subpath</em></a>.  The subpath is always a sequence of path
+segments that come from <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> that are &quot;left over&quot; after
+traversal has completed.</p>
+</li>
+</ol>
+<p>Once the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource, the <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a>, and associated
+attributes such as the <a class="reference internal" href="../glossary.html#term-subpath"><em class="xref std std-term">subpath</em></a> are located, the job of
+<a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> is finished.  It passes back the information it obtained to
+its caller, the <span>Pyramid</span> <a class="reference internal" href="../glossary.html#term-router"><em class="xref std std-term">Router</em></a>, which subsequently invokes
+<a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a> with the context and view name information.</p>
+<p>The traversal algorithm exposes two special cases:</p>
+<ul class="simple">
+<li>You will often end up with a <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a> that is the empty string as
+the result of a particular traversal.  This indicates that the view lookup
+machinery should look up the <a class="reference internal" href="../glossary.html#term-default-view"><em class="xref std std-term">default view</em></a>.  The default view is a
+view that is registered with no name or a view which is registered with a
+name that equals the empty string.</li>
+<li>If any path segment element begins with the special characters <tt class="docutils literal"><span class="pre">&#64;&#64;</span></tt>
+(think of them as goggles), the value of that segment minus the goggle
+characters is considered the <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a> immediately and traversal
+stops there.  This allows you to address views that may have the same names
+as resource names in the tree unambiguously.</li>
+</ul>
+<p>Finally, traversal is responsible for locating a <a class="reference internal" href="../glossary.html#term-virtual-root"><em class="xref std std-term">virtual root</em></a>.  A
+virtual root is used during &quot;virtual hosting&quot;; see the
+<a class="reference internal" href="vhosting.html#vhosting-chapter"><em>Virtual Hosting</em></a> chapter for information.  We won't speak more about
+it in this chapter.</p>
+<img alt="../_images/resourcetreetraverser.png" src="../_images/resourcetreetraverser.png" />
+</div>
+<div class="section" id="traversal-algorithm-examples">
+<span id="index-4"></span><h3>Traversal Algorithm Examples<a class="headerlink" href="#traversal-algorithm-examples" title="Permalink to this headline">¶</a></h3>
+<p>No one can be expected to understand the traversal algorithm by analogy and
+description alone, so let's examine some traversal scenarios that use
+concrete URLs and resource tree compositions.</p>
+<p>Let's pretend the user asks for
+<tt class="docutils literal"><span class="pre">http://example.com/foo/bar/baz/biz/buz.txt</span></tt>. The request's <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt>
+in that case is <tt class="docutils literal"><span class="pre">/foo/bar/baz/biz/buz.txt</span></tt>.  Let's further pretend that
+when this request comes in that we're traversing the following resource tree:</p>
+<div class="highlight-text"><div class="highlight"><pre>/--
+   |
+   |-- foo
+        |
+        ----bar
+</pre></div>
+</div>
+<p>Here's what happens:</p>
+<ul class="simple">
+<li><a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> traverses the root, and attempts to find &quot;foo&quot;, which it
+finds.</li>
+<li><a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> traverses &quot;foo&quot;, and attempts to find &quot;bar&quot;, which it
+finds.</li>
+<li><a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> traverses &quot;bar&quot;, and attempts to find &quot;baz&quot;, which it does
+not find (the &quot;bar&quot; resource raises a <a class="reference external" href="http://docs.python.org/3/library/exceptions.html#KeyError" title="(in Python v3.4)"><tt class="xref py py-exc docutils literal"><span class="pre">KeyError</span></tt></a> when asked for
+&quot;baz&quot;).</li>
+</ul>
+<p>The fact that it does not find &quot;baz&quot; at this point does not signify an error
+condition.  It signifies that:</p>
+<ul class="simple">
+<li>the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> is the &quot;bar&quot; resource (the context is the last resource
+found during traversal).</li>
+<li>the <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a> is <tt class="docutils literal"><span class="pre">baz</span></tt></li>
+<li>the <a class="reference internal" href="../glossary.html#term-subpath"><em class="xref std std-term">subpath</em></a> is <tt class="docutils literal"><span class="pre">('biz',</span> <span class="pre">'buz.txt')</span></tt></li>
+</ul>
+<p>At this point, traversal has ended, and <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a> begins.</p>
+<p>Because it's the &quot;context&quot; resource, the view lookup machinery examines &quot;bar&quot;
+to find out what &quot;type&quot; it is. Let's say it finds that the context is a
+<tt class="docutils literal"><span class="pre">Bar</span></tt> type (because &quot;bar&quot; happens to be an instance of the class <tt class="docutils literal"><span class="pre">Bar</span></tt>).
+Using the <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a> (<tt class="docutils literal"><span class="pre">baz</span></tt>) and the type, view lookup asks the
+<a class="reference internal" href="../glossary.html#term-application-registry"><em class="xref std std-term">application registry</em></a> this question:</p>
+<ul class="simple">
+<li>Please find me a <a class="reference internal" href="../glossary.html#term-view-callable"><em class="xref std std-term">view callable</em></a> registered using a <a class="reference internal" href="../glossary.html#term-view-configuration"><em class="xref std std-term">view
+configuration</em></a> with the name &quot;baz&quot; that can be used for the class <tt class="docutils literal"><span class="pre">Bar</span></tt>.</li>
+</ul>
+<p>Let's say that view lookup finds no matching view type.  In this
+circumstance, the <span>Pyramid</span> <a class="reference internal" href="../glossary.html#term-router"><em class="xref std std-term">router</em></a> returns the result of the
+<a class="reference internal" href="../glossary.html#term-not-found-view"><em class="xref std std-term">Not Found View</em></a> and the request ends.</p>
+<p>However, for this tree:</p>
+<div class="highlight-text"><div class="highlight"><pre>/--
+   |
+   |-- foo
+        |
+        ----bar
+             |
+             ----baz
+                    |
+                    biz
+</pre></div>
+</div>
+<p>The user asks for <tt class="docutils literal"><span class="pre">http://example.com/foo/bar/baz/biz/buz.txt</span></tt></p>
+<ul class="simple">
+<li><a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> traverses &quot;foo&quot;, and attempts to find &quot;bar&quot;, which it
+finds.</li>
+<li><a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> traverses &quot;bar&quot;, and attempts to find &quot;baz&quot;, which it
+finds.</li>
+<li><a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> traverses &quot;baz&quot;, and attempts to find &quot;biz&quot;, which it
+finds.</li>
+<li><a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> traverses &quot;biz&quot;, and attempts to find &quot;buz.txt&quot; which it
+does not find.</li>
+</ul>
+<p>The fact that it does not find a resource related to &quot;buz.txt&quot; at this point
+does not signify an error condition.  It signifies that:</p>
+<ul class="simple">
+<li>the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> is the &quot;biz&quot; resource (the context is the last resource
+found during traversal).</li>
+<li>the <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a> is &quot;buz.txt&quot;</li>
+<li>the <a class="reference internal" href="../glossary.html#term-subpath"><em class="xref std std-term">subpath</em></a> is an empty sequence ( <tt class="docutils literal"><span class="pre">()</span></tt> ).</li>
+</ul>
+<p>At this point, traversal has ended, and <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a> begins.</p>
+<p>Because it's the &quot;context&quot; resource, the view lookup machinery examines the
+&quot;biz&quot; resource to find out what &quot;type&quot; it is. Let's say it finds that the
+resource is a <tt class="docutils literal"><span class="pre">Biz</span></tt> type (because &quot;biz&quot; is an instance of the Python class
+<tt class="docutils literal"><span class="pre">Biz</span></tt>).  Using the <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a> (<tt class="docutils literal"><span class="pre">buz.txt</span></tt>) and the type, view
+lookup asks the <a class="reference internal" href="../glossary.html#term-application-registry"><em class="xref std std-term">application registry</em></a> this question:</p>
+<ul class="simple">
+<li>Please find me a <a class="reference internal" href="../glossary.html#term-view-callable"><em class="xref std std-term">view callable</em></a> registered with a <a class="reference internal" href="../glossary.html#term-view-configuration"><em class="xref std std-term">view
+configuration</em></a> with the name <tt class="docutils literal"><span class="pre">buz.txt</span></tt> that can be used for class
+<tt class="docutils literal"><span class="pre">Biz</span></tt>.</li>
+</ul>
+<p>Let's say that question is answered by the application registry; in such a
+situation, the application registry returns a <a class="reference internal" href="../glossary.html#term-view-callable"><em class="xref std std-term">view callable</em></a>.  The
+view callable is then called with the current <a class="reference internal" href="../glossary.html#term-webob"><em class="xref std std-term">WebOb</em></a> <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a>
+as the sole argument: <tt class="docutils literal"><span class="pre">request</span></tt>; it is expected to return a response.</p>
+<div class="sidebar">
+<p class="first sidebar-title">The Example View Callables Accept Only a Request; How Do I Access the Context Resource?</p>
+<p class="last">Most of the examples in this book assume that a view callable is typically
+passed only a <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> object.  Sometimes your view callables need
+access to the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource, especially when you use
+<a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a>.  You might use a supported alternate view callable
+argument list in your view callables such as the <tt class="docutils literal"><span class="pre">(context,</span> <span class="pre">request)</span></tt>
+calling convention described in
+<a class="reference internal" href="views.html#request-and-context-view-definitions"><em>Alternate View Callable Argument/Calling Conventions</em></a>.  But you don't need to if you
+don't want to.  In view callables that accept only a request, the
+<a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource found by traversal is available as the
+<tt class="docutils literal"><span class="pre">context</span></tt> attribute of the request object, e.g. <tt class="docutils literal"><span class="pre">request.context</span></tt>.
+The <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a> is available as the <tt class="docutils literal"><span class="pre">view_name</span></tt> attribute of the
+request object, e.g. <tt class="docutils literal"><span class="pre">request.view_name</span></tt>.  Other <span>Pyramid</span>
+-specific request attributes are also available as described in
+<a class="reference internal" href="webob.html#special-request-attributes"><em>Special Attributes Added to the Request by Pyramid</em></a>.</p>
+</div>
+</div>
+<div class="section" id="using-resource-interfaces-in-view-configuration">
+<span id="using-resource-interfaces"></span><span id="index-5"></span><h3>Using Resource Interfaces In View Configuration<a class="headerlink" href="#using-resource-interfaces-in-view-configuration" title="Permalink to this headline">¶</a></h3>
+<p>Instead of registering your views with a <tt class="docutils literal"><span class="pre">context</span></tt> that names a Python
+resource <em>class</em>, you can optionally register a view callable with a
+<tt class="docutils literal"><span class="pre">context</span></tt> which is an <a class="reference internal" href="../glossary.html#term-interface"><em class="xref std std-term">interface</em></a>.  An interface can be attached
+arbitrarily to any resource object.  View lookup treats context interfaces
+specially, and therefore the identity of a resource can be divorced from that
+of the class which implements it.  As a result, associating a view with an
+interface can provide more flexibility for sharing a single view between two
+or more different implementations of a resource type.  For example, if two
+resource objects of different Python class types share the same interface,
+you can use the same view configuration to specify both of them as a
+<tt class="docutils literal"><span class="pre">context</span></tt>.</p>
+<p>In order to make use of interfaces in your application during view dispatch,
+you must create an interface and mark up your resource classes or instances
+with interface declarations that refer to this interface.</p>
+<p>To attach an interface to a resource <em>class</em>, you define the interface and
+use the <tt class="xref py py-func docutils literal"><span class="pre">zope.interface.implementer()</span></tt> class decorator to associate the
+interface with the class.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">zope.interface</span> <span class="kn">import</span> <span class="n">Interface</span>
+<span class="kn">from</span> <span class="nn">zope.interface</span> <span class="kn">import</span> <span class="n">implementer</span>
+
+<span class="k">class</span> <span class="nc">IHello</span><span class="p">(</span><span class="n">Interface</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A marker interface &quot;&quot;&quot;</span>
+
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">IHello</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">Hello</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">pass</span>
+</pre></div>
+</td></tr></table></div>
+<p>To attach an interface to a resource <em>instance</em>, you define the interface and
+use the <tt class="xref py py-func docutils literal"><span class="pre">zope.interface.alsoProvides()</span></tt> function to associate the
+interface with the instance.  This function mutates the instance in such a
+way that the interface is attached to it.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">zope.interface</span> <span class="kn">import</span> <span class="n">Interface</span>
+<span class="kn">from</span> <span class="nn">zope.interface</span> <span class="kn">import</span> <span class="n">alsoProvides</span>
+
+<span class="k">class</span> <span class="nc">IHello</span><span class="p">(</span><span class="n">Interface</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A marker interface &quot;&quot;&quot;</span>
+
+<span class="k">class</span> <span class="nc">Hello</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<span class="k">def</span> <span class="nf">make_hello</span><span class="p">():</span>
+    <span class="n">hello</span> <span class="o">=</span> <span class="n">Hello</span><span class="p">()</span>
+    <span class="n">alsoProvides</span><span class="p">(</span><span class="n">hello</span><span class="p">,</span> <span class="n">IHello</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">hello</span>
+</pre></div>
+</td></tr></table></div>
+<p>Regardless of how you associate an interface, with a resource instance, or a
+resource class, the resulting code to associate that interface with a view
+callable is the same.  Assuming the above code that defines an <tt class="docutils literal"><span class="pre">IHello</span></tt>
+interface lives in the root of your application, and its module is named
+&quot;resources.py&quot;, the interface declaration below will associate the
+<tt class="docutils literal"><span class="pre">mypackage.views.hello_world</span></tt> view with resources that implement, or
+provide, this interface.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span class="c"># config is an instance of pyramid.config.Configurator</span>
+
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;mypackage.views.hello_world&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;hello.html&#39;</span><span class="p">,</span>
+                <span class="n">context</span><span class="o">=</span><span class="s">&#39;mypackage.resources.IHello&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Any time a resource that is determined to be the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> provides
+this interface, and a view named <tt class="docutils literal"><span class="pre">hello.html</span></tt> is looked up against it as
+per the URL, the <tt class="docutils literal"><span class="pre">mypackage.views.hello_world</span></tt> view callable will be
+invoked.</p>
+<p>Note, in cases where a view is registered against a resource class, and a
+view is also registered against an interface that the resource class
+implements, an ambiguity arises. Views registered for the resource class take
+precedence over any views registered for any interface the resource class
+implements. Thus, if one view configuration names a <tt class="docutils literal"><span class="pre">context</span></tt> of both the
+class type of a resource, and another view configuration names a <tt class="docutils literal"><span class="pre">context</span></tt>
+of interface implemented by the resource's class, and both view
+configurations are otherwise identical, the view registered for the context's
+class will &quot;win&quot;.</p>
+<p>For more information about defining resources with interfaces for use within
+view configuration, see <a class="reference internal" href="resources.html#resources-which-implement-interfaces"><em>Resources Which Implement Interfaces</em></a>.</p>
+</div>
+</div>
+<div class="section" id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h2>
+<p>A tutorial showing how <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> can be used within a <span>Pyramid</span>
+application exists in <a class="reference internal" href="../tutorials/wiki/index.html#bfg-wiki-tutorial"><em>ZODB + Traversal Wiki Tutorial</em></a>.</p>
+<p>See the <a class="reference internal" href="viewconfig.html#view-config-chapter"><em>View Configuration</em></a> chapter for detailed information about
+<a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a>.</p>
+<p>The <a class="reference internal" href="../api/traversal.html#module-pyramid.traversal" title="pyramid.traversal"><tt class="xref py py-mod docutils literal"><span class="pre">pyramid.traversal</span></tt></a> module contains API functions that deal with
+traversal, such as traversal invocation from within application code.</p>
+<p>The <a class="reference internal" href="../api/request.html#pyramid.request.Request.resource_url" title="pyramid.request.Request.resource_url"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.resource_url()</span></tt></a> method generates a URL when
+given a resource retrieved from a resource tree.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Traversal</a><ul>
+<li><a class="reference internal" href="#traversal-details">Traversal Details</a></li>
+<li><a class="reference internal" href="#the-resource-tree">The Resource Tree</a></li>
+<li><a class="reference internal" href="#the-traversal-algorithm">The Traversal Algorithm</a><ul>
+<li><a class="reference internal" href="#a-description-of-the-traversal-algorithm">A Description of The Traversal Algorithm</a></li>
+<li><a class="reference internal" href="#traversal-algorithm-examples">Traversal Algorithm Examples</a></li>
+<li><a class="reference internal" href="#using-resource-interfaces-in-view-configuration">Using Resource Interfaces In View Configuration</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="muchadoabouttraversal.html"
+                        title="previous chapter">Much Ado About Traversal</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="security.html"
+                        title="next chapter">Security</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="security.html" title="Security"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="muchadoabouttraversal.html" title="Much Ado About Traversal"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

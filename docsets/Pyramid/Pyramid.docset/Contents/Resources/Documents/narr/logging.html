@@ -1,0 +1,567 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Logging &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="next" title="PasteDeploy Configuration Files" href="paste.html" />
+    <link rel="prev" title="Environment Variables and .ini File Settings" href="environment.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="paste.html" title="PasteDeploy Configuration Files"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="environment.html" title="Environment Variables and .ini File Settings"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="logging">
+<span id="logging-chapter"></span><h1>Logging<a class="headerlink" href="#logging" title="Permalink to this headline">¶</a></h1>
+<p><span>Pyramid</span> allows you to make use of the Python standard library
+<a class="reference external" href="http://docs.python.org/3/library/logging.html#module-logging" title="(in Python v3.4)"><tt class="xref py py-mod docutils literal"><span class="pre">logging</span></tt></a> module.  This chapter describes how to configure logging and
+how to send log messages to loggers that you've configured.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">This chapter assumes you've used a <a class="reference internal" href="../glossary.html#term-scaffold"><em class="xref std std-term">scaffold</em></a> to create a
+project which contains <tt class="docutils literal"><span class="pre">development.ini</span></tt> and <tt class="docutils literal"><span class="pre">production.ini</span></tt> files
+which help configure logging.  All of the scaffolds which ship along with
+<span>Pyramid</span> do this.  If you're not using a scaffold, or if you've used
+a third-party scaffold which does not create these files, the
+configuration information in this chapter may not be applicable.</p>
+</div>
+<div class="section" id="logging-configuration">
+<span id="logging-config"></span><h2>Logging Configuration<a class="headerlink" href="#logging-configuration" title="Permalink to this headline">¶</a></h2>
+<p>A <span>Pyramid</span> project created from a <a class="reference internal" href="../glossary.html#term-scaffold"><em class="xref std std-term">scaffold</em></a> is configured to
+allow you to send messages to <a class="reference external" href="http://docs.python.org/3/library/logging.html#module-logging" title="(in Python v3.4)"><tt class="xref py py-mod docutils literal"><span class="pre">Python</span> <span class="pre">standard</span> <span class="pre">library</span> <span class="pre">logging</span> <span class="pre">package</span></tt></a> loggers from within your
+application.  In particular, the <a class="reference internal" href="../glossary.html#term-pastedeploy"><em class="xref std std-term">PasteDeploy</em></a> <tt class="docutils literal"><span class="pre">development.ini</span></tt> and
+<tt class="docutils literal"><span class="pre">production.ini</span></tt> files created when you use a scaffold include a basic
+configuration for the Python <a class="reference external" href="http://docs.python.org/3/library/logging.html#module-logging" title="(in Python v3.4)"><tt class="xref py py-mod docutils literal"><span class="pre">logging</span></tt></a> package.</p>
+<p>PasteDeploy <tt class="docutils literal"><span class="pre">.ini</span></tt> files use the Python standard library <a class="reference external" href="http://docs.python.org/library/configparser.html#module-ConfigParser" title="(in Python v2.7)"><tt class="xref py py-mod docutils literal"><span class="pre">ConfigParser</span>
+<span class="pre">format</span></tt></a>; this is the same format used as the Python
+<a class="reference external" href="http://docs.python.org/3/library/logging.config.html#logging-config-fileformat" title="(in Python v3.4)"><em class="xref std std-ref">logging module's Configuration file format</em></a>.
+The application-related and logging-related sections in the configuration file
+can coexist peacefully, and the logging-related sections in the file are used
+from when you run <tt class="docutils literal"><span class="pre">pserve</span></tt>.</p>
+<p>The <tt class="docutils literal"><span class="pre">pserve</span></tt> command calls the <a class="reference internal" href="../api/paster.html#pyramid.paster.setup_logging" title="pyramid.paster.setup_logging"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.paster.setup_logging()</span></tt></a>
+function, a thin wrapper around the <a class="reference external" href="http://docs.python.org/3/library/logging.config.html#logging.config.fileConfig" title="(in Python v3.4)"><tt class="xref py py-func docutils literal"><span class="pre">logging.config.fileConfig()</span></tt></a>
+using the specified <tt class="docutils literal"><span class="pre">.ini</span></tt> file if it contains a <tt class="docutils literal"><span class="pre">[loggers]</span></tt> section
+(all of the scaffold-generated <tt class="docutils literal"><span class="pre">.ini</span></tt> files do). <tt class="docutils literal"><span class="pre">setup_logging</span></tt> reads the
+logging configuration from the ini file upon which <tt class="docutils literal"><span class="pre">pserve</span></tt> was
+invoked.</p>
+<p>Default logging configuration is provided in both the default
+<tt class="docutils literal"><span class="pre">development.ini</span></tt> and the <tt class="docutils literal"><span class="pre">production.ini</span></tt> file.  The logging
+configuration in the <tt class="docutils literal"><span class="pre">development.ini</span></tt> file is as follows:</p>
+<div class="highlight-ini"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30</pre></div></td><td class="code"><div class="highlight"><pre><span class="c1"># Begin logging configuration</span>
+
+<span class="k">[loggers]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">root, {{package_logger}}</span>
+
+<span class="k">[handlers]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">console</span>
+
+<span class="k">[formatters]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">generic</span>
+
+<span class="k">[logger_root]</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">INFO</span>
+<span class="na">handlers</span> <span class="o">=</span> <span class="s">console</span>
+
+<span class="k">[logger_{{package_logger}}]</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">DEBUG</span>
+<span class="na">handlers</span> <span class="o">=</span>
+<span class="na">qualname</span> <span class="o">=</span> <span class="s">{{package}}</span>
+
+<span class="k">[handler_console]</span>
+<span class="na">class</span> <span class="o">=</span> <span class="s">StreamHandler</span>
+<span class="na">args</span> <span class="o">=</span> <span class="s">(sys.stderr,)</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">NOTSET</span>
+<span class="na">formatter</span> <span class="o">=</span> <span class="s">generic</span>
+
+<span class="k">[formatter_generic]</span>
+<span class="na">format</span> <span class="o">=</span> <span class="s">%(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s</span>
+
+<span class="c1"># End logging configuration</span>
+</pre></div>
+</td></tr></table></div>
+<p>The <tt class="docutils literal"><span class="pre">production.ini</span></tt> file uses the <tt class="docutils literal"><span class="pre">WARN</span></tt> level in its logger
+configuration, but it is otherwise identical.</p>
+<p>The name <tt class="docutils literal"><span class="pre">{{package_logger}}</span></tt> above will be replaced with the name of your
+project's <a class="reference internal" href="../glossary.html#term-package"><em class="xref std std-term">package</em></a>, which is derived from the name you provide to your
+project.  For instance, if you do:</p>
+<div class="highlight-text"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre>pcreate -s starter MyApp
+</pre></div>
+</td></tr></table></div>
+<p>The logging configuration will literally be:</p>
+<div class="highlight-ini"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30</pre></div></td><td class="code"><div class="highlight"><pre><span class="c1"># Begin logging configuration</span>
+
+<span class="k">[loggers]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">root, myapp</span>
+
+<span class="k">[handlers]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">console</span>
+
+<span class="k">[formatters]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">generic</span>
+
+<span class="k">[logger_root]</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">INFO</span>
+<span class="na">handlers</span> <span class="o">=</span> <span class="s">console</span>
+
+<span class="k">[logger_myapp]</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">DEBUG</span>
+<span class="na">handlers</span> <span class="o">=</span>
+<span class="na">qualname</span> <span class="o">=</span> <span class="s">myapp</span>
+
+<span class="k">[handler_console]</span>
+<span class="na">class</span> <span class="o">=</span> <span class="s">StreamHandler</span>
+<span class="na">args</span> <span class="o">=</span> <span class="s">(sys.stderr,)</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">NOTSET</span>
+<span class="na">formatter</span> <span class="o">=</span> <span class="s">generic</span>
+
+<span class="k">[formatter_generic]</span>
+<span class="na">format</span> <span class="o">=</span> <span class="s">%(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s</span>
+
+<span class="c1"># End logging configuration</span>
+</pre></div>
+</td></tr></table></div>
+<p>In this logging configuration:</p>
+<ul>
+<li><p class="first">a logger named <tt class="docutils literal"><span class="pre">root</span></tt> is created that logs messages at a level above
+or equal to the <tt class="docutils literal"><span class="pre">INFO</span></tt> level to stderr, with the following format:</p>
+<div class="highlight-text"><div class="highlight"><pre>2007-08-17 15:04:08,704 INFO [packagename]
+                             Loading resource, id: 86
+</pre></div>
+</div>
+</li>
+<li><p class="first">a logger named <tt class="docutils literal"><span class="pre">myapp</span></tt> is configured that logs messages sent at a level
+above or equal to <tt class="docutils literal"><span class="pre">DEBUG</span></tt> to stderr in the same format as the root
+logger.</p>
+</li>
+</ul>
+<p>The <tt class="docutils literal"><span class="pre">root</span></tt> logger will be used by all applications in the Pyramid process
+that ask for a logger (via <tt class="docutils literal"><span class="pre">logging.getLogger</span></tt>) that has a name which
+begins with anything except your project's package name (e.g. <tt class="docutils literal"><span class="pre">myapp</span></tt>).
+The logger with the same name as your package name is reserved for your own
+usage in your Pyramid application.  Its existence means that you can log to a
+known logging location from any Pyramid application generated via a scaffold.</p>
+<p>Pyramid and many other libraries (such as Beaker, SQLAlchemy, Paste) log a
+number of messages to the root logger for debugging purposes. Switching the
+root logger level to <tt class="docutils literal"><span class="pre">DEBUG</span></tt> reveals them:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span class="k">[logger_root]</span>
+<span class="c1">#level = INFO</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">DEBUG</span>
+<span class="na">handlers</span> <span class="o">=</span> <span class="s">console</span>
+</pre></div>
+</div>
+<p>Some scaffolds configure additional loggers for additional subsystems they
+use (such as SQLALchemy).  Take a look at the <tt class="docutils literal"><span class="pre">production.ini</span></tt> and
+<tt class="docutils literal"><span class="pre">development.ini</span></tt> files rendered when you create a project from a scaffold.</p>
+</div>
+<div class="section" id="sending-logging-messages">
+<h2>Sending Logging Messages<a class="headerlink" href="#sending-logging-messages" title="Permalink to this headline">¶</a></h2>
+<p>Python's special <tt class="docutils literal"><span class="pre">__name__</span></tt> variable refers to the current module's fully
+qualified name.  From any module in a package named <tt class="docutils literal"><span class="pre">myapp</span></tt>, the
+<tt class="docutils literal"><span class="pre">__name__</span></tt> builtin variable will always be something like <tt class="docutils literal"><span class="pre">myapp</span></tt>, or
+<tt class="docutils literal"><span class="pre">myapp.subpackage</span></tt> or <tt class="docutils literal"><span class="pre">myapp.package.subpackage</span></tt> if your project is named
+<tt class="docutils literal"><span class="pre">myapp</span></tt>.  Sending a message to this logger will send it to the <tt class="docutils literal"><span class="pre">myapp</span></tt>
+logger.</p>
+<p>To log messages to the package-specific logger configured in your <tt class="docutils literal"><span class="pre">.ini</span></tt>
+file, simply create a logger object using the <tt class="docutils literal"><span class="pre">__name__</span></tt> builtin and call
+methods on it.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">logging</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">__name__</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">myview</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">content_type</span> <span class="o">=</span> <span class="s">&#39;text/plain&#39;</span>
+    <span class="n">content</span> <span class="o">=</span> <span class="s">&#39;Hello World!&#39;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;Returning: </span><span class="si">%s</span><span class="s"> (content-type: </span><span class="si">%s</span><span class="s">)&#39;</span><span class="p">,</span> <span class="n">content</span><span class="p">,</span> <span class="n">content_type</span><span class="p">)</span>
+    <span class="n">request</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">content_type</span> <span class="o">=</span> <span class="n">content_type</span>
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">response</span>
+</pre></div>
+</td></tr></table></div>
+<p>This will result in the following printed to the console, on <tt class="docutils literal"><span class="pre">stderr</span></tt>:</p>
+<div class="highlight-text"><div class="highlight"><pre>16:20:20,440 DEBUG [myapp.views] Returning: Hello World!
+                   (content-type: text/plain)
+</pre></div>
+</div>
+</div>
+<div class="section" id="filtering-log-messages">
+<h2>Filtering log messages<a class="headerlink" href="#filtering-log-messages" title="Permalink to this headline">¶</a></h2>
+<p>Often there's too much log output to sift through, such as when switching
+the root logger's level to <tt class="docutils literal"><span class="pre">DEBUG</span></tt>.</p>
+<p>An example: you're diagnosing database connection issues in your application
+and only want to see SQLAlchemy's <tt class="docutils literal"><span class="pre">DEBUG</span></tt> messages in relation to database
+connection pooling. You can leave the root logger's level at the less verbose
+<tt class="docutils literal"><span class="pre">INFO</span></tt> level and set that particular SQLAlchemy logger to <tt class="docutils literal"><span class="pre">DEBUG</span></tt> on its
+own, apart from the root logger:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span class="k">[logger_sqlalchemy.pool]</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">DEBUG</span>
+<span class="na">handlers</span> <span class="o">=</span>
+<span class="na">qualname</span> <span class="o">=</span> <span class="s">sqlalchemy.pool</span>
+</pre></div>
+</div>
+<p>then add it to the list of loggers:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span class="k">[loggers]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">root, myapp, sqlalchemy.pool</span>
+</pre></div>
+</div>
+<p>No handlers need to be configured for this logger as by default non root
+loggers will propagate their log records up to their parent logger's
+handlers. The root logger is the top level parent of all loggers.</p>
+<p>This technique is used in the default <tt class="docutils literal"><span class="pre">development.ini</span></tt>. The root logger's
+level is set to <tt class="docutils literal"><span class="pre">INFO</span></tt>, whereas the application's log level is set to
+<tt class="docutils literal"><span class="pre">DEBUG</span></tt>:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span class="c1"># Begin logging configuration</span>
+
+<span class="k">[loggers]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">root, myapp</span>
+
+<span class="k">[logger_myapp]</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">DEBUG</span>
+<span class="na">handlers</span> <span class="o">=</span>
+<span class="na">qualname</span> <span class="o">=</span> <span class="s">myapp</span>
+</pre></div>
+</div>
+<p>All of the child loggers of the <tt class="docutils literal"><span class="pre">myapp</span></tt> logger will inherit the <tt class="docutils literal"><span class="pre">DEBUG</span></tt>
+level unless they're explicitly set differently. Meaning the <tt class="docutils literal"><span class="pre">myapp.views</span></tt>,
+<tt class="docutils literal"><span class="pre">myapp.models</span></tt> (and all your app's modules') loggers by default have an
+effective level of <tt class="docutils literal"><span class="pre">DEBUG</span></tt> too.</p>
+<p>For more advanced filtering, the logging module provides a <a class="reference external" href="http://docs.python.org/lib/node423.html">Filter</a> object; however it cannot be used
+directly from the configuration file.</p>
+</div>
+<div class="section" id="advanced-configuration">
+<h2>Advanced Configuration<a class="headerlink" href="#advanced-configuration" title="Permalink to this headline">¶</a></h2>
+<p>To capture log output to a separate file, use a <a class="reference external" href="http://docs.python.org/lib/node412.html">FileHandler</a> (or a <a class="reference external" href="http://docs.python.org/lib/node413.html">RotatingFileHandler</a>):</p>
+<div class="highlight-ini"><div class="highlight"><pre><span class="k">[handler_filelog]</span>
+<span class="na">class</span> <span class="o">=</span> <span class="s">FileHandler</span>
+<span class="na">args</span> <span class="o">=</span> <span class="s">(&#39;%(here)s/myapp.log&#39;,&#39;a&#39;)</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">INFO</span>
+<span class="na">formatter</span> <span class="o">=</span> <span class="s">generic</span>
+</pre></div>
+</div>
+<p>Before it's recognized, it needs to be added to the list of handlers:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span class="k">[handlers]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">console, myapp, filelog</span>
+</pre></div>
+</div>
+<p>and finally utilized by a logger.</p>
+<div class="highlight-ini"><div class="highlight"><pre><span class="k">[logger_root]</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">INFO</span>
+<span class="na">handlers</span> <span class="o">=</span> <span class="s">console, filelog</span>
+</pre></div>
+</div>
+<p>These final 3 lines of configuration directs all of the root logger's output
+to the <tt class="docutils literal"><span class="pre">myapp.log</span></tt> as well as the console.</p>
+</div>
+<div class="section" id="logging-exceptions">
+<h2>Logging Exceptions<a class="headerlink" href="#logging-exceptions" title="Permalink to this headline">¶</a></h2>
+<p>To log (or email) exceptions generated by your <span>Pyramid</span> application,
+use the <a class="reference internal" href="../glossary.html#term-pyramid-exclog"><em class="xref std std-term">pyramid_exclog</em></a> package.  Details about its configuration are
+in its <a class="reference external" href="http://docs.pylonsproject.org/projects/pyramid_exclog/dev/">documentation</a>.</p>
+</div>
+<div class="section" id="request-logging-with-paste-s-translogger">
+<span id="request-logging-with-pastes-translogger"></span><span id="index-0"></span><h2>Request Logging with Paste's TransLogger<a class="headerlink" href="#request-logging-with-paste-s-translogger" title="Permalink to this headline">¶</a></h2>
+<p>The term:<cite>WSGI</cite> design is modular.  Waitress logs error conditions, debugging
+output, etc., but not web traffic.  For web traffic logging Paste provides the
+<a class="reference external" href="http://pythonpaste.org/modules/translogger.html">TransLogger</a>
+<a class="reference internal" href="../glossary.html#term-middleware"><em class="xref std std-term">middleware</em></a>.  TransLogger produces logs in the <a class="reference external" href="http://httpd.apache.org/docs/2.2/logs.html#combined">Apache Combined Log
+Format</a>.  But
+TransLogger does not write to files, the Python logging system must be
+configured to do this.  The Python <a class="reference external" href="http://docs.python.org/lib/node412.html">FileHandler</a> logging handler can be used
+alongside TransLogger to create an <tt class="docutils literal"><span class="pre">access.log</span></tt> file similar to Apache's.</p>
+<p>Like any standard <a class="reference internal" href="../glossary.html#term-middleware"><em class="xref std std-term">middleware</em></a> with a Paste entry point, TransLogger can
+be configured to wrap your application using <tt class="docutils literal"><span class="pre">.ini</span></tt> file syntax.  First,
+rename your Pyramid <tt class="docutils literal"><span class="pre">.ini</span></tt> file's <tt class="docutils literal"><span class="pre">[app:main]</span></tt> section to
+<tt class="docutils literal"><span class="pre">[app:mypyramidapp]</span></tt>, then add a <tt class="docutils literal"><span class="pre">[filter:translogger]</span></tt> section, then use
+a <tt class="docutils literal"><span class="pre">[pipeline:main]</span></tt> section file to form a WSGI pipeline with both the
+translogger and your application in it.  For instance, change from this:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span class="k">[app:main]</span>
+<span class="na">use</span> <span class="o">=</span> <span class="s">egg:MyProject</span>
+</pre></div>
+</div>
+<p>To this:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span class="k">[app:mypyramidapp]</span>
+<span class="na">use</span> <span class="o">=</span> <span class="s">egg:MyProject</span>
+
+<span class="k">[filter:translogger]</span>
+<span class="na">use</span> <span class="o">=</span> <span class="s">egg:Paste#translogger</span>
+<span class="na">setup_console_handler</span> <span class="o">=</span> <span class="s">False</span>
+
+<span class="k">[pipeline:main]</span>
+<span class="na">pipeline</span> <span class="o">=</span> <span class="s">translogger</span>
+<span class="s">           mypyramidapp</span>
+</pre></div>
+</div>
+<p>Using PasteDeploy this way to form and serve a pipeline is equivalent to
+wrapping your app in a TransLogger instance via the bottom of the <tt class="docutils literal"><span class="pre">main</span></tt>
+function of your project's <tt class="docutils literal"><span class="pre">__init__</span></tt> file:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="o">...</span>
+<span class="n">app</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+<span class="kn">from</span> <span class="nn">paste.translogger</span> <span class="kn">import</span> <span class="n">TransLogger</span>
+<span class="n">app</span> <span class="o">=</span> <span class="n">TransLogger</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">setup_console_handler</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="k">return</span> <span class="n">app</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">TransLogger will automatically setup a logging handler to the console when
+called with no arguments, so it 'just works' in environments that don't
+configure logging. Since our logging handlers are configured we disable
+the automation via <tt class="docutils literal"><span class="pre">setup_console_handler</span> <span class="pre">=</span> <span class="pre">False</span></tt>.</p>
+</div>
+<p>With the filter in place, TransLogger's logger (named the <tt class="docutils literal"><span class="pre">wsgi</span></tt> logger) will
+propagate its log messages to the parent logger (the root logger), sending
+its output to the console when we request a page:</p>
+<div class="highlight-text"><div class="highlight"><pre>00:50:53,694 INFO [myapp.views] Returning: Hello World!
+                  (content-type: text/plain)
+00:50:53,695 INFO [wsgi] 192.168.1.111 - - [11/Aug/2011:20:09:33 -0700] &quot;GET /hello
+HTTP/1.1&quot; 404 - &quot;-&quot;
+&quot;Mozilla/5.0 (Macintosh; U; Intel Mac OS X; en-US; rv:1.8.1.6) Gecko/20070725
+Firefox/2.0.0.6&quot;
+</pre></div>
+</div>
+<p>To direct TransLogger to an <tt class="docutils literal"><span class="pre">access.log</span></tt> FileHandler, we need the following
+to add a FileHandler (named <tt class="docutils literal"><span class="pre">accesslog</span></tt>) to the list of handlers, and ensure
+that the <tt class="docutils literal"><span class="pre">wsgi</span></tt> logger is configured and uses this handler accordingly:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span class="c1"># Begin logging configuration</span>
+
+<span class="k">[loggers]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">root, myapp, wsgi</span>
+
+<span class="k">[handlers]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">console, accesslog</span>
+
+<span class="k">[logger_wsgi]</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">INFO</span>
+<span class="na">handlers</span> <span class="o">=</span> <span class="s">accesslog</span>
+<span class="na">qualname</span> <span class="o">=</span> <span class="s">wsgi</span>
+<span class="na">propagate</span> <span class="o">=</span> <span class="s">0</span>
+
+<span class="k">[handler_accesslog]</span>
+<span class="na">class</span> <span class="o">=</span> <span class="s">FileHandler</span>
+<span class="na">args</span> <span class="o">=</span> <span class="s">(&#39;%(here)s/access.log&#39;,&#39;a&#39;)</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">INFO</span>
+<span class="na">formatter</span> <span class="o">=</span> <span class="s">generic</span>
+</pre></div>
+</div>
+<p>As mentioned above, non-root loggers by default propagate their log records
+to the root logger's handlers (currently the console handler). Setting
+<tt class="docutils literal"><span class="pre">propagate</span></tt> to <tt class="docutils literal"><span class="pre">0</span></tt> (<tt class="docutils literal"><span class="pre">False</span></tt>) here disables this; so the <tt class="docutils literal"><span class="pre">wsgi</span></tt> logger
+directs its records only to the <tt class="docutils literal"><span class="pre">accesslog</span></tt> handler.</p>
+<p>Finally, there's no need to use the <tt class="docutils literal"><span class="pre">generic</span></tt> formatter with TransLogger as
+TransLogger itself provides all the information we need. We'll use a
+formatter that passes-through the log messages as is. Add a new formatter
+called <tt class="docutils literal"><span class="pre">accesslog</span></tt> by including the following in your configuration file:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span class="k">[formatters]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">generic, accesslog</span>
+
+<span class="k">[formatter_accesslog]</span>
+<span class="na">format</span> <span class="o">=</span> <span class="s">%(message)s</span>
+</pre></div>
+</div>
+<p>Finally alter the existing configuration to wire this new
+<tt class="docutils literal"><span class="pre">accesslog</span></tt> formatter into the FileHandler:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span class="k">[handler_accesslog]</span>
+<span class="na">class</span> <span class="o">=</span> <span class="s">FileHandler</span>
+<span class="na">args</span> <span class="o">=</span> <span class="s">(&#39;%(here)s/access.log&#39;,&#39;a&#39;)</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">INFO</span>
+<span class="na">formatter</span> <span class="o">=</span> <span class="s">accesslog</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Logging</a><ul>
+<li><a class="reference internal" href="#logging-configuration">Logging Configuration</a></li>
+<li><a class="reference internal" href="#sending-logging-messages">Sending Logging Messages</a></li>
+<li><a class="reference internal" href="#filtering-log-messages">Filtering log messages</a></li>
+<li><a class="reference internal" href="#advanced-configuration">Advanced Configuration</a></li>
+<li><a class="reference internal" href="#logging-exceptions">Logging Exceptions</a></li>
+<li><a class="reference internal" href="#request-logging-with-paste-s-translogger">Request Logging with Paste's TransLogger</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="environment.html"
+                        title="previous chapter">Environment Variables and <tt class="docutils literal"><span class="pre">.ini</span></tt> File Settings</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="paste.html"
+                        title="next chapter">PasteDeploy Configuration Files</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="paste.html" title="PasteDeploy Configuration Files"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="environment.html" title="Environment Variables and .ini File Settings"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,624 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>20: Logins With Authentication &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="up" title="Quick Tutorial for Pyramid" href="index.html" />
+    <link rel="next" title="21: Protecting Resources With Authorization" href="authorization.html" />
+    <link rel="prev" title="19: Databases Using SQLAlchemy" href="databases.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="authorization.html" title="21: Protecting Resources With Authorization"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="databases.html" title="19: Databases Using SQLAlchemy"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Quick Tutorial for Pyramid</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="logins-with-authentication">
+<h1>20: Logins With Authentication<a class="headerlink" href="#logins-with-authentication" title="Permalink to this headline">¶</a></h1>
+<p>Login views that authenticate a username/password against a list of
+users.</p>
+<div class="section" id="background">
+<h2>Background<a class="headerlink" href="#background" title="Permalink to this headline">¶</a></h2>
+<p>Most web applications have URLs that allow people to add/edit/delete
+content via a web browser. Time to add
+<a class="reference internal" href="../narr/security.html#security-chapter"><em>security</em></a>
+to the application. In this first step we introduce authentication.
+That is, logging in and logging out using Pyramid's rich facilities for
+pluggable user storages.</p>
+<p>In the next step we will introduce protection resources with
+authorization security statements.</p>
+</div>
+<div class="section" id="objectives">
+<h2>Objectives<a class="headerlink" href="#objectives" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Introduce the Pyramid concepts of authentication</li>
+<li>Create login/logout views</li>
+</ul>
+</div>
+<div class="section" id="steps">
+<h2>Steps<a class="headerlink" href="#steps" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">We are going to use the view classes step as our starting point:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span><span class="nb">cd</span> ..; cp -r view_classes authentication; <span class="nb">cd </span>authentication
+<span class="nv">$ $VENV</span>/bin/python setup.py develop
+</pre></div>
+</div>
+</li>
+<li><p class="first">Put the security hash in the <tt class="docutils literal"><span class="pre">authentication/development.ini</span></tt>
+configuration file as <tt class="docutils literal"><span class="pre">tutorial.secret</span></tt> instead of putting it in
+the code:</p>
+<div class="highlight-ini"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">[app:main]</span>
+<span class="na">use</span> <span class="o">=</span> <span class="s">egg:tutorial</span>
+<span class="na">pyramid.reload_templates</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">pyramid.includes</span> <span class="o">=</span><span class="s"></span>
+<span class="s">    pyramid_debugtoolbar</span>
+<span class="na">tutorial.secret</span> <span class="o">=</span> <span class="s">98zd</span>
+
+<span class="k">[server:main]</span>
+<span class="na">use</span> <span class="o">=</span> <span class="s">egg:pyramid#wsgiref</span>
+<span class="na">host</span> <span class="o">=</span> <span class="s">0.0.0.0</span>
+<span class="na">port</span> <span class="o">=</span> <span class="s">6543</span>
+
+<span class="c1"># Begin logging configuration</span>
+
+<span class="k">[loggers]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">root, tutorial</span>
+
+<span class="k">[logger_tutorial]</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">DEBUG</span>
+<span class="na">handlers</span> <span class="o">=</span>
+<span class="na">qualname</span> <span class="o">=</span> <span class="s">tutorial</span>
+
+<span class="k">[handlers]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">console</span>
+
+<span class="k">[formatters]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">generic</span>
+
+<span class="k">[logger_root]</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">INFO</span>
+<span class="na">handlers</span> <span class="o">=</span> <span class="s">console</span>
+
+<span class="k">[handler_console]</span>
+<span class="na">class</span> <span class="o">=</span> <span class="s">StreamHandler</span>
+<span class="na">args</span> <span class="o">=</span> <span class="s">(sys.stderr,)</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">NOTSET</span>
+<span class="na">formatter</span> <span class="o">=</span> <span class="s">generic</span>
+
+<span class="k">[formatter_generic]</span>
+<span class="na">format</span> <span class="o">=</span> <span class="s">%(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s</span>
+
+<span class="c1"># End logging configuration</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Get authentication (and for now, authorization policies) and login
+route into the <a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">configurator</em></a> in
+<tt class="docutils literal"><span class="pre">authentication/tutorial/__init__.py</span></tt>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.authentication</span> <span class="kn">import</span> <span class="n">AuthTktAuthenticationPolicy</span>
+<span class="kn">from</span> <span class="nn">pyramid.authorization</span> <span class="kn">import</span> <span class="n">ACLAuthorizationPolicy</span>
+<span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+
+<span class="kn">from</span> <span class="nn">.security</span> <span class="kn">import</span> <span class="n">groupfinder</span>
+
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">global_config</span><span class="p">,</span> <span class="o">**</span><span class="n">settings</span><span class="p">):</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">(</span><span class="n">settings</span><span class="o">=</span><span class="n">settings</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="s">&#39;pyramid_chameleon&#39;</span><span class="p">)</span>
+
+    <span class="c"># Security policies</span>
+    <span class="n">authn_policy</span> <span class="o">=</span> <span class="n">AuthTktAuthenticationPolicy</span><span class="p">(</span>
+        <span class="n">settings</span><span class="p">[</span><span class="s">&#39;tutorial.secret&#39;</span><span class="p">],</span> <span class="n">callback</span><span class="o">=</span><span class="n">groupfinder</span><span class="p">,</span>
+        <span class="n">hashalg</span><span class="o">=</span><span class="s">&#39;sha512&#39;</span><span class="p">)</span>
+    <span class="n">authz_policy</span> <span class="o">=</span> <span class="n">ACLAuthorizationPolicy</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">set_authentication_policy</span><span class="p">(</span><span class="n">authn_policy</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">set_authorization_policy</span><span class="p">(</span><span class="n">authz_policy</span><span class="p">)</span>
+
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;home&#39;</span><span class="p">,</span> <span class="s">&#39;/&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;hello&#39;</span><span class="p">,</span> <span class="s">&#39;/howdy&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;login&#39;</span><span class="p">,</span> <span class="s">&#39;/login&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;logout&#39;</span><span class="p">,</span> <span class="s">&#39;/logout&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="s">&#39;.views&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Create a <tt class="docutils literal"><span class="pre">authentication/tutorial/security.py</span></tt> module that can find
+our user information by providing an <em>authentication policy callback</em>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">USERS</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;editor&#39;</span><span class="p">:</span> <span class="s">&#39;editor&#39;</span><span class="p">,</span>
+         <span class="s">&#39;viewer&#39;</span><span class="p">:</span> <span class="s">&#39;viewer&#39;</span><span class="p">}</span>
+<span class="n">GROUPS</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;editor&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s">&#39;group:editors&#39;</span><span class="p">]}</span>
+
+
+<span class="k">def</span> <span class="nf">groupfinder</span><span class="p">(</span><span class="n">userid</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">userid</span> <span class="ow">in</span> <span class="n">USERS</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">GROUPS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">userid</span><span class="p">,</span> <span class="p">[])</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Update the views in <tt class="docutils literal"><span class="pre">authentication/tutorial/views.py</span></tt>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.httpexceptions</span> <span class="kn">import</span> <span class="n">HTTPFound</span>
+<span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">remember</span><span class="p">,</span>
+    <span class="n">forget</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.view</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">view_config</span><span class="p">,</span>
+    <span class="n">view_defaults</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">.security</span> <span class="kn">import</span> <span class="n">USERS</span>
+
+
+<span class="nd">@view_defaults</span><span class="p">(</span><span class="n">renderer</span><span class="o">=</span><span class="s">&#39;home.pt&#39;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">TutorialViews</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">request</span> <span class="o">=</span> <span class="n">request</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logged_in</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">authenticated_userid</span>
+
+    <span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;home&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">home</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;Home View&#39;</span><span class="p">}</span>
+
+    <span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;hello&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;Hello View&#39;</span><span class="p">}</span>
+
+    <span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;login&#39;</span><span class="p">,</span> <span class="n">renderer</span><span class="o">=</span><span class="s">&#39;login.pt&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">login</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">request</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span>
+        <span class="n">login_url</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">route_url</span><span class="p">(</span><span class="s">&#39;login&#39;</span><span class="p">)</span>
+        <span class="n">referrer</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">url</span>
+        <span class="k">if</span> <span class="n">referrer</span> <span class="o">==</span> <span class="n">login_url</span><span class="p">:</span>
+            <span class="n">referrer</span> <span class="o">=</span> <span class="s">&#39;/&#39;</span>  <span class="c"># never use login form itself as came_from</span>
+        <span class="n">came_from</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;came_from&#39;</span><span class="p">,</span> <span class="n">referrer</span><span class="p">)</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="n">login</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="n">password</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="k">if</span> <span class="s">&#39;form.submitted&#39;</span> <span class="ow">in</span> <span class="n">request</span><span class="o">.</span><span class="n">params</span><span class="p">:</span>
+            <span class="n">login</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;login&#39;</span><span class="p">]</span>
+            <span class="n">password</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;password&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">USERS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">login</span><span class="p">)</span> <span class="o">==</span> <span class="n">password</span><span class="p">:</span>
+                <span class="n">headers</span> <span class="o">=</span> <span class="n">remember</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">login</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">HTTPFound</span><span class="p">(</span><span class="n">location</span><span class="o">=</span><span class="n">came_from</span><span class="p">,</span>
+                                 <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="s">&#39;Failed login&#39;</span>
+
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s">&#39;Login&#39;</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="n">message</span><span class="p">,</span>
+            <span class="n">url</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">application_url</span> <span class="o">+</span> <span class="s">&#39;/login&#39;</span><span class="p">,</span>
+            <span class="n">came_from</span><span class="o">=</span><span class="n">came_from</span><span class="p">,</span>
+            <span class="n">login</span><span class="o">=</span><span class="n">login</span><span class="p">,</span>
+            <span class="n">password</span><span class="o">=</span><span class="n">password</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;logout&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">logout</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">request</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="n">forget</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">route_url</span><span class="p">(</span><span class="s">&#39;home&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">HTTPFound</span><span class="p">(</span><span class="n">location</span><span class="o">=</span><span class="n">url</span><span class="p">,</span>
+                         <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Add a login template at <tt class="docutils literal"><span class="pre">authentication/tutorial/login.pt</span></tt>:</p>
+<div class="highlight-html"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25</pre></div></td><td class="code"><div class="highlight"><pre><span class="cp">&lt;!DOCTYPE html&gt;</span>
+<span class="nt">&lt;html</span> <span class="na">lang=</span><span class="s">&quot;en&quot;</span><span class="nt">&gt;</span>
+<span class="nt">&lt;head&gt;</span>
+    <span class="nt">&lt;title&gt;</span>Quick Tour: ${name}<span class="nt">&lt;/title&gt;</span>
+<span class="nt">&lt;/head&gt;</span>
+<span class="nt">&lt;body&gt;</span>
+<span class="nt">&lt;h1&gt;</span>Login<span class="nt">&lt;/h1&gt;</span>
+<span class="nt">&lt;span</span> <span class="na">tal:replace=</span><span class="s">&quot;message&quot;</span><span class="nt">/&gt;</span>
+
+<span class="nt">&lt;form</span> <span class="na">action=</span><span class="s">&quot;${url}&quot;</span> <span class="na">method=</span><span class="s">&quot;post&quot;</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">&quot;hidden&quot;</span> <span class="na">name=</span><span class="s">&quot;came_from&quot;</span>
+           <span class="na">value=</span><span class="s">&quot;${came_from}&quot;</span><span class="nt">/&gt;</span>
+    <span class="nt">&lt;label</span> <span class="na">for=</span><span class="s">&quot;login&quot;</span><span class="nt">&gt;</span>Username<span class="nt">&lt;/label&gt;</span>
+    <span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">&quot;text&quot;</span> <span class="na">id=</span><span class="s">&quot;login&quot;</span>
+           <span class="na">name=</span><span class="s">&quot;login&quot;</span>
+           <span class="na">value=</span><span class="s">&quot;${login}&quot;</span><span class="nt">/&gt;&lt;br/&gt;</span>
+    <span class="nt">&lt;label</span> <span class="na">for=</span><span class="s">&quot;password&quot;</span><span class="nt">&gt;</span>Password<span class="nt">&lt;/label&gt;</span>
+    <span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">&quot;password&quot;</span> <span class="na">id=</span><span class="s">&quot;password&quot;</span>
+           <span class="na">name=</span><span class="s">&quot;password&quot;</span>
+           <span class="na">value=</span><span class="s">&quot;${password}&quot;</span><span class="nt">/&gt;&lt;br/&gt;</span>
+    <span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">&quot;submit&quot;</span> <span class="na">name=</span><span class="s">&quot;form.submitted&quot;</span>
+           <span class="na">value=</span><span class="s">&quot;Log In&quot;</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;/form&gt;</span>
+<span class="nt">&lt;/body&gt;</span>
+<span class="nt">&lt;/html&gt;</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Provide a login/logout box in <tt class="docutils literal"><span class="pre">authentication/tutorial/home.pt</span></tt></p>
+<div class="highlight-html"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18</pre></div></td><td class="code"><div class="highlight"><pre><span class="cp">&lt;!DOCTYPE html&gt;</span>
+<span class="nt">&lt;html</span> <span class="na">lang=</span><span class="s">&quot;en&quot;</span><span class="nt">&gt;</span>
+<span class="nt">&lt;head&gt;</span>
+    <span class="nt">&lt;title&gt;</span>Quick Tour: ${name}<span class="nt">&lt;/title&gt;</span>
+<span class="nt">&lt;/head&gt;</span>
+<span class="nt">&lt;body&gt;</span>
+
+<span class="nt">&lt;div&gt;</span>
+    <span class="nt">&lt;a</span> <span class="na">tal:condition=</span><span class="s">&quot;view.logged_in is None&quot;</span>
+            <span class="na">href=</span><span class="s">&quot;${request.application_url}/login&quot;</span><span class="nt">&gt;</span>Log In<span class="nt">&lt;/a&gt;</span>
+    <span class="nt">&lt;a</span> <span class="na">tal:condition=</span><span class="s">&quot;view.logged_in is not None&quot;</span>
+            <span class="na">href=</span><span class="s">&quot;${request.application_url}/logout&quot;</span><span class="nt">&gt;</span>Logout<span class="nt">&lt;/a&gt;</span>
+<span class="nt">&lt;/div&gt;</span>
+
+<span class="nt">&lt;h1&gt;</span>Hi ${name}<span class="nt">&lt;/h1&gt;</span>
+<span class="nt">&lt;p&gt;</span>Visit <span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">&quot;${request.route_url(&#39;hello&#39;)}&quot;</span><span class="nt">&gt;</span>hello<span class="nt">&lt;/a&gt;&lt;/p&gt;</span>
+<span class="nt">&lt;/body&gt;</span>
+<span class="nt">&lt;/html&gt;</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Run your Pyramid application with:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ $VENV</span>/bin/pserve development.ini --reload
+</pre></div>
+</div>
+</li>
+<li><p class="first">Open <a class="reference external" href="http://localhost:6543/">http://localhost:6543/</a> in a browser.</p>
+</li>
+<li><p class="first">Click the &quot;Log In&quot; link.</p>
+</li>
+<li><p class="first">Submit the login form with the username <tt class="docutils literal"><span class="pre">editor</span></tt> and the password
+<tt class="docutils literal"><span class="pre">editor</span></tt>.</p>
+</li>
+<li><p class="first">Note that the &quot;Log In&quot; link has changed to &quot;Logout&quot;.</p>
+</li>
+<li><p class="first">Click the &quot;Logout&quot; link.</p>
+</li>
+</ol>
+</div>
+<div class="section" id="analysis">
+<h2>Analysis<a class="headerlink" href="#analysis" title="Permalink to this headline">¶</a></h2>
+<p>Unlike many web frameworks, Pyramid includes a built-in (but optional)
+security model for authentication and authorization. This security
+system is intended to be flexible and support many needs. In this
+security model, authentication (who are you) and authorization (what
+are you allowed to do) are not just pluggable, but de-coupled. To learn
+one step at a time, we provide a system that identifies users and lets
+them log out.</p>
+<p>In this example we chose to use the bundled
+<a class="reference internal" href="../api/authentication.html#authentication-module"><em>AuthTktAuthenticationPolicy</em></a>
+policy. We enabled it in our configuration and provided a
+ticket-signing secret in our INI file.</p>
+<p>Our view class grew a login view. When you reached it via a GET,
+it returned a login form. When reached via POST, it processed the
+username and password against the &quot;groupfinder&quot; callable that we
+registered in the configuration.</p>
+<p>In our template, we fetched the <tt class="docutils literal"><span class="pre">logged_in</span></tt> value from the view
+class. We use this to calculate the logged-in user,
+if any. In the template we can then choose to show a login link to
+anonymous visitors or a logout link to logged-in users.</p>
+</div>
+<div class="section" id="extra-credit">
+<h2>Extra Credit<a class="headerlink" href="#extra-credit" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>What is the difference between a user and a principal?</li>
+<li>Can I use a database behind my <tt class="docutils literal"><span class="pre">groupfinder</span></tt> to look up principals?</li>
+<li>Do I have to put a <tt class="docutils literal"><span class="pre">renderer</span></tt> in my <tt class="docutils literal"><span class="pre">&#64;forbidden_view_config</span></tt>
+decorator?</li>
+<li>Once I am logged in, does any user-centric information get jammed
+onto each request? Use <tt class="docutils literal"><span class="pre">import</span> <span class="pre">pdb;</span> <span class="pre">pdb.set_trace()</span></tt> to answer
+this.</li>
+</ol>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last">See also <a class="reference internal" href="../narr/security.html#security-chapter"><em>Security</em></a>,
+<a class="reference internal" href="../api/authentication.html#authentication-module"><em>AuthTktAuthenticationPolicy</em></a>.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">20: Logins With Authentication</a><ul>
+<li><a class="reference internal" href="#background">Background</a></li>
+<li><a class="reference internal" href="#objectives">Objectives</a></li>
+<li><a class="reference internal" href="#steps">Steps</a></li>
+<li><a class="reference internal" href="#analysis">Analysis</a></li>
+<li><a class="reference internal" href="#extra-credit">Extra Credit</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="databases.html"
+                        title="previous chapter">19: Databases Using SQLAlchemy</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="authorization.html"
+                        title="next chapter">21: Protecting Resources With Authorization</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="authorization.html" title="21: Protecting Resources With Authorization"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="databases.html" title="19: Databases Using SQLAlchemy"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" >Quick Tutorial for Pyramid</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

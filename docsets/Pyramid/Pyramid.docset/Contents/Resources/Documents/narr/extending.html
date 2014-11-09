@@ -1,0 +1,407 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Extending An Existing Pyramid Application &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="next" title="Advanced Configuration" href="advconfig.html" />
+    <link rel="prev" title="Pyramid Configuration Introspection" href="introspector.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="advconfig.html" title="Advanced Configuration"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="introspector.html" title="Pyramid Configuration Introspection"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="extending-an-existing-pyramid-application">
+<span id="extending-chapter"></span><h1>Extending An Existing <span>Pyramid</span> Application<a class="headerlink" href="#extending-an-existing-pyramid-application" title="Permalink to this headline">¶</a></h1>
+<p>If a <span>Pyramid</span> developer has obeyed certain constraints while building
+an application, a third party should be able to change the application's
+behavior without needing to modify its source code.  The behavior of a
+<span>Pyramid</span> application that obeys certain constraints can be <em>overridden</em>
+or <em>extended</em> without modification.</p>
+<p>We'll define some jargon here for the benefit of identifying the parties
+involved in such an effort.</p>
+<dl class="docutils">
+<dt>Developer</dt>
+<dd>The original application developer.</dd>
+<dt>Integrator</dt>
+<dd>Another developer who wishes to reuse the application written by the
+original application developer in an unanticipated context.  He may also
+wish to modify the original application without changing the original
+application's source code.</dd>
+</dl>
+<div class="section" id="the-difference-between-extensible-and-pluggable-applications">
+<h2>The Difference Between &quot;Extensible&quot; and &quot;Pluggable&quot; Applications<a class="headerlink" href="#the-difference-between-extensible-and-pluggable-applications" title="Permalink to this headline">¶</a></h2>
+<p>Other web frameworks, such as <a class="reference internal" href="../glossary.html#term-django"><em class="xref std std-term">Django</em></a>, advertise that they allow
+developers to create &quot;pluggable applications&quot;.  They claim that if you create
+an application in a certain way, it will be integratable in a sensible,
+structured way into another arbitrarily-written application or project
+created by a third-party developer.</p>
+<p><span>Pyramid</span>, as a platform, does not claim to provide such a feature.  The
+platform provides no guarantee that you can create an application and package
+it up such that an arbitrary integrator can use it as a subcomponent in a
+larger Pyramid application or project.  Pyramid does not mandate the
+constraints necessary for such a pattern to work satisfactorily.  Because
+Pyramid is not very &quot;opinionated&quot;, developers are able to use wildly
+different patterns and technologies to build an application.  A given Pyramid
+application may happen to be reusable by a particular third party integrator,
+because the integrator and the original developer may share similar base
+technology choices (such as the use of a particular relational database or
+ORM).  But the same application may not be reusable by a different developer,
+because he has made different technology choices which are incompatible with
+the original developer's.</p>
+<p>As a result, the concept of a &quot;pluggable application&quot; is left to layers built
+above Pyramid, such as a &quot;CMS&quot; layer or &quot;application server&quot; layer.  Such
+layers are apt to provide the necessary &quot;opinions&quot; (such as mandating a
+storage layer, a templating system, and a structured, well-documented pattern
+of registering that certain URLs map to certain bits of code) which makes the
+concept of a &quot;pluggable application&quot; possible.  &quot;Pluggable applications&quot;,
+thus, should not plug into Pyramid itself but should instead plug into a
+system written atop Pyramid.</p>
+<p>Although it does not provide for &quot;pluggable applications&quot;, Pyramid <em>does</em>
+provide a rich set of mechanisms which allows for the extension of a single
+existing application.  Such features can be used by frameworks built using
+Pyramid as a base.  All Pyramid applications may not be <em>pluggable</em>, but all
+Pyramid applications are <em>extensible</em>.</p>
+</div>
+<div class="section" id="rules-for-building-an-extensible-application">
+<span id="building-an-extensible-app"></span><span id="index-0"></span><h2>Rules for Building An Extensible Application<a class="headerlink" href="#rules-for-building-an-extensible-application" title="Permalink to this headline">¶</a></h2>
+<p>There is only one rule you need to obey if you want to build a maximally
+extensible <span>Pyramid</span> application: as a developer, you should factor any
+overrideable <a class="reference internal" href="../glossary.html#term-imperative-configuration"><em class="xref std std-term">imperative configuration</em></a> you've created into functions
+which can be used via <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.include" title="pyramid.config.Configurator.include"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.include()</span></tt></a> rather than
+inlined as calls to methods of a <a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">Configurator</em></a> within the <tt class="docutils literal"><span class="pre">main</span></tt>
+function in your application's <tt class="docutils literal"><span class="pre">__init__.py</span></tt>.  For example, rather than:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;myapp.views.view1&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;view1&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;myapp.views.view2&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;view2&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>You should move the calls to <tt class="docutils literal"><span class="pre">add_view</span></tt> outside of the (non-reusable)
+<tt class="docutils literal"><span class="pre">if</span> <span class="pre">__name__</span> <span class="pre">==</span> <span class="pre">'__main__'</span></tt> block, and into a reusable function:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="n">add_views</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">add_views</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;myapp.views.view1&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;view1&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;myapp.views.view2&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;view2&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Doing this allows an integrator to maximally reuse the configuration
+statements that relate to your application by allowing him to selectively
+include or disinclude the configuration functions you've created from an
+&quot;override package&quot;.</p>
+<p>Alternately, you can use <a class="reference internal" href="../glossary.html#term-zcml"><em class="xref std std-term">ZCML</em></a> for the purpose of making configuration
+extensible and overrideable. <a class="reference internal" href="../glossary.html#term-zcml"><em class="xref std std-term">ZCML</em></a> declarations that belong to an
+application can be overridden and extended by integrators as necessary in a
+similar fashion.  If you use only <a class="reference internal" href="../glossary.html#term-zcml"><em class="xref std std-term">ZCML</em></a> to configure your application,
+it will automatically be maximally extensible without any manual effort.  See
+<a class="reference internal" href="../glossary.html#term-pyramid-zcml"><em class="xref std std-term">pyramid_zcml</em></a> for information about using ZCML.</p>
+<div class="section" id="fundamental-plugpoints">
+<h3>Fundamental Plugpoints<a class="headerlink" href="#fundamental-plugpoints" title="Permalink to this headline">¶</a></h3>
+<p>The fundamental &quot;plug points&quot; of an application developed using
+<span>Pyramid</span> are <em>routes</em>, <em>views</em>, and <em>assets</em>.  Routes are declarations
+made using the <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_route()</span></tt></a> method.  Views
+are declarations made using the <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_view" title="pyramid.config.Configurator.add_view"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_view()</span></tt></a>
+method.  Assets are files that are
+accessed by <span>Pyramid</span> using the <a class="reference internal" href="../glossary.html#term-pkg-resources"><em class="xref std std-term">pkg_resources</em></a> API such as static
+files and templates via a <a class="reference internal" href="../glossary.html#term-asset-specification"><em class="xref std std-term">asset specification</em></a>.  Other directives and
+configurator methods also deal in routes, views, and assets.  For example, the
+<tt class="docutils literal"><span class="pre">add_handler</span></tt> directive of the <tt class="docutils literal"><span class="pre">pyramid_handlers</span></tt> package adds a single
+route, and some number of views.</p>
+</div>
+</div>
+<div class="section" id="extending-an-existing-application">
+<span id="index-1"></span><h2>Extending an Existing Application<a class="headerlink" href="#extending-an-existing-application" title="Permalink to this headline">¶</a></h2>
+<p>The steps for extending an existing application depend largely on whether the
+application does or does not use configuration decorators and/or imperative
+code.</p>
+<div class="section" id="if-the-application-has-configuration-decorations">
+<h3>If The Application Has Configuration Decorations<a class="headerlink" href="#if-the-application-has-configuration-decorations" title="Permalink to this headline">¶</a></h3>
+<p>You've inherited a <span>Pyramid</span> application which you'd like to extend or
+override that uses <a class="reference internal" href="../api/view.html#pyramid.view.view_config" title="pyramid.view.view_config"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.view.view_config</span></tt></a> decorators or other
+<a class="reference internal" href="../glossary.html#term-configuration-decoration"><em class="xref std std-term">configuration decoration</em></a> decorators.</p>
+<p>If you just want to <em>extend</em> the application, you can run a <a class="reference internal" href="../glossary.html#term-scan"><em class="xref std std-term">scan</em></a>
+against the application's package, then add additional configuration that
+registers more views or routes.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="s">&#39;someotherpackage&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;mypackage.views.myview&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;myview&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>If you want to <em>override</em> configuration in the application, you <em>may</em> need to
+run <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.commit" title="pyramid.config.Configurator.commit"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.commit()</span></tt></a> after performing the scan of
+the original package, then add additional configuration that registers more
+views or routes which performs overrides.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="s">&#39;someotherpackage&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;mypackage.views.myview&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;myview&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Once this is done, you should be able to extend or override the application
+like any other (see <a class="reference internal" href="#extending-the-application"><em>Extending the Application</em></a>).</p>
+<p>You can alternately just prevent a <a class="reference internal" href="../glossary.html#term-scan"><em class="xref std std-term">scan</em></a> from happening (by omitting
+any call to the <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.scan" title="pyramid.config.Configurator.scan"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.scan()</span></tt></a> method).  This will
+cause the decorators attached to objects in the target application to do
+nothing.  At this point, you will need to convert all the configuration done
+in decorators into equivalent imperative configuration or ZCML and add that
+configuration or ZCML to a separate Python package as described in
+<a class="reference internal" href="#extending-the-application"><em>Extending the Application</em></a>.</p>
+</div>
+<div class="section" id="extending-the-application">
+<span id="id1"></span><h3>Extending the Application<a class="headerlink" href="#extending-the-application" title="Permalink to this headline">¶</a></h3>
+<p>To extend or override the behavior of an existing application, you will need
+to create a new package which includes the configuration of the old package,
+and you'll perhaps need to create implementations of the types of things
+you'd like to override (such as views), which are referred to within the
+original package.</p>
+<p>The general pattern for extending an existing application looks something
+like this:</p>
+<ul class="simple">
+<li>Create a new Python package.  The easiest way to do this is to create a new
+<span>Pyramid</span> application using the scaffold mechanism.  See
+<a class="reference internal" href="project.html#creating-a-project"><em>Creating the Project</em></a> for more information.</li>
+<li>In the new package, create Python files containing views and other
+overridden elements, such as templates and static assets as necessary.</li>
+<li>Install the new package into the same Python environment as the original
+application (e.g. <tt class="docutils literal"><span class="pre">$VENV/bin/python</span> <span class="pre">setup.py</span> <span class="pre">develop</span></tt> or
+<tt class="docutils literal"><span class="pre">$VENV/bin/python</span> <span class="pre">setup.py</span> <span class="pre">install</span></tt>).</li>
+<li>Change the <tt class="docutils literal"><span class="pre">main</span></tt> function in the new package's <tt class="docutils literal"><span class="pre">__init__.py</span></tt> to include
+the original <span>Pyramid</span> application's configuration functions via
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.include" title="pyramid.config.Configurator.include"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.include()</span></tt></a> statements or a <a class="reference internal" href="../glossary.html#term-scan"><em class="xref std std-term">scan</em></a>.</li>
+<li>Wire the new views and assets created in the new package up using
+imperative registrations within the <tt class="docutils literal"><span class="pre">main</span></tt> function of the
+<tt class="docutils literal"><span class="pre">__init__.py</span></tt> file of the new application.  This wiring should happen
+<em>after</em> including the configuration functions of the old application.
+These registrations will extend or override any registrations performed by
+the original application.  See <a class="reference internal" href="#overriding-views"><em>Overriding Views</em></a>,
+<a class="reference internal" href="#overriding-routes"><em>Overriding Routes</em></a> and <a class="reference internal" href="#overriding-resources"><em>Overriding Assets</em></a>.</li>
+</ul>
+</div>
+<div class="section" id="overriding-views">
+<span id="index-2"></span><span id="id2"></span><h3>Overriding Views<a class="headerlink" href="#overriding-views" title="Permalink to this headline">¶</a></h3>
+<p>The <a class="reference internal" href="../glossary.html#term-view-configuration"><em class="xref std std-term">view configuration</em></a> declarations you make which <em>override</em>
+application behavior will usually have the same <a class="reference internal" href="../glossary.html#term-view-predicate"><em class="xref std std-term">view predicate</em></a>
+attributes as the original you wish to override.  These <tt class="docutils literal"><span class="pre">&lt;view&gt;</span></tt>
+declarations will point at &quot;new&quot; view code, in the override package you've
+created.  The new view code itself will usually be cut-n-paste copies of view
+callables from the original application with slight tweaks.</p>
+<p>For example, if the original application has the following
+<tt class="docutils literal"><span class="pre">configure_views</span></tt> configuration method:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">configure_views</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;theoriginalapp.views.theview&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;theview&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>You can override the first view configuration statement made by
+<tt class="docutils literal"><span class="pre">configure_views</span></tt> within the override package, after loading the original
+configuration function:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+<span class="kn">from</span> <span class="nn">originalapp</span> <span class="kn">import</span> <span class="n">configure_views</span>
+
+<span class="k">if</span> <span class="n">__name</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="n">configure_views</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;theoverrideapp.views.theview&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;theview&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>In this case, the <tt class="docutils literal"><span class="pre">theoriginalapp.views.theview</span></tt> view will never be
+executed.  Instead, a new view, <tt class="docutils literal"><span class="pre">theoverrideapp.views.theview</span></tt> will be
+executed instead, when request circumstances dictate.</p>
+<p>A similar pattern can be used to <em>extend</em> the application with <tt class="docutils literal"><span class="pre">add_view</span></tt>
+declarations.  Just register a new view against some other set of predicates
+to make sure the URLs it implies are available on some other page rendering.</p>
+</div>
+<div class="section" id="overriding-routes">
+<span id="index-3"></span><span id="id3"></span><h3>Overriding Routes<a class="headerlink" href="#overriding-routes" title="Permalink to this headline">¶</a></h3>
+<p>Route setup is currently typically performed in a sequence of ordered calls
+to <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">add_route()</span></tt></a>.  Because these calls are
+ordered relative to each other, and because this ordering is typically
+important, you should retain their relative ordering when performing an
+override.  Typically, this means <em>copying</em> all the <tt class="docutils literal"><span class="pre">add_route</span></tt> statements
+into the override package's file and changing them as necessary.  Then
+disinclude any <tt class="docutils literal"><span class="pre">add_route</span></tt> statements from the original application.</p>
+</div>
+<div class="section" id="overriding-assets">
+<span id="overriding-resources"></span><span id="index-4"></span><h3>Overriding Assets<a class="headerlink" href="#overriding-assets" title="Permalink to this headline">¶</a></h3>
+<p>Assets are files on the filesystem that are accessible within a Python
+<em>package</em>.  An entire chapter is devoted to assets: <a class="reference internal" href="assets.html#assets-chapter"><em>Static Assets</em></a>.
+Within this chapter is a section named <a class="reference internal" href="assets.html#overriding-assets-section"><em>Overriding Assets</em></a>.
+This section of that chapter describes in detail how to override package
+assets with other assets by using the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.override_asset" title="pyramid.config.Configurator.override_asset"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.override_asset()</span></tt></a> method.  Add such
+<tt class="docutils literal"><span class="pre">override_asset</span></tt> calls to your override package's <tt class="docutils literal"><span class="pre">__init__.py</span></tt> to
+perform overrides.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Extending An Existing <span>Pyramid</span> Application</a><ul>
+<li><a class="reference internal" href="#the-difference-between-extensible-and-pluggable-applications">The Difference Between &quot;Extensible&quot; and &quot;Pluggable&quot; Applications</a></li>
+<li><a class="reference internal" href="#rules-for-building-an-extensible-application">Rules for Building An Extensible Application</a><ul>
+<li><a class="reference internal" href="#fundamental-plugpoints">Fundamental Plugpoints</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#extending-an-existing-application">Extending an Existing Application</a><ul>
+<li><a class="reference internal" href="#if-the-application-has-configuration-decorations">If The Application Has Configuration Decorations</a></li>
+<li><a class="reference internal" href="#extending-the-application">Extending the Application</a></li>
+<li><a class="reference internal" href="#overriding-views">Overriding Views</a></li>
+<li><a class="reference internal" href="#overriding-routes">Overriding Routes</a></li>
+<li><a class="reference internal" href="#overriding-assets">Overriding Assets</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="introspector.html"
+                        title="previous chapter">Pyramid Configuration Introspection</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="advconfig.html"
+                        title="next chapter">Advanced Configuration</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="advconfig.html" title="Advanced Configuration"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="introspector.html" title="Pyramid Configuration Introspection"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

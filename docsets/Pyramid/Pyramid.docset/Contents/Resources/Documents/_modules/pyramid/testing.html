@@ -1,0 +1,744 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.testing &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.testing</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+
+<span class="kn">from</span> <span class="nn">zope.interface</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">implementer</span><span class="p">,</span>
+    <span class="n">alsoProvides</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">IRequest</span><span class="p">,</span>
+    <span class="n">IResponseFactory</span><span class="p">,</span>
+    <span class="n">ISession</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.compat</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">PY3</span><span class="p">,</span>
+    <span class="n">PYPY</span><span class="p">,</span>
+    <span class="n">class_types</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+<span class="kn">from</span> <span class="nn">pyramid.decorator</span> <span class="kn">import</span> <span class="n">reify</span>
+<span class="kn">from</span> <span class="nn">pyramid.path</span> <span class="kn">import</span> <span class="n">caller_package</span>
+<span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+<span class="kn">from</span> <span class="nn">pyramid.registry</span> <span class="kn">import</span> <span class="n">Registry</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Authenticated</span><span class="p">,</span>
+    <span class="n">Everyone</span><span class="p">,</span>
+    <span class="n">AuthenticationAPIMixin</span><span class="p">,</span>
+    <span class="n">AuthorizationAPIMixin</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.threadlocal</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">get_current_registry</span><span class="p">,</span>
+    <span class="n">manager</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.i18n</span> <span class="kn">import</span> <span class="n">LocalizerRequestMixin</span>
+<span class="kn">from</span> <span class="nn">pyramid.request</span> <span class="kn">import</span> <span class="n">CallbackMethodsMixin</span>
+<span class="kn">from</span> <span class="nn">pyramid.url</span> <span class="kn">import</span> <span class="n">URLMethodsMixin</span>
+<span class="kn">from</span> <span class="nn">pyramid.util</span> <span class="kn">import</span> <span class="n">InstancePropertyMixin</span>
+
+<span class="n">_marker</span> <span class="o">=</span> <span class="nb">object</span><span class="p">()</span>
+
+<span class="k">class</span> <span class="nc">DummyRootFactory</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="n">__parent__</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">__name__</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s">&#39;bfg.routes.matchdict&#39;</span> <span class="ow">in</span> <span class="n">request</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">request</span><span class="p">[</span><span class="s">&#39;bfg.routes.matchdict&#39;</span><span class="p">])</span>
+
+<span class="k">class</span> <span class="nc">DummySecurityPolicy</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A standin for both an IAuthentication and IAuthorization policy &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">userid</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">groupids</span><span class="o">=</span><span class="p">(),</span> <span class="n">permissive</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                 <span class="n">remember_result</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">forget_result</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">userid</span> <span class="o">=</span> <span class="n">userid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">groupids</span> <span class="o">=</span> <span class="n">groupids</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">permissive</span> <span class="o">=</span> <span class="n">permissive</span>
+        <span class="k">if</span> <span class="n">remember_result</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">remember_result</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">forget_result</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">forget_result</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">remember_result</span> <span class="o">=</span> <span class="n">remember_result</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">forget_result</span> <span class="o">=</span> <span class="n">forget_result</span>
+
+    <span class="k">def</span> <span class="nf">authenticated_userid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">userid</span>
+
+    <span class="k">def</span> <span class="nf">unauthenticated_userid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">userid</span>
+
+    <span class="k">def</span> <span class="nf">effective_principals</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="n">effective_principals</span> <span class="o">=</span> <span class="p">[</span><span class="n">Everyone</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">userid</span><span class="p">:</span>
+            <span class="n">effective_principals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Authenticated</span><span class="p">)</span>
+            <span class="n">effective_principals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">userid</span><span class="p">)</span>
+            <span class="n">effective_principals</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">groupids</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">effective_principals</span>
+
+    <span class="k">def</span> <span class="nf">remember</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">principal</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">remembered</span> <span class="o">=</span> <span class="n">principal</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">remember_result</span>
+
+    <span class="k">def</span> <span class="nf">forget</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">forgotten</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">forget_result</span>
+
+    <span class="k">def</span> <span class="nf">permits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">principals</span><span class="p">,</span> <span class="n">permission</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">permissive</span>
+
+    <span class="k">def</span> <span class="nf">principals_allowed_by_permission</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">permission</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">effective_principals</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DummyTemplateRenderer"><a class="viewcode-back" href="../../api/testing.html#pyramid.testing.DummyTemplateRenderer">[docs]</a><span class="k">class</span> <span class="nc">DummyTemplateRenderer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    An instance of this class is returned from</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.testing_add_renderer`.  It has a</span>
+<span class="sd">    helper function (``assert_``) that makes it possible to make an</span>
+<span class="sd">    assertion which compares data passed to the renderer by the view</span>
+<span class="sd">    function against expected key/value pairs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">string_response</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_received</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_string_response</span> <span class="o">=</span> <span class="n">string_response</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_implementation</span> <span class="o">=</span> <span class="n">MockTemplate</span><span class="p">(</span><span class="n">string_response</span><span class="p">)</span>
+
+    <span class="c"># For in-the-wild test code that doesn&#39;t create its own renderer,</span>
+    <span class="c"># but mutates our internals instead.  When all you read is the</span>
+    <span class="c"># source code, *everything* is an API!</span>
+    <span class="k">def</span> <span class="nf">_get_string_response</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_string_response</span>
+    <span class="k">def</span> <span class="nf">_set_string_response</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">response</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_string_response</span> <span class="o">=</span> <span class="n">response</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_implementation</span><span class="o">.</span><span class="n">response</span> <span class="o">=</span> <span class="n">response</span>
+    <span class="n">string_response</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">_get_string_response</span><span class="p">,</span> <span class="n">_set_string_response</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">implementation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_implementation</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kw</span><span class="p">,</span> <span class="n">system</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">system</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_received</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">system</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_received</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kw</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">string_response</span>
+
+    <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Backwards compatibility &quot;&quot;&quot;</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_received</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">_marker</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">val</span> <span class="ow">is</span> <span class="n">_marker</span><span class="p">:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_implementation</span><span class="o">.</span><span class="n">_received</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">_marker</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">val</span> <span class="ow">is</span> <span class="n">_marker</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">val</span>
+
+<div class="viewcode-block" id="DummyTemplateRenderer.assert_"><a class="viewcode-back" href="../../api/testing.html#pyramid.testing.DummyTemplateRenderer.assert_">[docs]</a>    <span class="k">def</span> <span class="nf">assert_</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Accept an arbitrary set of assertion key/value pairs.  For</span>
+<span class="sd">        each assertion key/value pair assert that the renderer</span>
+<span class="sd">        (eg. :func:`pyramid.renderers.render_to_response`)</span>
+<span class="sd">        received the key with a value that equals the asserted</span>
+<span class="sd">        value. If the renderer did not receive the key at all, or the</span>
+<span class="sd">        value received by the renderer doesn&#39;t match the assertion</span>
+<span class="sd">        value, raise an :exc:`AssertionError`.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">kw</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">myval</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_received</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">_marker</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">myval</span> <span class="ow">is</span> <span class="n">_marker</span><span class="p">:</span>
+                <span class="n">myval</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_implementation</span><span class="o">.</span><span class="n">_received</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">_marker</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">myval</span> <span class="ow">is</span> <span class="n">_marker</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span>
+                        <span class="s">&#39;A value for key &quot;</span><span class="si">%s</span><span class="s">&quot; was not passed to the renderer&#39;</span>
+                        <span class="o">%</span> <span class="n">k</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">myval</span> <span class="o">!=</span> <span class="n">v</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span>
+                    <span class="s">&#39;</span><span class="se">\n</span><span class="s">asserted value for </span><span class="si">%s</span><span class="s">: </span><span class="si">%r</span><span class="se">\n</span><span class="s">actual value: </span><span class="si">%r</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                    <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">myval</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div></div>
+<div class="viewcode-block" id="DummyResource"><a class="viewcode-back" href="../../api/testing.html#pyramid.testing.DummyResource">[docs]</a><span class="k">class</span> <span class="nc">DummyResource</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot; A dummy :app:`Pyramid` :term:`resource` object.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">__name__</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">__parent__</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">__provides__</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; The resource&#39;s ``__name__`` attribute will be set to the</span>
+<span class="sd">        value of the ``__name__`` argument, and the resource&#39;s</span>
+<span class="sd">        ``__parent__`` attribute will be set to the value of the</span>
+<span class="sd">        ``__parent__`` argument.  If ``__provides__`` is specified, it</span>
+<span class="sd">        should be an interface object or tuple of interface objects</span>
+<span class="sd">        that will be attached to the resulting resource via</span>
+<span class="sd">        :func:`zope.interface.alsoProvides`. Any extra keywords passed</span>
+<span class="sd">        in the ``kw`` argumnent will be set as direct attributes of</span>
+<span class="sd">        the resource object.</span>
+
+<span class="sd">        .. note:: For backwards compatibility purposes, this class can also</span>
+<span class="sd">                  be imported as :class:`pyramid.testing.DummyModel`.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__name__</span> <span class="o">=</span> <span class="n">__name__</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__parent__</span> <span class="o">=</span> <span class="n">__parent__</span>
+        <span class="k">if</span> <span class="n">__provides__</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">alsoProvides</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">__provides__</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kw</span> <span class="o">=</span> <span class="n">kw</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subs</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; When the ``__setitem__`` method is called, the object</span>
+<span class="sd">        passed in as ``val`` will be decorated with a ``__parent__``</span>
+<span class="sd">        attribute pointing at the dummy resource and a ``__name__``</span>
+<span class="sd">        attribute that is the value of ``name``.  The value will then</span>
+<span class="sd">        be returned when dummy resource&#39;s ``__getitem__`` is called with</span>
+<span class="sd">        the name ``name```.&quot;&quot;&quot;</span>
+        <span class="n">val</span><span class="o">.</span><span class="n">__name__</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="n">val</span><span class="o">.</span><span class="n">__parent__</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subs</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return a named subobject (see ``__setitem__``)&quot;&quot;&quot;</span>
+        <span class="n">ob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">subs</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">ob</span>
+
+    <span class="k">def</span> <span class="nf">__delitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">subs</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">subs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">default</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DummyResource.values"><a class="viewcode-back" href="../../api/testing.html#pyramid.testing.DummyResource.values">[docs]</a>    <span class="k">def</span> <span class="nf">values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the values set by __setitem__ &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">subs</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="DummyResource.items"><a class="viewcode-back" href="../../api/testing.html#pyramid.testing.DummyResource.items">[docs]</a>    <span class="k">def</span> <span class="nf">items</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the items set by __setitem__ &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">subs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="DummyResource.keys"><a class="viewcode-back" href="../../api/testing.html#pyramid.testing.DummyResource.keys">[docs]</a>    <span class="k">def</span> <span class="nf">keys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the keys set by __setitem__ &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">subs</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+</div>
+    <span class="n">__iter__</span> <span class="o">=</span> <span class="n">keys</span>
+
+    <span class="k">def</span> <span class="nf">__nonzero__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="n">__bool__</span> <span class="o">=</span> <span class="n">__nonzero__</span>
+
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">subs</span>
+
+<div class="viewcode-block" id="DummyResource.clone"><a class="viewcode-back" href="../../api/testing.html#pyramid.testing.DummyResource.clone">[docs]</a>    <span class="k">def</span> <span class="nf">clone</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">__name__</span><span class="o">=</span><span class="n">_marker</span><span class="p">,</span> <span class="n">__parent__</span><span class="o">=</span><span class="n">_marker</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create a clone of the resource object.  If ``__name__`` or</span>
+<span class="sd">        ``__parent__`` arguments are passed, use these values to</span>
+<span class="sd">        override the existing ``__name__`` or ``__parent__`` of the</span>
+<span class="sd">        resource.  If any extra keyword args are passed in via the ``kw``</span>
+<span class="sd">        argument, use these keywords to add to or override existing</span>
+<span class="sd">        resource keywords (attributes).&quot;&quot;&quot;</span>
+        <span class="n">oldkw</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kw</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">oldkw</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kw</span><span class="p">)</span>
+        <span class="n">inst</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__parent__</span><span class="p">,</span> <span class="o">**</span><span class="n">oldkw</span><span class="p">)</span>
+        <span class="n">inst</span><span class="o">.</span><span class="n">subs</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">__name__</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">_marker</span><span class="p">:</span>
+            <span class="n">inst</span><span class="o">.</span><span class="n">__name__</span> <span class="o">=</span> <span class="n">__name__</span>
+        <span class="k">if</span> <span class="n">__parent__</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">_marker</span><span class="p">:</span>
+            <span class="n">inst</span><span class="o">.</span><span class="n">__parent__</span> <span class="o">=</span> <span class="n">__parent__</span>
+        <span class="k">return</span> <span class="n">inst</span>
+</div></div>
+<span class="n">DummyModel</span> <span class="o">=</span> <span class="n">DummyResource</span> <span class="c"># b/w compat (forever)</span>
+
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">ISession</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">DummySession</span><span class="p">(</span><span class="nb">dict</span><span class="p">):</span>
+    <span class="n">created</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">new</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="k">def</span> <span class="nf">changed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">invalidate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">flash</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">queue</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">allow_duplicate</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="n">storage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s">&#39;_f_&#39;</span> <span class="o">+</span> <span class="n">queue</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="k">if</span> <span class="n">allow_duplicate</span> <span class="ow">or</span> <span class="p">(</span><span class="n">msg</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">storage</span><span class="p">):</span>
+            <span class="n">storage</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">pop_flash</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queue</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">):</span>
+        <span class="n">storage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;_f_&#39;</span> <span class="o">+</span> <span class="n">queue</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="k">return</span> <span class="n">storage</span>
+
+    <span class="k">def</span> <span class="nf">peek_flash</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queue</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">):</span>
+        <span class="n">storage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;_f_&#39;</span> <span class="o">+</span> <span class="n">queue</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="k">return</span> <span class="n">storage</span>
+
+    <span class="k">def</span> <span class="nf">new_csrf_token</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="s">&#39;0123456789012345678901234567890123456789&#39;</span>
+        <span class="bp">self</span><span class="p">[</span><span class="s">&#39;_csrft_&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">token</span>
+        <span class="k">return</span> <span class="n">token</span>
+
+    <span class="k">def</span> <span class="nf">get_csrf_token</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;_csrft_&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">token</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_csrf_token</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">token</span>
+
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">IRequest</span><span class="p">)</span>
+<div class="viewcode-block" id="DummyRequest"><a class="viewcode-back" href="../../api/testing.html#pyramid.testing.DummyRequest">[docs]</a><span class="k">class</span> <span class="nc">DummyRequest</span><span class="p">(</span>
+    <span class="n">URLMethodsMixin</span><span class="p">,</span>
+    <span class="n">CallbackMethodsMixin</span><span class="p">,</span>
+    <span class="n">InstancePropertyMixin</span><span class="p">,</span>
+    <span class="n">LocalizerRequestMixin</span><span class="p">,</span>
+    <span class="n">AuthenticationAPIMixin</span><span class="p">,</span>
+    <span class="n">AuthorizationAPIMixin</span><span class="p">,</span>
+    <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A DummyRequest object (incompletely) imitates a :term:`request` object.</span>
+
+<span class="sd">    The ``params``, ``environ``, ``headers``, ``path``, and</span>
+<span class="sd">    ``cookies`` arguments correspond to their :term:`WebOb`</span>
+<span class="sd">    equivalents.</span>
+
+<span class="sd">    The ``post`` argument,  if passed, populates the request&#39;s</span>
+<span class="sd">    ``POST`` attribute, but *not* ``params``, in order to allow testing</span>
+<span class="sd">    that the app accepts data for a given view only from POST requests.</span>
+<span class="sd">    This argument also sets ``self.method`` to &quot;POST&quot;.</span>
+
+<span class="sd">    Extra keyword arguments are assigned as attributes of the request</span>
+<span class="sd">    itself.</span>
+
+<span class="sd">    Note that DummyRequest does not have complete fidelity with a &quot;real&quot;</span>
+<span class="sd">    request.  For example, by default, the DummyRequest ``GET`` and ``POST``</span>
+<span class="sd">    attributes are of type ``dict``, unlike a normal Request&#39;s GET and POST,</span>
+<span class="sd">    which are of type ``MultiDict``. If your code uses the features of</span>
+<span class="sd">    MultiDict, you should either use a real :class:`pyramid.request.Request`</span>
+<span class="sd">    or adapt your DummyRequest by replacing the attributes with ``MultiDict``</span>
+<span class="sd">    instances.</span>
+
+<span class="sd">    Other similar incompatibilities exist.  If you need all the features of</span>
+<span class="sd">    a Request, use the :class:`pyramid.request.Request` class itself rather</span>
+<span class="sd">    than this class while writing tests.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">method</span> <span class="o">=</span> <span class="s">&#39;GET&#39;</span>
+    <span class="n">application_url</span> <span class="o">=</span> <span class="s">&#39;http://example.com&#39;</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="s">&#39;example.com:80&#39;</span>
+    <span class="n">domain</span> <span class="o">=</span> <span class="s">&#39;example.com&#39;</span>
+    <span class="n">content_length</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">query_string</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="n">charset</span> <span class="o">=</span> <span class="s">&#39;UTF-8&#39;</span>
+    <span class="n">script_name</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="n">_registry</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">environ</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s">&#39;/&#39;</span><span class="p">,</span>
+                 <span class="n">cookies</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">post</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">environ</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">environ</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">headers</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">headers</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">cookies</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">cookies</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">environ</span> <span class="o">=</span> <span class="n">environ</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">headers</span> <span class="o">=</span> <span class="n">headers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="n">params</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cookies</span> <span class="o">=</span> <span class="n">cookies</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">matchdict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">GET</span> <span class="o">=</span> <span class="n">params</span>
+        <span class="k">if</span> <span class="n">post</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">=</span> <span class="s">&#39;POST&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">POST</span> <span class="o">=</span> <span class="n">post</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">POST</span> <span class="o">=</span> <span class="n">params</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">host_url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">application_url</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">application_url</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">application_url</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_info</span> <span class="o">=</span> <span class="n">path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">script_name</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_qs</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">body</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view_name</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subpath</span> <span class="o">=</span> <span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">traversed</span> <span class="o">=</span> <span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">virtual_root_path</span> <span class="o">=</span> <span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">context</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">virtual_root</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">marshalled</span> <span class="o">=</span> <span class="n">params</span> <span class="c"># repoze.monty</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">DummySession</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kw</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_registry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">get_current_registry</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span>
+
+    <span class="k">def</span> <span class="nf">_set_registry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">registry</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span> <span class="o">=</span> <span class="n">registry</span>
+
+    <span class="k">def</span> <span class="nf">_del_registry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_registry</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="n">registry</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">_get_registry</span><span class="p">,</span> <span class="n">_set_registry</span><span class="p">,</span> <span class="n">_del_registry</span><span class="p">)</span>
+
+    <span class="nd">@reify</span>
+    <span class="k">def</span> <span class="nf">response</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">f</span> <span class="o">=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">IResponseFactory</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">Response</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">f</span><span class="p">()</span>
+</div>
+<span class="n">have_zca</span> <span class="o">=</span> <span class="bp">True</span>
+
+<div class="viewcode-block" id="setUp"><a class="viewcode-back" href="../../api/testing.html#pyramid.testing.setUp">[docs]</a><span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="n">registry</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">hook_zca</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">autocommit</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+          <span class="n">settings</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">package</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Set :app:`Pyramid` registry and request thread locals for the</span>
+<span class="sd">    duration of a single unit test.</span>
+
+<span class="sd">    Use this function in the ``setUp`` method of a unittest test case</span>
+<span class="sd">    which directly or indirectly uses:</span>
+
+<span class="sd">    - any method of the :class:`pyramid.config.Configurator`</span>
+<span class="sd">      object returned by this function.</span>
+
+<span class="sd">    - the :func:`pyramid.threadlocal.get_current_registry` or</span>
+<span class="sd">      :func:`pyramid.threadlocal.get_current_request` functions.</span>
+
+<span class="sd">    If you use the ``get_current_*`` functions (or call :app:`Pyramid` code</span>
+<span class="sd">    that uses these functions) without calling ``setUp``,</span>
+<span class="sd">    :func:`pyramid.threadlocal.get_current_registry` will return a *global*</span>
+<span class="sd">    :term:`application registry`, which may cause unit tests to not be</span>
+<span class="sd">    isolated with respect to registrations they perform.</span>
+
+<span class="sd">    If the ``registry`` argument is ``None``, a new empty</span>
+<span class="sd">    :term:`application registry` will be created (an instance of the</span>
+<span class="sd">    :class:`pyramid.registry.Registry` class).  If the ``registry``</span>
+<span class="sd">    argument is not ``None``, the value passed in should be an</span>
+<span class="sd">    instance of the :class:`pyramid.registry.Registry` class or a</span>
+<span class="sd">    suitable testing analogue.</span>
+
+<span class="sd">    After ``setUp`` is finished, the registry returned by the</span>
+<span class="sd">    :func:`pyramid.threadlocal.get_current_registry` function will</span>
+<span class="sd">    be the passed (or constructed) registry until</span>
+<span class="sd">    :func:`pyramid.testing.tearDown` is called (or</span>
+<span class="sd">    :func:`pyramid.testing.setUp` is called again) .</span>
+
+<span class="sd">    If the ``hook_zca`` argument is ``True``, ``setUp`` will attempt</span>
+<span class="sd">    to perform the operation ``zope.component.getSiteManager.sethook(</span>
+<span class="sd">    pyramid.threadlocal.get_current_registry)``, which will cause</span>
+<span class="sd">    the :term:`Zope Component Architecture` global API</span>
+<span class="sd">    (e.g. :func:`zope.component.getSiteManager`,</span>
+<span class="sd">    :func:`zope.component.getAdapter`, and so on) to use the registry</span>
+<span class="sd">    constructed by ``setUp`` as the value it returns from</span>
+<span class="sd">    :func:`zope.component.getSiteManager`.  If the</span>
+<span class="sd">    :mod:`zope.component` package cannot be imported, or if</span>
+<span class="sd">    ``hook_zca`` is ``False``, the hook will not be set.</span>
+
+<span class="sd">    If ``settings`` is not ``None``, it must be a dictionary representing the</span>
+<span class="sd">    values passed to a Configurator as its ``settings=`` argument.</span>
+
+<span class="sd">    If ``package`` is ``None`` it will be set to the caller&#39;s package. The</span>
+<span class="sd">    ``package`` setting in the :class:`pyramid.config.Configurator` will</span>
+<span class="sd">    affect any relative imports made via</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.include` or</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.maybe_dotted`.</span>
+
+<span class="sd">    This function returns an instance of the</span>
+<span class="sd">    :class:`pyramid.config.Configurator` class, which can be</span>
+<span class="sd">    used for further configuration to set up an environment suitable</span>
+<span class="sd">    for a unit or integration test.  The ``registry`` attribute</span>
+<span class="sd">    attached to the Configurator instance represents the &#39;current&#39;</span>
+<span class="sd">    :term:`application registry`; the same registry will be returned</span>
+<span class="sd">    by :func:`pyramid.threadlocal.get_current_registry` during the</span>
+<span class="sd">    execution of the test.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">manager</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">registry</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">registry</span> <span class="o">=</span> <span class="n">Registry</span><span class="p">(</span><span class="s">&#39;testing&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">package</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">package</span> <span class="o">=</span> <span class="n">caller_package</span><span class="p">()</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">(</span><span class="n">registry</span><span class="o">=</span><span class="n">registry</span><span class="p">,</span> <span class="n">autocommit</span><span class="o">=</span><span class="n">autocommit</span><span class="p">,</span>
+                          <span class="n">package</span><span class="o">=</span><span class="n">package</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">settings</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">settings</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">registry</span><span class="p">,</span> <span class="s">&#39;settings&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">_set_settings</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">registry</span><span class="p">,</span> <span class="s">&#39;registerUtility&#39;</span><span class="p">):</span>
+        <span class="c"># Sometimes nose calls us with a non-registry object because</span>
+        <span class="c"># it thinks this function is module test setup.  Likewise,</span>
+        <span class="c"># someone may be passing us an esoteric &quot;dummy&quot; registry, and</span>
+        <span class="c"># the below won&#39;t succeed if it doesn&#39;t have a registerUtility</span>
+        <span class="c"># method.</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">add_default_renderers</span><span class="p">()</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">add_default_view_predicates</span><span class="p">()</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">add_default_route_predicates</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="k">global</span> <span class="n">have_zca</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">have_zca</span> <span class="ow">and</span> <span class="n">hook_zca</span> <span class="ow">and</span> <span class="n">config</span><span class="o">.</span><span class="n">hook_zca</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span> <span class="c"># pragma: no cover</span>
+        <span class="c"># (dont choke on not being able to import z.component)</span>
+        <span class="n">have_zca</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">begin</span><span class="p">(</span><span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span>
+</div>
+<div class="viewcode-block" id="tearDown"><a class="viewcode-back" href="../../api/testing.html#pyramid.testing.tearDown">[docs]</a><span class="k">def</span> <span class="nf">tearDown</span><span class="p">(</span><span class="n">unhook_zca</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Undo the effects of :func:`pyramid.testing.setUp`.  Use this</span>
+<span class="sd">    function in the ``tearDown`` method of a unit test that uses</span>
+<span class="sd">    :func:`pyramid.testing.setUp` in its ``setUp`` method.</span>
+
+<span class="sd">    If the ``unhook_zca`` argument is ``True`` (the default), call</span>
+<span class="sd">    :func:`zope.component.getSiteManager.reset`.  This undoes the</span>
+<span class="sd">    action of :func:`pyramid.testing.setUp` when called with the</span>
+<span class="sd">    argument ``hook_zca=True``.  If :mod:`zope.component` cannot be</span>
+<span class="sd">    imported, ``unhook_zca`` is set to ``False``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">have_zca</span>
+    <span class="k">if</span> <span class="n">unhook_zca</span> <span class="ow">and</span> <span class="n">have_zca</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">zope.component</span> <span class="kn">import</span> <span class="n">getSiteManager</span>
+            <span class="n">getSiteManager</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span> <span class="c"># pragma: no cover</span>
+            <span class="n">have_zca</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">info</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+    <span class="n">manager</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">info</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">registry</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s">&#39;registry&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">registry</span><span class="p">,</span> <span class="s">&#39;__init__&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">registry</span><span class="p">,</span> <span class="s">&#39;__name__&#39;</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">registry</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">registry</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                <span class="c"># calling __init__ is largely for the benefit of</span>
+                <span class="c"># people who want to use the global ZCA registry;</span>
+                <span class="c"># however maybe somebody&#39;s using a registry we don&#39;t</span>
+                <span class="c"># understand, let&#39;s not blow up</span>
+                <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="cleanUp"><a class="viewcode-back" href="../../api/testing.html#pyramid.testing.cleanUp">[docs]</a><span class="k">def</span> <span class="nf">cleanUp</span><span class="p">(</span><span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; An alias for :func:`pyramid.testing.setUp`. &quot;&quot;&quot;</span>
+    <span class="n">package</span> <span class="o">=</span> <span class="n">kw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;package&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">package</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">package</span> <span class="o">=</span> <span class="n">caller_package</span><span class="p">()</span>
+        <span class="n">kw</span><span class="p">[</span><span class="s">&#39;package&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">package</span>
+    <span class="k">return</span> <span class="n">setUp</span><span class="p">(</span><span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+</div>
+<span class="k">class</span> <span class="nc">DummyRendererFactory</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Registered by</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.testing_add_renderer` as</span>
+<span class="sd">    a dummy renderer factory.  The indecision about what to use as a</span>
+<span class="sd">    key (a spec vs. a relative name) is caused by test suites in the</span>
+<span class="sd">    wild believing they can register either.  The ``factory`` argument</span>
+<span class="sd">    passed to this constructor is usually the *real* template renderer</span>
+<span class="sd">    factory, found when ``testing_add_renderer`` is called.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">factory</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">factory</span> <span class="o">=</span> <span class="n">factory</span> <span class="c"># the &quot;real&quot; renderer factory reg&#39;d previously</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">renderers</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spec</span><span class="p">,</span> <span class="n">renderer</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">renderers</span><span class="p">[</span><span class="n">spec</span><span class="p">]</span> <span class="o">=</span> <span class="n">renderer</span>
+        <span class="k">if</span> <span class="s">&#39;:&#39;</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">:</span>
+            <span class="n">package</span><span class="p">,</span> <span class="n">relative</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;:&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">renderers</span><span class="p">[</span><span class="n">relative</span><span class="p">]</span> <span class="o">=</span> <span class="n">renderer</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">info</span><span class="p">):</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">info</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">renderer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">renderers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">renderer</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s">&#39;:&#39;</span> <span class="ow">in</span> <span class="n">spec</span><span class="p">:</span>
+                <span class="n">package</span><span class="p">,</span> <span class="n">relative</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;:&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">renderer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">renderers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">relative</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">renderer</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">factory</span><span class="p">:</span>
+                    <span class="n">renderer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">factory</span><span class="p">(</span><span class="n">info</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s">&#39;No testing renderer registered for </span><span class="si">%r</span><span class="s">&#39;</span> <span class="o">%</span>
+                                   <span class="n">spec</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">renderer</span>
+
+
+<span class="k">class</span> <span class="nc">MockTemplate</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">response</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_received</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">response</span> <span class="o">=</span> <span class="n">response</span>
+    <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrname</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attrname</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_received</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kw</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">response</span>
+
+<span class="k">def</span> <span class="nf">skip_on</span><span class="p">(</span><span class="o">*</span><span class="n">platforms</span><span class="p">):</span> <span class="c"># pragma: no  cover</span>
+    <span class="n">skip</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">for</span> <span class="n">platform</span> <span class="ow">in</span> <span class="n">platforms</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">skip_on</span><span class="o">.</span><span class="n">os_name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">platform</span><span class="p">):</span>
+            <span class="n">skip</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">if</span> <span class="n">platform</span> <span class="o">==</span> <span class="s">&#39;pypy&#39;</span> <span class="ow">and</span> <span class="n">PYPY</span><span class="p">:</span>
+            <span class="n">skip</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">if</span> <span class="n">platform</span> <span class="o">==</span> <span class="s">&#39;py3&#39;</span> <span class="ow">and</span> <span class="n">PY3</span><span class="p">:</span>
+            <span class="n">skip</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">class_types</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">skip</span><span class="p">:</span> <span class="k">return</span> <span class="bp">None</span>
+            <span class="k">else</span><span class="p">:</span> <span class="k">return</span> <span class="n">func</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">skip</span><span class="p">:</span>
+                    <span class="k">return</span>
+                <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+            <span class="n">wrapper</span><span class="o">.</span><span class="n">__name__</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="n">__name__</span>
+            <span class="n">wrapper</span><span class="o">.</span><span class="n">__doc__</span> <span class="o">=</span> <span class="n">func</span><span class="o">.</span><span class="n">__doc__</span>
+            <span class="k">return</span> <span class="n">wrapper</span>
+    <span class="k">return</span> <span class="n">decorator</span>
+<span class="n">skip_on</span><span class="o">.</span><span class="n">os_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="c"># for testing</span>
+
+<span class="nd">@contextmanager</span>
+<div class="viewcode-block" id="testConfig"><a class="viewcode-back" href="../../api/testing.html#pyramid.testing.testConfig">[docs]</a><span class="k">def</span> <span class="nf">testConfig</span><span class="p">(</span><span class="n">registry</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+        <span class="n">request</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+        <span class="n">hook_zca</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+        <span class="n">autocommit</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+        <span class="n">settings</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns a context manager for test set up.</span>
+
+<span class="sd">    This context manager calls :func:`pyramid.testing.setUp` when</span>
+<span class="sd">    entering and :func:`pyramid.testing.tearDown` when exiting.</span>
+
+<span class="sd">    All arguments are passed directly to :func:`pyramid.testing.setUp`.</span>
+<span class="sd">    If the ZCA is hooked, it will always be un-hooked in tearDown.</span>
+
+<span class="sd">    This context manager allows you to write test code like this:</span>
+
+<span class="sd">    .. code-block:: python</span>
+<span class="sd">        :linenos:</span>
+
+<span class="sd">        with testConfig() as config:</span>
+<span class="sd">            config.add_route(&#39;bar&#39;, &#39;/bar/{id}&#39;)</span>
+<span class="sd">            req = DummyRequest()</span>
+<span class="sd">            resp = myview(req),</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">setUp</span><span class="p">(</span><span class="n">registry</span><span class="o">=</span><span class="n">registry</span><span class="p">,</span>
+            <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">,</span>
+            <span class="n">hook_zca</span><span class="o">=</span><span class="n">hook_zca</span><span class="p">,</span>
+            <span class="n">autocommit</span><span class="o">=</span><span class="n">autocommit</span><span class="p">,</span>
+            <span class="n">settings</span><span class="o">=</span><span class="n">settings</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">config</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">tearDown</span><span class="p">(</span><span class="n">unhook_zca</span><span class="o">=</span><span class="n">hook_zca</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

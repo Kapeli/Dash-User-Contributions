@@ -1,0 +1,274 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Virtual Hosting &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="next" title="Unit, Integration, and Functional Testing" href="testing.html" />
+    <link rel="prev" title="Internationalization and Localization" href="i18n.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="testing.html" title="Unit, Integration, and Functional Testing"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="i18n.html" title="Internationalization and Localization"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="virtual-hosting">
+<span id="vhosting-chapter"></span><span id="index-0"></span><h1>Virtual Hosting<a class="headerlink" href="#virtual-hosting" title="Permalink to this headline">¶</a></h1>
+<p>&quot;Virtual hosting&quot; is, loosely, the act of serving a <span>Pyramid</span>
+application or a portion of a <span>Pyramid</span> application under a
+URL space that it does not &quot;naturally&quot; inhabit.</p>
+<p><span>Pyramid</span> provides facilities for serving an application under
+a URL &quot;prefix&quot;, as well as serving a <em>portion</em> of a <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a>
+based application under a root URL.</p>
+<div class="section" id="hosting-an-application-under-a-url-prefix">
+<span id="index-1"></span><h2>Hosting an Application Under a URL Prefix<a class="headerlink" href="#hosting-an-application-under-a-url-prefix" title="Permalink to this headline">¶</a></h2>
+<p><span>Pyramid</span> supports a common form of virtual hosting whereby you
+can host a <span>Pyramid</span> application as a &quot;subset&quot; of some other site
+(e.g. under <tt class="docutils literal"><span class="pre">http://example.com/mypyramidapplication/</span></tt> as opposed to
+under <tt class="docutils literal"><span class="pre">http://example.com/</span></tt>).</p>
+<p>If you use a &quot;pure Python&quot; environment, this functionality can be provided by
+Paste's <a class="reference external" href="http://pythonpaste.org/modules/urlmap.html">urlmap</a> &quot;composite&quot;
+WSGI application.  Alternately, you can use <a class="reference internal" href="../glossary.html#term-mod-wsgi"><em class="xref std std-term">mod_wsgi</em></a> to serve your
+application, which handles this virtual hosting translation for you &quot;under
+the hood&quot;.</p>
+<p>If you use the <tt class="docutils literal"><span class="pre">urlmap</span></tt> composite application &quot;in front&quot; of a
+<span>Pyramid</span> application or if you use <a class="reference internal" href="../glossary.html#term-mod-wsgi"><em class="xref std std-term">mod_wsgi</em></a> to serve
+up a <span>Pyramid</span> application, nothing special needs to be done
+within the application for URLs to be generated that contain a
+prefix. <tt class="xref py py-mod docutils literal"><span class="pre">paste.urlmap</span></tt> and <a class="reference internal" href="../glossary.html#term-mod-wsgi"><em class="xref std std-term">mod_wsgi</em></a> manipulate the
+<a class="reference internal" href="../glossary.html#term-wsgi"><em class="xref std std-term">WSGI</em></a> environment in such a way that the <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> and
+<tt class="docutils literal"><span class="pre">SCRIPT_NAME</span></tt> variables are correct for some given prefix.</p>
+<p>Here's an example of a PasteDeploy configuration snippet that includes
+a <tt class="docutils literal"><span class="pre">urlmap</span></tt> composite.</p>
+<div class="highlight-ini"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">[app:mypyramidapp]</span>
+<span class="na">use</span> <span class="o">=</span> <span class="s">egg:mypyramidapp</span>
+
+<span class="k">[composite:main]</span>
+<span class="na">use</span> <span class="o">=</span> <span class="s">egg:Paste#urlmap</span>
+<span class="na">/pyramidapp</span> <span class="o">=</span> <span class="s">mypyramidapp</span>
+</pre></div>
+</td></tr></table></div>
+<p>This &quot;roots&quot; the <span>Pyramid</span> application at the prefix
+<tt class="docutils literal"><span class="pre">/pyramidapp</span></tt> and serves up the composite as the &quot;main&quot; application
+in the file.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If you're using an Apache server to proxy to a Paste
+<tt class="docutils literal"><span class="pre">urlmap</span></tt> composite, you may have to use the <a class="reference external" href="http://httpd.apache.org/docs/2.2/mod/mod_proxy.html#proxypreservehost">ProxyPreserveHost</a>
+directive to pass the original <tt class="docutils literal"><span class="pre">HTTP_HOST</span></tt> header along to the
+application, so URLs get generated properly.  As of this writing
+the <tt class="docutils literal"><span class="pre">urlmap</span></tt> composite does not seem to respect the
+<tt class="docutils literal"><span class="pre">HTTP_X_FORWARDED_HOST</span></tt> parameter, which will contain the
+original host header even if <tt class="docutils literal"><span class="pre">HTTP_HOST</span></tt> is incorrect.</p>
+</div>
+<p>If you use <a class="reference internal" href="../glossary.html#term-mod-wsgi"><em class="xref std std-term">mod_wsgi</em></a>, you do not need to use a <tt class="docutils literal"><span class="pre">composite</span></tt>
+application in your <tt class="docutils literal"><span class="pre">.ini</span></tt> file.  The <tt class="docutils literal"><span class="pre">WSGIScriptAlias</span></tt>
+configuration setting in a <a class="reference internal" href="../glossary.html#term-mod-wsgi"><em class="xref std std-term">mod_wsgi</em></a> configuration does the
+work for you:</p>
+<div class="highlight-apache"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="nb">WSGIScriptAlias</span> <span class="sx">/pyramidapp</span> <span class="sx">/Users/chrism/projects/modwsgi/env/pyramid.wsgi</span>
+</pre></div>
+</td></tr></table></div>
+<p>In the above configuration, we root a <span>Pyramid</span> application at
+<tt class="docutils literal"><span class="pre">/pyramidapp</span></tt> within the Apache configuration.</p>
+</div>
+<div class="section" id="virtual-root-support">
+<span id="index-2"></span><span id="id1"></span><h2>Virtual Root Support<a class="headerlink" href="#virtual-root-support" title="Permalink to this headline">¶</a></h2>
+<p><span>Pyramid</span> also supports &quot;virtual roots&quot;, which can be used in
+<a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> -based (but not <a class="reference internal" href="../glossary.html#term-url-dispatch"><em class="xref std std-term">URL dispatch</em></a> -based)
+applications.</p>
+<p>Virtual root support is useful when you'd like to host some resource in a
+<span>Pyramid</span> resource tree as an application under a URL pathname that does
+not include the resource path itself.  For example, you might want to serve the
+object at the traversal path <tt class="docutils literal"><span class="pre">/cms</span></tt> as an application reachable via
+<tt class="docutils literal"><span class="pre">http://example.com/</span></tt> (as opposed to <tt class="docutils literal"><span class="pre">http://example.com/cms</span></tt>).</p>
+<p>To specify a virtual root, cause an environment variable to be inserted into
+the WSGI environ named <tt class="docutils literal"><span class="pre">HTTP_X_VHM_ROOT</span></tt> with a value that is the absolute
+pathname to the resource object in the resource tree that should behave as
+the &quot;root&quot; resource.  As a result, the traversal machinery will respect this
+value during traversal (prepending it to the PATH_INFO before traversal
+starts), and the <a class="reference internal" href="../api/request.html#pyramid.request.Request.resource_url" title="pyramid.request.Request.resource_url"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.resource_url()</span></tt></a> API will
+generate the &quot;correct&quot; virtually-rooted URLs.</p>
+<p>An example of an Apache <tt class="docutils literal"><span class="pre">mod_proxy</span></tt> configuration that will host the
+<tt class="docutils literal"><span class="pre">/cms</span></tt> subobject as <tt class="docutils literal"><span class="pre">http://www.example.com/</span></tt> using this facility
+is below:</p>
+<div class="highlight-apache"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9</pre></div></td><td class="code"><div class="highlight"><pre><span class="nb">NameVirtualHost</span> *:80
+
+<span class="nt">&lt;VirtualHost</span> <span class="s">*:80</span><span class="nt">&gt;</span>
+  <span class="nb">ServerName</span> www.example.com
+  <span class="nb">RewriteEngine</span> <span class="k">On</span>
+  <span class="nb">RewriteRule</span> ^/(.*) http://127.0.0.1:6543/$1 [L,P]
+  <span class="nb">ProxyPreserveHost</span> <span class="k">on</span>
+  <span class="nb">RequestHeader</span> add X-Vhm-Root <span class="sx">/cms</span>
+<span class="nt">&lt;/VirtualHost&gt;</span>
+</pre></div>
+</td></tr></table></div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Use of the <tt class="docutils literal"><span class="pre">RequestHeader</span></tt> directive requires that the
+Apache <a class="reference external" href="http://httpd.apache.org/docs/2.2/mod/mod_headers.html">mod_headers</a> module be
+available in the Apache environment you're using.</p>
+</div>
+<p>For a <span>Pyramid</span> application running under <a class="reference internal" href="../glossary.html#term-mod-wsgi"><em class="xref std std-term">mod_wsgi</em></a>,
+the same can be achieved using <tt class="docutils literal"><span class="pre">SetEnv</span></tt>:</p>
+<div class="highlight-apache"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="nt">&lt;Location</span> <span class="s">/</span><span class="nt">&gt;</span>
+  <span class="nb">SetEnv</span> HTTP_X_VHM_ROOT <span class="sx">/cms</span>
+<span class="nt">&lt;/Location&gt;</span>
+</pre></div>
+</td></tr></table></div>
+<p>Setting a virtual root has no effect when using an application based
+on <a class="reference internal" href="../glossary.html#term-url-dispatch"><em class="xref std std-term">URL dispatch</em></a>.</p>
+</div>
+<div class="section" id="further-documentation-and-examples">
+<h2>Further Documentation and Examples<a class="headerlink" href="#further-documentation-and-examples" title="Permalink to this headline">¶</a></h2>
+<p>The API documentation in <a class="reference internal" href="../api/traversal.html#traversal-module"><em>pyramid.traversal</em></a> documents a
+<a class="reference internal" href="../api/traversal.html#pyramid.traversal.virtual_root" title="pyramid.traversal.virtual_root"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.traversal.virtual_root()</span></tt></a> API.  When called, it
+returns the virtual root object (or the physical root object if no
+virtual root has been specified).</p>
+<p><a class="reference internal" href="../tutorials/modwsgi/index.html#modwsgi-tutorial"><em>Running a Pyramid Application under mod_wsgi</em></a> has detailed information about using
+<a class="reference internal" href="../glossary.html#term-mod-wsgi"><em class="xref std std-term">mod_wsgi</em></a> to serve <span>Pyramid</span> applications.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Virtual Hosting</a><ul>
+<li><a class="reference internal" href="#hosting-an-application-under-a-url-prefix">Hosting an Application Under a URL Prefix</a></li>
+<li><a class="reference internal" href="#virtual-root-support">Virtual Root Support</a></li>
+<li><a class="reference internal" href="#further-documentation-and-examples">Further Documentation and Examples</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="i18n.html"
+                        title="previous chapter">Internationalization and Localization</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="testing.html"
+                        title="next chapter">Unit, Integration, and Functional Testing</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="testing.html" title="Unit, Integration, and Functional Testing"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="i18n.html" title="Internationalization and Localization"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

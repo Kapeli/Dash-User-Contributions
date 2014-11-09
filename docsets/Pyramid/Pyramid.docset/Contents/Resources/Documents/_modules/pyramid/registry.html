@@ -1,0 +1,374 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.registry &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.registry</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">operator</span>
+
+<span class="kn">from</span> <span class="nn">zope.interface</span> <span class="kn">import</span> <span class="n">implementer</span>
+
+<span class="kn">from</span> <span class="nn">zope.interface.registry</span> <span class="kn">import</span> <span class="n">Components</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.compat</span> <span class="kn">import</span> <span class="n">text_</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ISettings</span><span class="p">,</span>
+    <span class="n">IIntrospector</span><span class="p">,</span>
+    <span class="n">IIntrospectable</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="n">empty</span> <span class="o">=</span> <span class="n">text_</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Registry"><a class="viewcode-back" href="../../api/registry.html#pyramid.registry.Registry">[docs]</a><span class="k">class</span> <span class="nc">Registry</span><span class="p">(</span><span class="n">Components</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A registry object is an :term:`application registry`.  It is used by</span>
+<span class="sd">    the framework itself to perform mappings of URLs to view callables, as</span>
+<span class="sd">    well as servicing other various framework duties. A registry has its own</span>
+<span class="sd">    internal API, but this API is rarely used by Pyramid application</span>
+<span class="sd">    developers (it&#39;s usually only used by developers of the Pyramid</span>
+<span class="sd">    framework).  But it has a number of attributes that may be useful to</span>
+<span class="sd">    application developers within application code, such as ``settings``,</span>
+<span class="sd">    which is a dictionary containing application deployment settings.</span>
+
+<span class="sd">    For information about the purpose and usage of the application registry,</span>
+<span class="sd">    see :ref:`zca_chapter`.</span>
+
+<span class="sd">    The application registry is usually accessed as ``request.registry`` in</span>
+<span class="sd">    application code.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c"># for optimization purposes, if no listeners are listening, don&#39;t try</span>
+    <span class="c"># to notify them</span>
+    <span class="n">has_listeners</span> <span class="o">=</span> <span class="bp">False</span>
+
+    <span class="n">_settings</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">__nonzero__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># defeat bool determination via dict.__len__</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">registerSubscriptionAdapter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">Components</span><span class="o">.</span><span class="n">registerSubscriptionAdapter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_listeners</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span> <span class="nf">registerSelfAdapter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">provided</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">empty</span><span class="p">,</span>
+                            <span class="n">info</span><span class="o">=</span><span class="n">empty</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="c"># registerAdapter analogue which always returns the object itself</span>
+        <span class="c"># when required is matched</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">registerAdapter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="n">required</span><span class="p">,</span>
+                                    <span class="n">provided</span><span class="o">=</span><span class="n">provided</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+                                    <span class="n">info</span><span class="o">=</span><span class="n">info</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="n">event</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">queryAdapterOrSelf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">object</span><span class="p">,</span> <span class="n">interface</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="c"># queryAdapter analogue which returns the object if it implements</span>
+        <span class="c"># the interface, otherwise it will return an adaptation to the</span>
+        <span class="c"># interface</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">interface</span><span class="o">.</span><span class="n">providedBy</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">queryAdapter</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">interface</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">default</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">object</span>
+
+    <span class="k">def</span> <span class="nf">registerHandler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">Components</span><span class="o">.</span><span class="n">registerHandler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_listeners</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+<div class="viewcode-block" id="Registry.notify"><a class="viewcode-back" href="../../api/registry.html#pyramid.registry.Registry.notify">[docs]</a>    <span class="k">def</span> <span class="nf">notify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">events</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_listeners</span><span class="p">:</span>
+            <span class="c"># iterating over subscribers assures they get executed</span>
+            <span class="p">[</span> <span class="n">_</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">subscribers</span><span class="p">(</span><span class="n">events</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span> <span class="p">]</span>
+
+    <span class="c"># backwards compatibility for code that wants to look up a settings</span>
+    <span class="c"># object via ``registry.getUtility(ISettings)``</span></div>
+    <span class="k">def</span> <span class="nf">_get_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_settings</span>
+
+    <span class="k">def</span> <span class="nf">_set_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">settings</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registerUtility</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="n">ISettings</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_settings</span> <span class="o">=</span> <span class="n">settings</span>
+
+    <span class="n">settings</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">_get_settings</span><span class="p">,</span> <span class="n">_set_settings</span><span class="p">)</span>
+</div>
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">IIntrospector</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">Introspector</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_refs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_categories</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_counter</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">intr</span><span class="p">):</span>
+        <span class="n">category</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_categories</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">intr</span><span class="o">.</span><span class="n">category_name</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">category</span><span class="p">[</span><span class="n">intr</span><span class="o">.</span><span class="n">discriminator</span><span class="p">]</span> <span class="o">=</span> <span class="n">intr</span>
+        <span class="n">category</span><span class="p">[</span><span class="n">intr</span><span class="o">.</span><span class="n">discriminator_hash</span><span class="p">]</span> <span class="o">=</span> <span class="n">intr</span>
+        <span class="n">intr</span><span class="o">.</span><span class="n">order</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_counter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category_name</span><span class="p">,</span> <span class="n">discriminator</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">category</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_categories</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">category_name</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">intr</span> <span class="o">=</span> <span class="n">category</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">discriminator</span><span class="p">,</span> <span class="n">default</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">intr</span>
+
+    <span class="k">def</span> <span class="nf">get_category</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category_name</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">sort_key</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">sort_key</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">sort_key</span> <span class="o">=</span> <span class="n">operator</span><span class="o">.</span><span class="n">attrgetter</span><span class="p">(</span><span class="s">&#39;order&#39;</span><span class="p">)</span>
+        <span class="n">category</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_categories</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">category_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">category</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">default</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">category</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">values</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="n">sort_key</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="p">{</span><span class="s">&#39;introspectable&#39;</span><span class="p">:</span><span class="n">intr</span><span class="p">,</span>
+             <span class="s">&#39;related&#39;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">related</span><span class="p">(</span><span class="n">intr</span><span class="p">)}</span>
+             <span class="k">for</span> <span class="n">intr</span> <span class="ow">in</span> <span class="n">values</span>
+             <span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">categorized</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sort_key</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">category_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">categories</span><span class="p">():</span>
+            <span class="n">L</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">category_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_category</span><span class="p">(</span><span class="n">category_name</span><span class="p">,</span>
+                                                       <span class="n">sort_key</span><span class="o">=</span><span class="n">sort_key</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">L</span>
+
+    <span class="k">def</span> <span class="nf">categories</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_categories</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category_name</span><span class="p">,</span> <span class="n">discriminator</span><span class="p">):</span>
+        <span class="n">intr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">category_name</span><span class="p">,</span> <span class="n">discriminator</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">intr</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_refs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">intr</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">L</span><span class="p">:</span>
+            <span class="n">L2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_refs</span><span class="p">[</span><span class="n">d</span><span class="p">]</span>
+            <span class="n">L2</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">intr</span><span class="p">)</span>
+        <span class="n">category</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_categories</span><span class="p">[</span><span class="n">intr</span><span class="o">.</span><span class="n">category_name</span><span class="p">]</span>
+        <span class="k">del</span> <span class="n">category</span><span class="p">[</span><span class="n">intr</span><span class="o">.</span><span class="n">discriminator</span><span class="p">]</span>
+        <span class="k">del</span> <span class="n">category</span><span class="p">[</span><span class="n">intr</span><span class="o">.</span><span class="n">discriminator_hash</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_get_intrs_by_pairs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pairs</span><span class="p">):</span>
+        <span class="n">introspectables</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">pairs</span><span class="p">:</span>
+            <span class="n">category_name</span><span class="p">,</span> <span class="n">discriminator</span> <span class="o">=</span> <span class="n">pair</span>
+            <span class="n">intr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_categories</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">category_name</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">discriminator</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">intr</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">((</span><span class="n">category_name</span><span class="p">,</span> <span class="n">discriminator</span><span class="p">))</span>
+            <span class="n">introspectables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">intr</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">introspectables</span>
+
+    <span class="k">def</span> <span class="nf">relate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">pairs</span><span class="p">):</span>
+        <span class="n">introspectables</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_intrs_by_pairs</span><span class="p">(</span><span class="n">pairs</span><span class="p">)</span>
+        <span class="n">relatable</span> <span class="o">=</span> <span class="p">((</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">introspectables</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">introspectables</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">relatable</span><span class="p">:</span>
+            <span class="n">L</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_refs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">y</span> <span class="ow">and</span> <span class="n">y</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">L</span><span class="p">:</span>
+                <span class="n">L</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">unrelate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">pairs</span><span class="p">):</span>
+        <span class="n">introspectables</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_intrs_by_pairs</span><span class="p">(</span><span class="n">pairs</span><span class="p">)</span>
+        <span class="n">relatable</span> <span class="o">=</span> <span class="p">((</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">introspectables</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">introspectables</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">relatable</span><span class="p">:</span>
+            <span class="n">L</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_refs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="k">if</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">L</span><span class="p">:</span>
+                <span class="n">L</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">related</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">intr</span><span class="p">):</span>
+        <span class="n">category_name</span><span class="p">,</span> <span class="n">discriminator</span> <span class="o">=</span> <span class="n">intr</span><span class="o">.</span><span class="n">category_name</span><span class="p">,</span> <span class="n">intr</span><span class="o">.</span><span class="n">discriminator</span>
+        <span class="n">intr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_categories</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">category_name</span><span class="p">,</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">discriminator</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">intr</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">((</span><span class="n">category_name</span><span class="p">,</span> <span class="n">discriminator</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_refs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">intr</span><span class="p">,</span> <span class="p">[])</span>
+
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">IIntrospectable</span><span class="p">)</span>
+<div class="viewcode-block" id="Introspectable"><a class="viewcode-back" href="../../api/registry.html#pyramid.registry.Introspectable">[docs]</a><span class="k">class</span> <span class="nc">Introspectable</span><span class="p">(</span><span class="nb">dict</span><span class="p">):</span>
+
+    <span class="n">order</span> <span class="o">=</span> <span class="mi">0</span> <span class="c"># mutated by introspector.add</span>
+    <span class="n">action_info</span> <span class="o">=</span> <span class="bp">None</span> <span class="c"># mutated by self.register</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category_name</span><span class="p">,</span> <span class="n">discriminator</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">type_name</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">category_name</span> <span class="o">=</span> <span class="n">category_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">discriminator</span> <span class="o">=</span> <span class="n">discriminator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">title</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type_name</span> <span class="o">=</span> <span class="n">type_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_relations</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">relate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category_name</span><span class="p">,</span> <span class="n">discriminator</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_relations</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">True</span><span class="p">,</span> <span class="n">category_name</span><span class="p">,</span> <span class="n">discriminator</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">unrelate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">category_name</span><span class="p">,</span> <span class="n">discriminator</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_relations</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">False</span><span class="p">,</span> <span class="n">category_name</span><span class="p">,</span> <span class="n">discriminator</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_assert_resolved</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">undefer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">discriminator</span><span class="p">)</span> <span class="ow">is</span> <span class="bp">self</span><span class="o">.</span><span class="n">discriminator</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">discriminator_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_assert_resolved</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">discriminator</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_assert_resolved</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">category_name</span><span class="p">,)</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">discriminator</span><span class="p">,))</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_assert_resolved</span><span class="p">()</span>
+        <span class="k">return</span> <span class="s">&#39;&lt;</span><span class="si">%s</span><span class="s"> category </span><span class="si">%r</span><span class="s">, discriminator </span><span class="si">%r</span><span class="s">&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
+                                                       <span class="bp">self</span><span class="o">.</span><span class="n">category_name</span><span class="p">,</span>
+                                                       <span class="bp">self</span><span class="o">.</span><span class="n">discriminator</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__nonzero__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="n">__bool__</span> <span class="o">=</span> <span class="n">__nonzero__</span> <span class="c"># py3</span>
+
+    <span class="k">def</span> <span class="nf">register</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">introspector</span><span class="p">,</span> <span class="n">action_info</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">discriminator</span> <span class="o">=</span> <span class="n">undefer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">discriminator</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">action_info</span> <span class="o">=</span> <span class="n">action_info</span>
+        <span class="n">introspector</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">relate</span><span class="p">,</span> <span class="n">category_name</span><span class="p">,</span> <span class="n">discriminator</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_relations</span><span class="p">:</span>
+            <span class="n">discriminator</span> <span class="o">=</span> <span class="n">undefer</span><span class="p">(</span><span class="n">discriminator</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">relate</span><span class="p">:</span>
+                <span class="n">method</span> <span class="o">=</span> <span class="n">introspector</span><span class="o">.</span><span class="n">relate</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">method</span> <span class="o">=</span> <span class="n">introspector</span><span class="o">.</span><span class="n">unrelate</span>
+            <span class="n">method</span><span class="p">(</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">category_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">discriminator</span><span class="p">),</span>
+                <span class="p">(</span><span class="n">category_name</span><span class="p">,</span> <span class="n">discriminator</span><span class="p">)</span>
+                <span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Deferred"><a class="viewcode-back" href="../../api/registry.html#pyramid.registry.Deferred">[docs]</a><span class="k">class</span> <span class="nc">Deferred</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Can be used by a third-party configuration extender to wrap a</span>
+<span class="sd">    :term:`discriminator` during configuration if an immediately hashable</span>
+<span class="sd">    discriminator cannot be computed because it relies on unresolved values.</span>
+<span class="sd">    The function should accept no arguments and should return a hashable</span>
+<span class="sd">    discriminator.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">func</span> <span class="o">=</span> <span class="n">func</span>
+
+    <span class="k">def</span> <span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">func</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="undefer"><a class="viewcode-back" href="../../api/registry.html#pyramid.registry.undefer">[docs]</a><span class="k">def</span> <span class="nf">undefer</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function which accepts an object and returns it unless it is a</span>
+<span class="sd">    :class:`pyramid.registry.Deferred` instance.  If it is an instance of</span>
+<span class="sd">    that class, its ``resolve`` method is called, and the result of the</span>
+<span class="sd">    method is returned.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">Deferred</span><span class="p">):</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">v</span>
+</div>
+<div class="viewcode-block" id="predvalseq"><a class="viewcode-back" href="../../api/registry.html#pyramid.registry.predvalseq">[docs]</a><span class="k">class</span> <span class="nc">predvalseq</span><span class="p">(</span><span class="nb">tuple</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A subtype of tuple used to represent a sequence of predicate values &quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</div>
+<span class="n">global_registry</span> <span class="o">=</span> <span class="n">Registry</span><span class="p">(</span><span class="s">&#39;global&#39;</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

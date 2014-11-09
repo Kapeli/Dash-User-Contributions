@@ -1,0 +1,523 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Sessions &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="next" title="Using Events" href="events.html" />
+    <link rel="prev" title="Request and Response Objects" href="webob.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="events.html" title="Using Events"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="webob.html" title="Request and Response Objects"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="sessions">
+<span id="sessions-chapter"></span><span id="index-0"></span><h1>Sessions<a class="headerlink" href="#sessions" title="Permalink to this headline">¶</a></h1>
+<p>A <a class="reference internal" href="../glossary.html#term-session"><em class="xref std std-term">session</em></a> is a namespace which is valid for some period of
+continual activity that can be used to represent a user's interaction
+with a web application.</p>
+<p>This chapter describes how to configure sessions, what session
+implementations <span>Pyramid</span> provides out of the box, how to store and
+retrieve data from sessions, and two session-specific features: flash
+messages, and cross-site request forgery attack prevention.</p>
+<div class="section" id="using-the-default-session-factory">
+<span id="index-1"></span><span id="id1"></span><h2>Using The Default Session Factory<a class="headerlink" href="#using-the-default-session-factory" title="Permalink to this headline">¶</a></h2>
+<p>In order to use sessions, you must set up a <a class="reference internal" href="../glossary.html#term-session-factory"><em class="xref std std-term">session factory</em></a>
+during your <span>Pyramid</span> configuration.</p>
+<p>A very basic, insecure sample session factory implementation is
+provided in the <span>Pyramid</span> core.  It uses a cookie to store
+session information.  This implementation has the following
+limitations:</p>
+<ul class="simple">
+<li>The session information in the cookies used by this implementation
+is <em>not</em> encrypted, so it can be viewed by anyone with access to the
+cookie storage of the user's browser or anyone with access to the
+network along which the cookie travels.</li>
+<li>The maximum number of bytes that are storable in a serialized
+representation of the session is fewer than 4000.  This is
+suitable only for very small data sets.</li>
+</ul>
+<p>It is digitally signed, however, and thus its data cannot easily be
+tampered with.</p>
+<p>You can configure this session factory in your <span>Pyramid</span> application
+by using the <tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.set_session_factory`()</span></tt> method.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.session</span> <span class="kn">import</span> <span class="n">SignedCookieSessionFactory</span>
+<span class="n">my_session_factory</span> <span class="o">=</span> <span class="n">SignedCookieSessionFactory</span><span class="p">(</span><span class="s">&#39;itsaseekreet&#39;</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+<span class="n">config</span><span class="o">.</span><span class="n">set_session_factory</span><span class="p">(</span><span class="n">my_session_factory</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">By default the <a class="reference internal" href="../api/session.html#pyramid.session.SignedCookieSessionFactory" title="pyramid.session.SignedCookieSessionFactory"><tt class="xref py py-func docutils literal"><span class="pre">SignedCookieSessionFactory()</span></tt></a>
+implementation is <em>unencrypted</em>.  You should not use it
+when you keep sensitive information in the session object, as the
+information can be easily read by both users of your application and third
+parties who have access to your users' network traffic.  And if you use this
+sessioning implementation, and you inadvertently create a cross-site
+scripting vulnerability in your application, because the session data is
+stored unencrypted in a cookie, it will also be easier for evildoers to
+obtain the current user's cross-site scripting token.  In short, use a
+different session factory implementation (preferably one which keeps session
+data on the server) for anything but the most basic of applications where
+&quot;session security doesn't matter&quot;, and you are sure your application has no
+cross-site scripting vulnerabilities.</p>
+</div>
+</div>
+<div class="section" id="using-a-session-object">
+<span id="index-2"></span><h2>Using a Session Object<a class="headerlink" href="#using-a-session-object" title="Permalink to this headline">¶</a></h2>
+<p>Once a session factory has been configured for your application, you
+can access session objects provided by the session factory via
+the <tt class="docutils literal"><span class="pre">session</span></tt> attribute of any <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> object.  For
+example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+
+<span class="k">def</span> <span class="nf">myview</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">session</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">session</span>
+    <span class="k">if</span> <span class="s">&#39;abc&#39;</span> <span class="ow">in</span> <span class="n">session</span><span class="p">:</span>
+        <span class="n">session</span><span class="p">[</span><span class="s">&#39;fred&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;yes&#39;</span>
+    <span class="n">session</span><span class="p">[</span><span class="s">&#39;abc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;123&#39;</span>
+    <span class="k">if</span> <span class="s">&#39;fred&#39;</span> <span class="ow">in</span> <span class="n">session</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;Fred was in the session&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;Fred was not in the session&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The first time this view is invoked produces <tt class="docutils literal"><span class="pre">Fred</span> <span class="pre">was</span> <span class="pre">not</span> <span class="pre">in</span> <span class="pre">the</span>
+<span class="pre">session</span></tt>.  Subsequent invocations produce <tt class="docutils literal"><span class="pre">Fred</span> <span class="pre">was</span> <span class="pre">in</span> <span class="pre">the</span>
+<span class="pre">session</span></tt>, assuming of course that the client side maintains the
+session's identity across multiple requests.</p>
+<p>You can use a session much like a Python dictionary.  It supports all
+dictionary methods, along with some extra attributes, and methods.</p>
+<p>Extra attributes:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">created</span></tt></dt>
+<dd>An integer timestamp indicating the time that this session was created.</dd>
+<dt><tt class="docutils literal"><span class="pre">new</span></tt></dt>
+<dd>A boolean.  If <tt class="docutils literal"><span class="pre">new</span></tt> is True, this session is new.  Otherwise, it has
+been constituted from data that was already serialized.</dd>
+</dl>
+<p>Extra methods:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">changed()</span></tt></dt>
+<dd>Call this when you mutate a mutable value in the session namespace.
+See the gotchas below for details on when, and why you should
+call this.</dd>
+<dt><tt class="docutils literal"><span class="pre">invalidate()</span></tt></dt>
+<dd>Call this when you want to invalidate the session (dump all data,
+and -- perhaps -- set a clearing cookie).</dd>
+</dl>
+<p>The formal definition of the methods and attributes supported by the
+session object are in the <a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.ISession" title="pyramid.interfaces.ISession"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.ISession</span></tt></a>
+documentation.</p>
+<p>Some gotchas:</p>
+<ul class="simple">
+<li>Keys and values of session data must be <em>pickleable</em>.  This means,
+typically, that they are instances of basic types of objects,
+such as strings, lists, dictionaries, tuples, integers, etc.  If you
+place an object in a session data key or value that is not
+pickleable, an error will be raised when the session is serialized.</li>
+<li>If you place a mutable value (for example, a list or a dictionary)
+in a session object, and you subsequently mutate that value, you must
+call the <tt class="docutils literal"><span class="pre">changed()</span></tt> method of the session object. In this case, the
+session has no way to know that is was modified. However, when you
+modify a session object directly, such as setting a value (i.e.,
+<tt class="docutils literal"><span class="pre">__setitem__</span></tt>), or removing a key (e.g., <tt class="docutils literal"><span class="pre">del</span></tt> or <tt class="docutils literal"><span class="pre">pop</span></tt>), the
+session will automatically know that it needs to re-serialize its
+data, thus calling <tt class="docutils literal"><span class="pre">changed()</span></tt> is unnecessary. There is no harm in
+calling <tt class="docutils literal"><span class="pre">changed()</span></tt> in either case, so when in doubt, call it after
+you've changed sessioning data.</li>
+</ul>
+</div>
+<div class="section" id="using-alternate-session-factories">
+<span id="index-3"></span><span id="id2"></span><h2>Using Alternate Session Factories<a class="headerlink" href="#using-alternate-session-factories" title="Permalink to this headline">¶</a></h2>
+<p>The following session factories exist at the time of this writing.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="39%" />
+<col width="12%" />
+<col width="49%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Session Factory</th>
+<th class="head">Backend</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><a class="reference external" href="https://pypi.python.org/pypi/pyramid_redis_sessions">pyramid_redis_sessions</a></td>
+<td><a class="reference external" href="http://redis.io/">Redis</a></td>
+<td>Server-side session library
+for Pyramid, using Redis for
+storage.</td>
+</tr>
+<tr class="row-odd"><td><a class="reference external" href="https://pypi.python.org/pypi/pyramid_beaker">pyramid_beaker</a></td>
+<td><a class="reference external" href="http://beaker.readthedocs.org/en/latest/">Beaker</a></td>
+<td>Session factory for Pyramid
+backed by the Beaker
+sessioning system.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="creating-your-own-session-factory">
+<span id="index-4"></span><h2>Creating Your Own Session Factory<a class="headerlink" href="#creating-your-own-session-factory" title="Permalink to this headline">¶</a></h2>
+<p>If none of the default or otherwise available sessioning
+implementations for <span>Pyramid</span> suit you, you may create your own
+session object by implementing a <a class="reference internal" href="../glossary.html#term-session-factory"><em class="xref std std-term">session factory</em></a>.  Your
+session factory should return a <a class="reference internal" href="../glossary.html#term-session"><em class="xref std std-term">session</em></a>.  The interfaces for
+both types are available in
+<a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.ISessionFactory" title="pyramid.interfaces.ISessionFactory"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.ISessionFactory</span></tt></a> and
+<a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.ISession" title="pyramid.interfaces.ISession"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.ISession</span></tt></a>. You might use the cookie
+implementation in the <a class="reference internal" href="../api/session.html#module-pyramid.session" title="pyramid.session"><tt class="xref py py-mod docutils literal"><span class="pre">pyramid.session</span></tt></a> module as inspiration.</p>
+</div>
+<div class="section" id="flash-messages">
+<span id="index-5"></span><span id="id3"></span><h2>Flash Messages<a class="headerlink" href="#flash-messages" title="Permalink to this headline">¶</a></h2>
+<p>&quot;Flash messages&quot; are simply a queue of message strings stored in the
+<a class="reference internal" href="../glossary.html#term-session"><em class="xref std std-term">session</em></a>.  To use flash messaging, you must enable a <a class="reference internal" href="../glossary.html#term-session-factory"><em class="xref std std-term">session
+factory</em></a> as described in <a class="reference internal" href="#using-the-default-session-factory"><em>Using The Default Session Factory</em></a> or
+<a class="reference internal" href="#using-alternate-session-factories"><em>Using Alternate Session Factories</em></a>.</p>
+<p>Flash messaging has two main uses: to display a status message only once to
+the user after performing an internal redirect, and to allow generic code to
+log messages for single-time display without having direct access to an HTML
+template. The user interface consists of a number of methods of the
+<a class="reference internal" href="../glossary.html#term-session"><em class="xref std std-term">session</em></a> object.</p>
+<div class="section" id="using-the-session-flash-method">
+<span id="index-6"></span><h3>Using the <tt class="docutils literal"><span class="pre">session.flash</span></tt> Method<a class="headerlink" href="#using-the-session-flash-method" title="Permalink to this headline">¶</a></h3>
+<p>To add a message to a flash message queue, use a session object's <tt class="docutils literal"><span class="pre">flash()</span></tt>
+method:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">flash</span><span class="p">(</span><span class="s">&#39;mymessage&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The <tt class="docutils literal"><span class="pre">flash()</span></tt> method appends a message to a flash queue, creating the queue
+if necessary.</p>
+<p><tt class="docutils literal"><span class="pre">flash()</span></tt> accepts three arguments:</p>
+<dl class="method">
+<dt id="flash">
+<tt class="descname">flash</tt><big>(</big><em>message</em>, <em>queue=''</em>, <em>allow_duplicate=True</em><big>)</big><a class="headerlink" href="#flash" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<p>The <tt class="docutils literal"><span class="pre">message</span></tt> argument is required.  It represents a message you wish to
+later display to a user.  It is usually a string but the <tt class="docutils literal"><span class="pre">message</span></tt> you
+provide is not modified in any way.</p>
+<p>The <tt class="docutils literal"><span class="pre">queue</span></tt> argument allows you to choose a queue to which to append
+the message you provide.  This can be used to push different kinds of
+messages into flash storage for later display in different places on a
+page.  You can pass any name for your queue, but it must be a string.
+Each queue is independent, and can be popped by <tt class="docutils literal"><span class="pre">pop_flash()</span></tt> or
+examined via <tt class="docutils literal"><span class="pre">peek_flash()</span></tt> separately.  <tt class="docutils literal"><span class="pre">queue</span></tt> defaults to the
+empty string.  The empty string represents the default flash message
+queue.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">flash</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s">&#39;myappsqueue&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The <tt class="docutils literal"><span class="pre">allow_duplicate</span></tt> argument defaults to <tt class="docutils literal"><span class="pre">True</span></tt>.  If this is
+<tt class="docutils literal"><span class="pre">False</span></tt>, and you attempt to add a message value which is already
+present in the queue, it will not be added.</p>
+</div>
+<div class="section" id="using-the-session-pop-flash-method">
+<span id="index-7"></span><h3>Using the <tt class="docutils literal"><span class="pre">session.pop_flash</span></tt> Method<a class="headerlink" href="#using-the-session-pop-flash-method" title="Permalink to this headline">¶</a></h3>
+<p>Once one or more messages have been added to a flash queue by the
+<tt class="docutils literal"><span class="pre">session.flash()</span></tt> API, the <tt class="docutils literal"><span class="pre">session.pop_flash()</span></tt> API can be used to
+pop an entire queue and return it for use.</p>
+<p>To pop a particular queue of messages from the flash object, use the session
+object's <tt class="docutils literal"><span class="pre">pop_flash()</span></tt> method. This returns a list of the messages
+that were added to the flash queue, and empties the queue.</p>
+<dl class="method">
+<dt id="pop_flash">
+<tt class="descname">pop_flash</tt><big>(</big><em>queue=''</em><big>)</big><a class="headerlink" href="#pop_flash" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">flash</span><span class="p">(</span><span class="s">&#39;info message&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">pop_flash</span><span class="p">()</span>
+<span class="go">[&#39;info message&#39;]</span>
+</pre></div>
+</div>
+<p>Calling <tt class="docutils literal"><span class="pre">session.pop_flash()</span></tt> again like above without a corresponding call
+to <tt class="docutils literal"><span class="pre">session.flash()</span></tt> will return an empty list, because the queue has already
+been popped.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">flash</span><span class="p">(</span><span class="s">&#39;info message&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">pop_flash</span><span class="p">()</span>
+<span class="go">[&#39;info message&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">pop_flash</span><span class="p">()</span>
+<span class="go">[]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="using-the-session-peek-flash-method">
+<span id="index-8"></span><h3>Using the <tt class="docutils literal"><span class="pre">session.peek_flash</span></tt> Method<a class="headerlink" href="#using-the-session-peek-flash-method" title="Permalink to this headline">¶</a></h3>
+<p>Once one or more messages has been added to a flash queue by the
+<tt class="docutils literal"><span class="pre">session.flash()</span></tt> API, the <tt class="docutils literal"><span class="pre">session.peek_flash()</span></tt> API can be used to
+&quot;peek&quot; at that queue.  Unlike <tt class="docutils literal"><span class="pre">session.pop_flash()</span></tt>, the queue is not
+popped from flash storage.</p>
+<dl class="method">
+<dt id="peek_flash">
+<tt class="descname">peek_flash</tt><big>(</big><em>queue=''</em><big>)</big><a class="headerlink" href="#peek_flash" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">flash</span><span class="p">(</span><span class="s">&#39;info message&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">peek_flash</span><span class="p">()</span>
+<span class="go">[&#39;info message&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">peek_flash</span><span class="p">()</span>
+<span class="go">[&#39;info message&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">pop_flash</span><span class="p">()</span>
+<span class="go">[&#39;info message&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">peek_flash</span><span class="p">()</span>
+<span class="go">[]</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="preventing-cross-site-request-forgery-attacks">
+<span id="index-9"></span><h2>Preventing Cross-Site Request Forgery Attacks<a class="headerlink" href="#preventing-cross-site-request-forgery-attacks" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="http://en.wikipedia.org/wiki/Cross-site_request_forgery">Cross-site request forgery</a> attacks are a
+phenomenon whereby a user who is logged in to your website might inadvertantly
+load a URL because it is linked from, or embedded in, an attacker's website.
+If the URL is one that may modify or delete data, the consequences can be dire.</p>
+<p>You can avoid most of these attacks by issuing a unique token to the browser
+and then requiring that it be present in all potentially unsafe requests.
+<span>Pyramid</span> sessions provide facilities to create and check CSRF tokens.</p>
+<p>To use CSRF tokens, you must first enable a <a class="reference internal" href="../glossary.html#term-session-factory"><em class="xref std std-term">session factory</em></a>
+as described in <a class="reference internal" href="#using-the-default-session-factory"><em>Using The Default Session Factory</em></a> or
+<a class="reference internal" href="#using-alternate-session-factories"><em>Using Alternate Session Factories</em></a>.</p>
+<div class="section" id="using-the-session-get-csrf-token-method">
+<span id="index-10"></span><h3>Using the <tt class="docutils literal"><span class="pre">session.get_csrf_token</span></tt> Method<a class="headerlink" href="#using-the-session-get-csrf-token-method" title="Permalink to this headline">¶</a></h3>
+<p>To get the current CSRF token from the session, use the
+<tt class="docutils literal"><span class="pre">session.get_csrf_token()</span></tt> method.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">token</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">get_csrf_token</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The <tt class="docutils literal"><span class="pre">session.get_csrf_token()</span></tt> method accepts no arguments.  It returns a
+CSRF <em>token</em> string. If <tt class="docutils literal"><span class="pre">session.get_csrf_token()</span></tt> or
+<tt class="docutils literal"><span class="pre">session.new_csrf_token()</span></tt> was invoked previously for this session, then the
+existing token will be returned.  If no CSRF token previously existed for
+this session, then a new token will be will be set into the session and returned.
+The newly created token will be opaque and randomized.</p>
+<p>You can use the returned token as the value of a hidden field in a form that
+posts to a method that requires elevated privileges, or supply it as a request
+header in AJAX requests.</p>
+<p>For example, include the CSRF token as a hidden field:</p>
+<div class="highlight-html"><div class="highlight"><pre><span class="nt">&lt;form</span> <span class="na">method=</span><span class="s">&quot;post&quot;</span> <span class="na">action=</span><span class="s">&quot;/myview&quot;</span><span class="nt">&gt;</span>
+  <span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">&quot;hidden&quot;</span> <span class="na">name=</span><span class="s">&quot;csrf_token&quot;</span> <span class="na">value=</span><span class="s">&quot;${request.session.get_csrf_token()}&quot;</span><span class="nt">&gt;</span>
+  <span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">&quot;submit&quot;</span> <span class="na">value=</span><span class="s">&quot;Delete Everything&quot;</span><span class="nt">&gt;</span>
+<span class="nt">&lt;/form&gt;</span>
+</pre></div>
+</div>
+<p>Or, include it as a header in a jQuery AJAX request:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">var</span> <span class="nx">csrfToken</span> <span class="o">=</span> <span class="nx">$</span><span class="p">{</span><span class="nx">request</span><span class="p">.</span><span class="nx">session</span><span class="p">.</span><span class="nx">get_csrf_token</span><span class="p">()};</span>
+<span class="nx">$</span><span class="p">.</span><span class="nx">ajax</span><span class="p">({</span>
+  <span class="nx">type</span><span class="o">:</span> <span class="s2">&quot;POST&quot;</span><span class="p">,</span>
+  <span class="nx">url</span><span class="o">:</span> <span class="s2">&quot;/myview&quot;</span><span class="p">,</span>
+  <span class="nx">headers</span><span class="o">:</span> <span class="p">{</span> <span class="s1">&#39;X-CSRF-Token&#39;</span><span class="o">:</span> <span class="nx">csrfToken</span> <span class="p">}</span>
+<span class="p">}).</span><span class="nx">done</span><span class="p">(</span><span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+  <span class="nx">alert</span><span class="p">(</span><span class="s2">&quot;Deleted&quot;</span><span class="p">);</span>
+<span class="p">});</span>
+</pre></div>
+</div>
+<p>The handler for the URL that receives the request
+should then require that the correct CSRF token is supplied.</p>
+</div>
+<div class="section" id="checking-csrf-tokens-manually">
+<h3>Checking CSRF Tokens Manually<a class="headerlink" href="#checking-csrf-tokens-manually" title="Permalink to this headline">¶</a></h3>
+<p>In request handling code, you can check the presence and validity of a CSRF
+token with <tt class="xref py py-func docutils literal"><span class="pre">pyramid.session.check_csrf_token(request)`()</span></tt>. If the token is
+valid, it will return <tt class="docutils literal"><span class="pre">True</span></tt>, otherwise it will raise <tt class="docutils literal"><span class="pre">HTTPBadRequest</span></tt>.
+Optionally, you can specify <tt class="docutils literal"><span class="pre">raises=False</span></tt> to have the check return <tt class="docutils literal"><span class="pre">False</span></tt>
+instead of raising an exception.</p>
+<p>By default, it checks for a GET or POST parameter named <tt class="docutils literal"><span class="pre">csrf_token</span></tt> or a
+header named <tt class="docutils literal"><span class="pre">X-CSRF-Token</span></tt>.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.session</span> <span class="kn">import</span> <span class="n">check_csrf_token</span>
+
+<span class="k">def</span> <span class="nf">myview</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="c"># Require CSRF Token</span>
+    <span class="n">check_csrf_token</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+
+    <span class="c"># ...</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="checking-csrf-tokens-with-a-view-predicate">
+<span id="index-11"></span><h3>Checking CSRF Tokens With A View Predicate<a class="headerlink" href="#checking-csrf-tokens-with-a-view-predicate" title="Permalink to this headline">¶</a></h3>
+<p>A convenient way to require a valid CSRF Token for a particular view is to
+include <tt class="docutils literal"><span class="pre">check_csrf=True</span></tt> as a view predicate.
+See <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_route()</span></tt></a>.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="nd">@view_config</span><span class="p">(</span><span class="n">request_method</span><span class="o">=</span><span class="s">&#39;POST&#39;</span><span class="p">,</span> <span class="n">check_csrf</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">myview</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="using-the-session-new-csrf-token-method">
+<h3>Using the <tt class="docutils literal"><span class="pre">session.new_csrf_token</span></tt> Method<a class="headerlink" href="#using-the-session-new-csrf-token-method" title="Permalink to this headline">¶</a></h3>
+<p>To explicitly create a new CSRF token, use the
+<tt class="docutils literal"><span class="pre">session.new_csrf_token()</span></tt> method.  This differs only from
+<tt class="docutils literal"><span class="pre">session.get_csrf_token()</span></tt> inasmuch as it clears any existing CSRF token,
+creates a new CSRF token, sets the token into the session, and returns the
+token.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">token</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">new_csrf_token</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Sessions</a><ul>
+<li><a class="reference internal" href="#using-the-default-session-factory">Using The Default Session Factory</a></li>
+<li><a class="reference internal" href="#using-a-session-object">Using a Session Object</a></li>
+<li><a class="reference internal" href="#using-alternate-session-factories">Using Alternate Session Factories</a></li>
+<li><a class="reference internal" href="#creating-your-own-session-factory">Creating Your Own Session Factory</a></li>
+<li><a class="reference internal" href="#flash-messages">Flash Messages</a><ul>
+<li><a class="reference internal" href="#using-the-session-flash-method">Using the <tt class="docutils literal"><span class="pre">session.flash</span></tt> Method</a></li>
+<li><a class="reference internal" href="#using-the-session-pop-flash-method">Using the <tt class="docutils literal"><span class="pre">session.pop_flash</span></tt> Method</a></li>
+<li><a class="reference internal" href="#using-the-session-peek-flash-method">Using the <tt class="docutils literal"><span class="pre">session.peek_flash</span></tt> Method</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#preventing-cross-site-request-forgery-attacks">Preventing Cross-Site Request Forgery Attacks</a><ul>
+<li><a class="reference internal" href="#using-the-session-get-csrf-token-method">Using the <tt class="docutils literal"><span class="pre">session.get_csrf_token</span></tt> Method</a></li>
+<li><a class="reference internal" href="#checking-csrf-tokens-manually">Checking CSRF Tokens Manually</a></li>
+<li><a class="reference internal" href="#checking-csrf-tokens-with-a-view-predicate">Checking CSRF Tokens With A View Predicate</a></li>
+<li><a class="reference internal" href="#using-the-session-new-csrf-token-method">Using the <tt class="docutils literal"><span class="pre">session.new_csrf_token</span></tt> Method</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="webob.html"
+                        title="previous chapter">Request and Response Objects</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="events.html"
+                        title="next chapter">Using Events</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="events.html" title="Using Events"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="webob.html" title="Request and Response Objects"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

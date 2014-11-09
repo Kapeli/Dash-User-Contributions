@@ -1,0 +1,350 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Design &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="SQLAlchemy + URL Dispatch Wiki Tutorial" href="index.html" />
+    <link rel="next" title="Installation" href="installation.html" />
+    <link rel="prev" title="Background" href="background.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="installation.html" title="Installation"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="background.html" title="Background"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">SQLAlchemy + URL Dispatch Wiki Tutorial</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="design">
+<h1>Design<a class="headerlink" href="#design" title="Permalink to this headline">¶</a></h1>
+<p>Following is a quick overview of the design of our wiki application, to help
+us understand the changes that we will be making as we work through the
+tutorial.</p>
+<div class="section" id="overall">
+<h2>Overall<a class="headerlink" href="#overall" title="Permalink to this headline">¶</a></h2>
+<p>We choose to use <a class="reference internal" href="../../glossary.html#term-restructuredtext"><em class="xref std std-term">reStructuredText</em></a> markup in the wiki text.  Translation
+from reStructuredText to HTML is provided by the widely used <tt class="docutils literal"><span class="pre">docutils</span></tt>
+Python module.  We will add this module in the dependency list on the project
+<tt class="docutils literal"><span class="pre">setup.py</span></tt> file.</p>
+</div>
+<div class="section" id="models">
+<h2>Models<a class="headerlink" href="#models" title="Permalink to this headline">¶</a></h2>
+<p>We'll be using a SQLite database to hold our wiki data, and we'll be using
+<a class="reference internal" href="../../glossary.html#term-sqlalchemy"><em class="xref std std-term">SQLAlchemy</em></a> to access the data in this database.</p>
+<p>Within the database, we define a single table named <cite>pages</cite>, whose elements
+will store the wiki pages.  There are two columns: <cite>name</cite> and <cite>data</cite>.</p>
+<p>URLs like <tt class="docutils literal"><span class="pre">/PageName</span></tt> will try to find an element in
+the table that has a corresponding name.</p>
+<p>To add a page to the wiki, a new row is created and the text
+is stored in <cite>data</cite>.</p>
+<p>A page named <tt class="docutils literal"><span class="pre">FrontPage</span></tt> containing the text <em>This is the front page</em>, will
+be created when the storage is initialized, and will be used as the wiki home
+page.</p>
+</div>
+<div class="section" id="views">
+<h2>Views<a class="headerlink" href="#views" title="Permalink to this headline">¶</a></h2>
+<p>There will be three views to handle the normal operations of adding,
+editing and viewing wiki pages, plus one view for the wiki front page.
+Two templates will be used, one for viewing, and one for both for adding
+and editing wiki pages.</p>
+<p>The default templating systems in <span>Pyramid</span> are
+<a class="reference internal" href="../../glossary.html#term-chameleon"><em class="xref std std-term">Chameleon</em></a> and <a class="reference internal" href="../../glossary.html#term-mako"><em class="xref std std-term">Mako</em></a>.  Chameleon is a variant of
+<a class="reference internal" href="../../glossary.html#term-zpt"><em class="xref std std-term">ZPT</em></a>, which is an XML-based templating language.  Mako is a
+non-XML-based templating language.  Because we had to pick one,
+we chose Chameleon for this tutorial.</p>
+</div>
+<div class="section" id="security">
+<h2>Security<a class="headerlink" href="#security" title="Permalink to this headline">¶</a></h2>
+<p>We'll eventually be adding security to our application.  The components we'll
+use to do this are below.</p>
+<ul>
+<li><p class="first">USERS, a dictionary mapping users names to their corresponding passwords.</p>
+</li>
+<li><p class="first">GROUPS, a dictionary mapping user names to a list of groups they belong to.</p>
+</li>
+<li><p class="first"><tt class="docutils literal"><span class="pre">groupfinder</span></tt>, an <em>authorization callback</em> that looks up USERS and
+GROUPS.  It will be provided in a new <em>security.py</em> file.</p>
+</li>
+<li><p class="first">An <a class="reference internal" href="../../glossary.html#term-acl"><em class="xref std std-term">ACL</em></a> is attached to the root <a class="reference internal" href="../../glossary.html#term-resource"><em class="xref std std-term">resource</em></a>.  Each row below
+details an <a class="reference internal" href="../../glossary.html#term-ace"><em class="xref std std-term">ACE</em></a>:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="24%" />
+<col width="38%" />
+<col width="38%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Action</th>
+<th class="head">Principal</th>
+<th class="head">Permission</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>Allow</td>
+<td>Everyone</td>
+<td>View</td>
+</tr>
+<tr class="row-odd"><td>Allow</td>
+<td>group:editors</td>
+<td>Edit</td>
+</tr>
+</tbody>
+</table>
+</li>
+<li><p class="first">Permission declarations are added to the views to assert the security
+policies as each request is handled.</p>
+</li>
+</ul>
+<p>Two additional views and one template will handle the login and
+logout tasks.</p>
+</div>
+<div class="section" id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Permalink to this headline">¶</a></h2>
+<p>The URL, actions, template and permission associated to each view are
+listed in the following table:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="27%" />
+<col width="28%" />
+<col width="16%" />
+<col width="15%" />
+<col width="15%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">URL</th>
+<th class="head">Action</th>
+<th class="head">View</th>
+<th class="head">Template</th>
+<th class="head">Permission</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>/</td>
+<td>Redirect to
+/FrontPage</td>
+<td>view_wiki</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>/PageName</td>
+<td>Display existing
+page <a class="footnote-reference" href="#id5" id="id1">[2]</a></td>
+<td>view_page
+<a class="footnote-reference" href="#id4" id="id2">[1]</a></td>
+<td>view.pt</td>
+<td>view</td>
+</tr>
+<tr class="row-even"><td>/PageName/edit_page</td>
+<td><p class="first">Display edit form
+with existing
+content.</p>
+<p class="last">If the form is
+submitted, redirect
+to /PageName</p>
+</td>
+<td>edit_page</td>
+<td>edit.pt</td>
+<td>edit</td>
+</tr>
+<tr class="row-odd"><td>/add_page/PageName</td>
+<td><p class="first">Create the page
+<em>PageName</em> in
+storage,  display
+the edit form
+without content.</p>
+<p class="last">If the form is
+submitted,
+redirect to
+/PageName</p>
+</td>
+<td>add_page</td>
+<td>edit.pt</td>
+<td>edit</td>
+</tr>
+<tr class="row-even"><td>/login</td>
+<td><p class="first">Display login form,
+Forbidden <a class="footnote-reference" href="#id6" id="id3">[3]</a></p>
+<p>If the form is
+submitted,
+authenticate.</p>
+<ul class="last simple">
+<li>If authentication
+successful,
+redirect to the
+page that we
+came from.</li>
+<li>If authentication
+fails, display
+login form with
+&quot;login failed&quot;
+message.</li>
+</ul>
+</td>
+<td>login</td>
+<td>login.pt</td>
+<td>&nbsp;</td>
+</tr>
+<tr class="row-odd"><td>/logout</td>
+<td>Redirect to
+/FrontPage</td>
+<td>logout</td>
+<td>&nbsp;</td>
+<td>&nbsp;</td>
+</tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="id4" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id2">[1]</a></td><td>This is the default view for a Page context
+when there is no view name.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="id5" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[2]</a></td><td>Pyramid will return a default 404 Not Found page
+if the page <em>PageName</em> does not exist yet.</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="id6" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id3">[3]</a></td><td>pyramid.exceptions.Forbidden is reached when a
+user tries to invoke a view that is
+not authorized by the authorization policy.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Design</a><ul>
+<li><a class="reference internal" href="#overall">Overall</a></li>
+<li><a class="reference internal" href="#models">Models</a></li>
+<li><a class="reference internal" href="#views">Views</a></li>
+<li><a class="reference internal" href="#security">Security</a></li>
+<li><a class="reference internal" href="#summary">Summary</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="background.html"
+                        title="previous chapter">Background</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="installation.html"
+                        title="next chapter">Installation</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="installation.html" title="Installation"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="background.html" title="Background"
+             >previous</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" >SQLAlchemy + URL Dispatch Wiki Tutorial</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>
