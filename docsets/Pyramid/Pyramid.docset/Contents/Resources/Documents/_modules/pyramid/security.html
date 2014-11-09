@@ -1,0 +1,505 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.security &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.security</h1><div class="highlight"><pre>
+<span class="kn">from</span> <span class="nn">zope.deprecation</span> <span class="kn">import</span> <span class="n">deprecated</span>
+<span class="kn">from</span> <span class="nn">zope.interface</span> <span class="kn">import</span> <span class="n">providedBy</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">IAuthenticationPolicy</span><span class="p">,</span>
+    <span class="n">IAuthorizationPolicy</span><span class="p">,</span>
+    <span class="n">ISecuredView</span><span class="p">,</span>
+    <span class="n">IView</span><span class="p">,</span>
+    <span class="n">IViewClassifier</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.compat</span> <span class="kn">import</span> <span class="n">map_</span>
+<span class="kn">from</span> <span class="nn">pyramid.threadlocal</span> <span class="kn">import</span> <span class="n">get_current_registry</span>
+
+<span class="n">Everyone</span> <span class="o">=</span> <span class="s">&#39;system.Everyone&#39;</span>
+<span class="n">Authenticated</span> <span class="o">=</span> <span class="s">&#39;system.Authenticated&#39;</span>
+<span class="n">Allow</span> <span class="o">=</span> <span class="s">&#39;Allow&#39;</span>
+<span class="n">Deny</span> <span class="o">=</span> <span class="s">&#39;Deny&#39;</span>
+
+<span class="k">class</span> <span class="nc">AllPermissionsList</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Stand in &#39;permission list&#39; to represent all permissions &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">()</span>
+    <span class="k">def</span> <span class="nf">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="p">)</span>
+
+<span class="n">ALL_PERMISSIONS</span> <span class="o">=</span> <span class="n">AllPermissionsList</span><span class="p">()</span>
+<span class="n">DENY_ALL</span> <span class="o">=</span> <span class="p">(</span><span class="n">Deny</span><span class="p">,</span> <span class="n">Everyone</span><span class="p">,</span> <span class="n">ALL_PERMISSIONS</span><span class="p">)</span>
+
+<span class="n">NO_PERMISSION_REQUIRED</span> <span class="o">=</span> <span class="s">&#39;__no_permission_required__&#39;</span>
+
+<span class="k">def</span> <span class="nf">_get_registry</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">registry</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="n">get_current_registry</span><span class="p">()</span> <span class="c"># b/c</span>
+    <span class="k">return</span> <span class="n">reg</span>
+
+<span class="k">def</span> <span class="nf">_get_authentication_policy</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">registry</span> <span class="o">=</span> <span class="n">_get_registry</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">registry</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">IAuthenticationPolicy</span><span class="p">)</span>
+
+<div class="viewcode-block" id="has_permission"><a class="viewcode-back" href="../../api/security.html#pyramid.security.has_permission">[docs]</a><span class="k">def</span> <span class="nf">has_permission</span><span class="p">(</span><span class="n">permission</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A function that calls :meth:`pyramid.request.Request.has_permission`</span>
+<span class="sd">    and returns its result.</span>
+<span class="sd">    </span>
+<span class="sd">    .. deprecated:: 1.5</span>
+<span class="sd">        Use :meth:`pyramid.request.Request.has_permission` instead.</span>
+
+<span class="sd">    .. versionchanged:: 1.5a3</span>
+<span class="sd">        If context is None, then attempt to use the context attribute of self;</span>
+<span class="sd">        if not set, then the AttributeError is propagated.</span>
+<span class="sd">    &quot;&quot;&quot;</span>    
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">has_permission</span><span class="p">(</span><span class="n">permission</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+</div>
+<span class="n">deprecated</span><span class="p">(</span>
+    <span class="s">&#39;has_permission&#39;</span><span class="p">,</span>
+    <span class="s">&#39;As of Pyramid 1.5 the &quot;pyramid.security.has_permission&quot; API is now &#39;</span>
+    <span class="s">&#39;deprecated.  It will be removed in Pyramid 1.8.  Use the &#39;</span>
+    <span class="s">&#39;&quot;has_permission&quot; method of the Pyramid request instead.&#39;</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="authenticated_userid"><a class="viewcode-back" href="../../api/security.html#pyramid.security.authenticated_userid">[docs]</a><span class="k">def</span> <span class="nf">authenticated_userid</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A function that returns the value of the property</span>
+<span class="sd">    :attr:`pyramid.request.Request.authenticated_userid`.</span>
+<span class="sd">    </span>
+<span class="sd">    .. deprecated:: 1.5</span>
+<span class="sd">       Use :attr:`pyramid.request.Request.authenticated_userid` instead.</span>
+<span class="sd">    &quot;&quot;&quot;</span>        
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">authenticated_userid</span>
+</div>
+<span class="n">deprecated</span><span class="p">(</span>
+    <span class="s">&#39;authenticated_userid&#39;</span><span class="p">,</span>
+    <span class="s">&#39;As of Pyramid 1.5 the &quot;pyramid.security.authenticated_userid&quot; API is now &#39;</span>
+    <span class="s">&#39;deprecated.  It will be removed in Pyramid 1.8.  Use the &#39;</span>
+    <span class="s">&#39;&quot;authenticated_userid&quot; attribute of the Pyramid request instead.&#39;</span>
+    <span class="p">)</span>
+
+<div class="viewcode-block" id="unauthenticated_userid"><a class="viewcode-back" href="../../api/security.html#pyramid.security.unauthenticated_userid">[docs]</a><span class="k">def</span> <span class="nf">unauthenticated_userid</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    A function that returns the value of the property</span>
+<span class="sd">    :attr:`pyramid.request.Request.unauthenticated_userid`.</span>
+<span class="sd">    </span>
+<span class="sd">    .. deprecated:: 1.5</span>
+<span class="sd">        Use :attr:`pyramid.request.Request.unauthenticated_userid` instead.</span>
+<span class="sd">    &quot;&quot;&quot;</span>        
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">unauthenticated_userid</span>
+</div>
+<span class="n">deprecated</span><span class="p">(</span>
+    <span class="s">&#39;unauthenticated_userid&#39;</span><span class="p">,</span>
+    <span class="s">&#39;As of Pyramid 1.5 the &quot;pyramid.security.unauthenticated_userid&quot; API is &#39;</span>
+    <span class="s">&#39;now deprecated.  It will be removed in Pyramid 1.8.  Use the &#39;</span>
+    <span class="s">&#39;&quot;unauthenticated_userid&quot; attribute of the Pyramid request instead.&#39;</span>
+    <span class="p">)</span>
+
+<div class="viewcode-block" id="effective_principals"><a class="viewcode-back" href="../../api/security.html#pyramid.security.effective_principals">[docs]</a><span class="k">def</span> <span class="nf">effective_principals</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A function that returns the value of the property</span>
+<span class="sd">    :attr:`pyramid.request.Request.effective_principals`.</span>
+<span class="sd">    </span>
+<span class="sd">    .. deprecated:: 1.5</span>
+<span class="sd">        Use :attr:`pyramid.request.Request.effective_principals` instead.</span>
+<span class="sd">    &quot;&quot;&quot;</span>            
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">effective_principals</span>
+</div>
+<span class="n">deprecated</span><span class="p">(</span>
+    <span class="s">&#39;effective_principals&#39;</span><span class="p">,</span>
+    <span class="s">&#39;As of Pyramid 1.5 the &quot;pyramid.security.effective_principals&quot; API is &#39;</span>
+    <span class="s">&#39;now deprecated.  It will be removed in Pyramid 1.8.  Use the &#39;</span>
+    <span class="s">&#39;&quot;effective_principals&quot; attribute of the Pyramid request instead.&#39;</span>
+    <span class="p">)</span>
+
+<div class="viewcode-block" id="remember"><a class="viewcode-back" href="../../api/security.html#pyramid.security.remember">[docs]</a><span class="k">def</span> <span class="nf">remember</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">principal</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns a sequence of header tuples (e.g. ``[(&#39;Set-Cookie&#39;, &#39;foo=abc&#39;)]``)</span>
+<span class="sd">    on this request&#39;s response.</span>
+<span class="sd">    These headers are suitable for &#39;remembering&#39; a set of credentials</span>
+<span class="sd">    implied by the data passed as ``principal`` and ``*kw`` using the</span>
+<span class="sd">    current :term:`authentication policy`.  Common usage might look</span>
+<span class="sd">    like so within the body of a view function (``response`` is</span>
+<span class="sd">    assumed to be a :term:`WebOb` -style :term:`response` object</span>
+<span class="sd">    computed previously by the view code)::</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       from pyramid.security import remember</span>
+<span class="sd">       headers = remember(request, &#39;chrism&#39;, password=&#39;123&#39;, max_age=&#39;86400&#39;)</span>
+<span class="sd">       response = request.response</span>
+<span class="sd">       response.headerlist.extend(headers)</span>
+<span class="sd">       return response</span>
+
+<span class="sd">    If no :term:`authentication policy` is in use, this function will</span>
+<span class="sd">    always return an empty sequence. If used, the composition and</span>
+<span class="sd">    meaning of ``**kw`` must be agreed upon by the calling code and</span>
+<span class="sd">    the effective authentication policy.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">policy</span> <span class="o">=</span> <span class="n">_get_authentication_policy</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">policy</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">return</span> <span class="n">policy</span><span class="o">.</span><span class="n">remember</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">principal</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="forget"><a class="viewcode-back" href="../../api/security.html#pyramid.security.forget">[docs]</a><span class="k">def</span> <span class="nf">forget</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return a sequence of header tuples (e.g. ``[(&#39;Set-Cookie&#39;,</span>
+<span class="sd">    &#39;foo=abc&#39;)]``) suitable for &#39;forgetting&#39; the set of credentials</span>
+<span class="sd">    possessed by the currently authenticated user.  A common usage</span>
+<span class="sd">    might look like so within the body of a view function</span>
+<span class="sd">    (``response`` is assumed to be an :term:`WebOb` -style</span>
+<span class="sd">    :term:`response` object computed previously by the view code)::</span>
+
+<span class="sd">      from pyramid.security import forget</span>
+<span class="sd">      headers = forget(request)</span>
+<span class="sd">      response.headerlist.extend(headers)</span>
+<span class="sd">      return response</span>
+
+<span class="sd">    If no :term:`authentication policy` is in use, this function will</span>
+<span class="sd">    always return an empty sequence.</span>
+<span class="sd">    &quot;&quot;&quot;</span>            
+    <span class="n">policy</span> <span class="o">=</span> <span class="n">_get_authentication_policy</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">policy</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="k">return</span> <span class="n">policy</span><span class="o">.</span><span class="n">forget</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="principals_allowed_by_permission"><a class="viewcode-back" href="../../api/security.html#pyramid.security.principals_allowed_by_permission">[docs]</a><span class="k">def</span> <span class="nf">principals_allowed_by_permission</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">permission</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Provided a ``context`` (a resource object), and a ``permission``</span>
+<span class="sd">    (a string or unicode object), if a :term:`authorization policy` is</span>
+<span class="sd">    in effect, return a sequence of :term:`principal` ids that possess</span>
+<span class="sd">    the permission in the ``context``.  If no authorization policy is</span>
+<span class="sd">    in effect, this will return a sequence with the single value</span>
+<span class="sd">    :mod:`pyramid.security.Everyone` (the special principal</span>
+<span class="sd">    identifier representing all principals).</span>
+
+<span class="sd">    .. note::</span>
+
+<span class="sd">       even if an :term:`authorization policy` is in effect,</span>
+<span class="sd">       some (exotic) authorization policies may not implement the</span>
+<span class="sd">       required machinery for this function; those will cause a</span>
+<span class="sd">       :exc:`NotImplementedError` exception to be raised when this</span>
+<span class="sd">       function is invoked.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">reg</span> <span class="o">=</span> <span class="n">get_current_registry</span><span class="p">()</span>
+    <span class="n">policy</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">IAuthorizationPolicy</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">policy</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">Everyone</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">policy</span><span class="o">.</span><span class="n">principals_allowed_by_permission</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">permission</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="view_execution_permitted"><a class="viewcode-back" href="../../api/security.html#pyramid.security.view_execution_permitted">[docs]</a><span class="k">def</span> <span class="nf">view_execution_permitted</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; If the view specified by ``context`` and ``name`` is protected</span>
+<span class="sd">    by a :term:`permission`, check the permission associated with the</span>
+<span class="sd">    view using the effective authentication/authorization policies and</span>
+<span class="sd">    the ``request``.  Return a boolean result.  If no</span>
+<span class="sd">    :term:`authorization policy` is in effect, or if the view is not</span>
+<span class="sd">    protected by a permission, return ``True``. If no view can view found,</span>
+<span class="sd">    an exception will be raised.</span>
+
+<span class="sd">    .. versionchanged:: 1.4a4</span>
+<span class="sd">       An exception is raised if no view is found.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">reg</span> <span class="o">=</span> <span class="n">_get_registry</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="n">provides</span> <span class="o">=</span> <span class="p">[</span><span class="n">IViewClassifier</span><span class="p">]</span> <span class="o">+</span> <span class="n">map_</span><span class="p">(</span><span class="n">providedBy</span><span class="p">,</span> <span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">))</span>
+    <span class="n">view</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">adapters</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">provides</span><span class="p">,</span> <span class="n">ISecuredView</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">view</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">view</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">adapters</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">provides</span><span class="p">,</span> <span class="n">IView</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">view</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&#39;No registered view satisfies the constraints. &#39;</span>
+                            <span class="s">&#39;It would not make sense to claim that this view &#39;</span>
+                            <span class="s">&#39;&quot;is&quot; or &quot;is not&quot; permitted.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Allowed</span><span class="p">(</span>
+            <span class="s">&#39;Allowed: view name </span><span class="si">%r</span><span class="s"> in context </span><span class="si">%r</span><span class="s"> (no permission defined)&#39;</span> <span class="o">%</span>
+            <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">context</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">view</span><span class="o">.</span><span class="n">__permitted__</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">request</span><span class="p">)</span>
+
+</div>
+<span class="k">class</span> <span class="nc">PermitsResult</span><span class="p">(</span><span class="nb">int</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__new__</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="n">inst</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">__new__</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">cls</span><span class="o">.</span><span class="n">boolval</span><span class="p">)</span>
+        <span class="n">inst</span><span class="o">.</span><span class="n">s</span> <span class="o">=</span> <span class="n">s</span>
+        <span class="n">inst</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="n">args</span>
+        <span class="k">return</span> <span class="n">inst</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">msg</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">s</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">msg</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;&lt;</span><span class="si">%s</span><span class="s"> instance at </span><span class="si">%s</span><span class="s"> with msg </span><span class="si">%r</span><span class="s">&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
+                                                    <span class="nb">id</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">msg</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Denied"><a class="viewcode-back" href="../../api/security.html#pyramid.security.Denied">[docs]</a><span class="k">class</span> <span class="nc">Denied</span><span class="p">(</span><span class="n">PermitsResult</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; An instance of ``Denied`` is returned when a security-related</span>
+<span class="sd">    API or other :app:`Pyramid` code denies an action unrelated to</span>
+<span class="sd">    an ACL check.  It evaluates equal to all boolean false types.  It</span>
+<span class="sd">    has an attribute named ``msg`` describing the circumstances for</span>
+<span class="sd">    the deny.&quot;&quot;&quot;</span>
+    <span class="n">boolval</span> <span class="o">=</span> <span class="mi">0</span>
+</div>
+<div class="viewcode-block" id="Allowed"><a class="viewcode-back" href="../../api/security.html#pyramid.security.Allowed">[docs]</a><span class="k">class</span> <span class="nc">Allowed</span><span class="p">(</span><span class="n">PermitsResult</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; An instance of ``Allowed`` is returned when a security-related</span>
+<span class="sd">    API or other :app:`Pyramid` code allows an action unrelated to</span>
+<span class="sd">    an ACL check.  It evaluates equal to all boolean true types.  It</span>
+<span class="sd">    has an attribute named ``msg`` describing the circumstances for</span>
+<span class="sd">    the allow.&quot;&quot;&quot;</span>
+    <span class="n">boolval</span> <span class="o">=</span> <span class="mi">1</span>
+</div>
+<span class="k">class</span> <span class="nc">ACLPermitsResult</span><span class="p">(</span><span class="nb">int</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__new__</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">ace</span><span class="p">,</span> <span class="n">acl</span><span class="p">,</span> <span class="n">permission</span><span class="p">,</span> <span class="n">principals</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="n">inst</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">__new__</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">cls</span><span class="o">.</span><span class="n">boolval</span><span class="p">)</span>
+        <span class="n">inst</span><span class="o">.</span><span class="n">permission</span> <span class="o">=</span> <span class="n">permission</span>
+        <span class="n">inst</span><span class="o">.</span><span class="n">ace</span> <span class="o">=</span> <span class="n">ace</span>
+        <span class="n">inst</span><span class="o">.</span><span class="n">acl</span> <span class="o">=</span> <span class="n">acl</span>
+        <span class="n">inst</span><span class="o">.</span><span class="n">principals</span> <span class="o">=</span> <span class="n">principals</span>
+        <span class="n">inst</span><span class="o">.</span><span class="n">context</span> <span class="o">=</span> <span class="n">context</span>
+        <span class="k">return</span> <span class="n">inst</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">msg</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> permission </span><span class="si">%r</span><span class="s"> via ACE </span><span class="si">%r</span><span class="s"> in ACL </span><span class="si">%r</span><span class="s"> on context </span><span class="si">%r</span><span class="s"> for &#39;</span>
+             <span class="s">&#39;principals </span><span class="si">%r</span><span class="s">&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">permission</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ace</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">acl</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">principals</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">msg</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;&lt;</span><span class="si">%s</span><span class="s"> instance at </span><span class="si">%s</span><span class="s"> with msg </span><span class="si">%r</span><span class="s">&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
+                                                    <span class="nb">id</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">msg</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ACLDenied"><a class="viewcode-back" href="../../api/security.html#pyramid.security.ACLDenied">[docs]</a><span class="k">class</span> <span class="nc">ACLDenied</span><span class="p">(</span><span class="n">ACLPermitsResult</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; An instance of ``ACLDenied`` represents that a security check made</span>
+<span class="sd">    explicitly against ACL was denied.  It evaluates equal to all boolean</span>
+<span class="sd">    false types.  It also has the following attributes: ``acl``, ``ace``,</span>
+<span class="sd">    ``permission``, ``principals``, and ``context``.  These attributes</span>
+<span class="sd">    indicate the security values involved in the request.  Its __str__ method</span>
+<span class="sd">    prints a summary of these attributes for debugging purposes.  The same</span>
+<span class="sd">    summary is available as the ``msg`` attribute.&quot;&quot;&quot;</span>
+    <span class="n">boolval</span> <span class="o">=</span> <span class="mi">0</span>
+</div>
+<div class="viewcode-block" id="ACLAllowed"><a class="viewcode-back" href="../../api/security.html#pyramid.security.ACLAllowed">[docs]</a><span class="k">class</span> <span class="nc">ACLAllowed</span><span class="p">(</span><span class="n">ACLPermitsResult</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; An instance of ``ACLAllowed`` represents that a security check made</span>
+<span class="sd">    explicitly against ACL was allowed.  It evaluates equal to all boolean</span>
+<span class="sd">    true types.  It also has the following attributes: ``acl``, ``ace``,</span>
+<span class="sd">    ``permission``, ``principals``, and ``context``.  These attributes</span>
+<span class="sd">    indicate the security values involved in the request.  Its __str__ method</span>
+<span class="sd">    prints a summary of these attributes for debugging purposes.  The same</span>
+<span class="sd">    summary is available as the ``msg`` attribute.&quot;&quot;&quot;</span>
+    <span class="n">boolval</span> <span class="o">=</span> <span class="mi">1</span>
+</div>
+<span class="k">class</span> <span class="nc">AuthenticationAPIMixin</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">_get_authentication_policy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="n">_get_registry</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">reg</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">IAuthenticationPolicy</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">authenticated_userid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the userid of the currently authenticated user or</span>
+<span class="sd">        ``None`` if there is no :term:`authentication policy` in effect or</span>
+<span class="sd">        there is no currently authenticated user.</span>
+
+<span class="sd">        .. versionadded:: 1.5</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">policy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_authentication_policy</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">policy</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="n">policy</span><span class="o">.</span><span class="n">authenticated_userid</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">unauthenticated_userid</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return an object which represents the *claimed* (not verified) user</span>
+<span class="sd">        id of the credentials present in the request. ``None`` if there is no</span>
+<span class="sd">        :term:`authentication policy` in effect or there is no user data</span>
+<span class="sd">        associated with the current request.  This differs from</span>
+<span class="sd">        :attr:`~pyramid.request.Request.authenticated_userid`, because the</span>
+<span class="sd">        effective authentication policy will not ensure that a record</span>
+<span class="sd">        associated with the userid exists in persistent storage.</span>
+
+<span class="sd">        .. versionadded:: 1.5</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">policy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_authentication_policy</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">policy</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="n">policy</span><span class="o">.</span><span class="n">unauthenticated_userid</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">effective_principals</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the list of &#39;effective&#39; :term:`principal` identifiers</span>
+<span class="sd">        for the ``request``. If no :term:`authentication policy` is in effect,</span>
+<span class="sd">        this will return a one-element list containing the</span>
+<span class="sd">        :data:`pyramid.security.Everyone` principal.</span>
+
+<span class="sd">        .. versionadded:: 1.5</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">policy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_authentication_policy</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">policy</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">Everyone</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">policy</span><span class="o">.</span><span class="n">effective_principals</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">AuthorizationAPIMixin</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">has_permission</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">permission</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Given a permission and an optional context, returns an instance of</span>
+<span class="sd">        :data:`pyramid.security.Allowed` if the permission is granted to this</span>
+<span class="sd">        request with the provided context, or the context already associated</span>
+<span class="sd">        with the request.  Otherwise, returns an instance of</span>
+<span class="sd">        :data:`pyramid.security.Denied`.  This method delegates to the current</span>
+<span class="sd">        authentication and authorization policies.  Returns</span>
+<span class="sd">        :data:`pyramid.security.Allowed` unconditionally if no authentication</span>
+<span class="sd">        policy has been registered for this request.  If ``context`` is not</span>
+<span class="sd">        supplied or is supplied as ``None``, the context used is the</span>
+<span class="sd">        ``request.context`` attribute.</span>
+
+<span class="sd">        :param permission: Does this request have the given permission?</span>
+<span class="sd">        :type permission: unicode, str</span>
+<span class="sd">        :param context: A resource object or ``None``</span>
+<span class="sd">        :type context: object</span>
+<span class="sd">        :returns: `pyramid.security.PermitsResult`</span>
+
+<span class="sd">        .. versionadded:: 1.5</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">context</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">context</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="n">_get_registry</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">authn_policy</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">IAuthenticationPolicy</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">authn_policy</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Allowed</span><span class="p">(</span><span class="s">&#39;No authentication policy in use.&#39;</span><span class="p">)</span>
+        <span class="n">authz_policy</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">IAuthorizationPolicy</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">authz_policy</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Authentication policy registered without &#39;</span>
+                             <span class="s">&#39;authorization policy&#39;</span><span class="p">)</span> <span class="c"># should never happen</span>
+        <span class="n">principals</span> <span class="o">=</span> <span class="n">authn_policy</span><span class="o">.</span><span class="n">effective_principals</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">authz_policy</span><span class="o">.</span><span class="n">permits</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">principals</span><span class="p">,</span> <span class="n">permission</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,760 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>19: Databases Using SQLAlchemy &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="up" title="Quick Tutorial for Pyramid" href="index.html" />
+    <link rel="next" title="20: Logins With Authentication" href="authentication.html" />
+    <link rel="prev" title="18: Forms and Validation With Deform" href="forms.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="authentication.html" title="20: Logins With Authentication"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="forms.html" title="18: Forms and Validation With Deform"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Quick Tutorial for Pyramid</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="databases-using-sqlalchemy">
+<span id="qtut-databases"></span><h1>19: Databases Using SQLAlchemy<a class="headerlink" href="#databases-using-sqlalchemy" title="Permalink to this headline">¶</a></h1>
+<p>Store/retrieve data using the SQLAlchemy ORM atop the SQLite database.</p>
+<div class="section" id="background">
+<h2>Background<a class="headerlink" href="#background" title="Permalink to this headline">¶</a></h2>
+<p>Our Pyramid-based wiki application now needs database-backed storage of
+pages. This frequently means a SQL database. The Pyramid community
+strongly supports the
+<a class="reference external" href="http://docs.sqlalchemy.org/en/latest/index.html#index-toplevel" title="(in SQLAlchemy v1.0)"><em class="xref std std-ref">SQLAlchemy</em></a> project and its
+<a class="reference external" href="http://docs.sqlalchemy.org/en/latest/orm/tutorial.html#ormtutorial-toplevel" title="(in SQLAlchemy v1.0)"><em class="xref std std-ref">object-relational mapper (ORM)</em></a>
+as a convenient, Pythonic way to interface to databases.</p>
+<p>In this step we hook up SQLAlchemy to a SQLite database table,
+providing storage and retrieval for the wikipages in the previous step.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The <tt class="docutils literal"><span class="pre">alchemy</span></tt> scaffold is really helpful for getting a
+SQLAlchemy project going, including generation of the console
+script. Since we want to see all the decisions, we will forgo
+convenience in this tutorial and wire it up ourselves.</p>
+</div>
+</div>
+<div class="section" id="objectives">
+<h2>Objectives<a class="headerlink" href="#objectives" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Store pages in SQLite by using SQLAlchemy models</li>
+<li>Use SQLAlchemy queries to list/add/view/edit pages</li>
+<li>Provide a database-initialize command by writing a Pyramid <em>console
+script</em> which can be run from the command line</li>
+</ul>
+</div>
+<div class="section" id="steps">
+<h2>Steps<a class="headerlink" href="#steps" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">We are going to use the forms step as our starting point:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span><span class="nb">cd</span> ..; cp -r forms databases; <span class="nb">cd </span>databases
+</pre></div>
+</div>
+</li>
+<li><p class="first">We need to add some dependencies in <tt class="docutils literal"><span class="pre">databases/setup.py</span></tt> as well
+as an &quot;entry point&quot; for the command-line script:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">setuptools</span> <span class="kn">import</span> <span class="n">setup</span>
+
+<span class="n">requires</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s">&#39;pyramid&#39;</span><span class="p">,</span>
+    <span class="s">&#39;pyramid_chameleon&#39;</span><span class="p">,</span>
+    <span class="s">&#39;deform&#39;</span><span class="p">,</span>
+    <span class="s">&#39;sqlalchemy&#39;</span><span class="p">,</span>
+    <span class="s">&#39;pyramid_tm&#39;</span><span class="p">,</span>
+    <span class="s">&#39;zope.sqlalchemy&#39;</span>
+<span class="p">]</span>
+
+<span class="n">setup</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;tutorial&#39;</span><span class="p">,</span>
+      <span class="n">install_requires</span><span class="o">=</span><span class="n">requires</span><span class="p">,</span>
+      <span class="n">entry_points</span><span class="o">=</span><span class="s">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s">      [paste.app_factory]</span>
+<span class="s">      main = tutorial:main</span>
+<span class="s">      [console_scripts]</span>
+<span class="s">      initialize_tutorial_db = tutorial.initialize_db:main</span>
+<span class="s">      &quot;&quot;&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">We aren't yet doing <tt class="docutils literal"><span class="pre">python3.3</span> <span class="pre">setup.py</span> <span class="pre">develop</span></tt> as we
+are changing it later.</p>
+</div>
+</li>
+<li><p class="first">Our configuration file at <tt class="docutils literal"><span class="pre">databases/development.ini</span></tt> wires
+together some new pieces:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span class="k">[app:main]</span>
+<span class="na">use</span> <span class="o">=</span> <span class="s">egg:tutorial</span>
+<span class="na">pyramid.reload_templates</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">pyramid.includes</span> <span class="o">=</span><span class="s"></span>
+<span class="s">    pyramid_debugtoolbar</span>
+<span class="s">    pyramid_tm</span>
+
+<span class="na">sqlalchemy.url</span> <span class="o">=</span> <span class="s">sqlite:///%(here)s/sqltutorial.sqlite</span>
+
+<span class="k">[server:main]</span>
+<span class="na">use</span> <span class="o">=</span> <span class="s">egg:pyramid#wsgiref</span>
+<span class="na">host</span> <span class="o">=</span> <span class="s">0.0.0.0</span>
+<span class="na">port</span> <span class="o">=</span> <span class="s">6543</span>
+
+<span class="c1"># Begin logging configuration</span>
+
+<span class="k">[loggers]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">root, tutorial, sqlalchemy</span>
+
+<span class="k">[logger_tutorial]</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">DEBUG</span>
+<span class="na">handlers</span> <span class="o">=</span>
+<span class="na">qualname</span> <span class="o">=</span> <span class="s">tutorial</span>
+
+<span class="k">[logger_sqlalchemy]</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">INFO</span>
+<span class="na">handlers</span> <span class="o">=</span>
+<span class="na">qualname</span> <span class="o">=</span> <span class="s">sqlalchemy.engine</span>
+
+<span class="k">[handlers]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">console</span>
+
+<span class="k">[formatters]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">generic</span>
+
+<span class="k">[logger_root]</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">INFO</span>
+<span class="na">handlers</span> <span class="o">=</span> <span class="s">console</span>
+
+<span class="k">[handler_console]</span>
+<span class="na">class</span> <span class="o">=</span> <span class="s">StreamHandler</span>
+<span class="na">args</span> <span class="o">=</span> <span class="s">(sys.stderr,)</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">NOTSET</span>
+<span class="na">formatter</span> <span class="o">=</span> <span class="s">generic</span>
+
+<span class="k">[formatter_generic]</span>
+<span class="na">format</span> <span class="o">=</span> <span class="s">%(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s</span>
+
+<span class="c1"># End logging configuration</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">This engine configuration now needs to be read into the application
+through changes in <tt class="docutils literal"><span class="pre">databases/tutorial/__init__.py</span></tt>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">engine_from_config</span>
+
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">DBSession</span><span class="p">,</span> <span class="n">Base</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">global_config</span><span class="p">,</span> <span class="o">**</span><span class="n">settings</span><span class="p">):</span>
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">engine_from_config</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s">&#39;sqlalchemy.&#39;</span><span class="p">)</span>
+    <span class="n">DBSession</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>
+    <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">bind</span> <span class="o">=</span> <span class="n">engine</span>
+
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">(</span><span class="n">settings</span><span class="o">=</span><span class="n">settings</span><span class="p">,</span>
+                          <span class="n">root_factory</span><span class="o">=</span><span class="s">&#39;tutorial.models.Root&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="s">&#39;pyramid_chameleon&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;wiki_view&#39;</span><span class="p">,</span> <span class="s">&#39;/&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;wikipage_add&#39;</span><span class="p">,</span> <span class="s">&#39;/add&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;wikipage_view&#39;</span><span class="p">,</span> <span class="s">&#39;/{uid}&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;wikipage_edit&#39;</span><span class="p">,</span> <span class="s">&#39;/{uid}/edit&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_static_view</span><span class="p">(</span><span class="s">&#39;deform_static&#39;</span><span class="p">,</span> <span class="s">&#39;deform:static/&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="s">&#39;.views&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Make a command-line script at <tt class="docutils literal"><span class="pre">databases/tutorial/initialize_db.py</span></tt>
+to initialize the database:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">transaction</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">engine_from_config</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.paster</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">get_appsettings</span><span class="p">,</span>
+    <span class="n">setup_logging</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DBSession</span><span class="p">,</span>
+    <span class="n">Page</span><span class="p">,</span>
+    <span class="n">Base</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">usage</span><span class="p">(</span><span class="n">argv</span><span class="p">):</span>
+    <span class="n">cmd</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">&#39;usage: </span><span class="si">%s</span><span class="s"> &lt;config_uri&gt;</span><span class="se">\n</span><span class="s">&#39;</span>
+          <span class="s">&#39;(example: &quot;</span><span class="si">%s</span><span class="s"> development.ini&quot;)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">cmd</span><span class="p">))</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">argv</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">usage</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+    <span class="n">config_uri</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">setup_logging</span><span class="p">(</span><span class="n">config_uri</span><span class="p">)</span>
+    <span class="n">settings</span> <span class="o">=</span> <span class="n">get_appsettings</span><span class="p">(</span><span class="n">config_uri</span><span class="p">)</span>
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">engine_from_config</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s">&#39;sqlalchemy.&#39;</span><span class="p">)</span>
+    <span class="n">DBSession</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>
+    <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">create_all</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">transaction</span><span class="o">.</span><span class="n">manager</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Page</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s">&#39;Root&#39;</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="s">&#39;&lt;p&gt;Root&lt;/p&gt;&#39;</span><span class="p">)</span>
+        <span class="n">DBSession</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Since <tt class="docutils literal"><span class="pre">setup.py</span></tt> changed, we now run it:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ $VENV</span>/bin/python setup.py develop
+</pre></div>
+</div>
+</li>
+<li><p class="first">The script references some models in <tt class="docutils literal"><span class="pre">databases/tutorial/models.py</span></tt>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Allow</span><span class="p">,</span> <span class="n">Everyone</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Column</span><span class="p">,</span>
+    <span class="n">Integer</span><span class="p">,</span>
+    <span class="n">Text</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy.ext.declarative</span> <span class="kn">import</span> <span class="n">declarative_base</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">scoped_session</span><span class="p">,</span>
+    <span class="n">sessionmaker</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">zope.sqlalchemy</span> <span class="kn">import</span> <span class="n">ZopeTransactionExtension</span>
+
+<span class="n">DBSession</span> <span class="o">=</span> <span class="n">scoped_session</span><span class="p">(</span>
+    <span class="n">sessionmaker</span><span class="p">(</span><span class="n">extension</span><span class="o">=</span><span class="n">ZopeTransactionExtension</span><span class="p">()))</span>
+<span class="n">Base</span> <span class="o">=</span> <span class="n">declarative_base</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">Page</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s">&#39;wikipages&#39;</span>
+    <span class="n">uid</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">title</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">body</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">Root</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="n">__acl__</span> <span class="o">=</span> <span class="p">[(</span><span class="n">Allow</span><span class="p">,</span> <span class="n">Everyone</span><span class="p">,</span> <span class="s">&#39;view&#39;</span><span class="p">),</span>
+               <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="s">&#39;group:editors&#39;</span><span class="p">,</span> <span class="s">&#39;edit&#39;</span><span class="p">)]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="k">pass</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Let's run this console script, thus producing our database and table:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ $VENV</span>/bin/initialize_tutorial_db development.ini
+2013-09-06 15:54:08,050 INFO  <span class="o">[</span>sqlalchemy.engine.base.Engine<span class="o">][</span>MainThread<span class="o">]</span> PRAGMA table_info<span class="o">(</span><span class="s2">&quot;wikipages&quot;</span><span class="o">)</span>
+2013-09-06 15:54:08,050 INFO  <span class="o">[</span>sqlalchemy.engine.base.Engine<span class="o">][</span>MainThread<span class="o">]</span> <span class="o">()</span>
+2013-09-06 15:54:08,051 INFO  <span class="o">[</span>sqlalchemy.engine.base.Engine<span class="o">][</span>MainThread<span class="o">]</span>
+CREATE TABLE wikipages <span class="o">(</span>
+        uid INTEGER NOT NULL,
+        title TEXT,
+        body TEXT,
+        PRIMARY KEY <span class="o">(</span>uid<span class="o">)</span>,
+        UNIQUE <span class="o">(</span>title<span class="o">)</span>
+<span class="o">)</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">With our data now driven by SQLAlchemy queries, we need to update
+our <tt class="docutils literal"><span class="pre">databases/tutorial/views.py</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">colander</span>
+<span class="kn">import</span> <span class="nn">deform.widget</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.httpexceptions</span> <span class="kn">import</span> <span class="n">HTTPFound</span>
+<span class="kn">from</span> <span class="nn">pyramid.view</span> <span class="kn">import</span> <span class="n">view_config</span>
+
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">DBSession</span><span class="p">,</span> <span class="n">Page</span>
+
+
+<span class="k">class</span> <span class="nc">WikiPage</span><span class="p">(</span><span class="n">colander</span><span class="o">.</span><span class="n">MappingSchema</span><span class="p">):</span>
+    <span class="n">title</span> <span class="o">=</span> <span class="n">colander</span><span class="o">.</span><span class="n">SchemaNode</span><span class="p">(</span><span class="n">colander</span><span class="o">.</span><span class="n">String</span><span class="p">())</span>
+    <span class="n">body</span> <span class="o">=</span> <span class="n">colander</span><span class="o">.</span><span class="n">SchemaNode</span><span class="p">(</span>
+        <span class="n">colander</span><span class="o">.</span><span class="n">String</span><span class="p">(),</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">deform</span><span class="o">.</span><span class="n">widget</span><span class="o">.</span><span class="n">RichTextWidget</span><span class="p">()</span>
+    <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">WikiViews</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">request</span> <span class="o">=</span> <span class="n">request</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">wiki_form</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">schema</span> <span class="o">=</span> <span class="n">WikiPage</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">deform</span><span class="o">.</span><span class="n">Form</span><span class="p">(</span><span class="n">schema</span><span class="p">,</span> <span class="n">buttons</span><span class="o">=</span><span class="p">(</span><span class="s">&#39;submit&#39;</span><span class="p">,))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">reqts</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">wiki_form</span><span class="o">.</span><span class="n">get_widget_resources</span><span class="p">()</span>
+
+    <span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;wiki_view&#39;</span><span class="p">,</span> <span class="n">renderer</span><span class="o">=</span><span class="s">&#39;wiki_view.pt&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">wiki_view</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">pages</span> <span class="o">=</span> <span class="n">DBSession</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Page</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">Page</span><span class="o">.</span><span class="n">title</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s">&#39;Wiki View&#39;</span><span class="p">,</span> <span class="n">pages</span><span class="o">=</span><span class="n">pages</span><span class="p">)</span>
+
+    <span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;wikipage_add&#39;</span><span class="p">,</span>
+                 <span class="n">renderer</span><span class="o">=</span><span class="s">&#39;wikipage_addedit.pt&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">wikipage_add</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wiki_form</span><span class="o">.</span><span class="n">render</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="s">&#39;submit&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">params</span><span class="p">:</span>
+            <span class="n">controls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">appstruct</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wiki_form</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">controls</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">deform</span><span class="o">.</span><span class="n">ValidationFailure</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="c"># Form is NOT valid</span>
+                <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">form</span><span class="o">=</span><span class="n">e</span><span class="o">.</span><span class="n">render</span><span class="p">())</span>
+
+            <span class="c"># Add a new page to the database</span>
+            <span class="n">new_title</span> <span class="o">=</span> <span class="n">appstruct</span><span class="p">[</span><span class="s">&#39;title&#39;</span><span class="p">]</span>
+            <span class="n">new_body</span> <span class="o">=</span> <span class="n">appstruct</span><span class="p">[</span><span class="s">&#39;body&#39;</span><span class="p">]</span>
+            <span class="n">DBSession</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Page</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">new_title</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="n">new_body</span><span class="p">))</span>
+
+            <span class="c"># Get the new ID and redirect</span>
+            <span class="n">page</span> <span class="o">=</span> <span class="n">DBSession</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Page</span><span class="p">)</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="n">new_title</span><span class="p">)</span><span class="o">.</span><span class="n">one</span><span class="p">()</span>
+            <span class="n">new_uid</span> <span class="o">=</span> <span class="n">page</span><span class="o">.</span><span class="n">uid</span>
+
+            <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">route_url</span><span class="p">(</span><span class="s">&#39;wikipage_view&#39;</span><span class="p">,</span> <span class="n">uid</span><span class="o">=</span><span class="n">new_uid</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">HTTPFound</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">form</span><span class="o">=</span><span class="n">form</span><span class="p">)</span>
+
+
+    <span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;wikipage_view&#39;</span><span class="p">,</span> <span class="n">renderer</span><span class="o">=</span><span class="s">&#39;wikipage_view.pt&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">wikipage_view</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">uid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">matchdict</span><span class="p">[</span><span class="s">&#39;uid&#39;</span><span class="p">])</span>
+        <span class="n">page</span> <span class="o">=</span> <span class="n">DBSession</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Page</span><span class="p">)</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">uid</span><span class="o">=</span><span class="n">uid</span><span class="p">)</span><span class="o">.</span><span class="n">one</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">page</span><span class="o">=</span><span class="n">page</span><span class="p">)</span>
+
+
+    <span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;wikipage_edit&#39;</span><span class="p">,</span>
+                 <span class="n">renderer</span><span class="o">=</span><span class="s">&#39;wikipage_addedit.pt&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">wikipage_edit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">uid</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">matchdict</span><span class="p">[</span><span class="s">&#39;uid&#39;</span><span class="p">])</span>
+        <span class="n">page</span> <span class="o">=</span> <span class="n">DBSession</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">Page</span><span class="p">)</span><span class="o">.</span><span class="n">filter_by</span><span class="p">(</span><span class="n">uid</span><span class="o">=</span><span class="n">uid</span><span class="p">)</span><span class="o">.</span><span class="n">one</span><span class="p">()</span>
+
+        <span class="n">wiki_form</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wiki_form</span>
+
+        <span class="k">if</span> <span class="s">&#39;submit&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">params</span><span class="p">:</span>
+            <span class="n">controls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">appstruct</span> <span class="o">=</span> <span class="n">wiki_form</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">controls</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">deform</span><span class="o">.</span><span class="n">ValidationFailure</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">page</span><span class="o">=</span><span class="n">page</span><span class="p">,</span> <span class="n">form</span><span class="o">=</span><span class="n">e</span><span class="o">.</span><span class="n">render</span><span class="p">())</span>
+
+            <span class="c"># Change the content and redirect to the view</span>
+            <span class="n">page</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">appstruct</span><span class="p">[</span><span class="s">&#39;title&#39;</span><span class="p">]</span>
+            <span class="n">page</span><span class="o">.</span><span class="n">body</span> <span class="o">=</span> <span class="n">appstruct</span><span class="p">[</span><span class="s">&#39;body&#39;</span><span class="p">]</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">route_url</span><span class="p">(</span><span class="s">&#39;wikipage_view&#39;</span><span class="p">,</span> <span class="n">uid</span><span class="o">=</span><span class="n">uid</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">HTTPFound</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+
+        <span class="n">form</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wiki_form</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span>
+            <span class="n">uid</span><span class="o">=</span><span class="n">page</span><span class="o">.</span><span class="n">uid</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="n">page</span><span class="o">.</span><span class="n">title</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="n">page</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">page</span><span class="o">=</span><span class="n">page</span><span class="p">,</span> <span class="n">form</span><span class="o">=</span><span class="n">form</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Our tests in <tt class="docutils literal"><span class="pre">databases/tutorial/tests.py</span></tt> changed to include
+SQLAlchemy bootstrapping:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">import</span> <span class="nn">transaction</span>
+
+<span class="kn">from</span> <span class="nn">pyramid</span> <span class="kn">import</span> <span class="n">testing</span>
+
+
+<span class="k">def</span> <span class="nf">_initTestingDB</span><span class="p">():</span>
+    <span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">create_engine</span>
+    <span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="p">(</span>
+        <span class="n">DBSession</span><span class="p">,</span>
+        <span class="n">Page</span><span class="p">,</span>
+        <span class="n">Base</span>
+        <span class="p">)</span>
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="s">&#39;sqlite://&#39;</span><span class="p">)</span>
+    <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">create_all</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span>
+    <span class="n">DBSession</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">transaction</span><span class="o">.</span><span class="n">manager</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Page</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s">&#39;FrontPage&#39;</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="s">&#39;This is the front page&#39;</span><span class="p">)</span>
+        <span class="n">DBSession</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">DBSession</span>
+
+
+<span class="k">class</span> <span class="nc">WikiViewTests</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">_initTestingDB</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">testing</span><span class="o">.</span><span class="n">setUp</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">tearDown</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+        <span class="n">testing</span><span class="o">.</span><span class="n">tearDown</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">test_wiki_view</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">tutorial.views</span> <span class="kn">import</span> <span class="n">WikiViews</span>
+
+        <span class="n">request</span> <span class="o">=</span> <span class="n">testing</span><span class="o">.</span><span class="n">DummyRequest</span><span class="p">()</span>
+        <span class="n">inst</span> <span class="o">=</span> <span class="n">WikiViews</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">inst</span><span class="o">.</span><span class="n">wiki_view</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">response</span><span class="p">[</span><span class="s">&#39;title&#39;</span><span class="p">],</span> <span class="s">&#39;Wiki View&#39;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">WikiFunctionalTests</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">_initTestingDB</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">testing</span><span class="o">.</span><span class="n">setUp</span><span class="p">()</span>
+        <span class="kn">from</span> <span class="nn">pyramid.paster</span> <span class="kn">import</span> <span class="n">get_app</span>
+        <span class="n">app</span> <span class="o">=</span> <span class="n">get_app</span><span class="p">(</span><span class="s">&#39;development.ini&#39;</span><span class="p">)</span>
+        <span class="kn">from</span> <span class="nn">webtest</span> <span class="kn">import</span> <span class="n">TestApp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">testapp</span> <span class="o">=</span> <span class="n">TestApp</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">tearDown</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+        <span class="n">testing</span><span class="o">.</span><span class="n">tearDown</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">test_it</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">testapp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertIn</span><span class="p">(</span><span class="n">b</span><span class="s">&#39;Wiki: View&#39;</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">testapp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;/add&#39;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertIn</span><span class="p">(</span><span class="n">b</span><span class="s">&#39;Add/Edit&#39;</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Run the tests in your package using <tt class="docutils literal"><span class="pre">nose</span></tt>:</p>
+<blockquote>
+<div><div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ $VENV</span>/bin/nosetests tutorial
+..
+-----------------------------------------------------------------
+Ran 2 tests in 1.141s
+
+OK
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p class="first">Run your Pyramid application with:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ $VENV</span>/bin/pserve development.ini --reload
+</pre></div>
+</div>
+</li>
+<li><p class="first">Open <a class="reference external" href="http://localhost:6543/">http://localhost:6543/</a> in a browser.</p>
+</li>
+</ol>
+</div>
+<div class="section" id="analysis">
+<h2>Analysis<a class="headerlink" href="#analysis" title="Permalink to this headline">¶</a></h2>
+<p>Let's start with the dependencies. We made the decision to use
+<tt class="docutils literal"><span class="pre">SQLAlchemy</span></tt> to talk to our database. We also, though, installed
+<tt class="docutils literal"><span class="pre">pyramid_tm</span></tt> and <tt class="docutils literal"><span class="pre">zope.sqlalchemy</span></tt>. Why?</p>
+<p>Pyramid has a strong orientation towards support for <tt class="docutils literal"><span class="pre">transactions</span></tt>.
+Specifically, you can install a transaction manager into your app
+application, either as middleware or a Pyramid &quot;tween&quot;. Then,
+just before you return the response, all transaction-aware parts of
+your application are executed.</p>
+<p>This means Pyramid view code usually doesn't manage transactions. If
+your view code or a template generates an error, the transaction manager
+aborts the transaction. This is a very liberating way to write code.</p>
+<p>The <tt class="docutils literal"><span class="pre">pyramid_tm</span></tt> package provides a &quot;tween&quot; that is configured in the
+<tt class="docutils literal"><span class="pre">development.ini</span></tt> configuration file. That installs it. We then need
+a package that makes SQLAlchemy and thus the RDBMS transaction manager
+integrate with the Pyramid transaction manager. That's what
+<tt class="docutils literal"><span class="pre">zope.sqlalchemy</span></tt> does.</p>
+<p>Where do we point at the location on disk for the SQLite file? In the
+configuration file. This lets consumers of our package change the
+location in a safe (non-code) way. That is, in configuration. This
+configuration-oriented approach isn't required in Pyramid; you can
+still make such statements in your <tt class="docutils literal"><span class="pre">__init__.py</span></tt> or some companion
+module.</p>
+<p>The <tt class="docutils literal"><span class="pre">initialize_tutorial_db</span></tt> is a nice example of framework support.
+You point your setup at the location of some <tt class="docutils literal"><span class="pre">[console_scripts]</span></tt> and
+these get generated into your virtualenv's <tt class="docutils literal"><span class="pre">bin</span></tt> directory. Our
+console script follows the pattern of being fed a configuration file
+with all the bootstrapping. It then opens SQLAlchemy and creates the
+root of the wiki, which also makes the SQLite file. Note the
+<tt class="docutils literal"><span class="pre">with</span> <span class="pre">transaction.manager</span></tt> part that puts the work in the scope of a
+transaction (as we aren't inside a web request where this is done
+automatically.)</p>
+<p>The <tt class="docutils literal"><span class="pre">models.py</span></tt> does a little bit extra work to hook up SQLAlchemy
+into the Pyramid transaction manager. It then declares the model for a
+<tt class="docutils literal"><span class="pre">Page</span></tt>.</p>
+<p>Our views have changes primarily around replacing our dummy
+dictionary-of-dictionaries data with proper database support: list the
+rows, add a row, edit a row, and delete a row.</p>
+</div>
+<div class="section" id="extra-credit">
+<h2>Extra Credit<a class="headerlink" href="#extra-credit" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>Why all this code? Why can't I just type 2 lines and have magic ensue?</li>
+<li>Give a try at a button that deletes a wiki page.</li>
+</ol>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">19: Databases Using SQLAlchemy</a><ul>
+<li><a class="reference internal" href="#background">Background</a></li>
+<li><a class="reference internal" href="#objectives">Objectives</a></li>
+<li><a class="reference internal" href="#steps">Steps</a></li>
+<li><a class="reference internal" href="#analysis">Analysis</a></li>
+<li><a class="reference internal" href="#extra-credit">Extra Credit</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="forms.html"
+                        title="previous chapter">18: Forms and Validation With Deform</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="authentication.html"
+                        title="next chapter">20: Logins With Authentication</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="authentication.html" title="20: Logins With Authentication"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="forms.html" title="18: Forms and Validation With Deform"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" >Quick Tutorial for Pyramid</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

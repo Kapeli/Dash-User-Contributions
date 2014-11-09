@@ -1,0 +1,272 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.static &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.static</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: utf-8 -*-</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">normcase</span><span class="p">,</span>
+    <span class="n">normpath</span><span class="p">,</span>
+    <span class="n">join</span><span class="p">,</span>
+    <span class="n">isdir</span><span class="p">,</span>
+    <span class="n">exists</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pkg_resources</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">resource_exists</span><span class="p">,</span>
+    <span class="n">resource_filename</span><span class="p">,</span>
+    <span class="n">resource_isdir</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">repoze.lru</span> <span class="kn">import</span> <span class="n">lru_cache</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.asset</span> <span class="kn">import</span> <span class="n">resolve_asset_spec</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.compat</span> <span class="kn">import</span> <span class="n">text_</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.httpexceptions</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">HTTPNotFound</span><span class="p">,</span>
+    <span class="n">HTTPMovedPermanently</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.path</span> <span class="kn">import</span> <span class="n">caller_package</span>
+<span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">FileResponse</span>
+<span class="kn">from</span> <span class="nn">pyramid.traversal</span> <span class="kn">import</span> <span class="n">traversal_path_info</span>
+
+<span class="n">slash</span> <span class="o">=</span> <span class="n">text_</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="static_view"><a class="viewcode-back" href="../../api/static.html#pyramid.static.static_view">[docs]</a><span class="k">class</span> <span class="nc">static_view</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; An instance of this class is a callable which can act as a</span>
+<span class="sd">    :app:`Pyramid` :term:`view callable`; this view will serve</span>
+<span class="sd">    static files from a directory on disk based on the ``root_dir``</span>
+<span class="sd">    you provide to its constructor.</span>
+
+<span class="sd">    The directory may contain subdirectories (recursively); the static</span>
+<span class="sd">    view implementation will descend into these directories as</span>
+<span class="sd">    necessary based on the components of the URL in order to resolve a</span>
+<span class="sd">    path into a response.</span>
+
+<span class="sd">    You may pass an absolute or relative filesystem path or a</span>
+<span class="sd">    :term:`asset specification` representing the directory</span>
+<span class="sd">    containing static files as the ``root_dir`` argument to this</span>
+<span class="sd">    class&#39; constructor.</span>
+
+<span class="sd">    If the ``root_dir`` path is relative, and the ``package_name``</span>
+<span class="sd">    argument is ``None``, ``root_dir`` will be considered relative to</span>
+<span class="sd">    the directory in which the Python file which *calls* ``static``</span>
+<span class="sd">    resides.  If the ``package_name`` name argument is provided, and a</span>
+<span class="sd">    relative ``root_dir`` is provided, the ``root_dir`` will be</span>
+<span class="sd">    considered relative to the Python :term:`package` specified by</span>
+<span class="sd">    ``package_name`` (a dotted path to a Python package).</span>
+
+<span class="sd">    ``cache_max_age`` influences the ``Expires`` and ``Max-Age``</span>
+<span class="sd">    response headers returned by the view (default is 3600 seconds or</span>
+<span class="sd">    one hour).</span>
+
+<span class="sd">    ``use_subpath`` influences whether ``request.subpath`` will be used as</span>
+<span class="sd">    ``PATH_INFO`` when calling the underlying WSGI application which actually</span>
+<span class="sd">    serves the static files.  If it is ``True``, the static application will</span>
+<span class="sd">    consider ``request.subpath`` as ``PATH_INFO`` input.  If it is ``False``,</span>
+<span class="sd">    the static application will consider request.environ[``PATH_INFO``] as</span>
+<span class="sd">    ``PATH_INFO`` input. By default, this is ``False``.</span>
+
+<span class="sd">    .. note::</span>
+
+<span class="sd">       If the ``root_dir`` is relative to a :term:`package`, or is a</span>
+<span class="sd">       :term:`asset specification` the :app:`Pyramid`</span>
+<span class="sd">       :class:`pyramid.config.Configurator` method can be used to override</span>
+<span class="sd">       assets within the named ``root_dir`` package-relative directory.</span>
+<span class="sd">       However, if the ``root_dir`` is absolute, configuration will not be able</span>
+<span class="sd">       to override the assets it contains.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">root_dir</span><span class="p">,</span> <span class="n">cache_max_age</span><span class="o">=</span><span class="mi">3600</span><span class="p">,</span> <span class="n">package_name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">use_subpath</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="s">&#39;index.html&#39;</span><span class="p">):</span>
+        <span class="c"># package_name is for bw compat; it is preferred to pass in a</span>
+        <span class="c"># package-relative path as root_dir</span>
+        <span class="c"># (e.g. ``anotherpackage:foo/static``).</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache_max_age</span> <span class="o">=</span> <span class="n">cache_max_age</span>
+        <span class="k">if</span> <span class="n">package_name</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">package_name</span> <span class="o">=</span> <span class="n">caller_package</span><span class="p">()</span><span class="o">.</span><span class="n">__name__</span>
+        <span class="n">package_name</span><span class="p">,</span> <span class="n">docroot</span> <span class="o">=</span> <span class="n">resolve_asset_spec</span><span class="p">(</span><span class="n">root_dir</span><span class="p">,</span> <span class="n">package_name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_subpath</span> <span class="o">=</span> <span class="n">use_subpath</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">package_name</span> <span class="o">=</span> <span class="n">package_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">docroot</span> <span class="o">=</span> <span class="n">docroot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">norm_docroot</span> <span class="o">=</span> <span class="n">normcase</span><span class="p">(</span><span class="n">normpath</span><span class="p">(</span><span class="n">docroot</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">index</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_subpath</span><span class="p">:</span>
+            <span class="n">path_tuple</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">subpath</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">path_tuple</span> <span class="o">=</span> <span class="n">traversal_path_info</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s">&#39;PATH_INFO&#39;</span><span class="p">])</span>
+
+        <span class="n">path</span> <span class="o">=</span> <span class="n">_secure_path</span><span class="p">(</span><span class="n">path_tuple</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">path</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">HTTPNotFound</span><span class="p">(</span><span class="s">&#39;Out of bounds: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">request</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">package_name</span><span class="p">:</span> <span class="c"># package resource</span>
+
+            <span class="n">resource_path</span> <span class="o">=</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">docroot</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">),</span> <span class="n">path</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">resource_isdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">package_name</span><span class="p">,</span> <span class="n">resource_path</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">request</span><span class="o">.</span><span class="n">path_url</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">add_slash_redirect</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+                <span class="n">resource_path</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">resource_path</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">),</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">resource_exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">package_name</span><span class="p">,</span> <span class="n">resource_path</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">HTTPNotFound</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+            <span class="n">filepath</span> <span class="o">=</span> <span class="n">resource_filename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">package_name</span><span class="p">,</span> <span class="n">resource_path</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span> <span class="c"># filesystem file</span>
+
+            <span class="c"># os.path.normpath converts / to \ on windows</span>
+            <span class="n">filepath</span> <span class="o">=</span> <span class="n">normcase</span><span class="p">(</span><span class="n">normpath</span><span class="p">(</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm_docroot</span><span class="p">,</span> <span class="n">path</span><span class="p">)))</span>
+            <span class="k">if</span> <span class="n">isdir</span><span class="p">(</span><span class="n">filepath</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">request</span><span class="o">.</span><span class="n">path_url</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">add_slash_redirect</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+                <span class="n">filepath</span> <span class="o">=</span> <span class="n">join</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">exists</span><span class="p">(</span><span class="n">filepath</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">HTTPNotFound</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">FileResponse</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_max_age</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">add_slash_redirect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">path_url</span> <span class="o">+</span> <span class="s">&#39;/&#39;</span>
+        <span class="n">qs</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">query_string</span>
+        <span class="k">if</span> <span class="n">qs</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="n">url</span> <span class="o">+</span> <span class="s">&#39;?&#39;</span> <span class="o">+</span> <span class="n">qs</span>
+        <span class="k">raise</span> <span class="n">HTTPMovedPermanently</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+</div>
+<span class="n">_seps</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="s">&#39;/&#39;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">_contains_slash</span><span class="p">(</span><span class="n">item</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">sep</span> <span class="ow">in</span> <span class="n">_seps</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">sep</span> <span class="ow">in</span> <span class="n">item</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+
+<span class="n">_has_insecure_pathelement</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="s">&#39;..&#39;</span><span class="p">,</span> <span class="s">&#39;.&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">intersection</span>
+
+<span class="nd">@lru_cache</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">_secure_path</span><span class="p">(</span><span class="n">path_tuple</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">_has_insecure_pathelement</span><span class="p">(</span><span class="n">path_tuple</span><span class="p">):</span>
+        <span class="c"># belt-and-suspenders security; this should never be true</span>
+        <span class="c"># unless someone screws up the traversal_path code</span>
+        <span class="c"># (request.subpath is computed via traversal_path too)</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="n">_contains_slash</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">path_tuple</span><span class="p">]):</span>
+        <span class="k">return</span> <span class="bp">None</span>
+    <span class="n">encoded</span> <span class="o">=</span> <span class="n">slash</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path_tuple</span><span class="p">)</span> <span class="c"># will be unicode</span>
+    <span class="k">return</span> <span class="n">encoded</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

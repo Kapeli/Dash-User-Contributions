@@ -1,0 +1,328 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>04: Easier Development with debugtoolbar &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="up" title="Quick Tutorial for Pyramid" href="index.html" />
+    <link rel="next" title="05: Unit Tests and nose" href="unit_testing.html" />
+    <link rel="prev" title="03: Application Configuration with .ini Files" href="ini.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="unit_testing.html" title="05: Unit Tests and nose"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="ini.html" title="03: Application Configuration with .ini Files"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Quick Tutorial for Pyramid</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="easier-development-with-debugtoolbar">
+<span id="qtut-debugtoolbar"></span><h1>04: Easier Development with <tt class="docutils literal"><span class="pre">debugtoolbar</span></tt><a class="headerlink" href="#easier-development-with-debugtoolbar" title="Permalink to this headline">¶</a></h1>
+<p>Error-handling and introspection using the <tt class="docutils literal"><span class="pre">pyramid_debugtoolbar</span></tt>
+add-on.</p>
+<div class="section" id="background">
+<h2>Background<a class="headerlink" href="#background" title="Permalink to this headline">¶</a></h2>
+<p>As we introduce the basics we also want to show how to be productive in
+development and debugging. For example, we just discussed template
+reloading and earlier we showed <tt class="docutils literal"><span class="pre">--reload</span></tt> for application reloading.</p>
+<p><tt class="docutils literal"><span class="pre">pyramid_debugtoolbar</span></tt> is a popular Pyramid add-on which makes
+several tools available in your browser. Adding it to your project
+illustrates several points about configuration.</p>
+</div>
+<div class="section" id="objectives">
+<h2>Objectives<a class="headerlink" href="#objectives" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Install and enable the toolbar to help during development</li>
+<li>Explain Pyramid add-ons</li>
+<li>Show how an add-on gets configured into your application</li>
+</ul>
+</div>
+<div class="section" id="steps">
+<h2>Steps<a class="headerlink" href="#steps" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">First we copy the results of the previous step, as well as install
+the <tt class="docutils literal"><span class="pre">pyramid_debugtoolbar</span></tt> package:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span><span class="nb">cd</span> ..; cp -r ini debugtoolbar; <span class="nb">cd </span>debugtoolbar
+<span class="nv">$ $VENV</span>/bin/python setup.py develop
+<span class="nv">$ $VENV</span>/bin/easy_install pyramid_debugtoolbar
+</pre></div>
+</div>
+</li>
+<li><p class="first">Our <tt class="docutils literal"><span class="pre">debugtoolbar/development.ini</span></tt> gets a configuration entry for
+<tt class="docutils literal"><span class="pre">pyramid.includes</span></tt>:</p>
+<div class="highlight-ini"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">[app:main]</span>
+<span class="na">use</span> <span class="o">=</span> <span class="s">egg:tutorial</span>
+<span class="na">pyramid.includes</span> <span class="o">=</span><span class="s"></span>
+<span class="s">    pyramid_debugtoolbar</span>
+
+<span class="k">[server:main]</span>
+<span class="na">use</span> <span class="o">=</span> <span class="s">egg:pyramid#wsgiref</span>
+<span class="na">host</span> <span class="o">=</span> <span class="s">0.0.0.0</span>
+<span class="na">port</span> <span class="o">=</span> <span class="s">6543</span>
+
+<span class="c1"># Begin logging configuration</span>
+
+<span class="k">[loggers]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">root, tutorial</span>
+
+<span class="k">[logger_tutorial]</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">DEBUG</span>
+<span class="na">handlers</span> <span class="o">=</span>
+<span class="na">qualname</span> <span class="o">=</span> <span class="s">tutorial</span>
+
+<span class="k">[handlers]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">console</span>
+
+<span class="k">[formatters]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">generic</span>
+
+<span class="k">[logger_root]</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">INFO</span>
+<span class="na">handlers</span> <span class="o">=</span> <span class="s">console</span>
+
+<span class="k">[handler_console]</span>
+<span class="na">class</span> <span class="o">=</span> <span class="s">StreamHandler</span>
+<span class="na">args</span> <span class="o">=</span> <span class="s">(sys.stderr,)</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">NOTSET</span>
+<span class="na">formatter</span> <span class="o">=</span> <span class="s">generic</span>
+
+<span class="k">[formatter_generic]</span>
+<span class="na">format</span> <span class="o">=</span> <span class="s">%(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s</span>
+
+<span class="c1"># End logging configuration</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Run the WSGI application with:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ $VENV</span>/bin/pserve development.ini --reload
+</pre></div>
+</div>
+</li>
+<li><p class="first">Open <a class="reference external" href="http://localhost:6543/">http://localhost:6543/</a> in your browser. See the handy
+toolbar on the right.</p>
+</li>
+</ol>
+</div>
+<div class="section" id="analysis">
+<h2>Analysis<a class="headerlink" href="#analysis" title="Permalink to this headline">¶</a></h2>
+<p><tt class="docutils literal"><span class="pre">pyramid_debugtoolbar</span></tt> is a full-fledged Python package,
+available on PyPI just like thousands of other Python packages. Thus we
+start by installing the <tt class="docutils literal"><span class="pre">pyramid_debugtoolbar</span></tt> package into our
+virtual environment using normal Python package installation commands.</p>
+<p>The <tt class="docutils literal"><span class="pre">pyramid_debugtoolbar</span></tt> Python package is also a Pyramid add-on,
+which means we need to include its add-on configuration into our web
+application. We could do this with imperative configuration in
+<tt class="docutils literal"><span class="pre">tutorial/__init__.py</span></tt> by using <tt class="docutils literal"><span class="pre">config.include</span></tt>. Pyramid also
+supports wiring in add-on configuration via our <tt class="docutils literal"><span class="pre">development.ini</span></tt>
+using <tt class="docutils literal"><span class="pre">pyramid.includes</span></tt>. We use this to load the configuration for
+the debugtoolbar.</p>
+<p>You'll now see an attractive (and collapsible) menu in the right of
+your browser, providing introspective access to debugging information.
+Even better, if your web application generates an error,
+you will see a nice traceback on the screen. When you want to disable
+this toolbar, no need to change code: you can remove it from
+<tt class="docutils literal"><span class="pre">pyramid.includes</span></tt> in the relevant <tt class="docutils literal"><span class="pre">.ini</span></tt> configuration file (thus
+showing why configuration files are handy.)</p>
+<p>Note that the toolbar mutates the HTML generated by our app and uses jQuery to
+overlay itself.  If you are using the toolbar while you're developing and you
+start to experience otherwise inexplicable client-side weirdness, you can shut
+it off by commenting out the <tt class="docutils literal"><span class="pre">pyramid_debugtoolbar</span></tt> line in
+<tt class="docutils literal"><span class="pre">pyramid.includes</span></tt> temporarily.</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last">See also <a class="reference external" href="http://docs.pylonsproject.org/projects/pyramid-debugtoolbar/en/latest/index.html#overview" title="(in pyramid_debugtoolbar v2.2)"><em class="xref std std-ref">pyramid_debugtoolbar</em></a>.</p>
+</div>
+</div>
+<div class="section" id="extra-credit">
+<h2>Extra Credit<a class="headerlink" href="#extra-credit" title="Permalink to this headline">¶</a></h2>
+<dl class="docutils">
+<dt># Why don't we add <tt class="docutils literal"><span class="pre">pyramid_debugtoolbar</span></tt> to the list of</dt>
+<dd><tt class="docutils literal"><span class="pre">install_requires</span></tt> dependencies in <tt class="docutils literal"><span class="pre">debugtoolbar/setup.py</span></tt>?</dd>
+</dl>
+<p># Introduce a bug into your application:  Change:</p>
+<blockquote>
+<div><div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">hello_world</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;&lt;body&gt;&lt;h1&gt;Hello World!&lt;/h1&gt;&lt;/body&gt;&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>to:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">hello_world</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">xResponse</span><span class="p">(</span><span class="s">&#39;&lt;body&gt;&lt;h1&gt;Hello World!&lt;/h1&gt;&lt;/body&gt;&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Save, and visit <a class="reference external" href="http://localhost:6543/">http://localhost:6543/</a> again.  Notice the nice
+traceback display.  On the lowest line, click the &quot;screen&quot; icon to the
+right, and try typing the variable names <tt class="docutils literal"><span class="pre">request</span></tt> and <tt class="docutils literal"><span class="pre">Response</span></tt>.
+What else can you discover?</p>
+</div></blockquote>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">04: Easier Development with <tt class="docutils literal"><span class="pre">debugtoolbar</span></tt></a><ul>
+<li><a class="reference internal" href="#background">Background</a></li>
+<li><a class="reference internal" href="#objectives">Objectives</a></li>
+<li><a class="reference internal" href="#steps">Steps</a></li>
+<li><a class="reference internal" href="#analysis">Analysis</a></li>
+<li><a class="reference internal" href="#extra-credit">Extra Credit</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="ini.html"
+                        title="previous chapter">03: Application Configuration with <tt class="docutils literal"><span class="pre">.ini</span></tt> Files</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="unit_testing.html"
+                        title="next chapter">05: Unit Tests and <tt class="docutils literal"><span class="pre">nose</span></tt></a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="unit_testing.html" title="05: Unit Tests and nose"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="ini.html" title="03: Application Configuration with .ini Files"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" >Quick Tutorial for Pyramid</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

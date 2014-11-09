@@ -1,0 +1,205 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>SQLAlchemy + URL Dispatch Wiki Tutorial &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="next" title="Background" href="background.html" />
+    <link rel="prev" title="Using the Zope Component Architecture in Pyramid" href="../../narr/zca.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="background.html" title="Background"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../../narr/zca.html" title="Using the Zope Component Architecture in Pyramid"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="sqlalchemy-url-dispatch-wiki-tutorial">
+<span id="bfg-sql-wiki-tutorial"></span><h1>SQLAlchemy + URL Dispatch Wiki Tutorial<a class="headerlink" href="#sqlalchemy-url-dispatch-wiki-tutorial" title="Permalink to this headline">¶</a></h1>
+<p>This tutorial introduces a <a class="reference internal" href="../../glossary.html#term-sqlalchemy"><em class="xref std std-term">SQLAlchemy</em></a> and <a class="reference internal" href="../../glossary.html#term-url-dispatch"><em class="xref std std-term">url dispatch</em></a> -based
+<span>Pyramid</span> application to a developer familiar with Python.  When the
+tutorial is finished, the developer will have created a basic Wiki
+application with authentication.</p>
+<p>For cut and paste purposes, the source code for all stages of this
+tutorial can be browsed on GitHub at <a class="reference external" href="https://github.com/Pylons/pyramid/tree/master/docs/tutorials/wiki2/src">docs/tutorials/wiki2/src</a>,
+which corresponds to the same location if you have Pyramid sources.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="design.html">Design</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="design.html#overall">Overall</a></li>
+<li class="toctree-l2"><a class="reference internal" href="design.html#models">Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="design.html#views">Views</a></li>
+<li class="toctree-l2"><a class="reference internal" href="design.html#security">Security</a></li>
+<li class="toctree-l2"><a class="reference internal" href="design.html#summary">Summary</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#before-you-begin">Before You Begin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#making-a-project">Making a Project</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#installing-the-project-in-development-mode">Installing the Project in Development Mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#running-the-tests">Running the Tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#exposing-test-coverage-information">Exposing Test Coverage Information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#initializing-the-database">Initializing the Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#starting-the-application">Starting the Application</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#decisions-the-alchemy-scaffold-has-made-for-you">Decisions the <tt class="docutils literal"><span class="pre">alchemy</span></tt> Scaffold Has Made For You</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="basiclayout.html">Basic Layout</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="basiclayout.html#application-configuration-with-init-py">Application Configuration with <tt class="docutils literal"><span class="pre">__init__.py</span></tt></a></li>
+<li class="toctree-l2"><a class="reference internal" href="basiclayout.html#view-declarations-via-views-py">View Declarations via <tt class="docutils literal"><span class="pre">views.py</span></tt></a></li>
+<li class="toctree-l2"><a class="reference internal" href="basiclayout.html#content-models-with-models-py">Content Models with <tt class="docutils literal"><span class="pre">models.py</span></tt></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="definingmodels.html">Defining the Domain Model</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="definingmodels.html#making-edits-to-models-py">Making Edits to <tt class="docutils literal"><span class="pre">models.py</span></tt></a></li>
+<li class="toctree-l2"><a class="reference internal" href="definingmodels.html#changing-scripts-initializedb-py">Changing <tt class="docutils literal"><span class="pre">scripts/initializedb.py</span></tt></a></li>
+<li class="toctree-l2"><a class="reference internal" href="definingmodels.html#installing-the-project-and-re-initializing-the-database">Installing the Project and re-initializing the Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="definingmodels.html#viewing-the-application-in-a-browser">Viewing the Application in a Browser</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="definingviews.html">Defining Views</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="definingviews.html#declaring-dependencies-in-our-setup-py-file">Declaring Dependencies in Our <tt class="docutils literal"><span class="pre">setup.py</span></tt> File</a></li>
+<li class="toctree-l2"><a class="reference internal" href="definingviews.html#running-setup-py-develop">Running <tt class="docutils literal"><span class="pre">setup.py</span> <span class="pre">develop</span></tt></a></li>
+<li class="toctree-l2"><a class="reference internal" href="definingviews.html#changing-the-views-py-file">Changing the <tt class="docutils literal"><span class="pre">views.py</span></tt> File</a></li>
+<li class="toctree-l2"><a class="reference internal" href="definingviews.html#adding-templates">Adding Templates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="definingviews.html#adding-routes-to-init-py">Adding Routes to <tt class="docutils literal"><span class="pre">__init__.py</span></tt></a></li>
+<li class="toctree-l2"><a class="reference internal" href="definingviews.html#viewing-the-application-in-a-browser">Viewing the Application in a Browser</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="authorization.html">Adding Authorization</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="authorization.html#access-control">Access Control</a></li>
+<li class="toctree-l2"><a class="reference internal" href="authorization.html#login-logout">Login, Logout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="authorization.html#seeing-our-changes">Seeing Our Changes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="authorization.html#viewing-the-application-in-a-browser">Viewing the Application in a Browser</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tests.html">Adding Tests</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tests.html#testing-the-models">Testing the Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tests.html#testing-the-views">Testing the Views</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tests.html#functional-tests">Functional tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tests.html#viewing-the-results-of-all-our-edits-to-tests-py">Viewing the results of all our edits to <tt class="docutils literal"><span class="pre">tests.py</span></tt></a></li>
+<li class="toctree-l2"><a class="reference internal" href="tests.html#running-the-tests">Running the Tests</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="distributing.html">Distributing Your Application</a></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../../narr/zca.html"
+                        title="previous chapter">Using the Zope Component Architecture in <span>Pyramid</span></a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="background.html"
+                        title="next chapter">Background</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="background.html" title="Background"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../../narr/zca.html" title="Using the Zope Component Architecture in Pyramid"
+             >previous</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

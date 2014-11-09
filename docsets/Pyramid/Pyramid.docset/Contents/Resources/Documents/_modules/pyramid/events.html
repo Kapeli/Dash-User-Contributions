@@ -1,0 +1,361 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.events &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.events</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">venusian</span>
+
+<span class="kn">from</span> <span class="nn">zope.interface</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">implementer</span><span class="p">,</span>
+    <span class="n">Interface</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">IContextFound</span><span class="p">,</span>
+    <span class="n">INewRequest</span><span class="p">,</span>
+    <span class="n">INewResponse</span><span class="p">,</span>
+    <span class="n">IApplicationCreated</span><span class="p">,</span>
+    <span class="n">IBeforeRender</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<div class="viewcode-block" id="subscriber"><a class="viewcode-back" href="../../api/events.html#pyramid.events.subscriber">[docs]</a><span class="k">class</span> <span class="nc">subscriber</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Decorator activated via a :term:`scan` which treats the function</span>
+<span class="sd">    being decorated as an event subscriber for the set of interfaces passed</span>
+<span class="sd">    as ``*ifaces`` and the set of predicate terms passed as ``**predicates``</span>
+<span class="sd">    to the decorator constructor.</span>
+
+<span class="sd">    For example:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       from pyramid.events import NewRequest</span>
+<span class="sd">       from pyramid.events import subscriber</span>
+
+<span class="sd">       @subscriber(NewRequest)</span>
+<span class="sd">       def mysubscriber(event):</span>
+<span class="sd">           event.request.foo = 1</span>
+
+<span class="sd">    More than one event type can be passed as a constructor argument.  The</span>
+<span class="sd">    decorated subscriber will be called for each event type.</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       from pyramid.events import NewRequest, NewResponse</span>
+<span class="sd">       from pyramid.events import subscriber</span>
+
+<span class="sd">       @subscriber(NewRequest, NewResponse)</span>
+<span class="sd">       def mysubscriber(event):</span>
+<span class="sd">           print(event)</span>
+
+<span class="sd">    When the ``subscriber`` decorator is used without passing an arguments,</span>
+<span class="sd">    the function it decorates is called for every event sent:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       from pyramid.events import subscriber</span>
+
+<span class="sd">       @subscriber()</span>
+<span class="sd">       def mysubscriber(event):</span>
+<span class="sd">           print(event)</span>
+
+<span class="sd">    This method will have no effect until a :term:`scan` is performed</span>
+<span class="sd">    against the package or module which contains it, ala:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       from pyramid.config import Configurator</span>
+<span class="sd">       config = Configurator()</span>
+<span class="sd">       config.scan(&#39;somepackage_containing_subscribers&#39;)</span>
+
+<span class="sd">    Any ``**predicate`` arguments will be passed along to</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.add_subscriber`.  See</span>
+<span class="sd">    :ref:`subscriber_predicates` for a description of how predicates can</span>
+<span class="sd">    narrow the set of circumstances in which a subscriber will be called.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">venusian</span> <span class="o">=</span> <span class="n">venusian</span> <span class="c"># for unit testing</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">ifaces</span><span class="p">,</span> <span class="o">**</span><span class="n">predicates</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ifaces</span> <span class="o">=</span> <span class="n">ifaces</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">predicates</span> <span class="o">=</span> <span class="n">predicates</span>
+
+    <span class="k">def</span> <span class="nf">register</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scanner</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">wrapped</span><span class="p">):</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">config</span>
+        <span class="k">for</span> <span class="n">iface</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ifaces</span> <span class="ow">or</span> <span class="p">(</span><span class="n">Interface</span><span class="p">,):</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">add_subscriber</span><span class="p">(</span><span class="n">wrapped</span><span class="p">,</span> <span class="n">iface</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">predicates</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wrapped</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">venusian</span><span class="o">.</span><span class="n">attach</span><span class="p">(</span><span class="n">wrapped</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">register</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="s">&#39;pyramid&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">wrapped</span>
+</div>
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">INewRequest</span><span class="p">)</span>
+<div class="viewcode-block" id="NewRequest"><a class="viewcode-back" href="../../api/events.html#pyramid.events.NewRequest">[docs]</a><span class="k">class</span> <span class="nc">NewRequest</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; An instance of this class is emitted as an :term:`event`</span>
+<span class="sd">    whenever :app:`Pyramid` begins to process a new request.  The</span>
+<span class="sd">    event instance has an attribute, ``request``, which is a</span>
+<span class="sd">    :term:`request` object.  This event class implements the</span>
+<span class="sd">    :class:`pyramid.interfaces.INewRequest` interface.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">request</span> <span class="o">=</span> <span class="n">request</span>
+</div>
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">INewResponse</span><span class="p">)</span>
+<div class="viewcode-block" id="NewResponse"><a class="viewcode-back" href="../../api/events.html#pyramid.events.NewResponse">[docs]</a><span class="k">class</span> <span class="nc">NewResponse</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; An instance of this class is emitted as an :term:`event`</span>
+<span class="sd">    whenever any :app:`Pyramid` :term:`view` or :term:`exception</span>
+<span class="sd">    view` returns a :term:`response`.</span>
+
+<span class="sd">    The instance has two attributes:``request``, which is the request</span>
+<span class="sd">    which caused the response, and ``response``, which is the response</span>
+<span class="sd">    object returned by a view or renderer.</span>
+
+<span class="sd">    If the ``response`` was generated by an :term:`exception view`, the</span>
+<span class="sd">    request will have an attribute named ``exception``, which is the</span>
+<span class="sd">    exception object which caused the exception view to be executed.  If the</span>
+<span class="sd">    response was generated by a &#39;normal&#39; view, this attribute of the request</span>
+<span class="sd">    will be ``None``.</span>
+
+<span class="sd">    This event will not be generated if a response cannot be created due to</span>
+<span class="sd">    an exception that is not caught by an exception view (no response is</span>
+<span class="sd">    created under this circumstace).</span>
+
+<span class="sd">    This class implements the</span>
+<span class="sd">    :class:`pyramid.interfaces.INewResponse` interface.</span>
+
+<span class="sd">    .. note::</span>
+
+<span class="sd">       Postprocessing a response is usually better handled in a WSGI</span>
+<span class="sd">       :term:`middleware` component than in subscriber code that is</span>
+<span class="sd">       called by a :class:`pyramid.interfaces.INewResponse` event.</span>
+<span class="sd">       The :class:`pyramid.interfaces.INewResponse` event exists</span>
+<span class="sd">       almost purely for symmetry with the</span>
+<span class="sd">       :class:`pyramid.interfaces.INewRequest` event.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">response</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">request</span> <span class="o">=</span> <span class="n">request</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">response</span> <span class="o">=</span> <span class="n">response</span>
+</div>
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">IContextFound</span><span class="p">)</span>
+<div class="viewcode-block" id="ContextFound"><a class="viewcode-back" href="../../api/events.html#pyramid.events.ContextFound">[docs]</a><span class="k">class</span> <span class="nc">ContextFound</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; An instance of this class is emitted as an :term:`event` after</span>
+<span class="sd">    the :app:`Pyramid` :term:`router` finds a :term:`context`</span>
+<span class="sd">    object (after it performs traversal) but before any view code is</span>
+<span class="sd">    executed.  The instance has an attribute, ``request``, which is</span>
+<span class="sd">    the request object generated by :app:`Pyramid`.</span>
+
+<span class="sd">    Notably, the request object will have an attribute named</span>
+<span class="sd">    ``context``, which is the context that will be provided to the</span>
+<span class="sd">    view which will eventually be called, as well as other attributes</span>
+<span class="sd">    attached by context-finding code.</span>
+
+<span class="sd">    This class implements the</span>
+<span class="sd">    :class:`pyramid.interfaces.IContextFound` interface.</span>
+
+<span class="sd">    .. note::</span>
+
+<span class="sd">       As of :app:`Pyramid` 1.0, for backwards compatibility purposes, this</span>
+<span class="sd">       event may also be imported as :class:`pyramid.events.AfterTraversal`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">request</span> <span class="o">=</span> <span class="n">request</span>
+</div>
+<span class="n">AfterTraversal</span> <span class="o">=</span> <span class="n">ContextFound</span> <span class="c"># b/c as of 1.0</span>
+
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">IApplicationCreated</span><span class="p">)</span>
+<div class="viewcode-block" id="ApplicationCreated"><a class="viewcode-back" href="../../api/events.html#pyramid.events.ApplicationCreated">[docs]</a><span class="k">class</span> <span class="nc">ApplicationCreated</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>    
+    <span class="sd">&quot;&quot;&quot; An instance of this class is emitted as an :term:`event` when</span>
+<span class="sd">    the :meth:`pyramid.config.Configurator.make_wsgi_app` is</span>
+<span class="sd">    called.  The instance has an attribute, ``app``, which is an</span>
+<span class="sd">    instance of the :term:`router` that will handle WSGI requests.</span>
+<span class="sd">    This class implements the</span>
+<span class="sd">    :class:`pyramid.interfaces.IApplicationCreated` interface.</span>
+
+<span class="sd">    .. note::</span>
+
+<span class="sd">       For backwards compatibility purposes, this class can also be imported as</span>
+<span class="sd">       :class:`pyramid.events.WSGIApplicationCreatedEvent`.  This was the name</span>
+<span class="sd">       of the event class before :app:`Pyramid` 1.0.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">app</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">app</span> <span class="o">=</span> <span class="n">app</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">object</span> <span class="o">=</span> <span class="n">app</span>
+</div>
+<span class="n">WSGIApplicationCreatedEvent</span> <span class="o">=</span> <span class="n">ApplicationCreated</span> <span class="c"># b/c (as of 1.0)</span>
+
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">IBeforeRender</span><span class="p">)</span>
+<div class="viewcode-block" id="BeforeRender"><a class="viewcode-back" href="../../api/events.html#pyramid.events.BeforeRender">[docs]</a><span class="k">class</span> <span class="nc">BeforeRender</span><span class="p">(</span><span class="nb">dict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Subscribers to this event may introspect and modify the set of</span>
+<span class="sd">    :term:`renderer globals` before they are passed to a :term:`renderer`.</span>
+<span class="sd">    This event object iself has a dictionary-like interface that can be used</span>
+<span class="sd">    for this purpose.  For example::</span>
+
+<span class="sd">      from pyramid.events import subscriber</span>
+<span class="sd">      from pyramid.events import BeforeRender</span>
+
+<span class="sd">      @subscriber(BeforeRender)</span>
+<span class="sd">      def add_global(event):</span>
+<span class="sd">          event[&#39;mykey&#39;] = &#39;foo&#39;</span>
+
+<span class="sd">    An object of this type is sent as an event just before a :term:`renderer`</span>
+<span class="sd">    is invoked.</span>
+
+<span class="sd">    If a subscriber adds a key via ``__setitem__`` that already exists in</span>
+<span class="sd">    the renderer globals dictionary, it will overwrite the older value there.</span>
+<span class="sd">    This can be problematic because event subscribers to the BeforeRender</span>
+<span class="sd">    event do not possess any relative ordering.  For maximum interoperability</span>
+<span class="sd">    with other third-party subscribers, if you write an event subscriber meant</span>
+<span class="sd">    to be used as a BeforeRender subscriber, your subscriber code will need to</span>
+<span class="sd">    ensure no value already exists in the renderer globals dictionary before</span>
+<span class="sd">    setting an overriding value (which can be done using ``.get`` or</span>
+<span class="sd">    ``__contains__`` of the event object).</span>
+
+<span class="sd">    The dictionary returned from the view is accessible through the</span>
+<span class="sd">    :attr:`rendering_val` attribute of a :class:`~pyramid.events.BeforeRender`</span>
+<span class="sd">    event.</span>
+
+<span class="sd">    Suppose you return ``{&#39;mykey&#39;: &#39;somevalue&#39;, &#39;mykey2&#39;: &#39;somevalue2&#39;}`` from</span>
+<span class="sd">    your view callable, like so::</span>
+
+<span class="sd">      from pyramid.view import view_config</span>
+
+<span class="sd">      @view_config(renderer=&#39;some_renderer&#39;)</span>
+<span class="sd">      def myview(request):</span>
+<span class="sd">          return {&#39;mykey&#39;: &#39;somevalue&#39;, &#39;mykey2&#39;: &#39;somevalue2&#39;}</span>
+
+<span class="sd">    :attr:`rendering_val` can be used to access these values from the</span>
+<span class="sd">    :class:`~pyramid.events.BeforeRender` object::</span>
+
+<span class="sd">      from pyramid.events import subscriber</span>
+<span class="sd">      from pyramid.events import BeforeRender</span>
+
+<span class="sd">      @subscriber(BeforeRender)</span>
+<span class="sd">      def read_return(event):</span>
+<span class="sd">          # {&#39;mykey&#39;: &#39;somevalue&#39;} is returned from the view</span>
+<span class="sd">          print(event.rendering_val[&#39;mykey&#39;])</span>
+
+<span class="sd">    In other words, :attr:`rendering_val` is the (non-system) value returned</span>
+<span class="sd">    by a view or passed to ``render*`` as ``value``.  This feature is new in</span>
+<span class="sd">    Pyramid 1.2.</span>
+
+<span class="sd">    For a description of the values present in the renderer globals dictionary,</span>
+<span class="sd">    see :ref:`renderer_system_values`.</span>
+
+<span class="sd">    .. seealso::</span>
+
+<span class="sd">        See also :class:`pyramid.interfaces.IBeforeRender`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">,</span> <span class="n">rendering_val</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="nb">dict</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rendering_val</span> <span class="o">=</span> <span class="n">rendering_val</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,649 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>What&#39;s New In Pyramid 1.5 &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="index.html" />
+    <link rel="next" title="What&#39;s New In Pyramid 1.4" href="whatsnew-1.4.html" />
+    <link rel="prev" title="pyramid.wsgi" href="api/wsgi.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="index.html">
+      		<img class="logo" src="_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="whatsnew-1.4.html" title="What&#39;s New In Pyramid 1.4"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="api/wsgi.html" title="pyramid.wsgi"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="what-s-new-in-pyramid-1-5">
+<h1>What's New In Pyramid 1.5<a class="headerlink" href="#what-s-new-in-pyramid-1-5" title="Permalink to this headline">¶</a></h1>
+<p>This article explains the new features in <span>Pyramid</span> version 1.5 as
+compared to its predecessor, <span>Pyramid</span> 1.4.  It also documents backwards
+incompatibilities between the two versions and deprecations added to
+<span>Pyramid</span> 1.5, as well as software dependency changes and notable
+documentation additions.</p>
+<div class="section" id="major-backwards-incompatibilities">
+<h2>Major Backwards Incompatibilities<a class="headerlink" href="#major-backwards-incompatibilities" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">Pyramid no longer depends on or configures the Mako and Chameleon templating
+system renderers by default.  Disincluding these templating systems by
+default means that the Pyramid core has fewer dependencies and can run on
+future platforms without immediate concern for the compatibility of its
+templating add-ons.  It also makes maintenance slightly more effective, as
+different people can maintain the templating system add-ons that they
+understand and care about without needing commit access to the Pyramid core,
+and it allows users who just don't want to see any packages they don't use
+come along for the ride when they install Pyramid.</p>
+<p>This means that upon upgrading to Pyramid 1.5a2+, projects that use either
+of these templating systems will see a traceback that ends something like
+this when their application attempts to render a Chameleon or Mako template:</p>
+<div class="highlight-python"><div class="highlight"><pre>ValueError: No such renderer factory .pt
+</pre></div>
+</div>
+<p>Or:</p>
+<div class="highlight-python"><div class="highlight"><pre>ValueError: No such renderer factory .mako
+</pre></div>
+</div>
+<p>Or:</p>
+<div class="highlight-python"><div class="highlight"><pre>ValueError: No such renderer factory .mak
+</pre></div>
+</div>
+<p>Support for Mako templating has been moved into an add-on package named
+<tt class="docutils literal"><span class="pre">pyramid_mako</span></tt>, and support for Chameleon templating has been moved into
+an add-on package named <tt class="docutils literal"><span class="pre">pyramid_chameleon</span></tt>.  These packages are drop-in
+replacements for the old built-in support for these templating langauges.
+All you have to do is install them and make them active in your configuration
+to register renderer factories for <tt class="docutils literal"><span class="pre">.pt</span></tt> and/or <tt class="docutils literal"><span class="pre">.mako</span></tt> (or <tt class="docutils literal"><span class="pre">.mak</span></tt>) to
+make your application work again.</p>
+<p>To re-add support for Chameleon and/or Mako template renderers into your
+existing projects, follow the below steps.</p>
+<p>If you depend on Mako templates:</p>
+<ul>
+<li><p class="first">Make sure the <tt class="docutils literal"><span class="pre">pyramid_mako</span></tt> package is installed.  One way to do this
+is by adding <tt class="docutils literal"><span class="pre">pyramid_mako</span></tt> to the <tt class="docutils literal"><span class="pre">install_requires</span></tt> section of your
+package's <tt class="docutils literal"><span class="pre">setup.py</span></tt> file and afterwards rerunning <tt class="docutils literal"><span class="pre">setup.py</span> <span class="pre">develop</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">setup</span><span class="p">(</span>
+    <span class="c">#...</span>
+    <span class="n">install_requires</span><span class="o">=</span><span class="p">[</span>
+        <span class="s">&#39;pyramid_mako&#39;</span><span class="p">,</span>         <span class="c"># new dependency</span>
+        <span class="s">&#39;pyramid&#39;</span><span class="p">,</span>
+        <span class="c">#...</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Within the portion of your application which instantiates a Pyramid
+<a class="reference internal" href="api/config.html#pyramid.config.Configurator" title="pyramid.config.Configurator"><tt class="xref py py-class docutils literal"><span class="pre">Configurator</span></tt></a> (often the <tt class="docutils literal"><span class="pre">main()</span></tt> function in
+your project's <tt class="docutils literal"><span class="pre">__init__.py</span></tt> file), tell Pyramid to include the
+<tt class="docutils literal"><span class="pre">pyramid_mako</span></tt> includeme:</p>
+<div class="highlight-python"><div class="highlight"><pre>config = Configurator(.....)
+config.include(&#39;pyramid_mako&#39;)
+</pre></div>
+</div>
+</li>
+</ul>
+<p>If you depend on Chameleon templates:</p>
+<ul>
+<li><p class="first">Make sure the <tt class="docutils literal"><span class="pre">pyramid_chameleon</span></tt> package is installed.  One way to do
+this is by adding <tt class="docutils literal"><span class="pre">pyramid_chameleon</span></tt> to the <tt class="docutils literal"><span class="pre">install_requires</span></tt> section
+of your package's <tt class="docutils literal"><span class="pre">setup.py</span></tt> file and afterwards rerunning
+<tt class="docutils literal"><span class="pre">setup.py</span> <span class="pre">develop</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">setup</span><span class="p">(</span>
+    <span class="c">#...</span>
+    <span class="n">install_requires</span><span class="o">=</span><span class="p">[</span>
+        <span class="s">&#39;pyramid_chameleon&#39;</span><span class="p">,</span>         <span class="c"># new dependency</span>
+        <span class="s">&#39;pyramid&#39;</span><span class="p">,</span>
+        <span class="c">#...</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Within the portion of your application which instantiates a Pyramid
+<a class="reference internal" href="api/config.html#pyramid.config.Configurator" title="pyramid.config.Configurator"><tt class="xref py py-class docutils literal"><span class="pre">Configurator</span></tt></a> (often the <tt class="docutils literal"><span class="pre">main()</span></tt> function in
+your project's <tt class="docutils literal"><span class="pre">__init__.py</span></tt> file), tell Pyramid to include the
+<tt class="docutils literal"><span class="pre">pyramid_chameleon</span></tt> includeme:</p>
+<div class="highlight-python"><div class="highlight"><pre>config = Configurator(.....)
+config.include(&#39;pyramid_chameleon&#39;)
+</pre></div>
+</div>
+</li>
+</ul>
+<p>Note that it's also fine to install these packages into <em>older</em> Pyramids for
+forward compatibility purposes.  Even if you don't upgrade to Pyramid 1.5
+immediately, performing the above steps in a Pyramid 1.4 installation is
+perfectly fine, won't cause any difference, and will give you forward
+compatibility when you eventually do upgrade to Pyramid 1.5.</p>
+<p>With the removal of Mako and Chameleon support from the core, some
+unit tests that use the <tt class="docutils literal"><span class="pre">pyramid.renderers.render*</span></tt> methods may begin to
+fail.  If any of your unit tests are invoking either
+<tt class="docutils literal"><span class="pre">pyramid.renderers.render()</span></tt>  or <tt class="docutils literal"><span class="pre">pyramid.renderers.render_to_response()</span></tt>
+with either Mako or Chameleon templates then the
+<tt class="docutils literal"><span class="pre">pyramid.config.Configurator</span></tt> instance in effect during
+the unit test should be also be updated to include the addons, as shown
+above. For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">ATest</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">pyramid</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">setUp</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="s">&#39;pyramid_mako&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">test_it</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">pyramid</span><span class="o">.</span><span class="n">renderers</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="s">&#39;mypkg:templates/home.mako&#39;</span><span class="p">,</span> <span class="p">{})</span>
+</pre></div>
+</div>
+<p>Or:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">ATest</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">pyramid</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">setUp</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="s">&#39;pyramid_chameleon&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">test_it</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">pyramid</span><span class="o">.</span><span class="n">renderers</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="s">&#39;mypkg:templates/home.pt&#39;</span><span class="p">,</span> <span class="p">{})</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">If you're using the Pyramid debug toolbar, when you upgrade Pyramid to
+1.5a2+, you'll also need to upgrade the <tt class="docutils literal"><span class="pre">pyramid_debugtoolbar</span></tt> package to
+at least version 1.0.8, as older toolbar versions are not compatible with
+Pyramid 1.5a2+ due to the removal of Mako support from the core.  It's
+fine to use this newer version of the toolbar code with older Pyramids too.</p>
+</li>
+</ul>
+</div>
+<div class="section" id="feature-additions">
+<h2>Feature Additions<a class="headerlink" href="#feature-additions" title="Permalink to this headline">¶</a></h2>
+<p>The feature additions in Pyramid 1.5 follow.</p>
+<ul>
+<li><p class="first">Add <tt class="docutils literal"><span class="pre">pdistreport</span></tt> script, which prints the Python version in use, the
+Pyramid version in use, and the version number and location of all Python
+distributions currently installed.</p>
+</li>
+<li><p class="first">Add the ability to invert the result of any view, route, or subscriber
+predicate value using the <tt class="docutils literal"><span class="pre">not_</span></tt> class.  For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">not_</span>
+
+<span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;myroute&#39;</span><span class="p">,</span> <span class="n">request_method</span><span class="o">=</span><span class="n">not_</span><span class="p">(</span><span class="s">&#39;POST&#39;</span><span class="p">))</span>
+<span class="k">def</span> <span class="nf">myview</span><span class="p">(</span><span class="n">request</span><span class="p">):</span> <span class="o">...</span>
+</pre></div>
+</div>
+<p>The above example will ensure that the view is called if the request method
+is not POST, at least if no other view is more specific.</p>
+<p>The <a class="reference internal" href="api/config.html#pyramid.config.not_" title="pyramid.config.not_"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.config.not_</span></tt></a> class can be used against any value that is
+a predicate value passed in any of these contexts:</p>
+<ul class="simple">
+<li><a class="reference internal" href="api/config.html#pyramid.config.Configurator.add_view" title="pyramid.config.Configurator.add_view"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_view()</span></tt></a></li>
+<li><a class="reference internal" href="api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_route()</span></tt></a></li>
+<li><a class="reference internal" href="api/config.html#pyramid.config.Configurator.add_subscriber" title="pyramid.config.Configurator.add_subscriber"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_subscriber()</span></tt></a></li>
+<li><a class="reference internal" href="api/view.html#pyramid.view.view_config" title="pyramid.view.view_config"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.view.view_config()</span></tt></a></li>
+<li><a class="reference internal" href="api/events.html#pyramid.events.subscriber" title="pyramid.events.subscriber"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.events.subscriber()</span></tt></a></li>
+</ul>
+</li>
+<li><p class="first">View lookup will now search for valid views based on the inheritance
+hierarchy of the context. It tries to find views based on the most specific
+context first, and upon predicate failure, will move up the inheritance chain
+to test views found by the super-type of the context.  In the past, only the
+most specific type containing views would be checked and if no matching view
+could be found then a PredicateMismatch would be raised. Now predicate
+mismatches don't hide valid views registered on super-types. Here's an
+example that now works:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">class</span> <span class="nc">IResource</span><span class="p">(</span><span class="n">Interface</span><span class="p">):</span>
+
+    <span class="o">...</span>
+
+<span class="nd">@view_config</span><span class="p">(</span><span class="n">context</span><span class="o">=</span><span class="n">IResource</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+
+    <span class="o">...</span>
+
+<span class="nd">@view_config</span><span class="p">(</span><span class="n">context</span><span class="o">=</span><span class="n">IResource</span><span class="p">,</span> <span class="n">request_method</span><span class="o">=</span><span class="s">&#39;POST&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">post</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+
+    <span class="o">...</span>
+
+<span class="nd">@view_config</span><span class="p">(</span><span class="n">context</span><span class="o">=</span><span class="n">IResource</span><span class="p">,</span> <span class="n">request_method</span><span class="o">=</span><span class="s">&#39;DELETE&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+
+    <span class="o">...</span>
+
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">IResource</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">MyResource</span><span class="p">:</span>
+
+    <span class="o">...</span>
+
+<span class="nd">@view_config</span><span class="p">(</span><span class="n">context</span><span class="o">=</span><span class="n">MyResource</span><span class="p">,</span> <span class="n">request_method</span><span class="o">=</span><span class="s">&#39;POST&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">override_post</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>Previously the override_post view registration would hide the get
+and delete views in the context of MyResource -- leading to a
+predicate mismatch error when trying to use GET or DELETE
+methods. Now the views are found and no predicate mismatch is
+raised.
+See <a class="reference external" href="https://github.com/Pylons/pyramid/pull/786">https://github.com/Pylons/pyramid/pull/786</a> and
+<a class="reference external" href="https://github.com/Pylons/pyramid/pull/1004">https://github.com/Pylons/pyramid/pull/1004</a> and
+<a class="reference external" href="https://github.com/Pylons/pyramid/pull/1046">https://github.com/Pylons/pyramid/pull/1046</a></p>
+</li>
+<li><p class="first"><tt class="docutils literal"><span class="pre">scripts/prequest.py</span></tt> (aka the <tt class="docutils literal"><span class="pre">prequest</span></tt> console script): added support
+for submitting <tt class="docutils literal"><span class="pre">PUT</span></tt> and <tt class="docutils literal"><span class="pre">PATCH</span></tt> requests.  See
+<a class="reference external" href="https://github.com/Pylons/pyramid/pull/1033">https://github.com/Pylons/pyramid/pull/1033</a>.  add support for submitting
+<tt class="docutils literal"><span class="pre">OPTIONS</span></tt> and <tt class="docutils literal"><span class="pre">PROPFIND</span></tt> requests, and allow users to specify basic
+authentication credentials in the request via a <tt class="docutils literal"><span class="pre">--login</span></tt> argument to the
+script.  See <a class="reference external" href="https://github.com/Pylons/pyramid/pull/1039">https://github.com/Pylons/pyramid/pull/1039</a>.</p>
+</li>
+<li><p class="first">The <a class="reference internal" href="api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_route()</span></tt></a> method now supports being
+called with an external URL as pattern. See
+<a class="reference external" href="https://github.com/Pylons/pyramid/issues/611">https://github.com/Pylons/pyramid/issues/611</a> and the documentation section
+<a class="reference internal" href="narr/urldispatch.html#external-route-narr"><em>External Routes</em></a>.</p>
+</li>
+<li><p class="first"><a class="reference internal" href="api/authorization.html#pyramid.authorization.ACLAuthorizationPolicy" title="pyramid.authorization.ACLAuthorizationPolicy"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.authorization.ACLAuthorizationPolicy</span></tt></a> supports <tt class="docutils literal"><span class="pre">__acl__</span></tt> as
+a callable. This removes the ambiguity between the potential
+<tt class="docutils literal"><span class="pre">AttributeError</span></tt> that would be raised on the <tt class="docutils literal"><span class="pre">context</span></tt> when the property
+was not defined and the <tt class="docutils literal"><span class="pre">AttributeError</span></tt> that could be raised from any
+user-defined code within a dynamic property. It is recommended to define a
+dynamic ACL as a callable to avoid this ambiguity. See
+<a class="reference external" href="https://github.com/Pylons/pyramid/issues/735">https://github.com/Pylons/pyramid/issues/735</a>.</p>
+</li>
+<li><p class="first">Allow a protocol-relative URL (e.g. <tt class="docutils literal"><span class="pre">//example.com/images</span></tt>) to be passed to
+<a class="reference internal" href="api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_static_view()</span></tt></a>. This allows
+externally-hosted static URLs to be generated based on the current protocol.</p>
+</li>
+<li><p class="first">The <a class="reference internal" href="api/authentication.html#pyramid.authentication.AuthTktAuthenticationPolicy" title="pyramid.authentication.AuthTktAuthenticationPolicy"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.authentication.AuthTktAuthenticationPolicy</span></tt></a> class has two
+new options to configure its domain usage:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">parent_domain</span></tt>: if set the authentication cookie is set on
+the parent domain. This is useful if you have multiple sites sharing the
+same domain.</li>
+<li><tt class="docutils literal"><span class="pre">domain</span></tt>: if provided the cookie is always set for this domain, bypassing
+all usual logic.</li>
+</ul>
+<p>See <a class="reference external" href="https://github.com/Pylons/pyramid/pull/1028">https://github.com/Pylons/pyramid/pull/1028</a>,
+<a class="reference external" href="https://github.com/Pylons/pyramid/pull/1072">https://github.com/Pylons/pyramid/pull/1072</a> and
+<a class="reference external" href="https://github.com/Pylons/pyramid/pull/1078">https://github.com/Pylons/pyramid/pull/1078</a>.</p>
+</li>
+<li><p class="first">The <tt class="xref py py-class docutils literal"><span class="pre">pyramid.authentication.AuthTktPolicy</span></tt> now supports IPv6
+addresses when using the <tt class="docutils literal"><span class="pre">include_ip=True</span></tt> option. This is possibly
+incompatible with alternative <tt class="docutils literal"><span class="pre">auth_tkt</span></tt> implementations, as the
+specification does not define how to properly handle IPv6. See
+<a class="reference external" href="https://github.com/Pylons/pyramid/issues/831">https://github.com/Pylons/pyramid/issues/831</a>.</p>
+</li>
+<li><p class="first">Make it possible to use variable arguments via
+<a class="reference internal" href="api/paster.html#pyramid.paster.get_appsettings" title="pyramid.paster.get_appsettings"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.paster.get_appsettings()</span></tt></a>. This also allowed the generated
+<tt class="docutils literal"><span class="pre">initialize_db</span></tt> script from the <tt class="docutils literal"><span class="pre">alchemy</span></tt> scaffold to grow support for
+options in the form <tt class="docutils literal"><span class="pre">a=1</span> <span class="pre">b=2</span></tt> so you can fill in values in a parameterized
+<tt class="docutils literal"><span class="pre">.ini</span></tt> file, e.g.  <tt class="docutils literal"><span class="pre">initialize_myapp_db</span> <span class="pre">etc/development.ini</span> <span class="pre">a=1</span> <span class="pre">b=2</span></tt>.
+See <a class="reference external" href="https://github.com/Pylons/pyramid/pull/911">https://github.com/Pylons/pyramid/pull/911</a></p>
+</li>
+<li><p class="first">The <tt class="docutils literal"><span class="pre">request.session.check_csrf_token()</span></tt> method and the <tt class="docutils literal"><span class="pre">check_csrf</span></tt> view
+predicate now take into account the value of the HTTP header named
+<tt class="docutils literal"><span class="pre">X-CSRF-Token</span></tt> (as well as the <tt class="docutils literal"><span class="pre">csrf_token</span></tt> form parameter, which they
+always did).  The header is tried when the form parameter does not exist.</p>
+</li>
+<li><p class="first">You can now generate &quot;hybrid&quot; urldispatch/traversal URLs more easily by using
+the new <tt class="docutils literal"><span class="pre">route_name</span></tt>, <tt class="docutils literal"><span class="pre">route_kw</span></tt> and <tt class="docutils literal"><span class="pre">route_remainder_name</span></tt> arguments
+to <a class="reference internal" href="api/request.html#pyramid.request.Request.resource_url" title="pyramid.request.Request.resource_url"><tt class="xref py py-meth docutils literal"><span class="pre">resource_url()</span></tt></a> and
+<tt class="xref py py-meth docutils literal"><span class="pre">resource_path()</span></tt>.  See
+<a class="reference internal" href="narr/hybrid.html#generating-hybrid-urls"><em>Generating Hybrid URLs</em></a>.</p>
+</li>
+<li><p class="first">A new http exception superclass named
+<tt class="xref py py-class docutils literal"><span class="pre">HTTPSuccessful</span></tt> was added.  You can use this
+class as the <tt class="docutils literal"><span class="pre">context</span></tt> of an exception view to catch all 200-series
+&quot;exceptions&quot; (e.g. &quot;raise HTTPOk&quot;).  This also allows you to catch <em>only</em> the
+<a class="reference internal" href="api/httpexceptions.html#pyramid.httpexceptions.HTTPOk" title="pyramid.httpexceptions.HTTPOk"><tt class="xref py py-class docutils literal"><span class="pre">HTTPOk</span></tt></a> exception itself; previously this was
+impossible because a number of other exceptions (such as <tt class="docutils literal"><span class="pre">HTTPNoContent</span></tt>)
+inherited from <tt class="docutils literal"><span class="pre">HTTPOk</span></tt>, but now they do not.</p>
+</li>
+<li><p class="first">It is now possible to escape double braces in Pyramid scaffolds (unescaped,
+these represent replacement values).  You can use <tt class="docutils literal"><span class="pre">\{\{a\}\}</span></tt> to
+represent a &quot;bare&quot; <tt class="docutils literal"><span class="pre">{{a}}</span></tt>.  See
+<a class="reference external" href="https://github.com/Pylons/pyramid/pull/862">https://github.com/Pylons/pyramid/pull/862</a></p>
+</li>
+<li><p class="first">Add <tt class="docutils literal"><span class="pre">localizer</span></tt> and <tt class="docutils literal"><span class="pre">locale_name</span></tt> properties (reified) to
+<a class="reference internal" href="api/request.html#pyramid.request.Request" title="pyramid.request.Request"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.request.Request</span></tt></a>.  See
+<a class="reference external" href="https://github.com/Pylons/pyramid/issues/508">https://github.com/Pylons/pyramid/issues/508</a>.  Note that the
+<a class="reference internal" href="api/i18n.html#pyramid.i18n.get_localizer" title="pyramid.i18n.get_localizer"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.i18n.get_localizer()</span></tt></a> and <a class="reference internal" href="api/i18n.html#pyramid.i18n.get_locale_name" title="pyramid.i18n.get_locale_name"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.i18n.get_locale_name()</span></tt></a>
+functions now simply look up these properties on the request.</p>
+</li>
+<li><p class="first">The <tt class="docutils literal"><span class="pre">pserve</span></tt> command now takes a <tt class="docutils literal"><span class="pre">-v</span></tt> (or <tt class="docutils literal"><span class="pre">--verbose</span></tt>) flag and a
+<tt class="docutils literal"><span class="pre">-q</span></tt> (or <tt class="docutils literal"><span class="pre">--quiet</span></tt>) flag.  Output from running <tt class="docutils literal"><span class="pre">pserve</span></tt> can be
+controlled using these flags.  <tt class="docutils literal"><span class="pre">-v</span></tt> can be specified multiple times to
+increase verbosity.  <tt class="docutils literal"><span class="pre">-q</span></tt> sets verbosity to <tt class="docutils literal"><span class="pre">0</span></tt> unconditionally.  The
+default verbosity level is <tt class="docutils literal"><span class="pre">1</span></tt>.</p>
+</li>
+<li><p class="first">The <tt class="docutils literal"><span class="pre">alchemy</span></tt> scaffold tests now provide better coverage.  See
+<a class="reference external" href="https://github.com/Pylons/pyramid/pull/1029">https://github.com/Pylons/pyramid/pull/1029</a></p>
+</li>
+<li><p class="first">Users can now provide dotted Python names to as the <tt class="docutils literal"><span class="pre">factory</span></tt> argument
+the Configurator methods named
+<a class="reference internal" href="api/config.html#pyramid.config.Configurator.add_view_predicate" title="pyramid.config.Configurator.add_view_predicate"><tt class="xref py py-meth docutils literal"><span class="pre">add_view_predicate()</span></tt></a>,
+<a class="reference internal" href="api/config.html#pyramid.config.Configurator.add_route_predicate" title="pyramid.config.Configurator.add_route_predicate"><tt class="xref py py-meth docutils literal"><span class="pre">add_route_predicate()</span></tt></a> and
+<tt class="xref py py-meth docutils literal"><span class="pre">add_subscriber_predicate()</span></tt>.  Instead of
+passing the predicate factory directly, you can pass a dotted name which
+refers to the factory.</p>
+</li>
+<li><p class="first"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.path.package_name()</span></tt> no longer thows an exception when resolving
+the package name for namespace packages that have no <tt class="docutils literal"><span class="pre">__file__</span></tt> attribute.</p>
+</li>
+<li><p class="first">An authorization API has been added as a method of the request:
+<a class="reference internal" href="api/request.html#pyramid.request.Request.has_permission" title="pyramid.request.Request.has_permission"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.has_permission()</span></tt></a>.  It is a method-based
+alternative to the <a class="reference internal" href="api/security.html#pyramid.security.has_permission" title="pyramid.security.has_permission"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.security.has_permission()</span></tt></a> API and works
+exactly the same.  The older API is now deprecated.</p>
+</li>
+<li><p class="first">Property API attributes have been added to the request for easier access to
+authentication data: <a class="reference internal" href="api/request.html#pyramid.request.Request.authenticated_userid" title="pyramid.request.Request.authenticated_userid"><tt class="xref py py-attr docutils literal"><span class="pre">pyramid.request.Request.authenticated_userid</span></tt></a>,
+<a class="reference internal" href="api/request.html#pyramid.request.Request.unauthenticated_userid" title="pyramid.request.Request.unauthenticated_userid"><tt class="xref py py-attr docutils literal"><span class="pre">pyramid.request.Request.unauthenticated_userid</span></tt></a>, and
+<a class="reference internal" href="api/request.html#pyramid.request.Request.effective_principals" title="pyramid.request.Request.effective_principals"><tt class="xref py py-attr docutils literal"><span class="pre">pyramid.request.Request.effective_principals</span></tt></a>.  These are analogues,
+respectively, of <a class="reference internal" href="api/security.html#pyramid.security.authenticated_userid" title="pyramid.security.authenticated_userid"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.security.authenticated_userid()</span></tt></a>,
+<a class="reference internal" href="api/security.html#pyramid.security.unauthenticated_userid" title="pyramid.security.unauthenticated_userid"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.security.unauthenticated_userid()</span></tt></a>, and
+<a class="reference internal" href="api/security.html#pyramid.security.effective_principals" title="pyramid.security.effective_principals"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.security.effective_principals()</span></tt></a>.  They operate exactly the
+same, except they are attributes of the request instead of functions
+accepting a request.  They are properties, so they cannot be assigned to.
+The older function-based APIs are now deprecated.</p>
+</li>
+<li><p class="first">Pyramid's console scripts (<tt class="docutils literal"><span class="pre">pserve</span></tt>, <tt class="docutils literal"><span class="pre">pviews</span></tt>, etc) can now be run
+directly, allowing custom arguments to be sent to the python interpreter
+at runtime. For example:</p>
+<div class="highlight-python"><div class="highlight"><pre>python -3 -m pyramid.scripts.pserve development.ini
+</pre></div>
+</div>
+</li>
+<li><p class="first">Added a specific subclass of <a class="reference internal" href="api/httpexceptions.html#pyramid.httpexceptions.HTTPBadRequest" title="pyramid.httpexceptions.HTTPBadRequest"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.httpexceptions.HTTPBadRequest</span></tt></a>
+named <a class="reference internal" href="api/exceptions.html#pyramid.exceptions.BadCSRFToken" title="pyramid.exceptions.BadCSRFToken"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.exceptions.BadCSRFToken</span></tt></a> which will now be raised in
+response to failures in the <tt class="docutils literal"><span class="pre">check_csrf_token</span></tt> view predicate.  See
+<a class="reference external" href="https://github.com/Pylons/pyramid/pull/1149">https://github.com/Pylons/pyramid/pull/1149</a></p>
+</li>
+<li><p class="first">Added a new <tt class="docutils literal"><span class="pre">SignedCookieSessionFactory</span></tt> which is very similar to the
+<tt class="docutils literal"><span class="pre">UnencryptedCookieSessionFactoryConfig</span></tt> but with a clearer focus on
+signing content. The custom serializer arguments to this function should
+only focus on serializing, unlike its predecessor which required the
+serializer to also perform signing.
+See <a class="reference external" href="https://github.com/Pylons/pyramid/pull/1142">https://github.com/Pylons/pyramid/pull/1142</a> . Note
+that cookies generated using <tt class="docutils literal"><span class="pre">SignedCookieSessionFactory</span></tt> are not
+compatible with cookies generated using <tt class="docutils literal"><span class="pre">UnencryptedCookieSessionFactory</span></tt>,
+so existing user session data will be destroyed if you switch to it.</p>
+</li>
+<li><p class="first">Added a new <tt class="docutils literal"><span class="pre">BaseCookieSessionFactory</span></tt> which acts as a generic cookie
+factory that can be used by framework implementors to create their own
+session implementations. It provides a reusable API which focuses strictly
+on providing a dictionary-like object that properly handles renewals,
+timeouts, and conformance with the <tt class="docutils literal"><span class="pre">ISession</span></tt> API.
+See <a class="reference external" href="https://github.com/Pylons/pyramid/pull/1142">https://github.com/Pylons/pyramid/pull/1142</a></p>
+</li>
+<li><p class="first">We no longer eagerly clear <tt class="docutils literal"><span class="pre">request.exception</span></tt> and <tt class="docutils literal"><span class="pre">request.exc_info</span></tt> in
+the exception view tween.  This makes it possible to inspect exception
+information within a finished callback.  See
+<a class="reference external" href="https://github.com/Pylons/pyramid/issues/1223">https://github.com/Pylons/pyramid/issues/1223</a>.</p>
+</li>
+</ul>
+</div>
+<div class="section" id="other-backwards-incompatibilities">
+<h2>Other Backwards Incompatibilities<a class="headerlink" href="#other-backwards-incompatibilities" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Modified the <tt class="xref py py-meth docutils literal"><span class="pre">current_route_url()</span></tt> method. The
+method previously returned the URL without the query string by default, it
+now does attach the query string unless it is overriden.</li>
+<li>The <a class="reference internal" href="api/request.html#pyramid.request.Request.route_url" title="pyramid.request.Request.route_url"><tt class="xref py py-meth docutils literal"><span class="pre">route_url()</span></tt></a> and
+<a class="reference internal" href="api/request.html#pyramid.request.Request.route_path" title="pyramid.request.Request.route_path"><tt class="xref py py-meth docutils literal"><span class="pre">route_path()</span></tt></a> APIs no longer quote <tt class="docutils literal"><span class="pre">/</span></tt> to
+<tt class="docutils literal"><span class="pre">%2F</span></tt> when a replacement value contains a <tt class="docutils literal"><span class="pre">/</span></tt>.  This was pointless, as
+WSGI servers always unquote the slash anyway, and Pyramid never sees the
+quoted value.</li>
+<li>It is no longer possible to set a <tt class="docutils literal"><span class="pre">locale_name</span></tt> attribute of the request,
+nor is it possible to set a <tt class="docutils literal"><span class="pre">localizer</span></tt> attribute of the request.  These
+are now &quot;reified&quot; properties that look up a locale name and localizer
+respectively using the machinery described in <a class="reference internal" href="narr/i18n.html#i18n-chapter"><em>Internationalization and Localization</em></a>.</li>
+<li>If you send an <tt class="docutils literal"><span class="pre">X-Vhm-Root</span></tt> header with a value that ends with any number
+of slashes, the trailing slashes will be removed before the URL
+is generated when you use <a class="reference internal" href="api/request.html#pyramid.request.Request.resource_url" title="pyramid.request.Request.resource_url"><tt class="xref py py-meth docutils literal"><span class="pre">resource_url()</span></tt></a>
+or <a class="reference internal" href="api/request.html#pyramid.request.Request.resource_path" title="pyramid.request.Request.resource_path"><tt class="xref py py-meth docutils literal"><span class="pre">resource_path()</span></tt></a>.  Previously the virtual
+root path would not have trailing slashes stripped, which would influence URL
+generation.</li>
+<li>The <a class="reference internal" href="api/interfaces.html#pyramid.interfaces.IResourceURL" title="pyramid.interfaces.IResourceURL"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.IResourceURL</span></tt></a> interface has now grown two new
+attributes: <tt class="docutils literal"><span class="pre">virtual_path_tuple</span></tt> and <tt class="docutils literal"><span class="pre">physical_path_tuple</span></tt>.  These should
+be the tuple form of the resource's path (physical and virtual).</li>
+<li>Removed the <tt class="docutils literal"><span class="pre">request.response_*</span></tt> varying attributes (such
+as``request.response_headers``) . These attributes had been deprecated
+since Pyramid 1.1, and as per the deprecation policy, have now been removed.</li>
+<li><tt class="docutils literal"><span class="pre">request.response</span></tt> will no longer be mutated when using the
+<a class="reference internal" href="api/renderers.html#pyramid.renderers.render" title="pyramid.renderers.render"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.renderers.render()</span></tt></a> API.  Almost all renderers mutate the
+<tt class="docutils literal"><span class="pre">request.response</span></tt> response object (for example, the JSON renderer sets
+<tt class="docutils literal"><span class="pre">request.response.content_type</span></tt> to <tt class="docutils literal"><span class="pre">application/json</span></tt>), but this is
+only necessary when the renderer is generating a response; it was a bug
+when it was done as a side effect of calling
+<a class="reference internal" href="api/renderers.html#pyramid.renderers.render" title="pyramid.renderers.render"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.renderers.render()</span></tt></a>.</li>
+<li>Removed the <tt class="docutils literal"><span class="pre">bfg2pyramid</span></tt> fixer script.</li>
+<li>The <a class="reference internal" href="api/events.html#pyramid.events.NewResponse" title="pyramid.events.NewResponse"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.events.NewResponse</span></tt></a> event is now sent <strong>after</strong> response
+callbacks are executed.  It previously executed before response callbacks
+were executed.  Rationale: it's more useful to be able to inspect the response
+after response callbacks have done their jobs instead of before.</li>
+<li>Removed the class named <tt class="docutils literal"><span class="pre">pyramid.view.static</span></tt> that had been deprecated
+since Pyramid 1.1.  Instead use <a class="reference internal" href="api/static.html#pyramid.static.static_view" title="pyramid.static.static_view"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.static.static_view</span></tt></a> with the
+<tt class="docutils literal"><span class="pre">use_subpath=True</span></tt> argument.</li>
+<li>Removed the <tt class="docutils literal"><span class="pre">pyramid.view.is_response</span></tt> function that had been deprecated
+since Pyramid 1.1.  Use the <a class="reference internal" href="api/request.html#pyramid.request.Request.is_response" title="pyramid.request.Request.is_response"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.is_response()</span></tt></a>
+method instead.</li>
+<li>Removed the ability to pass the following arguments to
+<a class="reference internal" href="api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_route()</span></tt></a>: <tt class="docutils literal"><span class="pre">view</span></tt>, <tt class="docutils literal"><span class="pre">view_context</span></tt>.
+<tt class="docutils literal"><span class="pre">view_for</span></tt>, <tt class="docutils literal"><span class="pre">view_permission</span></tt>, <tt class="docutils literal"><span class="pre">view_renderer</span></tt>, and <tt class="docutils literal"><span class="pre">view_attr</span></tt>.
+Using these arguments had been deprecated since Pyramid 1.1.  Instead of
+passing view-related arguments to <tt class="docutils literal"><span class="pre">add_route</span></tt>, use a separate call to
+<a class="reference internal" href="api/config.html#pyramid.config.Configurator.add_view" title="pyramid.config.Configurator.add_view"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_view()</span></tt></a> to associate a view with a route
+using its <tt class="docutils literal"><span class="pre">route_name</span></tt> argument.  Note that this impacts the
+<a class="reference internal" href="api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_static_view()</span></tt></a> function too, because
+it delegates to``add_route``.</li>
+<li>Removed the ability to influence and query a <a class="reference internal" href="api/request.html#pyramid.request.Request" title="pyramid.request.Request"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.request.Request</span></tt></a>
+object as if it were a dictionary.  Previously it was possible to use methods
+like <tt class="docutils literal"><span class="pre">__getitem__</span></tt>, <tt class="docutils literal"><span class="pre">get</span></tt>, <tt class="docutils literal"><span class="pre">items</span></tt>, and other dictlike methods to
+access values in the WSGI environment.  This behavior had been deprecated
+since Pyramid 1.1.  Use methods of <tt class="docutils literal"><span class="pre">request.environ</span></tt> (a real dictionary)
+instead.</li>
+<li>Removed ancient backwards compatibily hack in
+<tt class="docutils literal"><span class="pre">pyramid.traversal.DefaultRootFactory</span></tt> which populated the <tt class="docutils literal"><span class="pre">__dict__</span></tt> of
+the factory with the matchdict values for compatibility with BFG 0.9.</li>
+<li>The <tt class="docutils literal"><span class="pre">renderer_globals_factory</span></tt> argument to the
+<a class="reference internal" href="api/config.html#pyramid.config.Configurator" title="pyramid.config.Configurator"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.config.Configurator</span></tt></a> constructor and the
+coresponding argument to <a class="reference internal" href="api/config.html#pyramid.config.Configurator.setup_registry" title="pyramid.config.Configurator.setup_registry"><tt class="xref py py-meth docutils literal"><span class="pre">setup_registry()</span></tt></a>
+has been removed.  The <tt class="docutils literal"><span class="pre">set_renderer_globals_factory</span></tt> method of
+<a class="reference internal" href="api/config.html#pyramid.config.Configurator" title="pyramid.config.Configurator"><tt class="xref py py-class docutils literal"><span class="pre">Configurator</span></tt></a> has also been removed.  The (internal)
+<tt class="docutils literal"><span class="pre">pyramid.interfaces.IRendererGlobals</span></tt> interface was also removed.  These
+arguments, methods and interfaces had been deprecated since 1.1.  Use a
+<tt class="docutils literal"><span class="pre">BeforeRender</span></tt> event subscriber as documented in the &quot;Hooks&quot; chapter of the
+Pyramid narrative documentation instead of providing renderer globals values
+to the configurator.</li>
+<li>The key/values in the <tt class="docutils literal"><span class="pre">_query</span></tt> parameter of
+<a class="reference internal" href="api/request.html#pyramid.request.Request.route_url" title="pyramid.request.Request.route_url"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.route_url()</span></tt></a> and the <tt class="docutils literal"><span class="pre">query</span></tt> parameter of
+<a class="reference internal" href="api/request.html#pyramid.request.Request.resource_url" title="pyramid.request.Request.resource_url"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.resource_url()</span></tt></a> (and their variants), used to
+encode a value of <tt class="docutils literal"><span class="pre">None</span></tt> as the string <tt class="docutils literal"><span class="pre">'None'</span></tt>, leaving the resulting
+query string to be <tt class="docutils literal"><span class="pre">a=b&amp;key=None</span></tt>. The value is now dropped in this
+situation, leaving a query string of <tt class="docutils literal"><span class="pre">a=b&amp;key=</span></tt>.  See
+<a class="reference external" href="https://github.com/Pylons/pyramid/issues/1119">https://github.com/Pylons/pyramid/issues/1119</a></li>
+</ul>
+</div>
+<div class="section" id="deprecations">
+<h2>Deprecations<a class="headerlink" href="#deprecations" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Returning a <tt class="docutils literal"><span class="pre">(&quot;defname&quot;,</span> <span class="pre">dict)</span></tt> tuple from a view which has a Mako renderer
+is now deprecated.  Instead you should use the renderer spelling
+<tt class="docutils literal"><span class="pre">foo#defname.mak</span></tt> in the view configuration definition and return a dict
+only.</li>
+<li>The <a class="reference internal" href="api/config.html#pyramid.config.Configurator.set_request_property" title="pyramid.config.Configurator.set_request_property"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.set_request_property()</span></tt></a> method now issues
+a deprecation warning when used.  It had been docs-deprecated in 1.4
+but did not issue a deprecation warning when used.</li>
+<li><a class="reference internal" href="api/security.html#pyramid.security.has_permission" title="pyramid.security.has_permission"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.security.has_permission()</span></tt></a> is now deprecated in favor of using
+<a class="reference internal" href="api/request.html#pyramid.request.Request.has_permission" title="pyramid.request.Request.has_permission"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.has_permission()</span></tt></a>.</li>
+<li>The <a class="reference internal" href="api/security.html#pyramid.security.authenticated_userid" title="pyramid.security.authenticated_userid"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.security.authenticated_userid()</span></tt></a>,
+<a class="reference internal" href="api/security.html#pyramid.security.unauthenticated_userid" title="pyramid.security.unauthenticated_userid"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.security.unauthenticated_userid()</span></tt></a>, and
+<a class="reference internal" href="api/security.html#pyramid.security.effective_principals" title="pyramid.security.effective_principals"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.security.effective_principals()</span></tt></a> functions have been
+deprecated. Use <a class="reference internal" href="api/request.html#pyramid.request.Request.authenticated_userid" title="pyramid.request.Request.authenticated_userid"><tt class="xref py py-attr docutils literal"><span class="pre">pyramid.request.Request.authenticated_userid</span></tt></a>,
+<a class="reference internal" href="api/request.html#pyramid.request.Request.unauthenticated_userid" title="pyramid.request.Request.unauthenticated_userid"><tt class="xref py py-attr docutils literal"><span class="pre">pyramid.request.Request.unauthenticated_userid</span></tt></a> and
+<a class="reference internal" href="api/request.html#pyramid.request.Request.effective_principals" title="pyramid.request.Request.effective_principals"><tt class="xref py py-attr docutils literal"><span class="pre">pyramid.request.Request.effective_principals</span></tt></a> instead.</li>
+<li>Deprecate the <tt class="docutils literal"><span class="pre">pyramid.interfaces.ITemplateRenderer</span></tt> interface. It was
+ill-defined and became unused when Mako and Chameleon template bindings were
+split into their own packages.</li>
+<li>The <tt class="docutils literal"><span class="pre">pyramid.session.UnencryptedCookieSessionFactoryConfig</span></tt> API has been
+deprecated and is superseded by the
+<tt class="docutils literal"><span class="pre">pyramid.session.SignedCookieSessionFactory</span></tt>.  Note that while the cookies
+generated by the <tt class="docutils literal"><span class="pre">UnencryptedCookieSessionFactoryConfig</span></tt>
+are compatible with cookies generated by old releases, cookies generated by
+the SignedCookieSessionFactory are not. See
+<a class="reference external" href="https://github.com/Pylons/pyramid/pull/1142">https://github.com/Pylons/pyramid/pull/1142</a></li>
+</ul>
+</div>
+<div class="section" id="documentation-enhancements">
+<h2>Documentation Enhancements<a class="headerlink" href="#documentation-enhancements" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>A new documentation chapter named <a class="reference internal" href="quick_tour.html#quick-tour"><em>Quick Tour of Pyramid</em></a> was added.  It describes
+starting out with Pyramid from a high level.</li>
+<li>Added a <a class="reference internal" href="quick_tutorial/index.html#quick-tutorial"><em>Quick Tutorial for Pyramid</em></a> to go with the Quick Tour</li>
+<li>Many other enhancements.</li>
+</ul>
+</div>
+<div class="section" id="scaffolding-enhancements">
+<h2>Scaffolding Enhancements<a class="headerlink" href="#scaffolding-enhancements" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>All scaffolds have a new HTML + CSS theme.</li>
+<li>Updated docs and scaffolds to keep in step with new 2.0 release of
+<tt class="docutils literal"><span class="pre">Lingua</span></tt>.  This included removing all <tt class="docutils literal"><span class="pre">setup.cfg</span></tt> files from scaffolds
+and documentation environments.</li>
+</ul>
+</div>
+<div class="section" id="dependency-changes">
+<h2>Dependency Changes<a class="headerlink" href="#dependency-changes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Pyramid no longer depends upon <tt class="docutils literal"><span class="pre">Mako</span></tt> or <tt class="docutils literal"><span class="pre">Chameleon</span></tt>.</li>
+<li>Pyramid now depends on WebOb&gt;=1.3 (it uses <tt class="docutils literal"><span class="pre">webob.cookies.CookieProfile</span></tt>
+from 1.3+).</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">What's New In Pyramid 1.5</a><ul>
+<li><a class="reference internal" href="#major-backwards-incompatibilities">Major Backwards Incompatibilities</a></li>
+<li><a class="reference internal" href="#feature-additions">Feature Additions</a></li>
+<li><a class="reference internal" href="#other-backwards-incompatibilities">Other Backwards Incompatibilities</a></li>
+<li><a class="reference internal" href="#deprecations">Deprecations</a></li>
+<li><a class="reference internal" href="#documentation-enhancements">Documentation Enhancements</a></li>
+<li><a class="reference internal" href="#scaffolding-enhancements">Scaffolding Enhancements</a></li>
+<li><a class="reference internal" href="#dependency-changes">Dependency Changes</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="api/wsgi.html"
+                        title="previous chapter"><tt class="docutils literal"><span class="pre">pyramid.wsgi</span></tt></a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="whatsnew-1.4.html"
+                        title="next chapter">What's New In Pyramid 1.4</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="whatsnew-1.4.html" title="What&#39;s New In Pyramid 1.4"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="api/wsgi.html" title="pyramid.wsgi"
+             >previous</a> |</li>
+    	<li><a href="index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,546 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.path &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.path</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">pkg_resources</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">imp</span>
+
+<span class="kn">from</span> <span class="nn">zope.interface</span> <span class="kn">import</span> <span class="n">implementer</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="n">IAssetDescriptor</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.compat</span> <span class="kn">import</span> <span class="n">string_types</span>
+
+<span class="n">ignore_types</span> <span class="o">=</span> <span class="p">[</span> <span class="n">imp</span><span class="o">.</span><span class="n">C_EXTENSION</span><span class="p">,</span> <span class="n">imp</span><span class="o">.</span><span class="n">C_BUILTIN</span> <span class="p">]</span>
+<span class="n">init_names</span> <span class="o">=</span> <span class="p">[</span> <span class="s">&#39;__init__</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">imp</span><span class="o">.</span><span class="n">get_suffixes</span><span class="p">()</span> <span class="k">if</span>
+               <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ignore_types</span> <span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">caller_path</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="n">module</span> <span class="o">=</span> <span class="n">caller_module</span><span class="p">(</span><span class="n">level</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">package_path</span><span class="p">(</span><span class="n">module</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">path</span>
+
+<span class="k">def</span> <span class="nf">caller_module</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sys</span><span class="o">=</span><span class="n">sys</span><span class="p">):</span>
+    <span class="n">module_globals</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">(</span><span class="n">level</span><span class="p">)</span><span class="o">.</span><span class="n">f_globals</span>
+    <span class="n">module_name</span> <span class="o">=</span> <span class="n">module_globals</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;__name__&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="s">&#39;__main__&#39;</span>
+    <span class="n">module</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="n">module_name</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">module</span>
+
+<span class="k">def</span> <span class="nf">package_name</span><span class="p">(</span><span class="n">pkg_or_module</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; If this function is passed a module, return the dotted Python</span>
+<span class="sd">    package name of the package in which the module lives.  If this</span>
+<span class="sd">    function is passed a package, return the dotted Python package</span>
+<span class="sd">    name of the package itself.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">pkg_or_module</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">pkg_or_module</span><span class="o">.</span><span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s">&#39;__main__&#39;</span>
+    <span class="n">pkg_name</span> <span class="o">=</span> <span class="n">pkg_or_module</span><span class="o">.</span><span class="n">__name__</span>
+    <span class="n">pkg_filename</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">pkg_or_module</span><span class="p">,</span> <span class="s">&#39;__file__&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">pkg_filename</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="c"># Namespace packages do not have __init__.py* files,</span>
+        <span class="c"># and so have no __file__ attribute</span>
+        <span class="k">return</span> <span class="n">pkg_name</span>
+    <span class="n">splitted</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">pkg_filename</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">splitted</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">init_names</span><span class="p">:</span>
+        <span class="c"># it&#39;s a package</span>
+        <span class="k">return</span> <span class="n">pkg_name</span>
+    <span class="k">return</span> <span class="n">pkg_name</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">package_of</span><span class="p">(</span><span class="n">pkg_or_module</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Return the package of a module or return the package itself &quot;&quot;&quot;</span>
+    <span class="n">pkg_name</span> <span class="o">=</span> <span class="n">package_name</span><span class="p">(</span><span class="n">pkg_or_module</span><span class="p">)</span>
+    <span class="nb">__import__</span><span class="p">(</span><span class="n">pkg_name</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="n">pkg_name</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">caller_package</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">caller_module</span><span class="o">=</span><span class="n">caller_module</span><span class="p">):</span>
+    <span class="c"># caller_module in arglist for tests</span>
+    <span class="n">module</span> <span class="o">=</span> <span class="n">caller_module</span><span class="p">(</span><span class="n">level</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="s">&#39;__file__&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">((</span><span class="s">&#39;__init__.py&#39;</span> <span class="ow">in</span> <span class="n">f</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="s">&#39;__init__$py&#39;</span> <span class="ow">in</span> <span class="n">f</span><span class="p">)):</span> <span class="c"># empty at &gt;&gt;&gt;</span>
+        <span class="c"># Module is a package</span>
+        <span class="k">return</span> <span class="n">module</span>
+    <span class="c"># Go up one level to get package</span>
+    <span class="n">package_name</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">__name__</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="n">package_name</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">package_path</span><span class="p">(</span><span class="n">package</span><span class="p">):</span>
+    <span class="c"># computing the abspath is actually kinda expensive so we memoize</span>
+    <span class="c"># the result</span>
+    <span class="n">prefix</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="s">&#39;__abspath__&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">prefix</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">pkg_resources</span><span class="o">.</span><span class="n">resource_filename</span><span class="p">(</span><span class="n">package</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+        <span class="c"># pkg_resources doesn&#39;t care whether we feed it a package</span>
+        <span class="c"># name or a module name within the package, the result</span>
+        <span class="c"># will be the same: a directory name to the package itself</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">package</span><span class="o">.</span><span class="n">__abspath__</span> <span class="o">=</span> <span class="n">prefix</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c"># this is only an optimization, ignore any error</span>
+            <span class="k">pass</span>
+    <span class="k">return</span> <span class="n">prefix</span>
+
+<span class="k">class</span> <span class="nc">_CALLER_PACKAGE</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> <span class="c"># pragma: no cover (for docs)</span>
+        <span class="k">return</span> <span class="s">&#39;pyramid.path.CALLER_PACKAGE&#39;</span>
+
+<span class="n">CALLER_PACKAGE</span> <span class="o">=</span> <span class="n">_CALLER_PACKAGE</span><span class="p">()</span>
+
+<span class="k">class</span> <span class="nc">Resolver</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">package</span><span class="o">=</span><span class="n">CALLER_PACKAGE</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">package</span> <span class="ow">in</span> <span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="n">CALLER_PACKAGE</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">package</span> <span class="o">=</span> <span class="n">package</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="n">string_types</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="nb">__import__</span><span class="p">(</span><span class="n">package</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s">&#39;The dotted name </span><span class="si">%r</span><span class="s"> cannot be imported&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">package</span><span class="p">,)</span>
+                        <span class="p">)</span>
+                <span class="n">package</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="n">package</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">package</span> <span class="o">=</span> <span class="n">package_of</span><span class="p">(</span><span class="n">package</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_package_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">package</span> <span class="ow">is</span> <span class="n">CALLER_PACKAGE</span><span class="p">:</span>
+            <span class="n">package_name</span> <span class="o">=</span> <span class="n">caller_package</span><span class="p">()</span><span class="o">.</span><span class="n">__name__</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">package_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">package</span><span class="o">.</span><span class="n">__name__</span>
+        <span class="k">return</span> <span class="n">package_name</span>
+
+    <span class="k">def</span> <span class="nf">get_package</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">package</span> <span class="ow">is</span> <span class="n">CALLER_PACKAGE</span><span class="p">:</span>
+            <span class="n">package</span> <span class="o">=</span> <span class="n">caller_package</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">package</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">package</span>
+        <span class="k">return</span> <span class="n">package</span>
+
+
+<div class="viewcode-block" id="AssetResolver"><a class="viewcode-back" href="../../api/path.html#pyramid.path.AssetResolver">[docs]</a><span class="k">class</span> <span class="nc">AssetResolver</span><span class="p">(</span><span class="n">Resolver</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A class used to resolve an :term:`asset specification` to an</span>
+<span class="sd">    :term:`asset descriptor`.</span>
+
+<span class="sd">    .. versionadded:: 1.3</span>
+
+<span class="sd">    The constructor accepts a single argument named ``package`` which may be</span>
+<span class="sd">    any of:</span>
+
+<span class="sd">    - A fully qualified (not relative) dotted name to a module or package</span>
+
+<span class="sd">    - a Python module or package object</span>
+
+<span class="sd">    - The value ``None``</span>
+
+<span class="sd">    - The constant value :attr:`pyramid.path.CALLER_PACKAGE`.</span>
+
+<span class="sd">    The default value is :attr:`pyramid.path.CALLER_PACKAGE`.</span>
+
+<span class="sd">    The ``package`` is used when a relative asset specification is supplied</span>
+<span class="sd">    to the :meth:`~pyramid.path.AssetResolver.resolve` method.  An asset</span>
+<span class="sd">    specification without a colon in it is treated as relative.</span>
+
+<span class="sd">    If ``package`` is ``None``, the resolver will</span>
+<span class="sd">    only be able to resolve fully qualified (not relative) asset</span>
+<span class="sd">    specifications.  Any attempt to resolve a relative asset specification</span>
+<span class="sd">    will result in an :exc:`ValueError` exception.</span>
+
+<span class="sd">    If ``package`` is :attr:`pyramid.path.CALLER_PACKAGE`,</span>
+<span class="sd">    the resolver will treat relative asset specifications as</span>
+<span class="sd">    relative to the caller of the :meth:`~pyramid.path.AssetResolver.resolve`</span>
+<span class="sd">    method.</span>
+
+<span class="sd">    If ``package`` is a *module* or *module name* (as opposed to a package or</span>
+<span class="sd">    package name), its containing package is computed and this</span>
+<span class="sd">    package is used to derive the package name (all names are resolved relative</span>
+<span class="sd">    to packages, never to modules).  For example, if the ``package`` argument</span>
+<span class="sd">    to this type was passed the string ``xml.dom.expatbuilder``, and</span>
+<span class="sd">    ``template.pt`` is supplied to the</span>
+<span class="sd">    :meth:`~pyramid.path.AssetResolver.resolve` method, the resulting absolute</span>
+<span class="sd">    asset spec would be ``xml.minidom:template.pt``, because</span>
+<span class="sd">    ``xml.dom.expatbuilder`` is a module object, not a package object.</span>
+
+<span class="sd">    If ``package`` is a *package* or *package name* (as opposed to a module or</span>
+<span class="sd">    module name), this package will be used to compute relative</span>
+<span class="sd">    asset specifications.  For example, if the ``package`` argument to this</span>
+<span class="sd">    type was passed the string ``xml.dom``, and ``template.pt`` is supplied</span>
+<span class="sd">    to the :meth:`~pyramid.path.AssetResolver.resolve` method, the resulting</span>
+<span class="sd">    absolute asset spec would be ``xml.minidom:template.pt``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="AssetResolver.resolve"><a class="viewcode-back" href="../../api/path.html#pyramid.path.AssetResolver.resolve">[docs]</a>    <span class="k">def</span> <span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spec</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Resolve the asset spec named as ``spec`` to an object that has the</span>
+<span class="sd">        attributes and methods described in</span>
+<span class="sd">        :class:`pyramid.interfaces.IAssetDescriptor`.</span>
+
+<span class="sd">        If ``spec`` is an absolute filename</span>
+<span class="sd">        (e.g. ``/path/to/myproject/templates/foo.pt``) or an absolute asset</span>
+<span class="sd">        spec (e.g. ``myproject:templates.foo.pt``), an asset descriptor is</span>
+<span class="sd">        returned without taking into account the ``package`` passed to this</span>
+<span class="sd">        class&#39; constructor.</span>
+
+<span class="sd">        If ``spec`` is a *relative* asset specification (an asset</span>
+<span class="sd">        specification without a ``:`` in it, e.g. ``templates/foo.pt``), the</span>
+<span class="sd">        ``package`` argument of the constructor is used as the package</span>
+<span class="sd">        portion of the asset spec.  For example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">           a = AssetResolver(&#39;myproject&#39;)</span>
+<span class="sd">           resolver = a.resolve(&#39;templates/foo.pt&#39;)</span>
+<span class="sd">           print(resolver.abspath())</span>
+<span class="sd">           # -&gt; /path/to/myproject/templates/foo.pt</span>
+
+<span class="sd">        If the AssetResolver is constructed without a ``package`` argument of</span>
+<span class="sd">        ``None``, and a relative asset specification is passed to</span>
+<span class="sd">        ``resolve``, an :exc:`ValueError` exception is raised.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">spec</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">FSAssetDescriptor</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">spec</span>
+        <span class="k">if</span> <span class="s">&#39;:&#39;</span> <span class="ow">in</span> <span class="n">path</span><span class="p">:</span>
+            <span class="n">package_name</span><span class="p">,</span> <span class="n">path</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;:&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">package</span> <span class="ow">is</span> <span class="n">CALLER_PACKAGE</span><span class="p">:</span>
+                <span class="n">package_name</span> <span class="o">=</span> <span class="n">caller_package</span><span class="p">()</span><span class="o">.</span><span class="n">__name__</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">package_name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">package</span><span class="p">,</span> <span class="s">&#39;__name__&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">package_name</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s">&#39;relative spec </span><span class="si">%r</span><span class="s"> irresolveable without package&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">spec</span><span class="p">,)</span>
+                <span class="p">)</span>
+        <span class="k">return</span> <span class="n">PkgResourcesAssetDescriptor</span><span class="p">(</span><span class="n">package_name</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="DottedNameResolver"><a class="viewcode-back" href="../../api/path.html#pyramid.path.DottedNameResolver">[docs]</a><span class="k">class</span> <span class="nc">DottedNameResolver</span><span class="p">(</span><span class="n">Resolver</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A class used to resolve a :term:`dotted Python name` to a package or</span>
+<span class="sd">    module object.</span>
+
+<span class="sd">    .. versionadded:: 1.3</span>
+
+<span class="sd">    The constructor accepts a single argument named ``package`` which may be</span>
+<span class="sd">    any of:</span>
+
+<span class="sd">    - A fully qualified (not relative) dotted name to a module or package</span>
+
+<span class="sd">    - a Python module or package object</span>
+
+<span class="sd">    - The value ``None``</span>
+
+<span class="sd">    - The constant value :attr:`pyramid.path.CALLER_PACKAGE`.</span>
+
+<span class="sd">    The default value is :attr:`pyramid.path.CALLER_PACKAGE`.</span>
+
+<span class="sd">    The ``package`` is used when a relative dotted name is supplied to the</span>
+<span class="sd">    :meth:`~pyramid.path.DottedNameResolver.resolve` method.  A dotted name</span>
+<span class="sd">    which has a ``.`` (dot) or ``:`` (colon) as its first character is</span>
+<span class="sd">    treated as relative.</span>
+
+<span class="sd">    If ``package`` is ``None``, the resolver will only be able to resolve</span>
+<span class="sd">    fully qualified (not relative) names.  Any attempt to resolve a</span>
+<span class="sd">    relative name will result in an :exc:`ValueError` exception.</span>
+
+<span class="sd">    If ``package`` is :attr:`pyramid.path.CALLER_PACKAGE`,</span>
+<span class="sd">    the resolver will treat relative dotted names as relative to</span>
+<span class="sd">    the caller of the :meth:`~pyramid.path.DottedNameResolver.resolve`</span>
+<span class="sd">    method.</span>
+
+<span class="sd">    If ``package`` is a *module* or *module name* (as opposed to a package or</span>
+<span class="sd">    package name), its containing package is computed and this</span>
+<span class="sd">    package used to derive the package name (all names are resolved relative</span>
+<span class="sd">    to packages, never to modules).  For example, if the ``package`` argument</span>
+<span class="sd">    to this type was passed the string ``xml.dom.expatbuilder``, and</span>
+<span class="sd">    ``.mindom`` is supplied to the</span>
+<span class="sd">    :meth:`~pyramid.path.DottedNameResolver.resolve` method, the resulting</span>
+<span class="sd">    import would be for ``xml.minidom``, because ``xml.dom.expatbuilder`` is</span>
+<span class="sd">    a module object, not a package object.</span>
+
+<span class="sd">    If ``package`` is a *package* or *package name* (as opposed to a module or</span>
+<span class="sd">    module name), this package will be used to relative compute</span>
+<span class="sd">    dotted names.  For example, if the ``package`` argument to this type was</span>
+<span class="sd">    passed the string ``xml.dom``, and ``.minidom`` is supplied to the</span>
+<span class="sd">    :meth:`~pyramid.path.DottedNameResolver.resolve` method, the resulting</span>
+<span class="sd">    import would be for ``xml.minidom``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="DottedNameResolver.resolve"><a class="viewcode-back" href="../../api/path.html#pyramid.path.DottedNameResolver.resolve">[docs]</a>    <span class="k">def</span> <span class="nf">resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dotted</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method resolves a dotted name reference to a global Python</span>
+<span class="sd">        object (an object which can be imported) to the object itself.</span>
+
+<span class="sd">        Two dotted name styles are supported:</span>
+
+<span class="sd">        - ``pkg_resources``-style dotted names where non-module attributes</span>
+<span class="sd">          of a package are separated from the rest of the path using a ``:``</span>
+<span class="sd">          e.g. ``package.module:attr``.</span>
+
+<span class="sd">        - ``zope.dottedname``-style dotted names where non-module</span>
+<span class="sd">          attributes of a package are separated from the rest of the path</span>
+<span class="sd">          using a ``.`` e.g. ``package.module.attr``.</span>
+
+<span class="sd">        These styles can be used interchangeably.  If the supplied name</span>
+<span class="sd">        contains a ``:`` (colon), the ``pkg_resources`` resolution</span>
+<span class="sd">        mechanism will be chosen, otherwise the ``zope.dottedname``</span>
+<span class="sd">        resolution mechanism will be chosen.</span>
+
+<span class="sd">        If the ``dotted`` argument passed to this method is not a string, a</span>
+<span class="sd">        :exc:`ValueError` will be raised.</span>
+
+<span class="sd">        When a dotted name cannot be resolved, a :exc:`ValueError` error is</span>
+<span class="sd">        raised.</span>
+
+<span class="sd">        Example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">           r = DottedNameResolver()</span>
+<span class="sd">           v = r.resolve(&#39;xml&#39;) # v is the xml module</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dotted</span><span class="p">,</span> <span class="n">string_types</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%r</span><span class="s"> is not a string&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">dotted</span><span class="p">,))</span>
+        <span class="n">package</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">package</span>
+        <span class="k">if</span> <span class="n">package</span> <span class="ow">is</span> <span class="n">CALLER_PACKAGE</span><span class="p">:</span>
+            <span class="n">package</span> <span class="o">=</span> <span class="n">caller_package</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve</span><span class="p">(</span><span class="n">dotted</span><span class="p">,</span> <span class="n">package</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DottedNameResolver.maybe_resolve"><a class="viewcode-back" href="../../api/path.html#pyramid.path.DottedNameResolver.maybe_resolve">[docs]</a>    <span class="k">def</span> <span class="nf">maybe_resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dotted</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method behaves just like</span>
+<span class="sd">        :meth:`~pyramid.path.DottedNameResolver.resolve`, except if the</span>
+<span class="sd">        ``dotted`` value passed is not a string, it is simply returned.  For</span>
+<span class="sd">        example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">           import xml</span>
+<span class="sd">           r = DottedNameResolver()</span>
+<span class="sd">           v = r.maybe_resolve(xml)</span>
+<span class="sd">           # v is the xml module; no exception raised</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dotted</span><span class="p">,</span> <span class="n">string_types</span><span class="p">):</span>
+            <span class="n">package</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">package</span>
+            <span class="k">if</span> <span class="n">package</span> <span class="ow">is</span> <span class="n">CALLER_PACKAGE</span><span class="p">:</span>
+                <span class="n">package</span> <span class="o">=</span> <span class="n">caller_package</span><span class="p">()</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve</span><span class="p">(</span><span class="n">dotted</span><span class="p">,</span> <span class="n">package</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">dotted</span>
+</div>
+    <span class="k">def</span> <span class="nf">_resolve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dotted</span><span class="p">,</span> <span class="n">package</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s">&#39;:&#39;</span> <span class="ow">in</span> <span class="n">dotted</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pkg_resources_style</span><span class="p">(</span><span class="n">dotted</span><span class="p">,</span> <span class="n">package</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_zope_dottedname_style</span><span class="p">(</span><span class="n">dotted</span><span class="p">,</span> <span class="n">package</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_pkg_resources_style</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">package</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; package.module:attr style &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s">&#39;.&#39;</span><span class="p">,</span> <span class="s">&#39;:&#39;</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">package</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s">&#39;relative name </span><span class="si">%r</span><span class="s"> irresolveable without package&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">value</span><span class="p">,)</span>
+                    <span class="p">)</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;.&#39;</span><span class="p">,</span> <span class="s">&#39;:&#39;</span><span class="p">]:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">package</span><span class="o">.</span><span class="n">__name__</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">package</span><span class="o">.</span><span class="n">__name__</span> <span class="o">+</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="n">pkg_resources</span><span class="o">.</span><span class="n">EntryPoint</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span>
+            <span class="s">&#39;x=</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_zope_dottedname_style</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">package</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; package.module.attr style &quot;&quot;&quot;</span>
+        <span class="n">module</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="s">&#39;__name__&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span> <span class="c"># package may be None</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">module</span><span class="p">:</span>
+            <span class="n">module</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="s">&#39;.&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">module</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s">&#39;relative name </span><span class="si">%r</span><span class="s"> irresolveable without package&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">value</span><span class="p">,)</span>
+                <span class="p">)</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">module</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s">&#39;relative name </span><span class="si">%r</span><span class="s"> irresolveable without &#39;</span>
+                        <span class="s">&#39;package&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">value</span><span class="p">,)</span>
+                        <span class="p">)</span>
+                <span class="n">module</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)</span>
+                <span class="n">name</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="k">while</span> <span class="ow">not</span> <span class="n">name</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                    <span class="n">module</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+                    <span class="n">name</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">module</span> <span class="o">+</span> <span class="n">name</span>
+
+        <span class="n">used</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">found</span> <span class="o">=</span> <span class="nb">__import__</span><span class="p">(</span><span class="n">used</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
+            <span class="n">used</span> <span class="o">+=</span> <span class="s">&#39;.&#39;</span> <span class="o">+</span> <span class="n">n</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">found</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">found</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                <span class="nb">__import__</span><span class="p">(</span><span class="n">used</span><span class="p">)</span>
+                <span class="n">found</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">found</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span> <span class="c"># pragma: no cover</span>
+
+        <span class="k">return</span> <span class="n">found</span>
+</div>
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">IAssetDescriptor</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">PkgResourcesAssetDescriptor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="n">pkg_resources</span> <span class="o">=</span> <span class="n">pkg_resources</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pkg_name</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pkg_name</span> <span class="o">=</span> <span class="n">pkg_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">path</span>
+
+    <span class="k">def</span> <span class="nf">absspec</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkg_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">abspath</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkg_resources</span><span class="o">.</span><span class="n">resource_filename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkg_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">stream</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkg_resources</span><span class="o">.</span><span class="n">resource_stream</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkg_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">isdir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkg_resources</span><span class="o">.</span><span class="n">resource_isdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkg_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">listdir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkg_resources</span><span class="o">.</span><span class="n">resource_listdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkg_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">exists</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkg_resources</span><span class="o">.</span><span class="n">resource_exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkg_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">IAssetDescriptor</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">FSAssetDescriptor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">absspec</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+    <span class="k">def</span> <span class="nf">abspath</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span>
+
+    <span class="k">def</span> <span class="nf">stream</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="s">&#39;rb&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">isdir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">listdir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">exists</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

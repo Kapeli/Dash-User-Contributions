@@ -1,0 +1,621 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.renderers &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.renderers</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">zope.interface</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">implementer</span><span class="p">,</span>
+    <span class="n">providedBy</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="kn">from</span> <span class="nn">zope.interface.registry</span> <span class="kn">import</span> <span class="n">Components</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">IJSONAdapter</span><span class="p">,</span>
+    <span class="n">IRendererFactory</span><span class="p">,</span>
+    <span class="n">IResponseFactory</span><span class="p">,</span>
+    <span class="n">IRendererInfo</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.compat</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">string_types</span><span class="p">,</span>
+    <span class="n">text_type</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.decorator</span> <span class="kn">import</span> <span class="n">reify</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.events</span> <span class="kn">import</span> <span class="n">BeforeRender</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.path</span> <span class="kn">import</span> <span class="n">caller_package</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+<span class="kn">from</span> <span class="nn">pyramid.threadlocal</span> <span class="kn">import</span> <span class="n">get_current_registry</span>
+
+<span class="c"># API</span>
+
+<div class="viewcode-block" id="render"><a class="viewcode-back" href="../../api/renderers.html#pyramid.renderers.render">[docs]</a><span class="k">def</span> <span class="nf">render</span><span class="p">(</span><span class="n">renderer_name</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">package</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Using the renderer ``renderer_name`` (a template</span>
+<span class="sd">    or a static renderer), render the value (or set of values) present</span>
+<span class="sd">    in ``value``. Return the result of the renderer&#39;s ``__call__``</span>
+<span class="sd">    method (usually a string or Unicode).</span>
+
+<span class="sd">    If the ``renderer_name`` refers to a file on disk, such as when the</span>
+<span class="sd">    renderer is a template, it&#39;s usually best to supply the name as an</span>
+<span class="sd">    :term:`asset specification`</span>
+<span class="sd">    (e.g. ``packagename:path/to/template.pt``).</span>
+
+<span class="sd">    You may supply a relative asset spec as ``renderer_name``.  If</span>
+<span class="sd">    the ``package`` argument is supplied, a relative renderer path</span>
+<span class="sd">    will be converted to an absolute asset specification by</span>
+<span class="sd">    combining the package ``package`` with the relative</span>
+<span class="sd">    asset specification ``renderer_name``.  If ``package``</span>
+<span class="sd">    is ``None`` (the default), the package name of the *caller* of</span>
+<span class="sd">    this function will be used as the package.</span>
+
+<span class="sd">    The ``value`` provided will be supplied as the input to the</span>
+<span class="sd">    renderer.  Usually, for template renderings, this should be a</span>
+<span class="sd">    dictionary.  For other renderers, this will need to be whatever</span>
+<span class="sd">    sort of value the renderer expects.</span>
+
+<span class="sd">    The &#39;system&#39; values supplied to the renderer will include a basic set of</span>
+<span class="sd">    top-level system names, such as ``request``, ``context``,</span>
+<span class="sd">    ``renderer_name``, and ``view``.  See :ref:`renderer_system_values` for</span>
+<span class="sd">    the full list.  If :term:`renderer globals` have been specified, these</span>
+<span class="sd">    will also be used to augment the value.</span>
+
+<span class="sd">    Supply a ``request`` parameter in order to provide the renderer</span>
+<span class="sd">    with the most correct &#39;system&#39; values (``request`` and ``context``</span>
+<span class="sd">    in particular).</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">registry</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">registry</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="n">registry</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">if</span> <span class="n">package</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">package</span> <span class="o">=</span> <span class="n">caller_package</span><span class="p">()</span>
+    <span class="n">helper</span> <span class="o">=</span> <span class="n">RendererHelper</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">renderer_name</span><span class="p">,</span> <span class="n">package</span><span class="o">=</span><span class="n">package</span><span class="p">,</span>
+                            <span class="n">registry</span><span class="o">=</span><span class="n">registry</span><span class="p">)</span>
+
+    <span class="n">saved_response</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="c"># save the current response, preventing the renderer from affecting it</span>
+    <span class="n">attrs</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">__dict__</span> <span class="k">if</span> <span class="n">request</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="k">else</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="s">&#39;response&#39;</span> <span class="ow">in</span> <span class="n">attrs</span><span class="p">:</span>
+        <span class="n">saved_response</span> <span class="o">=</span> <span class="n">attrs</span><span class="p">[</span><span class="s">&#39;response&#39;</span><span class="p">]</span>
+        <span class="k">del</span> <span class="n">attrs</span><span class="p">[</span><span class="s">&#39;response&#39;</span><span class="p">]</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">helper</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+
+    <span class="c"># restore the original response, overwriting any changes</span>
+    <span class="k">if</span> <span class="n">saved_response</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">attrs</span><span class="p">[</span><span class="s">&#39;response&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">saved_response</span>
+    <span class="k">elif</span> <span class="s">&#39;response&#39;</span> <span class="ow">in</span> <span class="n">attrs</span><span class="p">:</span>
+        <span class="k">del</span> <span class="n">attrs</span><span class="p">[</span><span class="s">&#39;response&#39;</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">result</span>
+</div>
+<div class="viewcode-block" id="render_to_response"><a class="viewcode-back" href="../../api/renderers.html#pyramid.renderers.render_to_response">[docs]</a><span class="k">def</span> <span class="nf">render_to_response</span><span class="p">(</span><span class="n">renderer_name</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">package</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Using the renderer ``renderer_name`` (a template</span>
+<span class="sd">    or a static renderer), render the value (or set of values) using</span>
+<span class="sd">    the result of the renderer&#39;s ``__call__`` method (usually a string</span>
+<span class="sd">    or Unicode) as the response body.</span>
+
+<span class="sd">    If the renderer name refers to a file on disk (such as when the</span>
+<span class="sd">    renderer is a template), it&#39;s usually best to supply the name as a</span>
+<span class="sd">    :term:`asset specification`.</span>
+
+<span class="sd">    You may supply a relative asset spec as ``renderer_name``.  If</span>
+<span class="sd">    the ``package`` argument is supplied, a relative renderer name</span>
+<span class="sd">    will be converted to an absolute asset specification by</span>
+<span class="sd">    combining the package ``package`` with the relative</span>
+<span class="sd">    asset specification ``renderer_name``.  If you do</span>
+<span class="sd">    not supply a ``package`` (or ``package`` is ``None``) the package</span>
+<span class="sd">    name of the *caller* of this function will be used as the package.</span>
+
+<span class="sd">    The ``value`` provided will be supplied as the input to the</span>
+<span class="sd">    renderer.  Usually, for template renderings, this should be a</span>
+<span class="sd">    dictionary.  For other renderers, this will need to be whatever</span>
+<span class="sd">    sort of value the renderer expects.</span>
+
+<span class="sd">    The &#39;system&#39; values supplied to the renderer will include a basic set of</span>
+<span class="sd">    top-level system names, such as ``request``, ``context``,</span>
+<span class="sd">    ``renderer_name``, and ``view``.  See :ref:`renderer_system_values` for</span>
+<span class="sd">    the full list.  If :term:`renderer globals` have been specified, these</span>
+<span class="sd">    will also be used to argument the value.</span>
+
+<span class="sd">    Supply a ``request`` parameter in order to provide the renderer</span>
+<span class="sd">    with the most correct &#39;system&#39; values (``request`` and ``context``</span>
+<span class="sd">    in particular). Keep in mind that if the ``request`` parameter is</span>
+<span class="sd">    not passed in, any changes to ``request.response`` attributes made</span>
+<span class="sd">    before calling this function will be ignored.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">registry</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">registry</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="n">registry</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">if</span> <span class="n">package</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">package</span> <span class="o">=</span> <span class="n">caller_package</span><span class="p">()</span>
+    <span class="n">helper</span> <span class="o">=</span> <span class="n">RendererHelper</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">renderer_name</span><span class="p">,</span> <span class="n">package</span><span class="o">=</span><span class="n">package</span><span class="p">,</span>
+                            <span class="n">registry</span><span class="o">=</span><span class="n">registry</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">helper</span><span class="o">.</span><span class="n">render_to_response</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="get_renderer"><a class="viewcode-back" href="../../api/renderers.html#pyramid.renderers.get_renderer">[docs]</a><span class="k">def</span> <span class="nf">get_renderer</span><span class="p">(</span><span class="n">renderer_name</span><span class="p">,</span> <span class="n">package</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Return the renderer object for the renderer ``renderer_name``.</span>
+
+<span class="sd">    You may supply a relative asset spec as ``renderer_name``.  If</span>
+<span class="sd">    the ``package`` argument is supplied, a relative renderer name</span>
+<span class="sd">    will be converted to an absolute asset specification by</span>
+<span class="sd">    combining the package ``package`` with the relative</span>
+<span class="sd">    asset specification ``renderer_name``.  If ``package`` is ``None``</span>
+<span class="sd">    (the default), the package name of the *caller* of this function</span>
+<span class="sd">    will be used as the package.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">package</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">package</span> <span class="o">=</span> <span class="n">caller_package</span><span class="p">()</span>
+    <span class="n">helper</span> <span class="o">=</span> <span class="n">RendererHelper</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">renderer_name</span><span class="p">,</span> <span class="n">package</span><span class="o">=</span><span class="n">package</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">helper</span><span class="o">.</span><span class="n">renderer</span>
+
+<span class="c"># concrete renderer factory implementations (also API)</span>
+</div>
+<span class="k">def</span> <span class="nf">string_renderer_factory</span><span class="p">(</span><span class="n">info</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_render</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">system</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">string_types</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">request</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;request&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">request</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">response</span>
+            <span class="n">ct</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">content_type</span>
+            <span class="k">if</span> <span class="n">ct</span> <span class="o">==</span> <span class="n">response</span><span class="o">.</span><span class="n">default_content_type</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">content_type</span> <span class="o">=</span> <span class="s">&#39;text/plain&#39;</span>
+        <span class="k">return</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="n">_render</span>
+
+<span class="n">_marker</span> <span class="o">=</span> <span class="nb">object</span><span class="p">()</span>
+
+<div class="viewcode-block" id="JSON"><a class="viewcode-back" href="../../api/renderers.html#pyramid.renderers.JSON">[docs]</a><span class="k">class</span> <span class="nc">JSON</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Renderer that returns a JSON-encoded string.</span>
+
+<span class="sd">    Configure a custom JSON renderer using the</span>
+<span class="sd">    :meth:`~pyramid.config.Configurator.add_renderer` API at application</span>
+<span class="sd">    startup time:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       from pyramid.config import Configurator</span>
+
+<span class="sd">       config = Configurator()</span>
+<span class="sd">       config.add_renderer(&#39;myjson&#39;, JSON(indent=4))</span>
+
+<span class="sd">    Once this renderer is registered as above, you can use</span>
+<span class="sd">    ``myjson`` as the ``renderer=`` parameter to ``@view_config`` or</span>
+<span class="sd">    :meth:`~pyramid.config.Configurator.add_view``:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       from pyramid.view import view_config</span>
+
+<span class="sd">       @view_config(renderer=&#39;myjson&#39;)</span>
+<span class="sd">       def myview(request):</span>
+<span class="sd">           return {&#39;greeting&#39;:&#39;Hello world&#39;}</span>
+
+<span class="sd">    Custom objects can be serialized using the renderer by either</span>
+<span class="sd">    implementing the ``__json__`` magic method, or by registering</span>
+<span class="sd">    adapters with the renderer.  See</span>
+<span class="sd">    :ref:`json_serializing_custom_objects` for more information.</span>
+
+<span class="sd">    .. note::</span>
+
+<span class="sd">        The default serializer uses ``json.JSONEncoder``. A different</span>
+<span class="sd">        serializer can be specified via the ``serializer`` argument.  Custom</span>
+<span class="sd">        serializers should accept the object, a callback ``default``, and any</span>
+<span class="sd">        extra ``kw`` keyword arguments passed during renderer construction.</span>
+<span class="sd">        This feature isn&#39;t widely used but it can be used to replace the</span>
+<span class="sd">        stock JSON serializer with, say, simplejson.  If all you want to</span>
+<span class="sd">        do, however, is serialize custom objects, you should use the method</span>
+<span class="sd">        explained in :ref:`json_serializing_custom_objects` instead</span>
+<span class="sd">        of replacing the serializer.</span>
+
+<span class="sd">    .. versionadded:: 1.4</span>
+<span class="sd">       Prior to this version, there was no public API for supplying options</span>
+<span class="sd">       to the underlying serializer without defining a custom renderer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">serializer</span><span class="o">=</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">,</span> <span class="n">adapters</span><span class="o">=</span><span class="p">(),</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Any keyword arguments will be passed to the ``serializer``</span>
+<span class="sd">        function.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">serializer</span> <span class="o">=</span> <span class="n">serializer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kw</span> <span class="o">=</span> <span class="n">kw</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">components</span> <span class="o">=</span> <span class="n">Components</span><span class="p">()</span>
+        <span class="k">for</span> <span class="nb">type</span><span class="p">,</span> <span class="n">adapter</span> <span class="ow">in</span> <span class="n">adapters</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_adapter</span><span class="p">(</span><span class="nb">type</span><span class="p">,</span> <span class="n">adapter</span><span class="p">)</span>
+
+<div class="viewcode-block" id="JSON.add_adapter"><a class="viewcode-back" href="../../api/renderers.html#pyramid.renderers.JSON.add_adapter">[docs]</a>    <span class="k">def</span> <span class="nf">add_adapter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">type_or_iface</span><span class="p">,</span> <span class="n">adapter</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; When an object of the type (or interface) ``type_or_iface`` fails</span>
+<span class="sd">        to automatically encode using the serializer, the renderer will use</span>
+<span class="sd">        the adapter ``adapter`` to convert it into a JSON-serializable</span>
+<span class="sd">        object.  The adapter must accept two arguments: the object and the</span>
+<span class="sd">        currently active request.</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">           class Foo(object):</span>
+<span class="sd">               x = 5</span>
+
+<span class="sd">           def foo_adapter(obj, request):</span>
+<span class="sd">               return obj.x</span>
+
+<span class="sd">           renderer = JSON(indent=4)</span>
+<span class="sd">           renderer.add_adapter(Foo, foo_adapter)</span>
+
+<span class="sd">        When you&#39;ve done this, the JSON renderer will be able to serialize</span>
+<span class="sd">        instances of the ``Foo`` class when they&#39;re encountered in your view</span>
+<span class="sd">        results.&quot;&quot;&quot;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">registerAdapter</span><span class="p">(</span><span class="n">adapter</span><span class="p">,</span> <span class="p">(</span><span class="n">type_or_iface</span><span class="p">,),</span>
+                                        <span class="n">IJSONAdapter</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">info</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns a plain JSON-encoded string with content-type</span>
+<span class="sd">        ``application/json``. The content-type may be overridden by</span>
+<span class="sd">        setting ``request.response.content_type``.&quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">_render</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">system</span><span class="p">):</span>
+            <span class="n">request</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;request&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">request</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">response</span>
+                <span class="n">ct</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">content_type</span>
+                <span class="k">if</span> <span class="n">ct</span> <span class="o">==</span> <span class="n">response</span><span class="o">.</span><span class="n">default_content_type</span><span class="p">:</span>
+                    <span class="n">response</span><span class="o">.</span><span class="n">content_type</span> <span class="o">=</span> <span class="s">&#39;application/json&#39;</span>
+            <span class="n">default</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_default</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">serializer</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">default</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">kw</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">_render</span>
+
+    <span class="k">def</span> <span class="nf">_make_default</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">default</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="s">&#39;__json__&#39;</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">obj</span><span class="o">.</span><span class="n">__json__</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+            <span class="n">obj_iface</span> <span class="o">=</span> <span class="n">providedBy</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+            <span class="n">adapters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">adapters</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">adapters</span><span class="o">.</span><span class="n">lookup</span><span class="p">((</span><span class="n">obj_iface</span><span class="p">,),</span> <span class="n">IJSONAdapter</span><span class="p">,</span>
+                                     <span class="n">default</span><span class="o">=</span><span class="n">_marker</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="n">_marker</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%r</span><span class="s"> is not JSON serializable&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">obj</span><span class="p">,))</span>
+            <span class="k">return</span> <span class="n">result</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">request</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">default</span>
+</div>
+<span class="n">json_renderer_factory</span> <span class="o">=</span> <span class="n">JSON</span><span class="p">()</span> <span class="c"># bw compat</span>
+
+<div class="viewcode-block" id="JSONP"><a class="viewcode-back" href="../../api/renderers.html#pyramid.renderers.JSONP">[docs]</a><span class="k">class</span> <span class="nc">JSONP</span><span class="p">(</span><span class="n">JSON</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; `JSONP &lt;http://en.wikipedia.org/wiki/JSONP&gt;`_ renderer factory helper</span>
+<span class="sd">    which implements a hybrid json/jsonp renderer.  JSONP is useful for</span>
+<span class="sd">    making cross-domain AJAX requests.  </span>
+
+<span class="sd">    Configure a JSONP renderer using the</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.add_renderer` API at application</span>
+<span class="sd">    startup time:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       from pyramid.config import Configurator</span>
+
+<span class="sd">       config = Configurator()</span>
+<span class="sd">       config.add_renderer(&#39;jsonp&#39;, JSONP(param_name=&#39;callback&#39;))</span>
+
+<span class="sd">    The class&#39; constructor also accepts arbitrary keyword arguments.  All</span>
+<span class="sd">    keyword arguments except ``param_name`` are passed to the ``json.dumps``</span>
+<span class="sd">    function as its keyword arguments.</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       from pyramid.config import Configurator</span>
+
+<span class="sd">       config = Configurator()</span>
+<span class="sd">       config.add_renderer(&#39;jsonp&#39;, JSONP(param_name=&#39;callback&#39;, indent=4))</span>
+<span class="sd">    </span>
+<span class="sd">    .. versionchanged:: 1.4</span>
+<span class="sd">       The ability of this class to accept a ``**kw`` in its constructor.</span>
+
+<span class="sd">    The arguments passed to this class&#39; constructor mean the same thing as</span>
+<span class="sd">    the arguments passed to :class:`pyramid.renderers.JSON` (including</span>
+<span class="sd">    ``serializer`` and ``adapters``).</span>
+
+<span class="sd">    Once this renderer is registered via</span>
+<span class="sd">    :meth:`~pyramid.config.Configurator.add_renderer` as above, you can use</span>
+<span class="sd">    ``jsonp`` as the ``renderer=`` parameter to ``@view_config`` or</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.add_view``:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       from pyramid.view import view_config</span>
+
+<span class="sd">       @view_config(renderer=&#39;jsonp&#39;)</span>
+<span class="sd">       def myview(request):</span>
+<span class="sd">           return {&#39;greeting&#39;:&#39;Hello world&#39;}</span>
+
+<span class="sd">    When a view is called that uses the JSONP renderer:</span>
+
+<span class="sd">    - If there is a parameter in the request&#39;s HTTP query string that matches</span>
+<span class="sd">      the ``param_name`` of the registered JSONP renderer (by default,</span>
+<span class="sd">      ``callback``), the renderer will return a JSONP response.</span>
+
+<span class="sd">    - If there is no callback parameter in the request&#39;s query string, the</span>
+<span class="sd">      renderer will return a &#39;plain&#39; JSON response.</span>
+
+<span class="sd">    .. versionadded:: 1.1</span>
+
+<span class="sd">    .. seealso::</span>
+
+<span class="sd">        See also :ref:`jsonp_renderer`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">param_name</span><span class="o">=</span><span class="s">&#39;callback&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">param_name</span> <span class="o">=</span> <span class="n">param_name</span>
+        <span class="n">JSON</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">info</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns JSONP-encoded string with content-type</span>
+<span class="sd">        ``application/javascript`` if query parameter matching</span>
+<span class="sd">        ``self.param_name`` is present in request.GET; otherwise returns</span>
+<span class="sd">        plain-JSON encoded string with content-type ``application/json``&quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">_render</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">system</span><span class="p">):</span>
+            <span class="n">request</span> <span class="o">=</span> <span class="n">system</span><span class="p">[</span><span class="s">&#39;request&#39;</span><span class="p">]</span>
+            <span class="n">default</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_default</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">serializer</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">default</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">kw</span><span class="p">)</span>
+            <span class="n">callback</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">param_name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">callback</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">ct</span> <span class="o">=</span> <span class="s">&#39;application/json&#39;</span>
+                <span class="n">body</span> <span class="o">=</span> <span class="n">val</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ct</span> <span class="o">=</span> <span class="s">&#39;application/javascript&#39;</span>
+                <span class="n">body</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">(</span><span class="si">%s</span><span class="s">);&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">callback</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">response</span>
+            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">content_type</span> <span class="o">==</span> <span class="n">response</span><span class="o">.</span><span class="n">default_content_type</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">content_type</span> <span class="o">=</span> <span class="n">ct</span>
+            <span class="k">return</span> <span class="n">body</span>
+        <span class="k">return</span> <span class="n">_render</span>
+</div>
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">IRendererInfo</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">RendererHelper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">package</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">registry</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">and</span> <span class="s">&#39;.&#39;</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
+            <span class="n">rtype</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">name</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># important.. must be a string; cannot be None; see issue 249</span>
+            <span class="n">rtype</span> <span class="o">=</span> <span class="n">name</span> <span class="ow">or</span> <span class="s">&#39;&#39;</span>
+
+        <span class="k">if</span> <span class="n">registry</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">registry</span> <span class="o">=</span> <span class="n">get_current_registry</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">package</span> <span class="o">=</span> <span class="n">package</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">rtype</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registry</span> <span class="o">=</span> <span class="n">registry</span>
+
+    <span class="nd">@reify</span>
+    <span class="k">def</span> <span class="nf">settings</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">settings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">settings</span>
+        <span class="k">if</span> <span class="n">settings</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">settings</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">return</span> <span class="n">settings</span>
+
+    <span class="nd">@reify</span>
+    <span class="k">def</span> <span class="nf">renderer</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">factory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">IRendererFactory</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">factory</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s">&#39;No such renderer factory </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">factory</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_renderer</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">renderer</span>
+
+    <span class="k">def</span> <span class="nf">render_view</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">view</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="n">system</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;view&#39;</span><span class="p">:</span><span class="n">view</span><span class="p">,</span>
+                  <span class="s">&#39;renderer_name&#39;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="c"># b/c</span>
+                  <span class="s">&#39;renderer_info&#39;</span><span class="p">:</span><span class="bp">self</span><span class="p">,</span>
+                  <span class="s">&#39;context&#39;</span><span class="p">:</span><span class="n">context</span><span class="p">,</span>
+                  <span class="s">&#39;request&#39;</span><span class="p">:</span><span class="n">request</span><span class="p">,</span>
+                  <span class="s">&#39;req&#39;</span><span class="p">:</span><span class="n">request</span><span class="p">,</span>
+                  <span class="p">}</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">render_to_response</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="n">system</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">system_values</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">renderer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">renderer</span>
+        <span class="k">if</span> <span class="n">system_values</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">system_values</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s">&#39;view&#39;</span><span class="p">:</span><span class="bp">None</span><span class="p">,</span>
+                <span class="s">&#39;renderer_name&#39;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="c"># b/c</span>
+                <span class="s">&#39;renderer_info&#39;</span><span class="p">:</span><span class="bp">self</span><span class="p">,</span>
+                <span class="s">&#39;context&#39;</span><span class="p">:</span><span class="nb">getattr</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s">&#39;context&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">),</span>
+                <span class="s">&#39;request&#39;</span><span class="p">:</span><span class="n">request</span><span class="p">,</span>
+                <span class="s">&#39;req&#39;</span><span class="p">:</span><span class="n">request</span><span class="p">,</span>
+                <span class="p">}</span>
+
+        <span class="n">system_values</span> <span class="o">=</span> <span class="n">BeforeRender</span><span class="p">(</span><span class="n">system_values</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+        <span class="n">registry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span>
+        <span class="n">registry</span><span class="o">.</span><span class="n">notify</span><span class="p">(</span><span class="n">system_values</span><span class="p">)</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">renderer</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">system_values</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+    <span class="k">def</span> <span class="nf">render_to_response</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">system_values</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">system_values</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_response</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">request</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_make_response</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="c"># broken out of render_to_response as a separate method for testing</span>
+        <span class="c"># purposes</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s">&#39;response&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">response</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># request is None or request is not a pyramid.response.Response</span>
+            <span class="n">registry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span>
+            <span class="n">response_factory</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">IResponseFactory</span><span class="p">,</span>
+                                                     <span class="n">default</span><span class="o">=</span><span class="n">Response</span><span class="p">)</span>
+
+            <span class="n">response</span> <span class="o">=</span> <span class="n">response_factory</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">text_type</span><span class="p">):</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">result</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">response</span><span class="o">.</span><span class="n">body</span> <span class="o">=</span> <span class="n">result</span>
+
+        <span class="k">return</span> <span class="n">response</span>
+
+    <span class="k">def</span> <span class="nf">clone</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">package</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">registry</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">if</span> <span class="n">package</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">package</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">package</span>
+        <span class="k">if</span> <span class="n">registry</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">registry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">package</span><span class="o">=</span><span class="n">package</span><span class="p">,</span> <span class="n">registry</span><span class="o">=</span><span class="n">registry</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">NullRendererHelper</span><span class="p">(</span><span class="n">RendererHelper</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Special renderer helper that has render_* methods which simply return</span>
+<span class="sd">    the value they are fed rather than converting them to response objects;</span>
+<span class="sd">    useful for testing purposes and special case view configuration</span>
+<span class="sd">    registrations that want to use the view configuration machinery but do</span>
+<span class="sd">    not want actual rendering to happen .&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">package</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">registry</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="c"># we override the initializer to avoid calling get_current_registry</span>
+        <span class="c"># (it will return a reference to the global registry when this</span>
+        <span class="c"># thing is called at module scope; we don&#39;t want that).</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">package</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registry</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">settings</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">get_current_registry</span><span class="p">()</span><span class="o">.</span><span class="n">settings</span> <span class="ow">or</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="nf">render_view</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">view</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">system_values</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">value</span>
+    
+    <span class="k">def</span> <span class="nf">render_to_response</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">system_values</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">clone</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">package</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">registry</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+    
+<span class="n">null_renderer</span> <span class="o">=</span> <span class="n">NullRendererHelper</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

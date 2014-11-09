@@ -1,0 +1,584 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Advanced Configuration &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="next" title="Extending Pyramid Configuration" href="extconfig.html" />
+    <link rel="prev" title="Extending An Existing Pyramid Application" href="extending.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="extconfig.html" title="Extending Pyramid Configuration"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="extending.html" title="Extending An Existing Pyramid Application"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="advanced-configuration">
+<span id="advconfig-narr"></span><span id="index-0"></span><h1>Advanced Configuration<a class="headerlink" href="#advanced-configuration" title="Permalink to this headline">¶</a></h1>
+<p>To support application extensibility, the <span>Pyramid</span>
+<a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">Configurator</em></a>, by default, detects configuration conflicts and allows
+you to include configuration imperatively from other packages or modules.  It
+also, by default, performs configuration in two separate phases.  This allows
+you to ignore relative configuration statement ordering in some
+circumstances.</p>
+<div class="section" id="conflict-detection">
+<span id="index-1"></span><span id="id1"></span><h2>Conflict Detection<a class="headerlink" href="#conflict-detection" title="Permalink to this headline">¶</a></h2>
+<p>Here's a familiar example of one of the simplest <span>Pyramid</span> applications,
+configured imperatively:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">wsgiref.simple_server</span> <span class="kn">import</span> <span class="n">make_server</span>
+<span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+<span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+
+<span class="k">def</span> <span class="nf">hello_world</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;Hello world!&#39;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">hello_world</span><span class="p">)</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+    <span class="n">server</span> <span class="o">=</span> <span class="n">make_server</span><span class="p">(</span><span class="s">&#39;0.0.0.0&#39;</span><span class="p">,</span> <span class="mi">8080</span><span class="p">,</span> <span class="n">app</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">()</span>
+</pre></div>
+</td></tr></table></div>
+<p>When you start this application, all will be OK.  However, what happens if we
+try to add another view to the configuration with the same set of
+<a class="reference internal" href="../glossary.html#term-predicate"><em class="xref std std-term">predicate</em></a> arguments as one we've already added?</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">wsgiref.simple_server</span> <span class="kn">import</span> <span class="n">make_server</span>
+<span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+<span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+
+<span class="k">def</span> <span class="nf">hello_world</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;Hello world!&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">goodbye_world</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;Goodbye world!&#39;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">hello_world</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;hello&#39;</span><span class="p">)</span>
+
+    <span class="c"># conflicting view configuration</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">goodbye_world</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;hello&#39;</span><span class="p">)</span>
+
+    <span class="n">app</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+    <span class="n">server</span> <span class="o">=</span> <span class="n">make_server</span><span class="p">(</span><span class="s">&#39;0.0.0.0&#39;</span><span class="p">,</span> <span class="mi">8080</span><span class="p">,</span> <span class="n">app</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">()</span>
+</pre></div>
+</td></tr></table></div>
+<p>The application now has two conflicting view configuration statements.  When
+we try to start it again, it won't start.  Instead, we'll receive a traceback
+that ends something like this:</p>
+<div class="highlight-guess"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14</pre></div></td><td class="code"><div class="highlight"><pre><span class="nx">Traceback</span> <span class="p">(</span><span class="nx">most</span> <span class="nx">recent</span> <span class="nb">call</span> <span class="nb">last</span><span class="p">):</span>
+  <span class="nb">File</span> <span class="s2">&quot;app.py&quot;</span><span class="p">,</span> <span class="nb">line</span> <span class="mi">12</span><span class="p">,</span> <span class="k">in</span> <span class="o">&lt;</span><span class="nx">module</span><span class="o">&gt;</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="nx">config.make_wsgi_app</span><span class="p">()</span>
+  <span class="nb">File</span> <span class="s2">&quot;pyramid/config.py&quot;</span><span class="p">,</span> <span class="nb">line</span> <span class="mi">839</span><span class="p">,</span> <span class="k">in</span> <span class="nx">make_wsgi_app</span>
+    <span class="bp">self.</span><span class="nx">commit</span><span class="p">()</span>
+  <span class="nb">File</span> <span class="s2">&quot;pyramid/pyramid/config.py&quot;</span><span class="p">,</span> <span class="nb">line</span> <span class="mi">473</span><span class="p">,</span> <span class="k">in</span> <span class="nx">commit</span>
+    <span class="bp">self.</span><span class="nx">_ctx.execute_actions</span><span class="p">()</span>
+  <span class="nx">...</span> <span class="nx">more</span> <span class="nb">code</span> <span class="nx">...</span>
+<span class="nx">pyramid.exceptions.ConfigurationConflictError</span><span class="p">:</span>
+        <span class="nx">Conflicting</span> <span class="nx">configuration</span> <span class="nx">actions</span>
+  <span class="nb">For</span><span class="p">:</span> <span class="p">(</span><span class="s1">&#39;view&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="o">&lt;</span><span class="nx">InterfaceClass</span> <span class="nx">pyramid.interfaces.IView</span><span class="o">&gt;</span><span class="p">,</span>
+        <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">False</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="nb">Line</span> <span class="mi">14</span> <span class="nx">of</span> <span class="nb">file</span> <span class="n">app.py</span> <span class="k">in</span> <span class="o">&lt;</span><span class="nx">module</span><span class="o">&gt;</span><span class="p">:</span> <span class="s1">&#39;config.add_view(hello_world)&#39;</span>
+  <span class="nb">Line</span> <span class="mi">17</span> <span class="nx">of</span> <span class="nb">file</span> <span class="n">app.py</span> <span class="k">in</span> <span class="o">&lt;</span><span class="nx">module</span><span class="o">&gt;</span><span class="p">:</span> <span class="s1">&#39;config.add_view(goodbye_world)&#39;</span>
+</pre></div>
+</td></tr></table></div>
+<p>This traceback is trying to tell us:</p>
+<ul class="simple">
+<li>We've got conflicting information for a set of view configuration
+statements (The <tt class="docutils literal"><span class="pre">For:</span></tt> line).</li>
+<li>There are two statements which conflict, shown beneath the <tt class="docutils literal"><span class="pre">For:</span></tt> line:
+<tt class="docutils literal"><span class="pre">config.add_view(hello_world.</span> <span class="pre">'hello')</span></tt> on line 14 of <tt class="docutils literal"><span class="pre">app.py</span></tt>, and
+<tt class="docutils literal"><span class="pre">config.add_view(goodbye_world,</span> <span class="pre">'hello')</span></tt> on line 17 of <tt class="docutils literal"><span class="pre">app.py</span></tt>.</li>
+</ul>
+<p>These two configuration statements are in conflict because we've tried to
+tell the system that the set of <a class="reference internal" href="../glossary.html#term-predicate"><em class="xref std std-term">predicate</em></a> values for both view
+configurations are exactly the same.  Both the <tt class="docutils literal"><span class="pre">hello_world</span></tt> and
+<tt class="docutils literal"><span class="pre">goodbye_world</span></tt> views are configured to respond under the same set of
+circumstances.  This circumstance: the <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a> (represented by the
+<tt class="docutils literal"><span class="pre">name=</span></tt> predicate) is <tt class="docutils literal"><span class="pre">hello</span></tt>.</p>
+<p>This presents an ambiguity that <span>Pyramid</span> cannot resolve. Rather than
+allowing the circumstance to go unreported, by default Pyramid raises a
+<tt class="xref py py-exc docutils literal"><span class="pre">ConfigurationConflictError</span></tt> error and prevents the application from
+running.</p>
+<p>Conflict detection happens for any kind of configuration: imperative
+configuration or configuration that results from the execution of a
+<a class="reference internal" href="../glossary.html#term-scan"><em class="xref std std-term">scan</em></a>.</p>
+<div class="section" id="manually-resolving-conflicts">
+<span id="id2"></span><h3>Manually Resolving Conflicts<a class="headerlink" href="#manually-resolving-conflicts" title="Permalink to this headline">¶</a></h3>
+<p>There are a number of ways to manually resolve conflicts: by changing
+registrations to not conflict, by strategically using
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.commit" title="pyramid.config.Configurator.commit"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.commit()</span></tt></a>, or by using an &quot;autocommitting&quot;
+configurator.</p>
+<div class="section" id="the-right-thing">
+<h4>The Right Thing<a class="headerlink" href="#the-right-thing" title="Permalink to this headline">¶</a></h4>
+<p>The most correct way to resolve conflicts is to &quot;do the needful&quot;: change your
+configuration code to not have conflicting configuration statements.  The
+details of how this is done depends entirely on the configuration statements
+made by your application.  Use the detail provided in the
+<tt class="xref py py-exc docutils literal"><span class="pre">ConfigurationConflictError</span></tt> to track down the offending conflicts and
+modify your configuration code accordingly.</p>
+<p>If you're getting a conflict while trying to extend an existing application,
+and that application has a function which performs configuration like this
+one:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">add_routes</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Don't call this function directly with <tt class="docutils literal"><span class="pre">config</span></tt> as an argument.  Instead,
+use <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.include" title="pyramid.config.Configurator.include"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.include()</span></tt></a>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="n">add_routes</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Using <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.include" title="pyramid.config.Configurator.include"><tt class="xref py py-meth docutils literal"><span class="pre">include()</span></tt></a> instead of calling the
+function directly provides a modicum of automated conflict resolution, with
+the configuration statements you define in the calling code overriding those
+of the included function.</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last">See also <a class="reference internal" href="#automatic-conflict-resolution"><em>Automatic Conflict Resolution</em></a> and
+<a class="reference internal" href="#including-configuration"><em>Including Configuration from External Sources</em></a>.</p>
+</div>
+</div>
+<div class="section" id="using-config-commit">
+<h4>Using <tt class="docutils literal"><span class="pre">config.commit()</span></tt><a class="headerlink" href="#using-config-commit" title="Permalink to this headline">¶</a></h4>
+<p>You can manually commit a configuration by using the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.commit" title="pyramid.config.Configurator.commit"><tt class="xref py py-meth docutils literal"><span class="pre">commit()</span></tt></a> method between configuration
+calls.  For example, we prevent conflicts from occurring in the application
+we examined previously as the result of adding a <tt class="docutils literal"><span class="pre">commit</span></tt>.  Here's the
+application that generates conflicts:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">wsgiref.simple_server</span> <span class="kn">import</span> <span class="n">make_server</span>
+<span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+<span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+
+<span class="k">def</span> <span class="nf">hello_world</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;Hello world!&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">goodbye_world</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;Goodbye world!&#39;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">hello_world</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;hello&#39;</span><span class="p">)</span>
+
+    <span class="c"># conflicting view configuration</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">goodbye_world</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;hello&#39;</span><span class="p">)</span>
+
+    <span class="n">app</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+    <span class="n">server</span> <span class="o">=</span> <span class="n">make_server</span><span class="p">(</span><span class="s">&#39;0.0.0.0&#39;</span><span class="p">,</span> <span class="mi">8080</span><span class="p">,</span> <span class="n">app</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">()</span>
+</pre></div>
+</td></tr></table></div>
+<p>We can prevent the two <tt class="docutils literal"><span class="pre">add_view</span></tt> calls from conflicting by issuing a call
+to <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.commit" title="pyramid.config.Configurator.commit"><tt class="xref py py-meth docutils literal"><span class="pre">commit()</span></tt></a> between them:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">wsgiref.simple_server</span> <span class="kn">import</span> <span class="n">make_server</span>
+<span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+<span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+
+<span class="k">def</span> <span class="nf">hello_world</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;Hello world!&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">goodbye_world</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;Goodbye world!&#39;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">hello_world</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;hello&#39;</span><span class="p">)</span>
+
+    <span class="n">config</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span> <span class="c"># commit any pending configuration actions</span>
+
+    <span class="c"># no-longer-conflicting view configuration</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">goodbye_world</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;hello&#39;</span><span class="p">)</span>
+
+    <span class="n">app</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+    <span class="n">server</span> <span class="o">=</span> <span class="n">make_server</span><span class="p">(</span><span class="s">&#39;0.0.0.0&#39;</span><span class="p">,</span> <span class="mi">8080</span><span class="p">,</span> <span class="n">app</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">()</span>
+</pre></div>
+</td></tr></table></div>
+<p>In the above example we've issued a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.commit" title="pyramid.config.Configurator.commit"><tt class="xref py py-meth docutils literal"><span class="pre">commit()</span></tt></a> between the two <tt class="docutils literal"><span class="pre">add_view</span></tt>
+calls.  <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.commit" title="pyramid.config.Configurator.commit"><tt class="xref py py-meth docutils literal"><span class="pre">commit()</span></tt></a> will execute any pending
+configuration statements.</p>
+<p>Calling <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.commit" title="pyramid.config.Configurator.commit"><tt class="xref py py-meth docutils literal"><span class="pre">commit()</span></tt></a> is safe at any time.  It
+executes all pending configuration actions and leaves the configuration
+action list &quot;clean&quot;.</p>
+<p>Note that <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.commit" title="pyramid.config.Configurator.commit"><tt class="xref py py-meth docutils literal"><span class="pre">commit()</span></tt></a> has no effect when
+you're using an <em>autocommitting</em> configurator (see
+<a class="reference internal" href="#autocommitting-configurator"><em>Using An Autocommitting Configurator</em></a>).</p>
+</div>
+<div class="section" id="using-an-autocommitting-configurator">
+<span id="autocommitting-configurator"></span><h4>Using An Autocommitting Configurator<a class="headerlink" href="#using-an-autocommitting-configurator" title="Permalink to this headline">¶</a></h4>
+<p>You can also use a heavy hammer to circumvent conflict detection by using a
+configurator constructor parameter: <tt class="docutils literal"><span class="pre">autocommit=True</span></tt>.  For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">(</span><span class="n">autocommit</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>When the <tt class="docutils literal"><span class="pre">autocommit</span></tt> parameter passed to the Configurator is <tt class="docutils literal"><span class="pre">True</span></tt>,
+conflict detection (and <a class="reference internal" href="#twophase-config"><em>Two-Phase Configuration</em></a>) is disabled.  Configuration
+statements will be executed immediately, and succeeding statements will
+override preceding ones.</p>
+<p><a class="reference internal" href="../api/config.html#pyramid.config.Configurator.commit" title="pyramid.config.Configurator.commit"><tt class="xref py py-meth docutils literal"><span class="pre">commit()</span></tt></a> has no effect when <tt class="docutils literal"><span class="pre">autocommit</span></tt>
+is <tt class="docutils literal"><span class="pre">True</span></tt>.</p>
+<p>If you use a Configurator in code that performs unit testing, it's usually a
+good idea to use an autocommitting Configurator, because you are usually
+unconcerned about conflict detection or two-phase configuration in test code.</p>
+</div>
+</div>
+<div class="section" id="automatic-conflict-resolution">
+<span id="id3"></span><h3>Automatic Conflict Resolution<a class="headerlink" href="#automatic-conflict-resolution" title="Permalink to this headline">¶</a></h3>
+<p>If your code uses the <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.include" title="pyramid.config.Configurator.include"><tt class="xref py py-meth docutils literal"><span class="pre">include()</span></tt></a> method to
+include external configuration, some conflicts are automatically resolved.
+Configuration statements that are made as the result of an &quot;include&quot; will be
+overridden by configuration statements that happen within the caller of
+the &quot;include&quot; method.</p>
+<p>Automatic conflict resolution supports this goal: if a user wants to reuse a
+Pyramid application, and they want to customize the configuration of this
+application without hacking its code &quot;from outside&quot;, they can &quot;include&quot; a
+configuration function from the package and override only some of its
+configuration statements within the code that does the include.  No conflicts
+will be generated by configuration statements within the code that does the
+including, even if configuration statements in the included code would
+conflict if it was moved &quot;up&quot; to the calling code.</p>
+</div>
+<div class="section" id="methods-which-provide-conflict-detection">
+<h3>Methods Which Provide Conflict Detection<a class="headerlink" href="#methods-which-provide-conflict-detection" title="Permalink to this headline">¶</a></h3>
+<p>These are the methods of the configurator which provide conflict detection:</p>
+<p><a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_view" title="pyramid.config.Configurator.add_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_view()</span></tt></a>,
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">add_route()</span></tt></a>,
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_renderer" title="pyramid.config.Configurator.add_renderer"><tt class="xref py py-meth docutils literal"><span class="pre">add_renderer()</span></tt></a>,
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_request_method" title="pyramid.config.Configurator.add_request_method"><tt class="xref py py-meth docutils literal"><span class="pre">add_request_method()</span></tt></a>,
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_request_factory" title="pyramid.config.Configurator.set_request_factory"><tt class="xref py py-meth docutils literal"><span class="pre">set_request_factory()</span></tt></a>,
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_session_factory" title="pyramid.config.Configurator.set_session_factory"><tt class="xref py py-meth docutils literal"><span class="pre">set_session_factory()</span></tt></a>,
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_request_property" title="pyramid.config.Configurator.set_request_property"><tt class="xref py py-meth docutils literal"><span class="pre">set_request_property()</span></tt></a>,
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_root_factory" title="pyramid.config.Configurator.set_root_factory"><tt class="xref py py-meth docutils literal"><span class="pre">set_root_factory()</span></tt></a>,
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_view_mapper" title="pyramid.config.Configurator.set_view_mapper"><tt class="xref py py-meth docutils literal"><span class="pre">set_view_mapper()</span></tt></a>,
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_authentication_policy" title="pyramid.config.Configurator.set_authentication_policy"><tt class="xref py py-meth docutils literal"><span class="pre">set_authentication_policy()</span></tt></a>,
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_authorization_policy" title="pyramid.config.Configurator.set_authorization_policy"><tt class="xref py py-meth docutils literal"><span class="pre">set_authorization_policy()</span></tt></a>,
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_locale_negotiator" title="pyramid.config.Configurator.set_locale_negotiator"><tt class="xref py py-meth docutils literal"><span class="pre">set_locale_negotiator()</span></tt></a>,
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_default_permission" title="pyramid.config.Configurator.set_default_permission"><tt class="xref py py-meth docutils literal"><span class="pre">set_default_permission()</span></tt></a>,
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_traverser" title="pyramid.config.Configurator.add_traverser"><tt class="xref py py-meth docutils literal"><span class="pre">add_traverser()</span></tt></a>,
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_resource_url_adapter" title="pyramid.config.Configurator.add_resource_url_adapter"><tt class="xref py py-meth docutils literal"><span class="pre">add_resource_url_adapter()</span></tt></a>,
+and <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_response_adapter" title="pyramid.config.Configurator.add_response_adapter"><tt class="xref py py-meth docutils literal"><span class="pre">add_response_adapter()</span></tt></a>.</p>
+<p><a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_static_view()</span></tt></a> also indirectly
+provides conflict detection, because it's implemented in terms of the
+conflict-aware <tt class="docutils literal"><span class="pre">add_route</span></tt> and <tt class="docutils literal"><span class="pre">add_view</span></tt> methods.</p>
+</div>
+</div>
+<div class="section" id="including-configuration-from-external-sources">
+<span id="including-configuration"></span><span id="index-2"></span><h2>Including Configuration from External Sources<a class="headerlink" href="#including-configuration-from-external-sources" title="Permalink to this headline">¶</a></h2>
+<p>Some application programmers will factor their configuration code in such a
+way that it is easy to reuse and override configuration statements.  For
+example, such a developer might factor out a function used to add routes to
+his application:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">add_routes</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Rather than calling this function directly with <tt class="docutils literal"><span class="pre">config</span></tt> as an argument.
+Instead, use <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.include" title="pyramid.config.Configurator.include"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.include()</span></tt></a>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="n">add_routes</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Using <tt class="docutils literal"><span class="pre">include</span></tt> rather than calling the function directly will allow
+<a class="reference internal" href="#automatic-conflict-resolution"><em>Automatic Conflict Resolution</em></a> to work.</p>
+<p><a class="reference internal" href="../api/config.html#pyramid.config.Configurator.include" title="pyramid.config.Configurator.include"><tt class="xref py py-meth docutils literal"><span class="pre">include()</span></tt></a> can also accept a <a class="reference internal" href="../glossary.html#term-module"><em class="xref std std-term">module</em></a>
+as an argument:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">myapp</span>
+
+<span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="n">myapp</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>For this to work properly, the <tt class="docutils literal"><span class="pre">myapp</span></tt> module must contain a callable with
+the special name <tt class="docutils literal"><span class="pre">includeme</span></tt>, which should perform configuration (like the
+<tt class="docutils literal"><span class="pre">add_routes</span></tt> callable we showed above as an example).</p>
+<p><a class="reference internal" href="../api/config.html#pyramid.config.Configurator.include" title="pyramid.config.Configurator.include"><tt class="xref py py-meth docutils literal"><span class="pre">include()</span></tt></a> can also accept a <a class="reference internal" href="../glossary.html#term-dotted-python-name"><em class="xref std std-term">dotted
+Python name</em></a> to a function or a module.</p>
+</div>
+<div class="section" id="two-phase-configuration">
+<span id="twophase-config"></span><h2>Two-Phase Configuration<a class="headerlink" href="#two-phase-configuration" title="Permalink to this headline">¶</a></h2>
+<p>When a non-autocommitting <a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">Configurator</em></a> is used to do configuration
+(the default), configuration execution happens in two phases.  In the first
+phase, &quot;eager&quot; configuration actions (actions that must happen before all
+others, such as registering a renderer) are executed, and <em>discriminators</em>
+are computed for each of the actions that depend on the result of the eager
+actions.  In the second phase, the discriminators of all actions are compared
+to do conflict detection.</p>
+<p>Due to this, for configuration methods that have no internal ordering
+constraints, execution order of configuration method calls is not important.
+For example, the relative ordering of
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_view" title="pyramid.config.Configurator.add_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_view()</span></tt></a> and
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_renderer" title="pyramid.config.Configurator.add_renderer"><tt class="xref py py-meth docutils literal"><span class="pre">add_renderer()</span></tt></a> is unimportant when a
+non-autocommitting configurator is used.  This code snippet:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;some.view&#39;</span><span class="p">,</span> <span class="n">renderer</span><span class="o">=</span><span class="s">&#39;path_to_custom/renderer.rn&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_renderer</span><span class="p">(</span><span class="s">&#39;.rn&#39;</span><span class="p">,</span> <span class="n">SomeCustomRendererFactory</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Has the same result as:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_renderer</span><span class="p">(</span><span class="s">&#39;.rn&#39;</span><span class="p">,</span> <span class="n">SomeCustomRendererFactory</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;some.view&#39;</span><span class="p">,</span> <span class="n">renderer</span><span class="o">=</span><span class="s">&#39;path_to_custom/renderer.rn&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Even though the view statement depends on the registration of a custom
+renderer, due to two-phase configuration, the order in which the
+configuration statements are issued is not important.  <tt class="docutils literal"><span class="pre">add_view</span></tt> will be
+able to find the <tt class="docutils literal"><span class="pre">.rn</span></tt> renderer even if <tt class="docutils literal"><span class="pre">add_renderer</span></tt> is called after
+<tt class="docutils literal"><span class="pre">add_view</span></tt>.</p>
+<p>The same is untrue when you use an <em>autocommitting</em> configurator (see
+<a class="reference internal" href="#autocommitting-configurator"><em>Using An Autocommitting Configurator</em></a>).  When an autocommitting configurator is
+used, two-phase configuration is disabled, and configuration statements must
+be ordered in dependency order.</p>
+<p>Some configuration methods, such as
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">add_route()</span></tt></a> have internal ordering
+constraints: the routes they imply require relative ordering.  Such ordering
+constraints are not absolved by two-phase configuration.  Routes are still
+added in configuration execution order.</p>
+</div>
+<div class="section" id="more-information">
+<h2>More Information<a class="headerlink" href="#more-information" title="Permalink to this headline">¶</a></h2>
+<p>For more information, see the article, <a class="reference external" href="http://docs.pylonsproject.org/projects/pyramid_cookbook/en/latest/configuration/whirlwind_tour.html">&quot;A Whirlwind Tour of Advanced
+Configuration Tactics&quot;</a>,
+in the Pyramid Cookbook.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Advanced Configuration</a><ul>
+<li><a class="reference internal" href="#conflict-detection">Conflict Detection</a><ul>
+<li><a class="reference internal" href="#manually-resolving-conflicts">Manually Resolving Conflicts</a><ul>
+<li><a class="reference internal" href="#the-right-thing">The Right Thing</a></li>
+<li><a class="reference internal" href="#using-config-commit">Using <tt class="docutils literal"><span class="pre">config.commit()</span></tt></a></li>
+<li><a class="reference internal" href="#using-an-autocommitting-configurator">Using An Autocommitting Configurator</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#automatic-conflict-resolution">Automatic Conflict Resolution</a></li>
+<li><a class="reference internal" href="#methods-which-provide-conflict-detection">Methods Which Provide Conflict Detection</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#including-configuration-from-external-sources">Including Configuration from External Sources</a></li>
+<li><a class="reference internal" href="#two-phase-configuration">Two-Phase Configuration</a></li>
+<li><a class="reference internal" href="#more-information">More Information</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="extending.html"
+                        title="previous chapter">Extending An Existing <span>Pyramid</span> Application</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="extconfig.html"
+                        title="next chapter">Extending Pyramid Configuration</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="extconfig.html" title="Extending Pyramid Configuration"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="extending.html" title="Extending An Existing Pyramid Application"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

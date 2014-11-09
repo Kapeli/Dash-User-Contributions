@@ -1,0 +1,281 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>01: Single-File Web Applications &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="up" title="Quick Tutorial for Pyramid" href="index.html" />
+    <link rel="next" title="02: Python Packages for Pyramid Applications" href="package.html" />
+    <link rel="prev" title="Prelude: Quick Project Startup with Scaffolds" href="scaffolds.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="package.html" title="02: Python Packages for Pyramid Applications"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="scaffolds.html" title="Prelude: Quick Project Startup with Scaffolds"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Quick Tutorial for Pyramid</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="single-file-web-applications">
+<span id="qtut-hello-world"></span><h1>01: Single-File Web Applications<a class="headerlink" href="#single-file-web-applications" title="Permalink to this headline">¶</a></h1>
+<p>What's the simplest way to get started in Pyramid? A single-file module.
+No Python packages, no <tt class="docutils literal"><span class="pre">setup.py</span></tt>, no other machinery.</p>
+<div class="section" id="background">
+<h2>Background<a class="headerlink" href="#background" title="Permalink to this headline">¶</a></h2>
+<p>Microframeworks are all the rage these days. &quot;Microframework&quot; is a
+marketing term, not a technical one.  They have a low mental overhead:
+they do so little, the only things you have to worry about are <em>your
+things</em>.</p>
+<p>Pyramid is special because it can act as a single-file module
+microframework. You can have a single Python file that can be executed
+directly by Python. But Pyramid also provides facilities to scale to
+the largest of applications.</p>
+<p>Python has a standard called <a class="reference internal" href="../glossary.html#term-wsgi"><em class="xref std std-term">WSGI</em></a> that defines how
+Python web applications plug into standard servers, getting passed
+incoming requests and returning responses. Most modern Python web
+frameworks obey an &quot;MVC&quot; (model-view-controller) application pattern,
+where the data in the model has a view that mediates interaction with
+outside systems.</p>
+<p>In this step we'll see a brief glimpse of WSGI servers, WSGI
+applications, requests, responses, and views.</p>
+</div>
+<div class="section" id="objectives">
+<h2>Objectives<a class="headerlink" href="#objectives" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Get a running Pyramid web application, as simply as possible</li>
+<li>Use that as a well-understood base for adding each unit of complexity</li>
+<li>Initial exposure to WSGI apps, requests, views, and responses</li>
+</ul>
+</div>
+<div class="section" id="steps">
+<h2>Steps<a class="headerlink" href="#steps" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">Make sure you have followed the steps in <a class="reference internal" href="requirements.html"><em>Requirements</em></a>.</p>
+</li>
+<li><p class="first">Starting from your workspace directory
+(<tt class="docutils literal"><span class="pre">~/projects/quick_tutorial</span></tt>), create a directory for this step:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>mkdir hello_world; <span class="nb">cd </span>hello_world
+</pre></div>
+</div>
+</li>
+<li><p class="first">Copy the following into <tt class="docutils literal"><span class="pre">hello_world/app.py</span></tt>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">wsgiref.simple_server</span> <span class="kn">import</span> <span class="n">make_server</span>
+<span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+<span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+
+
+<span class="k">def</span> <span class="nf">hello_world</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">&#39;Incoming request&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;&lt;body&gt;&lt;h1&gt;Hello World!&lt;/h1&gt;&lt;/body&gt;&#39;</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;hello&#39;</span><span class="p">,</span> <span class="s">&#39;/&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">hello_world</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;hello&#39;</span><span class="p">)</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+    <span class="n">server</span> <span class="o">=</span> <span class="n">make_server</span><span class="p">(</span><span class="s">&#39;0.0.0.0&#39;</span><span class="p">,</span> <span class="mi">6543</span><span class="p">,</span> <span class="n">app</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">()</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Run the application:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ $VENV</span>/bin/python app.py
+</pre></div>
+</div>
+</li>
+<li><p class="first">Open <a class="reference external" href="http://localhost:6543/">http://localhost:6543/</a> in your browser.</p>
+</li>
+</ol>
+</div>
+<div class="section" id="analysis">
+<h2>Analysis<a class="headerlink" href="#analysis" title="Permalink to this headline">¶</a></h2>
+<p>New to Python web programming? If so, some lines in module merit
+explanation:</p>
+<ol class="arabic simple">
+<li><em>Line 11</em>. The <tt class="docutils literal"><span class="pre">if</span> <span class="pre">__name__</span> <span class="pre">==</span> <span class="pre">'__main__':</span></tt> is Python's way of
+saying &quot;Start here when running from the command line&quot;, rather than
+when this module is imported.</li>
+<li><em>Lines 12-14</em>. Use Pyramid's <a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">configurator</em></a> to connect
+<a class="reference internal" href="../glossary.html#term-view"><em class="xref std std-term">view</em></a> code to a particular URL <a class="reference internal" href="../glossary.html#term-route"><em class="xref std std-term">route</em></a>.</li>
+<li><em>Lines 6-8</em>. Implement the view code that generates the
+<a class="reference internal" href="../glossary.html#term-response"><em class="xref std std-term">response</em></a>.</li>
+<li><em>Lines 15-17</em>. Publish a <a class="reference internal" href="../glossary.html#term-wsgi"><em class="xref std std-term">WSGI</em></a> app using an HTTP
+server.</li>
+</ol>
+<p>As shown in this example, the <a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">configurator</em></a> plays a
+central role in Pyramid development. Building an application from
+loosely-coupled parts via <a class="reference internal" href="../narr/configuration.html#configuration-narr"><em>Application Configuration</em></a> is a
+central idea in Pyramid, one that we will revisit regularly in this
+<em>Quick Tour</em>.</p>
+</div>
+<div class="section" id="extra-credit">
+<h2>Extra Credit<a class="headerlink" href="#extra-credit" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">Why do we do this:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">print</span><span class="p">(</span><span class="s">&#39;Incoming request&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>...instead of:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">print</span> <span class="s">&#39;Incoming request&#39;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">What happens if you return a string of HTML? A sequence of integers?</p>
+</li>
+<li><p class="first">Put something invalid, such as <tt class="docutils literal"><span class="pre">print</span> <span class="pre">xyz</span></tt>, in the view function.
+Kill your <tt class="docutils literal"><span class="pre">python</span> <span class="pre">app.py</span></tt> with <tt class="docutils literal"><span class="pre">cntrl-c</span></tt> and restart,
+then reload your browser. See the exception in the console?</p>
+</li>
+<li><p class="first">The <tt class="docutils literal"><span class="pre">GI</span></tt> in <tt class="docutils literal"><span class="pre">WSGI</span></tt> stands for &quot;Gateway Interface&quot;. What web
+standard is this modelled after?</p>
+</li>
+</ol>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">01: Single-File Web Applications</a><ul>
+<li><a class="reference internal" href="#background">Background</a></li>
+<li><a class="reference internal" href="#objectives">Objectives</a></li>
+<li><a class="reference internal" href="#steps">Steps</a></li>
+<li><a class="reference internal" href="#analysis">Analysis</a></li>
+<li><a class="reference internal" href="#extra-credit">Extra Credit</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="scaffolds.html"
+                        title="previous chapter">Prelude: Quick Project Startup with Scaffolds</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="package.html"
+                        title="next chapter">02: Python Packages for Pyramid Applications</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="package.html" title="02: Python Packages for Pyramid Applications"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="scaffolds.html" title="Prelude: Quick Project Startup with Scaffolds"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" >Quick Tutorial for Pyramid</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

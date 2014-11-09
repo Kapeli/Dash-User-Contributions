@@ -1,0 +1,721 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Combining Traversal and URL Dispatch &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="next" title="Invoking a Subrequest" href="subrequest.html" />
+    <link rel="prev" title="Security" href="security.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="subrequest.html" title="Invoking a Subrequest"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="security.html" title="Security"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="combining-traversal-and-url-dispatch">
+<span id="hybrid-chapter"></span><h1>Combining Traversal and URL Dispatch<a class="headerlink" href="#combining-traversal-and-url-dispatch" title="Permalink to this headline">¶</a></h1>
+<p>When you write most <span>Pyramid</span> applications, you'll be using one or the
+other of two available <a class="reference internal" href="../glossary.html#term-resource-location"><em class="xref std std-term">resource location</em></a> subsystems: traversal or URL
+dispatch.  However, to solve a limited set of problems, it's useful to use
+<em>both</em> traversal and URL dispatch together within the same application.
+<span>Pyramid</span> makes this possible via <em>hybrid</em> applications.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Reasoning about the behavior of a &quot;hybrid&quot; URL dispatch + traversal
+application can be challenging.  To successfully reason about using
+URL dispatch and traversal together, you need to understand URL
+pattern matching, root factories, and the <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a>
+algorithm, and the potential interactions between them.  Therefore,
+we don't recommend creating an application that relies on hybrid
+behavior unless you must.</p>
+</div>
+<div class="section" id="a-review-of-non-hybrid-applications">
+<h2>A Review of Non-Hybrid Applications<a class="headerlink" href="#a-review-of-non-hybrid-applications" title="Permalink to this headline">¶</a></h2>
+<p>When used according to the tutorials in its documentation
+<span>Pyramid</span> is a &quot;dual-mode&quot; framework: the tutorials explain
+how to create an application in terms of using either <a class="reference internal" href="../glossary.html#term-url-dispatch"><em class="xref std std-term">url
+dispatch</em></a> <em>or</em> <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a>.  This chapter details how you might
+combine these two dispatch mechanisms, but we'll review how they work
+in isolation before trying to combine them.</p>
+<div class="section" id="url-dispatch-only">
+<h3>URL Dispatch Only<a class="headerlink" href="#url-dispatch-only" title="Permalink to this headline">¶</a></h3>
+<p>An application that uses <a class="reference internal" href="../glossary.html#term-url-dispatch"><em class="xref std std-term">url dispatch</em></a> exclusively to map URLs to code
+will often have statements like this within application startup
+configuration:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7</pre></div></td><td class="code"><div class="highlight"><pre><span class="c"># config is an instance of pyramid.config.Configurator</span>
+
+<span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;foobar&#39;</span><span class="p">,</span> <span class="s">&#39;{foo}/{bar}&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;bazbuz&#39;</span><span class="p">,</span> <span class="s">&#39;{baz}/{buz}&#39;</span><span class="p">)</span>
+
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;myproject.views.foobar&#39;</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;foobar&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;myproject.views.bazbuz&#39;</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;bazbuz&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Each <a class="reference internal" href="../glossary.html#term-route"><em class="xref std std-term">route</em></a> corresponds to one or more view callables.  Each view
+callable is associated with a route by passing a <tt class="docutils literal"><span class="pre">route_name</span></tt> parameter
+that matches its name during a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_view" title="pyramid.config.Configurator.add_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_view()</span></tt></a>.  When a route is matched
+during a request, <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a> is used to match the request to its
+associated view callable.  The presence of calls to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">add_route()</span></tt></a> signify that an application is
+using URL dispatch.</p>
+</div>
+<div class="section" id="traversal-only">
+<h3>Traversal Only<a class="headerlink" href="#traversal-only" title="Permalink to this headline">¶</a></h3>
+<p>An application that uses only traversal will have view configuration
+declarations that look like this:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span class="c"># config is an instance of pyramid.config.Configurator</span>
+
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;mypackage.views.foobar&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;foobar&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;mypackage.views.bazbuz&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;bazbuz&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>When the above configuration is applied to an application, the
+<tt class="docutils literal"><span class="pre">mypackage.views.foobar</span></tt> view callable above will be called when the URL
+<tt class="docutils literal"><span class="pre">/foobar</span></tt> is visited.  Likewise, the view <tt class="docutils literal"><span class="pre">mypackage.views.bazbuz</span></tt> will
+be called when the URL <tt class="docutils literal"><span class="pre">/bazbuz</span></tt> is visited.</p>
+<p>Typically, an application that uses traversal exclusively won't perform any
+calls to <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_route()</span></tt></a> in its startup
+code.</p>
+</div>
+</div>
+<div class="section" id="hybrid-applications">
+<span id="index-0"></span><h2>Hybrid Applications<a class="headerlink" href="#hybrid-applications" title="Permalink to this headline">¶</a></h2>
+<p>Either traversal or url dispatch alone can be used to create a
+<span>Pyramid</span> application.  However, it is also possible to
+combine the concepts of traversal and url dispatch when building an
+application: the result is a hybrid application.  In a hybrid
+application, traversal is performed <em>after</em> a particular route has
+matched.</p>
+<p>A hybrid application is a lot more like a &quot;pure&quot; traversal-based
+application than it is like a &quot;pure&quot; URL-dispatch based application.
+But unlike in a &quot;pure&quot; traversal-based application, in a hybrid
+application, <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> is performed during a request after a
+route has already matched.  This means that the URL pattern that
+represents the <tt class="docutils literal"><span class="pre">pattern</span></tt> argument of a route must match the
+<tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> of a request, and after the route pattern has matched,
+most of the &quot;normal&quot; rules of traversal with respect to <a class="reference internal" href="../glossary.html#term-resource-location"><em class="xref std std-term">resource
+location</em></a> and <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a> apply.</p>
+<p>There are only four real differences between a purely traversal-based
+application and a hybrid application:</p>
+<ul class="simple">
+<li>In a purely traversal based application, no routes are defined; in a
+hybrid application, at least one route will be defined.</li>
+<li>In a purely traversal based application, the root object used is
+global, implied by the <a class="reference internal" href="../glossary.html#term-root-factory"><em class="xref std std-term">root factory</em></a> provided at startup
+time; in a hybrid application, the <a class="reference internal" href="../glossary.html#term-root"><em class="xref std std-term">root</em></a> object at which
+traversal begins may be varied on a per-route basis.</li>
+<li>In a purely traversal-based application, the <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> of the
+underlying <a class="reference internal" href="../glossary.html#term-wsgi"><em class="xref std std-term">WSGI</em></a> environment is used wholesale as a traversal
+path; in a hybrid application, the traversal path is not the entire
+<tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> string, but a portion of the URL determined by a
+matching pattern in the matched route configuration's pattern.</li>
+<li>In a purely traversal based application, view configurations which
+do not mention a <tt class="docutils literal"><span class="pre">route_name</span></tt> argument are considered during
+<a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a>; in a hybrid application, when a route is
+matched, only view configurations which mention that route's name as
+a <tt class="docutils literal"><span class="pre">route_name</span></tt> are considered during <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a>.</li>
+</ul>
+<p>More generally, a hybrid application <em>is</em> a traversal-based
+application except:</p>
+<ul class="simple">
+<li>the traversal <em>root</em> is chosen based on the route configuration of
+the route that matched instead of from the <tt class="docutils literal"><span class="pre">root_factory</span></tt> supplied
+during application startup configuration.</li>
+<li>the traversal <em>path</em> is chosen based on the route configuration of
+the route that matched rather than from the <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> of a
+request.</li>
+<li>the set of views that may be chosen during <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a> when
+a route matches are limited to those which specifically name a
+<tt class="docutils literal"><span class="pre">route_name</span></tt> in their configuration that is the same as the
+matched route's <tt class="docutils literal"><span class="pre">name</span></tt>.</li>
+</ul>
+<p>To create a hybrid mode application, use a <a class="reference internal" href="../glossary.html#term-route-configuration"><em class="xref std std-term">route configuration</em></a>
+that implies a particular <a class="reference internal" href="../glossary.html#term-root-factory"><em class="xref std std-term">root factory</em></a> and which also includes
+a <tt class="docutils literal"><span class="pre">pattern</span></tt> argument that contains a special dynamic part: either
+<tt class="docutils literal"><span class="pre">*traverse</span></tt> or <tt class="docutils literal"><span class="pre">*subpath</span></tt>.</p>
+<div class="section" id="the-root-object-for-a-route-match">
+<h3>The Root Object for a Route Match<a class="headerlink" href="#the-root-object-for-a-route-match" title="Permalink to this headline">¶</a></h3>
+<p>A hybrid application implies that traversal is performed during a
+request after a route has matched.  Traversal, by definition, must
+always begin at a root object.  Therefore it's important to know
+<em>which</em> root object will be traversed after a route has matched.</p>
+<p>Figuring out which <a class="reference internal" href="../glossary.html#term-root"><em class="xref std std-term">root</em></a> object results from a particular route
+match is straightforward.  When a route is matched:</p>
+<ul class="simple">
+<li>If the route's configuration has a <tt class="docutils literal"><span class="pre">factory</span></tt> argument which
+points to a <a class="reference internal" href="../glossary.html#term-root-factory"><em class="xref std std-term">root factory</em></a> callable, that callable will be
+called to generate a <a class="reference internal" href="../glossary.html#term-root"><em class="xref std std-term">root</em></a> object.</li>
+<li>If the route's configuration does not have a <tt class="docutils literal"><span class="pre">factory</span></tt>
+argument, the <em>global</em> <a class="reference internal" href="../glossary.html#term-root-factory"><em class="xref std std-term">root factory</em></a> will be called to
+generate a <a class="reference internal" href="../glossary.html#term-root"><em class="xref std std-term">root</em></a> object.  The global root factory is the
+callable implied by the <tt class="docutils literal"><span class="pre">root_factory</span></tt> argument passed to the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator" title="pyramid.config.Configurator"><tt class="xref py py-class docutils literal"><span class="pre">Configurator</span></tt></a> at application
+startup time.</li>
+<li>If a <tt class="docutils literal"><span class="pre">root_factory</span></tt> argument is not provided to the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator" title="pyramid.config.Configurator"><tt class="xref py py-class docutils literal"><span class="pre">Configurator</span></tt></a> at startup time, a
+<em>default</em> root factory is used.  The default root factory is used to
+generate a root object.</li>
+</ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Root factories related to a route were explained previously within
+<a class="reference internal" href="urldispatch.html#route-factories"><em>Route Factories</em></a>.  Both the global root factory and default
+root factory were explained previously within
+<a class="reference internal" href="traversal.html#the-resource-tree"><em>The Resource Tree</em></a>.</p>
+</div>
+</div>
+<div class="section" id="using-traverse-in-a-route-pattern">
+<span id="index-1"></span><span id="id1"></span><h3>Using <tt class="docutils literal"><span class="pre">*traverse</span></tt> In a Route Pattern<a class="headerlink" href="#using-traverse-in-a-route-pattern" title="Permalink to this headline">¶</a></h3>
+<p>A hybrid application most often implies the inclusion of a route
+configuration that contains the special token <tt class="docutils literal"><span class="pre">*traverse</span></tt> at the end
+of a route's pattern:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;home&#39;</span><span class="p">,</span> <span class="s">&#39;{foo}/{bar}/*traverse&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>A <tt class="docutils literal"><span class="pre">*traverse</span></tt> token at the end of the pattern in a route's
+configuration implies a &quot;remainder&quot; <em>capture</em> value.  When it is used,
+it will match the remainder of the path segments of the URL.  This
+remainder becomes the path used to perform traversal.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The <tt class="docutils literal"><span class="pre">*remainder</span></tt> route pattern syntax is explained in more
+detail within <a class="reference internal" href="urldispatch.html#route-pattern-syntax"><em>Route Pattern Syntax</em></a>.</p>
+</div>
+<p>A hybrid mode application relies more heavily on <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> to do
+<a class="reference internal" href="../glossary.html#term-resource-location"><em class="xref std std-term">resource location</em></a> and <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a> than most examples indicate
+within <a class="reference internal" href="urldispatch.html#urldispatch-chapter"><em>URL Dispatch</em></a>.</p>
+<p>Because the pattern of the above route ends with <tt class="docutils literal"><span class="pre">*traverse</span></tt>, when this
+route configuration is matched during a request, <span>Pyramid</span> will attempt
+to use <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> against the <a class="reference internal" href="../glossary.html#term-root"><em class="xref std std-term">root</em></a> object implied by the
+<a class="reference internal" href="../glossary.html#term-root-factory"><em class="xref std std-term">root factory</em></a> that is implied by the route's configuration.  Since no
+<tt class="docutils literal"><span class="pre">root_factory</span></tt> argument is explicitly specified for this route, this will
+either be the <em>global</em> root factory for the application, or the <em>default</em>
+root factory.  Once <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> has found a <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource,
+<a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a> will be invoked in almost exactly the same way it would
+have been invoked in a &quot;pure&quot; traversal-based application.</p>
+<p>Let's assume there is no <em>global</em> <a class="reference internal" href="../glossary.html#term-root-factory"><em class="xref std std-term">root factory</em></a> configured in
+this application. The <em>default</em> <a class="reference internal" href="../glossary.html#term-root-factory"><em class="xref std std-term">root factory</em></a> cannot be traversed:
+it has no useful <tt class="docutils literal"><span class="pre">__getitem__</span></tt> method.  So we'll need to associate
+this route configuration with a custom root factory in order to
+create a useful hybrid application.  To that end, let's imagine that
+we've created a root factory that looks like so in a module named
+<tt class="docutils literal"><span class="pre">routes.py</span></tt>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">class</span> <span class="nc">Resource</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subobjects</span><span class="p">):</span>
+       <span class="bp">self</span><span class="o">.</span><span class="n">subobjects</span> <span class="o">=</span> <span class="n">subobjects</span>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+       <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">subobjects</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+
+<span class="n">root</span> <span class="o">=</span> <span class="n">Resource</span><span class="p">(</span>
+        <span class="p">{</span><span class="s">&#39;a&#39;</span><span class="p">:</span> <span class="n">Resource</span><span class="p">({</span><span class="s">&#39;b&#39;</span><span class="p">:</span> <span class="n">Resource</span><span class="p">({</span><span class="s">&#39;c&#39;</span><span class="p">:</span> <span class="n">Resource</span><span class="p">({})})})}</span>
+       <span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">root_factory</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">root</span>
+</pre></div>
+</td></tr></table></div>
+<p>Above, we've defined a (bogus) resource tree that can be traversed, and a
+<tt class="docutils literal"><span class="pre">root_factory</span></tt> function that can be used as part of a particular route
+configuration statement:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;home&#39;</span><span class="p">,</span> <span class="s">&#39;{foo}/{bar}/*traverse&#39;</span><span class="p">,</span>
+                 <span class="n">factory</span><span class="o">=</span><span class="s">&#39;mypackage.routes.root_factory&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The <tt class="docutils literal"><span class="pre">factory</span></tt> above points at the function we've defined.  It will return
+an instance of the <tt class="docutils literal"><span class="pre">Resource</span></tt> class as a root object whenever this route is
+matched.  Instances of the <tt class="docutils literal"><span class="pre">Resource</span></tt> class can be used for tree traversal
+because they have a <tt class="docutils literal"><span class="pre">__getitem__</span></tt> method that does something nominally
+useful. Since traversal uses <tt class="docutils literal"><span class="pre">__getitem__</span></tt> to walk the resources of a
+resource tree, using traversal against the root resource implied by our route
+statement is a reasonable thing to do.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">We could have also used our <tt class="docutils literal"><span class="pre">root_factory</span></tt> function as the
+<tt class="docutils literal"><span class="pre">root_factory</span></tt> argument of the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator" title="pyramid.config.Configurator"><tt class="xref py py-class docutils literal"><span class="pre">Configurator</span></tt></a> constructor, instead
+of associating it with a particular route inside the route's
+configuration.  Every hybrid route configuration that is matched but
+which does <em>not</em> name a <tt class="docutils literal"><span class="pre">factory</span></tt> attribute will use the use
+global <tt class="docutils literal"><span class="pre">root_factory</span></tt> function to generate a root object.</p>
+</div>
+<p>When the route configuration named <tt class="docutils literal"><span class="pre">home</span></tt> above is matched during a
+request, the matchdict generated will be based on its pattern:
+<tt class="docutils literal"><span class="pre">{foo}/{bar}/*traverse</span></tt>.  The &quot;capture value&quot; implied by the <tt class="docutils literal"><span class="pre">*traverse</span></tt>
+element in the pattern will be used to traverse the resource tree in order to
+find a context resource, starting from the root object returned from the root
+factory.  In the above example, the <a class="reference internal" href="../glossary.html#term-root"><em class="xref std std-term">root</em></a> object found will be the
+instance named <tt class="docutils literal"><span class="pre">root</span></tt> in <tt class="docutils literal"><span class="pre">routes.py</span></tt>.</p>
+<p>If the URL that matched a route with the pattern <tt class="docutils literal"><span class="pre">{foo}/{bar}/*traverse</span></tt>,
+is <tt class="docutils literal"><span class="pre">http://example.com/one/two/a/b/c</span></tt>, the traversal path used
+against the root object will be <tt class="docutils literal"><span class="pre">a/b/c</span></tt>.  As a result,
+<span>Pyramid</span> will attempt to traverse through the edges <tt class="docutils literal"><span class="pre">'a'</span></tt>,
+<tt class="docutils literal"><span class="pre">'b'</span></tt>, and <tt class="docutils literal"><span class="pre">'c'</span></tt>, beginning at the root object.</p>
+<p>In our above example, this particular set of traversal steps will mean that
+the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource of the view would be the <tt class="docutils literal"><span class="pre">Resource</span></tt> object
+we've named <tt class="docutils literal"><span class="pre">'c'</span></tt> in our bogus resource tree and the <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a>
+resulting from traversal will be the empty string; if you need a refresher
+about why this outcome is presumed, see <a class="reference internal" href="traversal.html#traversal-algorithm"><em>The Traversal Algorithm</em></a>.</p>
+<p>At this point, a suitable view callable will be found and invoked
+using <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a> as described in <a class="reference internal" href="viewconfig.html#view-configuration"><em>View Configuration</em></a>,
+but with a caveat: in order for view lookup to work, we need to define
+a view configuration that will match when <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a> is
+invoked after a route matches:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;home&#39;</span><span class="p">,</span> <span class="s">&#39;{foo}/{bar}/*traverse&#39;</span><span class="p">,</span>
+                 <span class="n">factory</span><span class="o">=</span><span class="s">&#39;mypackage.routes.root_factory&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;mypackage.views.myview&#39;</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;home&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Note that the above call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_view" title="pyramid.config.Configurator.add_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_view()</span></tt></a> includes a <tt class="docutils literal"><span class="pre">route_name</span></tt>
+argument.  View configurations that include a <tt class="docutils literal"><span class="pre">route_name</span></tt> argument are
+meant to associate a particular view declaration with a route, using the
+route's name, in order to indicate that the view should <em>only be invoked when
+the route matches</em>.</p>
+<p>Calls to <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_view" title="pyramid.config.Configurator.add_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_view()</span></tt></a> may pass a
+<tt class="docutils literal"><span class="pre">route_name</span></tt> attribute, which refers to the value of an existing route's
+<tt class="docutils literal"><span class="pre">name</span></tt> argument.  In the above example, the route name is <tt class="docutils literal"><span class="pre">home</span></tt>,
+referring to the name of the route defined above it.</p>
+<p>The above <tt class="docutils literal"><span class="pre">mypackage.views.myview</span></tt> view callable will be invoked when:</p>
+<ul class="simple">
+<li>the route named &quot;home&quot; is matched</li>
+<li>the <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a> resulting from traversal is the empty string.</li>
+<li>the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource is any object.</li>
+</ul>
+<p>It is also possible to declare alternate views that may be invoked
+when a hybrid route is matched:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;home&#39;</span><span class="p">,</span> <span class="s">&#39;{foo}/{bar}/*traverse&#39;</span><span class="p">,</span>
+                 <span class="n">factory</span><span class="o">=</span><span class="s">&#39;mypackage.routes.root_factory&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;mypackage.views.myview&#39;</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;home&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;mypackage.views.another_view&#39;</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;home&#39;</span><span class="p">,</span>
+                <span class="n">name</span><span class="o">=</span><span class="s">&#39;another&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The <tt class="docutils literal"><span class="pre">add_view</span></tt> call for <tt class="docutils literal"><span class="pre">mypackage.views.another_view</span></tt> above names a
+different view and, more importantly, a different <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a>.  The
+above <tt class="docutils literal"><span class="pre">mypackage.views.another_view</span></tt> view will be invoked when:</p>
+<ul class="simple">
+<li>the route named &quot;home&quot; is matched</li>
+<li>the <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a> resulting from traversal is <tt class="docutils literal"><span class="pre">another</span></tt>.</li>
+<li>the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource is any object.</li>
+</ul>
+<p>For instance, if the URL <tt class="docutils literal"><span class="pre">http://example.com/one/two/a/another</span></tt> is provided
+to an application that uses the previously mentioned resource tree, the
+<tt class="docutils literal"><span class="pre">mypackage.views.another</span></tt> view callable will be called instead of the
+<tt class="docutils literal"><span class="pre">mypackage.views.myview</span></tt> view callable because the <a class="reference internal" href="../glossary.html#term-view-name"><em class="xref std std-term">view name</em></a> will
+be <tt class="docutils literal"><span class="pre">another</span></tt> instead of the empty string.</p>
+<p>More complicated matching can be composed.  All arguments to <em>route</em>
+configuration statements and <em>view</em> configuration statements are
+supported in hybrid applications (such as <a class="reference internal" href="../glossary.html#term-predicate"><em class="xref std std-term">predicate</em></a>
+arguments).</p>
+</div>
+<div class="section" id="using-the-traverse-argument-in-a-route-definition">
+<h3>Using the <tt class="docutils literal"><span class="pre">traverse</span></tt> Argument In a Route Definition<a class="headerlink" href="#using-the-traverse-argument-in-a-route-definition" title="Permalink to this headline">¶</a></h3>
+<p>Rather than using the <tt class="docutils literal"><span class="pre">*traverse</span></tt> remainder marker in a pattern, you
+can use the <tt class="docutils literal"><span class="pre">traverse</span></tt> argument to the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">add_route()</span></tt></a> method.</p>
+<p>When you use the <tt class="docutils literal"><span class="pre">*traverse</span></tt> remainder marker, the traversal path is
+limited to being the remainder segments of a request URL when a route
+matches.  However, when you use the <tt class="docutils literal"><span class="pre">traverse</span></tt> argument or
+attribute, you have more control over how to compose a traversal path.</p>
+<p>Here's a use of the <tt class="docutils literal"><span class="pre">traverse</span></tt> pattern in a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">add_route()</span></tt></a>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;abc&#39;</span><span class="p">,</span> <span class="s">&#39;/articles/{article}/edit&#39;</span><span class="p">,</span>
+                 <span class="n">traverse</span><span class="o">=</span><span class="s">&#39;/{article}&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The syntax of the <tt class="docutils literal"><span class="pre">traverse</span></tt> argument is the same as it is for
+<tt class="docutils literal"><span class="pre">pattern</span></tt>.</p>
+<p>If, as above, the <tt class="docutils literal"><span class="pre">pattern</span></tt> provided is <tt class="docutils literal"><span class="pre">/articles/{article}/edit</span></tt>,
+and the <tt class="docutils literal"><span class="pre">traverse</span></tt> argument provided is <tt class="docutils literal"><span class="pre">/{article}</span></tt>, when a
+request comes in that causes the route to match in such a way that the
+<tt class="docutils literal"><span class="pre">article</span></tt> match value is <tt class="docutils literal"><span class="pre">1</span></tt> (when the request URI is
+<tt class="docutils literal"><span class="pre">/articles/1/edit</span></tt>), the traversal path will be generated as <tt class="docutils literal"><span class="pre">/1</span></tt>.
+This means that the root object's <tt class="docutils literal"><span class="pre">__getitem__</span></tt> will be called with
+the name <tt class="docutils literal"><span class="pre">1</span></tt> during the traversal phase.  If the <tt class="docutils literal"><span class="pre">1</span></tt> object
+exists, it will become the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> of the request.
+The <a class="reference internal" href="traversal.html#traversal-chapter"><em>Traversal</em></a> chapter has more information about traversal.</p>
+<p>If the traversal path contains segment marker names which are not
+present in the pattern argument, a runtime error will occur.  The
+<tt class="docutils literal"><span class="pre">traverse</span></tt> pattern should not contain segment markers that do not
+exist in the <tt class="docutils literal"><span class="pre">path</span></tt>.</p>
+<p>Note that the <tt class="docutils literal"><span class="pre">traverse</span></tt> argument is ignored when attached to a
+route that has a <tt class="docutils literal"><span class="pre">*traverse</span></tt> remainder marker in its pattern.</p>
+<p>Traversal will begin at the root object implied by this route (either
+the global root, or the object returned by the <tt class="docutils literal"><span class="pre">factory</span></tt> associated
+with this route).</p>
+<div class="section" id="making-global-views-match">
+<span id="index-2"></span><h4>Making Global Views Match<a class="headerlink" href="#making-global-views-match" title="Permalink to this headline">¶</a></h4>
+<p>By default, only view configurations that mention a <tt class="docutils literal"><span class="pre">route_name</span></tt>
+will be found during view lookup when a route that has a <tt class="docutils literal"><span class="pre">*traverse</span></tt>
+in its pattern matches.  You can allow views without a <tt class="docutils literal"><span class="pre">route_name</span></tt>
+attribute to match a route by adding the <tt class="docutils literal"><span class="pre">use_global_views</span></tt> flag to
+the route definition.  For example, the <tt class="docutils literal"><span class="pre">myproject.views.bazbuz</span></tt>
+view below will be found if the route named <tt class="docutils literal"><span class="pre">abc</span></tt> below is matched
+and the <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> is <tt class="docutils literal"><span class="pre">/abc/bazbuz</span></tt>, even though the view
+configuration statement does not have the <tt class="docutils literal"><span class="pre">route_name=&quot;abc&quot;</span></tt>
+attribute.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;abc&#39;</span><span class="p">,</span> <span class="s">&#39;/abc/*traverse&#39;</span><span class="p">,</span> <span class="n">use_global_views</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;myproject.views.bazbuz&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;bazbuz&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+</div>
+<div class="section" id="using-subpath-in-a-route-pattern">
+<span id="star-subpath"></span><span id="index-3"></span><h3>Using <tt class="docutils literal"><span class="pre">*subpath</span></tt> in a Route Pattern<a class="headerlink" href="#using-subpath-in-a-route-pattern" title="Permalink to this headline">¶</a></h3>
+<p>There are certain extremely rare cases when you'd like to influence the
+traversal <a class="reference internal" href="../glossary.html#term-subpath"><em class="xref std std-term">subpath</em></a> when a route matches without actually performing
+traversal.  For instance, the <a class="reference internal" href="../api/wsgi.html#pyramid.wsgi.wsgiapp2" title="pyramid.wsgi.wsgiapp2"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.wsgi.wsgiapp2()</span></tt></a> decorator and the
+<a class="reference internal" href="../api/static.html#pyramid.static.static_view" title="pyramid.static.static_view"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.static.static_view</span></tt></a> helper attempt to compute <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt>
+from the request's subpath when its <tt class="docutils literal"><span class="pre">use_subpath</span></tt> argument is <tt class="docutils literal"><span class="pre">True</span></tt>, so
+it's useful to be able to influence this value.</p>
+<p>When <tt class="docutils literal"><span class="pre">*subpath</span></tt> exists in a pattern, no path is actually traversed,
+but the traversal algorithm will return a <a class="reference internal" href="../glossary.html#term-subpath"><em class="xref std std-term">subpath</em></a> list implied
+by the capture value of <tt class="docutils literal"><span class="pre">*subpath</span></tt>.  You'll see this pattern most
+commonly in route declarations that look like this:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pryamid.static</span> <span class="kn">import</span> <span class="n">static_view</span>
+
+<span class="n">www</span> <span class="o">=</span> <span class="n">static_view</span><span class="p">(</span><span class="s">&#39;mypackage:static&#39;</span><span class="p">,</span> <span class="n">use_subpath</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;static&#39;</span><span class="p">,</span> <span class="s">&#39;/static/*subpath&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">www</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;static&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p><tt class="docutils literal"><span class="pre">mypackage.views.www</span></tt> is an instance of
+<a class="reference internal" href="../api/static.html#pyramid.static.static_view" title="pyramid.static.static_view"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.static.static_view</span></tt></a>.  This effectively tells the static
+helper to traverse everything in the subpath as a filename.</p>
+</div>
+</div>
+<div class="section" id="corner-cases">
+<span id="index-4"></span><h2>Corner Cases<a class="headerlink" href="#corner-cases" title="Permalink to this headline">¶</a></h2>
+<p>A number of corner case &quot;gotchas&quot; exist when using a hybrid
+application.  We'll detail them here.</p>
+<div class="section" id="registering-a-default-view-for-a-route-that-has-a-view-attribute">
+<h3>Registering a Default View for a Route That Has a <tt class="docutils literal"><span class="pre">view</span></tt> Attribute<a class="headerlink" href="#registering-a-default-view-for-a-route-that-has-a-view-attribute" title="Permalink to this headline">¶</a></h3>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">As of <span>Pyramid</span> 1.1 this section is slated to be removed in
+a later documentation release because the ability to add views
+directly to the <a class="reference internal" href="../glossary.html#term-route-configuration"><em class="xref std std-term">route configuration</em></a> by passing a <tt class="docutils literal"><span class="pre">view</span></tt> argument
+to <tt class="docutils literal"><span class="pre">add_route</span></tt> has been deprecated.</p>
+</div>
+<p>It is an error to provide <em>both</em> a <tt class="docutils literal"><span class="pre">view</span></tt> argument to a <a class="reference internal" href="../glossary.html#term-route-configuration"><em class="xref std std-term">route
+configuration</em></a> <em>and</em> a <a class="reference internal" href="../glossary.html#term-view-configuration"><em class="xref std std-term">view configuration</em></a> which names a
+<tt class="docutils literal"><span class="pre">route_name</span></tt> that has no <tt class="docutils literal"><span class="pre">name</span></tt> value or the empty <tt class="docutils literal"><span class="pre">name</span></tt> value.  For
+example, this pair of declarations will generate a conflict error at startup
+time.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;home&#39;</span><span class="p">,</span> <span class="s">&#39;{foo}/{bar}/*traverse&#39;</span><span class="p">,</span>
+                 <span class="n">view</span><span class="o">=</span><span class="s">&#39;myproject.views.home&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;myproject.views.another&#39;</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;home&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>This is because the <tt class="docutils literal"><span class="pre">view</span></tt> argument to the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">add_route()</span></tt></a> above is an <em>implicit</em>
+default view when that route matches.  <tt class="docutils literal"><span class="pre">add_route</span></tt> calls don't <em>need</em> to
+supply a view attribute.  For example, this <tt class="docutils literal"><span class="pre">add_route</span></tt> call:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;home&#39;</span><span class="p">,</span> <span class="s">&#39;{foo}/{bar}/*traverse&#39;</span><span class="p">,</span>
+                 <span class="n">view</span><span class="o">=</span><span class="s">&#39;myproject.views.home&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Can also be spelled like so:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;home&#39;</span><span class="p">,</span> <span class="s">&#39;{foo}/{bar}/*traverse&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;myproject.views.home&#39;</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;home&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The two spellings are logically equivalent.  In fact, the former is just a
+syntactical shortcut for the latter.</p>
+</div>
+<div class="section" id="binding-extra-views-against-a-route-configuration-that-doesn-t-have-a-traverse-element-in-its-pattern">
+<h3>Binding Extra Views Against a Route Configuration that Doesn't Have a <tt class="docutils literal"><span class="pre">*traverse</span></tt> Element In Its Pattern<a class="headerlink" href="#binding-extra-views-against-a-route-configuration-that-doesn-t-have-a-traverse-element-in-its-pattern" title="Permalink to this headline">¶</a></h3>
+<p>Here's another corner case that just makes no sense:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;abc&#39;</span><span class="p">,</span> <span class="s">&#39;/abc&#39;</span><span class="p">,</span> <span class="n">view</span><span class="o">=</span><span class="s">&#39;myproject.views.abc&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;myproject.views.bazbuz&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;bazbuz&#39;</span><span class="p">,</span>
+                <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;abc&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The above view declaration is useless, because it will never be matched when
+the route it references has matched.  Only the view associated with the route
+itself (<tt class="docutils literal"><span class="pre">myproject.views.abc</span></tt>) will ever be invoked when the route matches,
+because the default view is always invoked when a route matches and when no
+post-match traversal is performed.</p>
+<p>To make the above view declaration useful, the special <tt class="docutils literal"><span class="pre">*traverse</span></tt>
+token must end the route's pattern.  For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;abc&#39;</span><span class="p">,</span> <span class="s">&#39;/abc/*traverse&#39;</span><span class="p">,</span> <span class="n">view</span><span class="o">=</span><span class="s">&#39;myproject.views.abc&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;myproject.views.bazbuz&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;bazbuz&#39;</span><span class="p">,</span>
+                <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;abc&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>With the above configuration, the <tt class="docutils literal"><span class="pre">myproject.views.bazbuz</span></tt> view will
+be invoked when the request URI is <tt class="docutils literal"><span class="pre">/abc/bazbuz</span></tt>, assuming there is
+no object contained by the root object with the key <tt class="docutils literal"><span class="pre">bazbuz</span></tt>. A
+different request URI, such as <tt class="docutils literal"><span class="pre">/abc/foo/bar</span></tt>, would invoke the
+default <tt class="docutils literal"><span class="pre">myproject.views.abc</span></tt> view.</p>
+</div>
+</div>
+<div class="section" id="generating-hybrid-urls">
+<span id="index-5"></span><span id="id2"></span><h2>Generating Hybrid URLs<a class="headerlink" href="#generating-hybrid-urls" title="Permalink to this headline">¶</a></h2>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 1.5.</span></p>
+</div>
+<p>The <a class="reference internal" href="../api/request.html#pyramid.request.Request.resource_url" title="pyramid.request.Request.resource_url"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.resource_url()</span></tt></a> method and the
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.resource_path" title="pyramid.request.Request.resource_path"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.resource_path()</span></tt></a> method both accept optional
+keyword arguments that make it easier to generate route-prefixed URLs that
+contain paths to traversal resources:<tt class="docutils literal"><span class="pre">route_name</span></tt>, <tt class="docutils literal"><span class="pre">route_kw</span></tt>, and
+<tt class="docutils literal"><span class="pre">route_remainder_name</span></tt>.</p>
+<p>Any route that has a pattern that contains a <tt class="docutils literal"><span class="pre">*remainder</span></tt> pattern (any
+stararg remainder pattern, such as <tt class="docutils literal"><span class="pre">*traverse</span></tt> or <tt class="docutils literal"><span class="pre">*subpath</span></tt> or <tt class="docutils literal"><span class="pre">*fred</span></tt>)
+can be used as the target name for <tt class="docutils literal"><span class="pre">request.resource_url(...,</span> <span class="pre">route_name=)</span></tt>
+and <tt class="docutils literal"><span class="pre">request.resource_path(...,</span> <span class="pre">route_name=)</span></tt>.</p>
+<p>For example, let's imagine you have a route defined in your Pyramid application
+like so:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;mysection&#39;</span><span class="p">,</span> <span class="s">&#39;/mysection*traverse&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If you'd like to generate the URL <tt class="docutils literal"><span class="pre">http://example.com/mysection/a/</span></tt>, you can
+use the following incantation, assuming that the variable <tt class="docutils literal"><span class="pre">a</span></tt> below points to
+a resource that is a child of the root with a <tt class="docutils literal"><span class="pre">__name__</span></tt> of <tt class="docutils literal"><span class="pre">a</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">request</span><span class="o">.</span><span class="n">resource_url</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;mysection&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can generate only the path portion <tt class="docutils literal"><span class="pre">/mysection/a/</span></tt> assuming the same:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">request</span><span class="o">.</span><span class="n">resource_path</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;mysection&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The path is virtual host aware, so if the <tt class="docutils literal"><span class="pre">X-Vhm-Root</span></tt> environ variable is
+present in the request, and it's set to <tt class="docutils literal"><span class="pre">/a</span></tt>, the above call to
+<tt class="docutils literal"><span class="pre">request.resource_url</span></tt> would generate <tt class="docutils literal"><span class="pre">http://example.com/mysection/</span></tt>
+and the above call to <tt class="docutils literal"><span class="pre">request.resource_path</span></tt> would generate <tt class="docutils literal"><span class="pre">/mysection/</span></tt>.
+See <a class="reference internal" href="vhosting.html#virtual-root-support"><em>Virtual Root Support</em></a> for more information.</p>
+<p>If the route you're trying to use needs simple dynamic part values to be filled
+in to succesfully generate the URL, you can pass these as the <tt class="docutils literal"><span class="pre">route_kw</span></tt>
+argument to <tt class="docutils literal"><span class="pre">resource_url</span></tt> and <tt class="docutils literal"><span class="pre">resource_path</span></tt>.  For example, assuming that
+the route definition is like so:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;mysection&#39;</span><span class="p">,</span> <span class="s">&#39;/{id}/mysection*traverse&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can pass <tt class="docutils literal"><span class="pre">route_kw</span></tt> in to fill in <tt class="docutils literal"><span class="pre">{id}</span></tt> above:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">request</span><span class="o">.</span><span class="n">resource_url</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;mysection&#39;</span><span class="p">,</span> <span class="n">route_kw</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;id&#39;</span><span class="p">:</span><span class="s">&#39;1&#39;</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>If you pass <tt class="docutils literal"><span class="pre">route_kw</span></tt> but do not pass <tt class="docutils literal"><span class="pre">route_name</span></tt>, <tt class="docutils literal"><span class="pre">route_kw</span></tt> will
+be ignored.</p>
+<p>By default this feature works by calling <tt class="docutils literal"><span class="pre">route_url</span></tt> under the hood,
+and passing the value of the resource path to that function as <tt class="docutils literal"><span class="pre">traverse</span></tt>.
+If your route has a different <tt class="docutils literal"><span class="pre">*stararg</span></tt> remainder name (such as
+<tt class="docutils literal"><span class="pre">*subpath</span></tt>), you can tell <tt class="docutils literal"><span class="pre">resource_url</span></tt> or <tt class="docutils literal"><span class="pre">resource_path</span></tt> to use that
+instead of  <tt class="docutils literal"><span class="pre">traverse</span></tt> by passing <tt class="docutils literal"><span class="pre">route_remainder_name</span></tt>.  For example,
+if you have the following route:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;mysection&#39;</span><span class="p">,</span> <span class="s">&#39;/mysection*subpath&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can fill in the <tt class="docutils literal"><span class="pre">*subpath</span></tt> value using <tt class="docutils literal"><span class="pre">resource_url</span></tt> by doing:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">request</span><span class="o">.</span><span class="n">resource_path</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;mysection&#39;</span><span class="p">,</span>
+                      <span class="n">route_remainder_name</span><span class="o">=</span><span class="s">&#39;subpath&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If you pass <tt class="docutils literal"><span class="pre">route_remainder_name</span></tt> but do not pass <tt class="docutils literal"><span class="pre">route_name</span></tt>,
+<tt class="docutils literal"><span class="pre">route_remainder_name</span></tt> will be ignored.</p>
+<p>If you try to use <tt class="docutils literal"><span class="pre">resource_path</span></tt> or <tt class="docutils literal"><span class="pre">resource_url</span></tt> when the <tt class="docutils literal"><span class="pre">route_name</span></tt>
+argument points at a route that does not have a remainder stararg, an error
+will not be raised, but the generated URL will not contain any remainder
+information either.</p>
+<p>All other values that are normally passable to <tt class="docutils literal"><span class="pre">resource_path</span></tt> and
+<tt class="docutils literal"><span class="pre">resource_url</span></tt> (such as <tt class="docutils literal"><span class="pre">query</span></tt>, <tt class="docutils literal"><span class="pre">anchor</span></tt>, <tt class="docutils literal"><span class="pre">host</span></tt>, <tt class="docutils literal"><span class="pre">port</span></tt>, and
+positional elements) work as you might expect in this configuration.</p>
+<p>Note that this feature is incompatible with the <tt class="docutils literal"><span class="pre">__resource_url__</span></tt> feature
+(see <a class="reference internal" href="resources.html#overriding-resource-url-generation"><em>Overriding Resource URL Generation</em></a>) implemented on resource
+objects.  Any  <tt class="docutils literal"><span class="pre">__resource_url__</span></tt> supplied by your resource will be ignored
+when you pass <tt class="docutils literal"><span class="pre">route_name</span></tt>.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Combining Traversal and URL Dispatch</a><ul>
+<li><a class="reference internal" href="#a-review-of-non-hybrid-applications">A Review of Non-Hybrid Applications</a><ul>
+<li><a class="reference internal" href="#url-dispatch-only">URL Dispatch Only</a></li>
+<li><a class="reference internal" href="#traversal-only">Traversal Only</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#hybrid-applications">Hybrid Applications</a><ul>
+<li><a class="reference internal" href="#the-root-object-for-a-route-match">The Root Object for a Route Match</a></li>
+<li><a class="reference internal" href="#using-traverse-in-a-route-pattern">Using <tt class="docutils literal"><span class="pre">*traverse</span></tt> In a Route Pattern</a></li>
+<li><a class="reference internal" href="#using-the-traverse-argument-in-a-route-definition">Using the <tt class="docutils literal"><span class="pre">traverse</span></tt> Argument In a Route Definition</a><ul>
+<li><a class="reference internal" href="#making-global-views-match">Making Global Views Match</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#using-subpath-in-a-route-pattern">Using <tt class="docutils literal"><span class="pre">*subpath</span></tt> in a Route Pattern</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#corner-cases">Corner Cases</a><ul>
+<li><a class="reference internal" href="#registering-a-default-view-for-a-route-that-has-a-view-attribute">Registering a Default View for a Route That Has a <tt class="docutils literal"><span class="pre">view</span></tt> Attribute</a></li>
+<li><a class="reference internal" href="#binding-extra-views-against-a-route-configuration-that-doesn-t-have-a-traverse-element-in-its-pattern">Binding Extra Views Against a Route Configuration that Doesn't Have a <tt class="docutils literal"><span class="pre">*traverse</span></tt> Element In Its Pattern</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#generating-hybrid-urls">Generating Hybrid URLs</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="security.html"
+                        title="previous chapter">Security</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="subrequest.html"
+                        title="next chapter">Invoking a Subrequest</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="subrequest.html" title="Invoking a Subrequest"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="security.html" title="Security"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

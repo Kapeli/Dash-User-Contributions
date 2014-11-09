@@ -1,0 +1,506 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Extending Pyramid Configuration &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="next" title="Creating Pyramid Scaffolds" href="scaffolding.html" />
+    <link rel="prev" title="Advanced Configuration" href="advconfig.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="scaffolding.html" title="Creating Pyramid Scaffolds"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="advconfig.html" title="Advanced Configuration"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="extending-pyramid-configuration">
+<span id="extconfig-narr"></span><span id="index-0"></span><h1>Extending Pyramid Configuration<a class="headerlink" href="#extending-pyramid-configuration" title="Permalink to this headline">¶</a></h1>
+<p>Pyramid allows you to extend its Configurator with custom directives.  Custom
+directives can use other directives, they can add a custom <a class="reference internal" href="../glossary.html#term-action"><em class="xref std std-term">action</em></a>,
+they can participate in <a class="reference internal" href="../glossary.html#term-conflict-resolution"><em class="xref std std-term">conflict resolution</em></a>, and they can provide
+some number of <a class="reference internal" href="../glossary.html#term-introspectable"><em class="xref std std-term">introspectable</em></a> objects.</p>
+<div class="section" id="adding-methods-to-the-configurator-via-add-directive">
+<span id="add-directive"></span><span id="index-1"></span><h2>Adding Methods to the Configurator via <tt class="docutils literal"><span class="pre">add_directive</span></tt><a class="headerlink" href="#adding-methods-to-the-configurator-via-add-directive" title="Permalink to this headline">¶</a></h2>
+<p>Framework extension writers can add arbitrary methods to a
+<a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">Configurator</em></a> by using the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_directive" title="pyramid.config.Configurator.add_directive"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_directive()</span></tt></a> method of the configurator.
+Using <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_directive" title="pyramid.config.Configurator.add_directive"><tt class="xref py py-meth docutils literal"><span class="pre">add_directive()</span></tt></a> makes it possible to
+extend a Pyramid configurator in arbitrary ways, and allows it to perform
+application-specific tasks more succinctly.</p>
+<p>The <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_directive" title="pyramid.config.Configurator.add_directive"><tt class="xref py py-meth docutils literal"><span class="pre">add_directive()</span></tt></a> method accepts two
+positional arguments: a method name and a callable object.  The callable
+object is usually a function that takes the configurator instance as its
+first argument and accepts other arbitrary positional and keyword arguments.
+For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.events</span> <span class="kn">import</span> <span class="n">NewRequest</span>
+<span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+
+<span class="k">def</span> <span class="nf">add_newrequest_subscriber</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">subscriber</span><span class="p">):</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_subscriber</span><span class="p">(</span><span class="n">subscriber</span><span class="p">,</span> <span class="n">NewRequest</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_directive</span><span class="p">(</span><span class="s">&#39;add_newrequest_subscriber&#39;</span><span class="p">,</span>
+                         <span class="n">add_newrequest_subscriber</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Once <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_directive" title="pyramid.config.Configurator.add_directive"><tt class="xref py py-meth docutils literal"><span class="pre">add_directive()</span></tt></a> is called, a user can
+then call the added directive by its given name as if it were a built-in
+method of the Configurator:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">mysubscriber</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">request</span><span class="p">)</span>
+
+<span class="n">config</span><span class="o">.</span><span class="n">add_newrequest_subscriber</span><span class="p">(</span><span class="n">mysubscriber</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>A call to <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_directive" title="pyramid.config.Configurator.add_directive"><tt class="xref py py-meth docutils literal"><span class="pre">add_directive()</span></tt></a> is often
+&quot;hidden&quot; within an <tt class="docutils literal"><span class="pre">includeme</span></tt> function within a &quot;frameworky&quot; package meant
+to be included as per <a class="reference internal" href="advconfig.html#including-configuration"><em>Including Configuration from External Sources</em></a> via
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.include" title="pyramid.config.Configurator.include"><tt class="xref py py-meth docutils literal"><span class="pre">include()</span></tt></a>.  For example, if you put this
+code in a package named <tt class="docutils literal"><span class="pre">pyramid_subscriberhelpers</span></tt>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">includeme</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_directive</span><span class="p">(</span><span class="s">&#39;add_newrequest_subscriber&#39;</span><span class="p">,</span>
+                         <span class="n">add_newrequest_subscriber</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The user of the add-on package <tt class="docutils literal"><span class="pre">pyramid_subscriberhelpers</span></tt> would then be
+able to install it and subsequently do:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">mysubscriber</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">request</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+<span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="s">&#39;pyramid_subscriberhelpers&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_newrequest_subscriber</span><span class="p">(</span><span class="n">mysubscriber</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+<div class="section" id="using-config-action-in-a-directive">
+<h2>Using <tt class="docutils literal"><span class="pre">config.action</span></tt> in a Directive<a class="headerlink" href="#using-config-action-in-a-directive" title="Permalink to this headline">¶</a></h2>
+<p>If a custom directive can't do its work exclusively in terms of existing
+configurator methods (such as
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_subscriber" title="pyramid.config.Configurator.add_subscriber"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_subscriber()</span></tt></a>, as above), the directive
+may need to make use of the <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.action" title="pyramid.config.Configurator.action"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.action()</span></tt></a>
+method.  This method adds an entry to the list of &quot;actions&quot; that Pyramid will
+attempt to process when <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.commit" title="pyramid.config.Configurator.commit"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.commit()</span></tt></a> is called.
+An action is simply a dictionary that includes a <a class="reference internal" href="../glossary.html#term-discriminator"><em class="xref std std-term">discriminator</em></a>,
+possibly a callback function, and possibly other metadata used by Pyramid's
+action system.</p>
+<p>Here's an example directive which uses the &quot;action&quot; method:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">add_jammyjam</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">jammyjam</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">register</span><span class="p">():</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">jammyjam</span> <span class="o">=</span> <span class="n">jammyjam</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">action</span><span class="p">(</span><span class="s">&#39;jammyjam&#39;</span><span class="p">,</span> <span class="n">register</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_directive</span><span class="p">(</span><span class="s">&#39;add_jammyjam&#39;</span><span class="p">,</span> <span class="n">add_jammyjam</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Fancy, but what does it do?  The action method accepts a number of arguments.
+In the above directive named <tt class="docutils literal"><span class="pre">add_jammyjam</span></tt>, we call
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.action" title="pyramid.config.Configurator.action"><tt class="xref py py-meth docutils literal"><span class="pre">action()</span></tt></a> with two arguments: the string
+<tt class="docutils literal"><span class="pre">jammyjam</span></tt> is passed as the first argument named <tt class="docutils literal"><span class="pre">discriminator</span></tt>, and the
+closure function named <tt class="docutils literal"><span class="pre">register</span></tt> is passed as the second argument named
+<tt class="docutils literal"><span class="pre">callable</span></tt>.</p>
+<p>When the <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.action" title="pyramid.config.Configurator.action"><tt class="xref py py-meth docutils literal"><span class="pre">action()</span></tt></a> method is called, it
+appends an action to the list of pending configuration actions.  All pending
+actions with the same discriminator value are potentially in conflict with
+one another (see <a class="reference internal" href="advconfig.html#conflict-detection"><em>Conflict Detection</em></a>).  When the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.commit" title="pyramid.config.Configurator.commit"><tt class="xref py py-meth docutils literal"><span class="pre">commit()</span></tt></a> method of the Configurator is
+called (either explicitly or as the result of calling
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.make_wsgi_app" title="pyramid.config.Configurator.make_wsgi_app"><tt class="xref py py-meth docutils literal"><span class="pre">make_wsgi_app()</span></tt></a>), conflicting actions are
+potentially automatically resolved as per
+<a class="reference internal" href="advconfig.html#automatic-conflict-resolution"><em>Automatic Conflict Resolution</em></a>.  If a conflict cannot be automatically
+resolved, a <tt class="xref py py-exc docutils literal"><span class="pre">pyramid.exceptions.ConfigurationConflictError</span></tt> is raised
+and application startup is prevented.</p>
+<p>In our above example, therefore, if a consumer of our <tt class="docutils literal"><span class="pre">add_jammyjam</span></tt>
+directive did this:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_jammyjam</span><span class="p">(</span><span class="s">&#39;first&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_jammyjam</span><span class="p">(</span><span class="s">&#39;second&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>When the action list was committed resulting from the set of calls above, our
+user's application would not start, because the discriminators of the actions
+generated by the two calls are in direct conflict.  Automatic conflict
+resolution cannot resolve the conflict (because no <tt class="docutils literal"><span class="pre">config.include</span></tt> is
+involved), and the user provided no intermediate
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.commit" title="pyramid.config.Configurator.commit"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.commit()</span></tt></a> call between the calls to
+<tt class="docutils literal"><span class="pre">add_jammyjam</span></tt> to ensure that the successive calls did not conflict with
+each other.</p>
+<p>This demonstrates the purpose of the discriminator argument to the action
+method: it's used to indicate a uniqueness constraint for an action.  Two
+actions with the same discriminator will conflict unless the conflict is
+automatically or manually resolved. A discriminator can be any hashable
+object, but it is generally a string or a tuple.  <em>You use a discriminator to
+declaratively ensure that the user doesn't provide ambiguous configuration
+statements.</em></p>
+<p>But let's imagine that a consumer of <tt class="docutils literal"><span class="pre">add_jammyjam</span></tt> used it in such a way
+that no configuration conflicts are generated.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_jammyjam</span><span class="p">(</span><span class="s">&#39;first&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>What happens now?  When the <tt class="docutils literal"><span class="pre">add_jammyjam</span></tt> method is called, an action is
+appended to the pending actions list.  When the pending configuration actions
+are processed during <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.commit" title="pyramid.config.Configurator.commit"><tt class="xref py py-meth docutils literal"><span class="pre">commit()</span></tt></a>, and no
+conflicts occur, the <em>callable</em> provided as the second argument to the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.action" title="pyramid.config.Configurator.action"><tt class="xref py py-meth docutils literal"><span class="pre">action()</span></tt></a> method within <tt class="docutils literal"><span class="pre">add_jammyjam</span></tt> is
+called with no arguments.  The callable in <tt class="docutils literal"><span class="pre">add_jammyjam</span></tt> is the
+<tt class="docutils literal"><span class="pre">register</span></tt> closure function.  It simply sets the value
+<tt class="docutils literal"><span class="pre">config.registry.jammyjam</span></tt> to whatever the user passed in as the
+<tt class="docutils literal"><span class="pre">jammyjam</span></tt> argument to the <tt class="docutils literal"><span class="pre">add_jammyjam</span></tt> function.  Therefore, the
+result of the user's call to our directive will set the <tt class="docutils literal"><span class="pre">jammyjam</span></tt>
+attribute of the registry to the string <tt class="docutils literal"><span class="pre">first</span></tt>.  <em>A callable is used by a
+directive to defer the result of a user's call to the directive until
+conflict detection has had a chance to do its job</em>.</p>
+<p>Other arguments exist to the <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.action" title="pyramid.config.Configurator.action"><tt class="xref py py-meth docutils literal"><span class="pre">action()</span></tt></a>
+method, including <tt class="docutils literal"><span class="pre">args</span></tt>, <tt class="docutils literal"><span class="pre">kw</span></tt>, <tt class="docutils literal"><span class="pre">order</span></tt>, and <tt class="docutils literal"><span class="pre">introspectables</span></tt>.</p>
+<p><tt class="docutils literal"><span class="pre">args</span></tt> and <tt class="docutils literal"><span class="pre">kw</span></tt> exist as values, which, if passed, will be used as
+arguments to the <tt class="docutils literal"><span class="pre">callable</span></tt> function when it is called back.  For example
+our directive might use them like so:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">add_jammyjam</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">jammyjam</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">register</span><span class="p">(</span><span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">jammyjam_args</span> <span class="o">=</span> <span class="n">arg</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">jammyjam_kw</span> <span class="o">=</span> <span class="n">kw</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">jammyjam</span> <span class="o">=</span> <span class="n">jammyjam</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">action</span><span class="p">(</span><span class="s">&#39;jammyjam&#39;</span><span class="p">,</span> <span class="n">register</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="s">&#39;one&#39;</span><span class="p">,),</span> <span class="n">kw</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;two&#39;</span><span class="p">:</span><span class="s">&#39;two&#39;</span><span class="p">})</span>
+</pre></div>
+</td></tr></table></div>
+<p>In the above example, when this directive is used to generate an action, and
+that action is committed, <tt class="docutils literal"><span class="pre">config.registry.jammyjam_args</span></tt> will be set to
+<tt class="docutils literal"><span class="pre">('one',)</span></tt> and <tt class="docutils literal"><span class="pre">config.registry.jammyjam_kw</span></tt> will be set to
+<tt class="docutils literal"><span class="pre">{'two':'two'}</span></tt>.  <tt class="docutils literal"><span class="pre">args</span></tt> and <tt class="docutils literal"><span class="pre">kw</span></tt> are honestly not very useful when
+your <tt class="docutils literal"><span class="pre">callable</span></tt> is a closure function, because you already usually have
+access to every local in the directive without needing them to be passed
+back.  They can be useful, however, if you don't use a closure as a callable.</p>
+<p><tt class="docutils literal"><span class="pre">order</span></tt> is a crude order control mechanism.  <tt class="docutils literal"><span class="pre">order</span></tt> defaults to the
+integer <tt class="docutils literal"><span class="pre">0</span></tt>; it can be set to any other integer.  All actions that share an
+order will be called before other actions that share a higher order.  This
+makes it possible to write a directive with callable logic that relies on the
+execution of the callable of another directive being done first.  For
+example, Pyramid's <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_view" title="pyramid.config.Configurator.add_view"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_view()</span></tt></a> directive
+registers an action with a higher order than the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_route()</span></tt></a> method.  Due to this, the
+<tt class="docutils literal"><span class="pre">add_view</span></tt> method's callable can assume that, if a <tt class="docutils literal"><span class="pre">route_name</span></tt> was
+passed to it, that a route by this name was already registered by
+<tt class="docutils literal"><span class="pre">add_route</span></tt>, and if such a route has not already been registered, it's a
+configuration error (a view that names a nonexistent route via its
+<tt class="docutils literal"><span class="pre">route_name</span></tt> parameter will never be called).</p>
+<p><tt class="docutils literal"><span class="pre">introspectables</span></tt> is a sequence of <a class="reference internal" href="../glossary.html#term-introspectable"><em class="xref std std-term">introspectable</em></a> objects.  You can
+pass a sequence of introspectables to the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.action" title="pyramid.config.Configurator.action"><tt class="xref py py-meth docutils literal"><span class="pre">action()</span></tt></a> method, which allows you to
+augment Pyramid's configuration introspection system.</p>
+</div>
+<div class="section" id="adding-configuration-introspection">
+<span id="introspection"></span><h2>Adding Configuration Introspection<a class="headerlink" href="#adding-configuration-introspection" title="Permalink to this headline">¶</a></h2>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 1.3.</span></p>
+</div>
+<p>Pyramid provides a configuration introspection system that can be used by
+debugging tools to provide visibility into the configuration of a running
+application.</p>
+<p>All built-in Pyramid directives (such as
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_view" title="pyramid.config.Configurator.add_view"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_view()</span></tt></a> and
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_route()</span></tt></a>) register a set of
+introspectables when called.  For example, when you register a view via
+<tt class="docutils literal"><span class="pre">add_view</span></tt>, the directive registers at least one introspectable: an
+introspectable about the view registration itself, providing human-consumable
+values for the arguments it was passed.  You can later use the introspection
+query system to determine whether a particular view uses a renderer, or
+whether a particular view is limited to a particular request method, or which
+routes a particular view is registered against.  The Pyramid &quot;debug toolbar&quot;
+makes use of the introspection system in various ways to display information
+to Pyramid developers.</p>
+<p>Introspection values are set when a sequence of <a class="reference internal" href="../glossary.html#term-introspectable"><em class="xref std std-term">introspectable</em></a>
+objects is passed to the <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.action" title="pyramid.config.Configurator.action"><tt class="xref py py-meth docutils literal"><span class="pre">action()</span></tt></a> method.
+Here's an example of a directive which uses introspectables:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">add_jammyjam</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">register</span><span class="p">():</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">jammyjam</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="n">intr</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">introspectable</span><span class="p">(</span><span class="n">category_name</span><span class="o">=</span><span class="s">&#39;jammyjams&#39;</span><span class="p">,</span>
+                                 <span class="n">discriminator</span><span class="o">=</span><span class="s">&#39;jammyjam&#39;</span><span class="p">,</span>
+                                 <span class="n">title</span><span class="o">=</span><span class="s">&#39;a jammyjam&#39;</span><span class="p">,</span>
+                                 <span class="n">type_name</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+    <span class="n">intr</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">action</span><span class="p">(</span><span class="s">&#39;jammyjam&#39;</span><span class="p">,</span> <span class="n">register</span><span class="p">,</span> <span class="n">introspectables</span><span class="o">=</span><span class="p">(</span><span class="n">intr</span><span class="p">,))</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_directive</span><span class="p">(</span><span class="s">&#39;add_jammyjam&#39;</span><span class="p">,</span> <span class="n">add_jammyjam</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>If you notice, the above directive uses the <tt class="docutils literal"><span class="pre">introspectable</span></tt> attribute of a
+Configurator (<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.introspectable" title="pyramid.config.Configurator.introspectable"><tt class="xref py py-attr docutils literal"><span class="pre">pyramid.config.Configurator.introspectable</span></tt></a>) to create
+an introspectable object.  The introspectable object's constructor requires
+at least four arguments: the <tt class="docutils literal"><span class="pre">category_name</span></tt>, the <tt class="docutils literal"><span class="pre">discriminator</span></tt>, the
+<tt class="docutils literal"><span class="pre">title</span></tt>, and the <tt class="docutils literal"><span class="pre">type_name</span></tt>.</p>
+<p>The <tt class="docutils literal"><span class="pre">category_name</span></tt> is a string representing the logical category for this
+introspectable.  Usually the category_name is a pluralization of the type of
+object being added via the action.</p>
+<p>The <tt class="docutils literal"><span class="pre">discriminator</span></tt> is a value unique <strong>within the category</strong> (unlike the
+action discriminator, which must be unique within the entire set of actions).
+It is typically a string or tuple representing the values unique to this
+introspectable within the category.  It is used to generate links and as part
+of a relationship-forming target for other introspectables.</p>
+<p>The <tt class="docutils literal"><span class="pre">title</span></tt> is a human-consumable string that can be used by introspection
+system frontends to show a friendly summary of this introspectable.</p>
+<p>The <tt class="docutils literal"><span class="pre">type_name</span></tt> is a value that can be used to subtype this introspectable
+within its category for sorting and presentation purposes.  It can be any
+value.</p>
+<p>An introspectable is also dictionary-like.  It can contain any set of
+key/value pairs, typically related to the arguments passed to its related
+directive.  While the category_name, discriminator, title and type_name are
+<em>metadata</em> about the introspectable, the values provided as key/value pairs
+are the actual data provided by the introspectable.  In the above example, we
+set the <tt class="docutils literal"><span class="pre">value</span></tt> key to the value of the <tt class="docutils literal"><span class="pre">value</span></tt> argument passed to the
+directive.</p>
+<p>Our directive above mutates the introspectable, and passes it in to the
+<tt class="docutils literal"><span class="pre">action</span></tt> method as the first element of a tuple as the value of the
+<tt class="docutils literal"><span class="pre">introspectable</span></tt> keyword argument.  This associates this introspectable
+with the action.  Introspection tools will then display this introspectable
+in their index.</p>
+<div class="section" id="introspectable-relationships">
+<h3>Introspectable Relationships<a class="headerlink" href="#introspectable-relationships" title="Permalink to this headline">¶</a></h3>
+<p>Two introspectables may have relationships between each other.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">add_jammyjam</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">template</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">register</span><span class="p">():</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">jammyjam</span> <span class="o">=</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">template</span><span class="p">)</span>
+    <span class="n">intr</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">introspectable</span><span class="p">(</span><span class="n">category_name</span><span class="o">=</span><span class="s">&#39;jammyjams&#39;</span><span class="p">,</span>
+                                 <span class="n">discriminator</span><span class="o">=</span><span class="s">&#39;jammyjam&#39;</span><span class="p">,</span>
+                                 <span class="n">title</span><span class="o">=</span><span class="s">&#39;a jammyjam&#39;</span><span class="p">,</span>
+                                 <span class="n">type_name</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+    <span class="n">intr</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="n">tmpl_intr</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">introspectable</span><span class="p">(</span><span class="n">category_name</span><span class="o">=</span><span class="s">&#39;jammyjam templates&#39;</span><span class="p">,</span>
+                                      <span class="n">discriminator</span><span class="o">=</span><span class="n">template</span><span class="p">,</span>
+                                      <span class="n">title</span><span class="o">=</span><span class="n">template</span><span class="p">,</span>
+                                      <span class="n">type_name</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+    <span class="n">tmpl_intr</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">template</span>
+    <span class="n">intr</span><span class="o">.</span><span class="n">relate</span><span class="p">(</span><span class="s">&#39;jammyjam templates&#39;</span><span class="p">,</span> <span class="n">template</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">action</span><span class="p">(</span><span class="s">&#39;jammyjam&#39;</span><span class="p">,</span> <span class="n">register</span><span class="p">,</span> <span class="n">introspectables</span><span class="o">=</span><span class="p">(</span><span class="n">intr</span><span class="p">,</span> <span class="n">tmpl_intr</span><span class="p">))</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_directive</span><span class="p">(</span><span class="s">&#39;add_jammyjam&#39;</span><span class="p">,</span> <span class="n">add_jammyjam</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>In the above example, the <tt class="docutils literal"><span class="pre">add_jammyjam</span></tt> directive registers two
+introspectables.  The first is related to the <tt class="docutils literal"><span class="pre">value</span></tt> passed to the
+directive; the second is related to the <tt class="docutils literal"><span class="pre">template</span></tt> passed to the directive.
+If you believe a concept within a directive is important enough to have its
+own introspectable, you can cause the same directive to register more than
+one introspectable, registering one introspectable for the &quot;main idea&quot; and
+another for a related concept.</p>
+<p>The call to <tt class="docutils literal"><span class="pre">intr.relate</span></tt> above
+(<a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.IIntrospectable.relate" title="pyramid.interfaces.IIntrospectable.relate"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.interfaces.IIntrospectable.relate()</span></tt></a>) is passed two arguments:
+a category name and a directive.  The example above effectively indicates
+that the directive wishes to form a relationship between the <tt class="docutils literal"><span class="pre">intr</span></tt>
+introspectable and the <tt class="docutils literal"><span class="pre">tmpl_intr</span></tt> introspectable; the arguments passed to
+<tt class="docutils literal"><span class="pre">relate</span></tt> are the category name and discriminator of the <tt class="docutils literal"><span class="pre">tmpl_intr</span></tt>
+introspectable.</p>
+<p>Relationships need not be made between two introspectables created by the
+same directive.  Instead, a relationship can be formed between an
+introspectable created in one directive and another introspectable created in
+another by calling <tt class="docutils literal"><span class="pre">relate</span></tt> on either side with the other directive's
+category name and discriminator.  An error will be raised at configuration
+commit time if you attempt to relate an introspectable with another
+nonexistent introspectable, however.</p>
+<p>Introspectable relationships will show up in frontend system renderings of
+introspection values.  For example, if a view registration names a route
+name, the introspectable related to the view callable will show a reference
+to the route to which it relates to and vice versa.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Extending Pyramid Configuration</a><ul>
+<li><a class="reference internal" href="#adding-methods-to-the-configurator-via-add-directive">Adding Methods to the Configurator via <tt class="docutils literal"><span class="pre">add_directive</span></tt></a></li>
+<li><a class="reference internal" href="#using-config-action-in-a-directive">Using <tt class="docutils literal"><span class="pre">config.action</span></tt> in a Directive</a></li>
+<li><a class="reference internal" href="#adding-configuration-introspection">Adding Configuration Introspection</a><ul>
+<li><a class="reference internal" href="#introspectable-relationships">Introspectable Relationships</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="advconfig.html"
+                        title="previous chapter">Advanced Configuration</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="scaffolding.html"
+                        title="next chapter">Creating Pyramid Scaffolds</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="scaffolding.html" title="Creating Pyramid Scaffolds"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="advconfig.html" title="Advanced Configuration"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

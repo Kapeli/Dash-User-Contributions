@@ -1,0 +1,251 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.paster &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.paster</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">paste.deploy</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">loadapp</span><span class="p">,</span>
+    <span class="n">appconfig</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.compat</span> <span class="kn">import</span> <span class="n">configparser</span>
+<span class="kn">from</span> <span class="nn">logging.config</span> <span class="kn">import</span> <span class="n">fileConfig</span>
+<span class="kn">from</span> <span class="nn">pyramid.scripting</span> <span class="kn">import</span> <span class="n">prepare</span>
+
+<div class="viewcode-block" id="get_app"><a class="viewcode-back" href="../../api/paster.html#pyramid.paster.get_app">[docs]</a><span class="k">def</span> <span class="nf">get_app</span><span class="p">(</span><span class="n">config_uri</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">loadapp</span><span class="o">=</span><span class="n">loadapp</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Return the WSGI application named ``name`` in the PasteDeploy</span>
+<span class="sd">    config file specified by ``config_uri``.</span>
+
+<span class="sd">    ``options``, if passed, should be a dictionary used as variable assignments</span>
+<span class="sd">    like ``{&#39;http_port&#39;: 8080}``.  This is useful if e.g. ``%(http_port)s`` is</span>
+<span class="sd">    used in the config file.</span>
+
+<span class="sd">    If the ``name`` is None, this will attempt to parse the name from</span>
+<span class="sd">    the ``config_uri`` string expecting the format ``inifile#name``.</span>
+<span class="sd">    If no name is found, the name will default to &quot;main&quot;.&quot;&quot;&quot;</span>
+    <span class="n">path</span><span class="p">,</span> <span class="n">section</span> <span class="o">=</span> <span class="n">_getpathsec</span><span class="p">(</span><span class="n">config_uri</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="n">config_name</span> <span class="o">=</span> <span class="s">&#39;config:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">path</span>
+    <span class="n">here_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+
+    <span class="n">app</span> <span class="o">=</span> <span class="n">loadapp</span><span class="p">(</span>
+        <span class="n">config_name</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">section</span><span class="p">,</span>
+        <span class="n">relative_to</span><span class="o">=</span><span class="n">here_dir</span><span class="p">,</span>
+        <span class="n">global_conf</span><span class="o">=</span><span class="n">options</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">app</span>
+</div>
+<div class="viewcode-block" id="get_appsettings"><a class="viewcode-back" href="../../api/paster.html#pyramid.paster.get_appsettings">[docs]</a><span class="k">def</span> <span class="nf">get_appsettings</span><span class="p">(</span><span class="n">config_uri</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">appconfig</span><span class="o">=</span><span class="n">appconfig</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Return a dictionary representing the key/value pairs in an ``app``</span>
+<span class="sd">    section within the file represented by ``config_uri``.</span>
+
+<span class="sd">    ``options``, if passed, should be a dictionary used as variable assignments</span>
+<span class="sd">    like ``{&#39;http_port&#39;: 8080}``.  This is useful if e.g. ``%(http_port)s`` is</span>
+<span class="sd">    used in the config file.</span>
+
+<span class="sd">    If the ``name`` is None, this will attempt to parse the name from</span>
+<span class="sd">    the ``config_uri`` string expecting the format ``inifile#name``.</span>
+<span class="sd">    If no name is found, the name will default to &quot;main&quot;.&quot;&quot;&quot;</span>
+    <span class="n">path</span><span class="p">,</span> <span class="n">section</span> <span class="o">=</span> <span class="n">_getpathsec</span><span class="p">(</span><span class="n">config_uri</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="n">config_name</span> <span class="o">=</span> <span class="s">&#39;config:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">path</span>
+    <span class="n">here_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">appconfig</span><span class="p">(</span>
+        <span class="n">config_name</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">section</span><span class="p">,</span>
+        <span class="n">relative_to</span><span class="o">=</span><span class="n">here_dir</span><span class="p">,</span>
+        <span class="n">global_conf</span><span class="o">=</span><span class="n">options</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="setup_logging"><a class="viewcode-back" href="../../api/paster.html#pyramid.paster.setup_logging">[docs]</a><span class="k">def</span> <span class="nf">setup_logging</span><span class="p">(</span><span class="n">config_uri</span><span class="p">,</span> <span class="n">fileConfig</span><span class="o">=</span><span class="n">fileConfig</span><span class="p">,</span>
+                  <span class="n">configparser</span><span class="o">=</span><span class="n">configparser</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Set up logging via the logging module&#39;s fileConfig function with the</span>
+<span class="sd">    filename specified via ``config_uri`` (a string in the form</span>
+<span class="sd">    ``filename#sectionname``).</span>
+
+<span class="sd">    ConfigParser defaults are specified for the special ``__file__``</span>
+<span class="sd">    and ``here`` variables, similar to PasteDeploy config loading.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">path</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">_getpathsec</span><span class="p">(</span><span class="n">config_uri</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">configparser</span><span class="o">.</span><span class="n">ConfigParser</span><span class="p">()</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">read</span><span class="p">([</span><span class="n">path</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">parser</span><span class="o">.</span><span class="n">has_section</span><span class="p">(</span><span class="s">&#39;loggers&#39;</span><span class="p">):</span>
+        <span class="n">config_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">fileConfig</span><span class="p">(</span>
+            <span class="n">config_file</span><span class="p">,</span>
+            <span class="nb">dict</span><span class="p">(</span><span class="n">__file__</span><span class="o">=</span><span class="n">config_file</span><span class="p">,</span> <span class="n">here</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">config_file</span><span class="p">))</span>
+            <span class="p">)</span>
+</div>
+<span class="k">def</span> <span class="nf">_getpathsec</span><span class="p">(</span><span class="n">config_uri</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+    <span class="k">if</span> <span class="s">&#39;#&#39;</span> <span class="ow">in</span> <span class="n">config_uri</span><span class="p">:</span>
+        <span class="n">path</span><span class="p">,</span> <span class="n">section</span> <span class="o">=</span> <span class="n">config_uri</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;#&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">path</span><span class="p">,</span> <span class="n">section</span> <span class="o">=</span> <span class="n">config_uri</span><span class="p">,</span> <span class="s">&#39;main&#39;</span>
+    <span class="k">if</span> <span class="n">name</span><span class="p">:</span>
+        <span class="n">section</span> <span class="o">=</span> <span class="n">name</span>
+    <span class="k">return</span> <span class="n">path</span><span class="p">,</span> <span class="n">section</span>
+
+<div class="viewcode-block" id="bootstrap"><a class="viewcode-back" href="../../api/paster.html#pyramid.paster.bootstrap">[docs]</a><span class="k">def</span> <span class="nf">bootstrap</span><span class="p">(</span><span class="n">config_uri</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Load a WSGI application from the PasteDeploy config file specified</span>
+<span class="sd">    by ``config_uri``. The environment will be configured as if it is</span>
+<span class="sd">    currently serving ``request``, leaving a natural environment in place</span>
+<span class="sd">    to write scripts that can generate URLs and utilize renderers.</span>
+
+<span class="sd">    This function returns a dictionary with ``app``, ``root``, ``closer``,</span>
+<span class="sd">    ``request``, and ``registry`` keys.  ``app`` is the WSGI app loaded</span>
+<span class="sd">    (based on the ``config_uri``), ``root`` is the traversal root resource</span>
+<span class="sd">    of the Pyramid application, and ``closer`` is a parameterless callback</span>
+<span class="sd">    that may be called when your script is complete (it pops a threadlocal</span>
+<span class="sd">    stack).</span>
+
+<span class="sd">    .. note::</span>
+
+<span class="sd">       Most operations within :app:`Pyramid` expect to be invoked within the</span>
+<span class="sd">       context of a WSGI request, thus it&#39;s important when loading your</span>
+<span class="sd">       application to anchor it when executing scripts and other code that is</span>
+<span class="sd">       not normally invoked during active WSGI requests.</span>
+
+<span class="sd">    .. note::</span>
+
+<span class="sd">       For a complex config file containing multiple :app:`Pyramid`</span>
+<span class="sd">       applications, this function will setup the environment under the context</span>
+<span class="sd">       of the last-loaded :app:`Pyramid` application. You may load a specific</span>
+<span class="sd">       application yourself by using the lower-level functions</span>
+<span class="sd">       :meth:`pyramid.paster.get_app` and :meth:`pyramid.scripting.prepare` in</span>
+<span class="sd">       conjunction with :attr:`pyramid.config.global_registries`.</span>
+
+<span class="sd">    ``config_uri`` -- specifies the PasteDeploy config file to use for the</span>
+<span class="sd">    interactive shell. The format is ``inifile#name``. If the name is left</span>
+<span class="sd">    off, ``main`` will be assumed.</span>
+
+<span class="sd">    ``request`` -- specified to anchor the script to a given set of WSGI</span>
+<span class="sd">    parameters. For example, most people would want to specify the host,</span>
+<span class="sd">    scheme and port such that their script will generate URLs in relation</span>
+<span class="sd">    to those parameters. A request with default parameters is constructed</span>
+<span class="sd">    for you if none is provided. You can mutate the request&#39;s ``environ``</span>
+<span class="sd">    later to setup a specific host/port/scheme/etc.</span>
+
+<span class="sd">    ``options`` Is passed to get_app for use as variable assignments like </span>
+<span class="sd">    {&#39;http_port&#39;: 8080} and then use %(http_port)s in the</span>
+<span class="sd">    config file.</span>
+
+<span class="sd">    See :ref:`writing_a_script` for more information about how to use this</span>
+<span class="sd">    function.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">get_app</span><span class="p">(</span><span class="n">config_uri</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">options</span><span class="p">)</span>
+    <span class="n">env</span> <span class="o">=</span> <span class="n">prepare</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="n">env</span><span class="p">[</span><span class="s">&#39;app&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">app</span>
+    <span class="k">return</span> <span class="n">env</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>
