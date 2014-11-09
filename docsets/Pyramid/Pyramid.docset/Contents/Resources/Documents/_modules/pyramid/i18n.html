@@ -1,0 +1,503 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.i18n &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.i18n</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">gettext</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">translationstring</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Translator</span><span class="p">,</span>
+    <span class="n">Pluralizer</span><span class="p">,</span>
+    <span class="n">TranslationString</span><span class="p">,</span> <span class="c"># API</span>
+    <span class="n">TranslationStringFactory</span><span class="p">,</span> <span class="c"># API</span>
+    <span class="p">)</span>
+
+<span class="n">TranslationString</span> <span class="o">=</span> <span class="n">TranslationString</span> <span class="c"># PyFlakes</span>
+<span class="n">TranslationStringFactory</span> <span class="o">=</span> <span class="n">TranslationStringFactory</span> <span class="c"># PyFlakes</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.compat</span> <span class="kn">import</span> <span class="n">PY3</span>
+<span class="kn">from</span> <span class="nn">pyramid.decorator</span> <span class="kn">import</span> <span class="n">reify</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ILocalizer</span><span class="p">,</span>
+    <span class="n">ITranslationDirectories</span><span class="p">,</span>
+    <span class="n">ILocaleNegotiator</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.threadlocal</span> <span class="kn">import</span> <span class="n">get_current_registry</span>
+
+<div class="viewcode-block" id="Localizer"><a class="viewcode-back" href="../../api/i18n.html#pyramid.i18n.Localizer">[docs]</a><span class="k">class</span> <span class="nc">Localizer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    An object providing translation and pluralizations related to</span>
+<span class="sd">    the current request&#39;s locale name.  A</span>
+<span class="sd">    :class:`pyramid.i18n.Localizer` object is created using the</span>
+<span class="sd">    :func:`pyramid.i18n.get_localizer` function.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">locale_name</span><span class="p">,</span> <span class="n">translations</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">locale_name</span> <span class="o">=</span> <span class="n">locale_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">translations</span> <span class="o">=</span> <span class="n">translations</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pluralizer</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">translator</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="Localizer.translate"><a class="viewcode-back" href="../../api/i18n.html#pyramid.i18n.Localizer.translate">[docs]</a>    <span class="k">def</span> <span class="nf">translate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tstring</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">mapping</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Translate a :term:`translation string` to the current language</span>
+<span class="sd">        and interpolate any *replacement markers* in the result.  The</span>
+<span class="sd">        ``translate`` method accepts three arguments: ``tstring``</span>
+<span class="sd">        (required), ``domain`` (optional) and ``mapping`` (optional).</span>
+<span class="sd">        When called, it will translate the ``tstring`` translation</span>
+<span class="sd">        string to a ``unicode`` object using the current locale.  If</span>
+<span class="sd">        the current locale could not be determined, the result of</span>
+<span class="sd">        interpolation of the default value is returned.  The optional</span>
+<span class="sd">        ``domain`` argument can be used to specify or override the</span>
+<span class="sd">        domain of the ``tstring`` (useful when ``tstring`` is a normal</span>
+<span class="sd">        string rather than a translation string).  The optional</span>
+<span class="sd">        ``mapping`` argument can specify or override the ``tstring``</span>
+<span class="sd">        interpolation mapping, useful when the ``tstring`` argument is</span>
+<span class="sd">        a simple string instead of a translation string.</span>
+
+<span class="sd">        Example::</span>
+
+<span class="sd">           from pyramid.18n import TranslationString</span>
+<span class="sd">           ts = TranslationString(&#39;Add ${item}&#39;, domain=&#39;mypackage&#39;,</span>
+<span class="sd">                                  mapping={&#39;item&#39;:&#39;Item&#39;})</span>
+<span class="sd">           translated = localizer.translate(ts)</span>
+
+<span class="sd">        Example::</span>
+
+<span class="sd">           translated = localizer.translate(&#39;Add ${item}&#39;, domain=&#39;mypackage&#39;,</span>
+<span class="sd">                                            mapping={&#39;item&#39;:&#39;Item&#39;})</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">translator</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">translator</span> <span class="o">=</span> <span class="n">Translator</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">translations</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">translator</span><span class="p">(</span><span class="n">tstring</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="n">domain</span><span class="p">,</span> <span class="n">mapping</span><span class="o">=</span><span class="n">mapping</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Localizer.pluralize"><a class="viewcode-back" href="../../api/i18n.html#pyramid.i18n.Localizer.pluralize">[docs]</a>    <span class="k">def</span> <span class="nf">pluralize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">singular</span><span class="p">,</span> <span class="n">plural</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">mapping</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a Unicode string translation by using two</span>
+<span class="sd">        :term:`message identifier` objects as a singular/plural pair</span>
+<span class="sd">        and an ``n`` value representing the number that appears in the</span>
+<span class="sd">        message using gettext plural forms support.  The ``singular``</span>
+<span class="sd">        and ``plural`` objects should be unicode strings. There is no</span>
+<span class="sd">        reason to use translation string objects as arguments as all</span>
+<span class="sd">        metadata is ignored.</span>
+<span class="sd">        </span>
+<span class="sd">        ``n`` represents the number of elements. ``domain`` is the</span>
+<span class="sd">        translation domain to use to do the pluralization, and ``mapping``</span>
+<span class="sd">        is the interpolation mapping that should be used on the result. If</span>
+<span class="sd">        the ``domain`` is not supplied, a default domain is used (usually</span>
+<span class="sd">        ``messages``).</span>
+<span class="sd">        </span>
+<span class="sd">        Example::</span>
+
+<span class="sd">           num = 1</span>
+<span class="sd">           translated = localizer.pluralize(&#39;Add ${num} item&#39;,</span>
+<span class="sd">                                            &#39;Add ${num} items&#39;,</span>
+<span class="sd">                                            num,</span>
+<span class="sd">                                            mapping={&#39;num&#39;:num})</span>
+
+<span class="sd">        If using the gettext plural support, which is required for</span>
+<span class="sd">        languages that have pluralisation rules other than n != 1, the</span>
+<span class="sd">        ``singular`` argument must be the message_id defined in the</span>
+<span class="sd">        translation file. The plural argument is not used in this case.</span>
+
+<span class="sd">        Example::</span>
+
+<span class="sd">           num = 1</span>
+<span class="sd">           translated = localizer.pluralize(&#39;item_plural&#39;,</span>
+<span class="sd">                                            &#39;&#39;,</span>
+<span class="sd">                                            num,</span>
+<span class="sd">                                            mapping={&#39;num&#39;:num})</span>
+
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pluralizer</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pluralizer</span> <span class="o">=</span> <span class="n">Pluralizer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">translations</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pluralizer</span><span class="p">(</span><span class="n">singular</span><span class="p">,</span> <span class="n">plural</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="n">domain</span><span class="p">,</span>
+                               <span class="n">mapping</span><span class="o">=</span><span class="n">mapping</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="default_locale_negotiator"><a class="viewcode-back" href="../../api/i18n.html#pyramid.i18n.default_locale_negotiator">[docs]</a><span class="k">def</span> <span class="nf">default_locale_negotiator</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; The default :term:`locale negotiator`.  Returns a locale name</span>
+<span class="sd">    or ``None``.</span>
+
+<span class="sd">    - First, the negotiator looks for the ``_LOCALE_`` attribute of</span>
+<span class="sd">      the request object (possibly set by a view or a listener for an</span>
+<span class="sd">      :term:`event`). If the attribute exists and it is not ``None``,</span>
+<span class="sd">      its value will be used.</span>
+<span class="sd">  </span>
+<span class="sd">    - Then it looks for the ``request.params[&#39;_LOCALE_&#39;]`` value.</span>
+
+<span class="sd">    - Then it looks for the ``request.cookies[&#39;_LOCALE_&#39;]`` value.</span>
+
+<span class="sd">    - Finally, the negotiator returns ``None`` if the locale could not</span>
+<span class="sd">      be determined via any of the previous checks (when a locale</span>
+<span class="sd">      negotiator returns ``None``, it signifies that the</span>
+<span class="sd">      :term:`default locale name` should be used.)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;_LOCALE_&#39;</span>
+    <span class="n">locale_name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">locale_name</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">locale_name</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">locale_name</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">locale_name</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">cookies</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">locale_name</span>
+</div>
+<div class="viewcode-block" id="negotiate_locale_name"><a class="viewcode-back" href="../../api/i18n.html#pyramid.i18n.negotiate_locale_name">[docs]</a><span class="k">def</span> <span class="nf">negotiate_locale_name</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Negotiate and return the :term:`locale name` associated with</span>
+<span class="sd">    the current request.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">registry</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">registry</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="n">registry</span> <span class="o">=</span> <span class="n">get_current_registry</span><span class="p">()</span>
+    <span class="n">negotiator</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">ILocaleNegotiator</span><span class="p">,</span>
+                                       <span class="n">default</span><span class="o">=</span><span class="n">default_locale_negotiator</span><span class="p">)</span>
+    <span class="n">locale_name</span> <span class="o">=</span> <span class="n">negotiator</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">locale_name</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">settings</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">settings</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="n">locale_name</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;default_locale_name&#39;</span><span class="p">,</span> <span class="s">&#39;en&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">locale_name</span>
+</div>
+<div class="viewcode-block" id="get_locale_name"><a class="viewcode-back" href="../../api/i18n.html#pyramid.i18n.get_locale_name">[docs]</a><span class="k">def</span> <span class="nf">get_locale_name</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    .. deprecated:: 1.5</span>
+<span class="sd">        Use :attr:`pyramid.request.Request.locale_name` directly instead.</span>
+<span class="sd">        Return the :term:`locale name` associated with the current request.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">locale_name</span>
+</div>
+<div class="viewcode-block" id="make_localizer"><a class="viewcode-back" href="../../api/i18n.html#pyramid.i18n.make_localizer">[docs]</a><span class="k">def</span> <span class="nf">make_localizer</span><span class="p">(</span><span class="n">current_locale_name</span><span class="p">,</span> <span class="n">translation_directories</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Create a :class:`pyramid.i18n.Localizer` object</span>
+<span class="sd">    corresponding to the provided locale name from the </span>
+<span class="sd">    translations found in the list of translation directories.&quot;&quot;&quot;</span>
+    <span class="n">translations</span> <span class="o">=</span> <span class="n">Translations</span><span class="p">()</span>
+    <span class="n">translations</span><span class="o">.</span><span class="n">_catalog</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="n">locales_to_try</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="s">&#39;_&#39;</span> <span class="ow">in</span> <span class="n">current_locale_name</span><span class="p">:</span>
+        <span class="n">locales_to_try</span> <span class="o">=</span> <span class="p">[</span><span class="n">current_locale_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]]</span>
+    <span class="n">locales_to_try</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current_locale_name</span><span class="p">)</span>
+
+    <span class="c"># intent: order locales left to right in least specific to most specific,</span>
+    <span class="c"># e.g. [&#39;de&#39;, &#39;de_DE&#39;].  This services the intent of creating a</span>
+    <span class="c"># translations object that returns a &quot;more specific&quot; translation for a</span>
+    <span class="c"># region, but will fall back to a &quot;less specific&quot; translation for the</span>
+    <span class="c"># locale if necessary.  Ordering from least specific to most specific</span>
+    <span class="c"># allows us to call translations.add in the below loop to get this</span>
+    <span class="c"># behavior.</span>
+
+    <span class="k">for</span> <span class="n">tdir</span> <span class="ow">in</span> <span class="n">translation_directories</span><span class="p">:</span>
+        <span class="n">locale_dirs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">lname</span> <span class="ow">in</span> <span class="n">locales_to_try</span><span class="p">:</span>
+            <span class="n">ldir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tdir</span><span class="p">,</span> <span class="n">lname</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">ldir</span><span class="p">):</span>
+                <span class="n">locale_dirs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ldir</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">locale_dir</span> <span class="ow">in</span> <span class="n">locale_dirs</span><span class="p">:</span>
+            <span class="n">messages_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">locale_dir</span><span class="p">,</span> <span class="s">&#39;LC_MESSAGES&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">messages_dir</span><span class="p">)):</span>
+                <span class="k">continue</span>
+            <span class="k">for</span> <span class="n">mofile</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">messages_dir</span><span class="p">):</span>
+                <span class="n">mopath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">messages_dir</span><span class="p">,</span>
+                                                       <span class="n">mofile</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">mofile</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;.mo&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">mopath</span><span class="p">):</span>
+                    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">mopath</span><span class="p">,</span> <span class="s">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">mofp</span><span class="p">:</span>
+                        <span class="n">domain</span> <span class="o">=</span> <span class="n">mofile</span><span class="p">[:</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>
+                        <span class="n">dtrans</span> <span class="o">=</span> <span class="n">Translations</span><span class="p">(</span><span class="n">mofp</span><span class="p">,</span> <span class="n">domain</span><span class="p">)</span>
+                        <span class="n">translations</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">dtrans</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Localizer</span><span class="p">(</span><span class="n">locale_name</span><span class="o">=</span><span class="n">current_locale_name</span><span class="p">,</span>
+                          <span class="n">translations</span><span class="o">=</span><span class="n">translations</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="get_localizer"><a class="viewcode-back" href="../../api/i18n.html#pyramid.i18n.get_localizer">[docs]</a><span class="k">def</span> <span class="nf">get_localizer</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    .. deprecated:: 1.5</span>
+<span class="sd">        Use the :attr:`pyramid.request.Request.localizer` attribute directly</span>
+<span class="sd">        instead.  Retrieve a :class:`pyramid.i18n.Localizer` object</span>
+<span class="sd">        corresponding to the current request&#39;s locale name.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">localizer</span>
+</div>
+<span class="k">class</span> <span class="nc">Translations</span><span class="p">(</span><span class="n">gettext</span><span class="o">.</span><span class="n">GNUTranslations</span><span class="p">,</span> <span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An extended translation catalog class (ripped off from Babel) &quot;&quot;&quot;</span>
+
+    <span class="n">DEFAULT_DOMAIN</span> <span class="o">=</span> <span class="s">&#39;messages&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fileobj</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="n">DEFAULT_DOMAIN</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize the translations catalog.</span>
+
+<span class="sd">        :param fileobj: the file-like object the translation should be read</span>
+<span class="sd">                        from</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># germanic plural by default; self.plural will be overwritten by</span>
+        <span class="c"># GNUTranslations._parse (called as a side effect if fileobj is</span>
+        <span class="c"># passed to GNUTranslations.__init__) with a &quot;real&quot; self.plural for</span>
+        <span class="c"># this domain; see https://github.com/Pylons/pyramid/issues/235</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plural</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">n</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">)</span> 
+        <span class="n">gettext</span><span class="o">.</span><span class="n">GNUTranslations</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fp</span><span class="o">=</span><span class="n">fileobj</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="p">[</span><span class="nb">getattr</span><span class="p">(</span><span class="n">fileobj</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">domain</span> <span class="o">=</span> <span class="n">domain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_domains</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">dirname</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">locales</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="n">DEFAULT_DOMAIN</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Load translations from the given directory.</span>
+
+<span class="sd">        :param dirname: the directory containing the ``MO`` files</span>
+<span class="sd">        :param locales: the list of locales in order of preference (items in</span>
+<span class="sd">                        this list can be either `Locale` objects or locale</span>
+<span class="sd">                        strings)</span>
+<span class="sd">        :param domain: the message domain</span>
+<span class="sd">        :return: the loaded catalog, or a ``NullTranslations`` instance if no</span>
+<span class="sd">                 matching translations were found</span>
+<span class="sd">        :rtype: `Translations`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">locales</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">locales</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+                <span class="n">locales</span> <span class="o">=</span> <span class="p">[</span><span class="n">locales</span><span class="p">]</span>
+            <span class="n">locales</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">locales</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">domain</span><span class="p">:</span>
+            <span class="n">domain</span> <span class="o">=</span> <span class="n">cls</span><span class="o">.</span><span class="n">DEFAULT_DOMAIN</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">gettext</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="n">dirname</span><span class="p">,</span> <span class="n">locales</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">filename</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">gettext</span><span class="o">.</span><span class="n">NullTranslations</span><span class="p">()</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fp</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">cls</span><span class="p">(</span><span class="n">fileobj</span><span class="o">=</span><span class="n">fp</span><span class="p">,</span> <span class="n">domain</span><span class="o">=</span><span class="n">domain</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;&lt;</span><span class="si">%s</span><span class="s">: &quot;</span><span class="si">%s</span><span class="s">&quot;&gt;&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
+                               <span class="bp">self</span><span class="o">.</span><span class="n">_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;project-id-version&#39;</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">translations</span><span class="p">,</span> <span class="n">merge</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add the given translations to the catalog.</span>
+
+<span class="sd">        If the domain of the translations is different than that of the</span>
+<span class="sd">        current catalog, they are added as a catalog that is only accessible</span>
+<span class="sd">        by the various ``d*gettext`` functions.</span>
+
+<span class="sd">        :param translations: the `Translations` instance with the messages to</span>
+<span class="sd">                             add</span>
+<span class="sd">        :param merge: whether translations for message domains that have</span>
+<span class="sd">                      already been added should be merged with the existing</span>
+<span class="sd">                      translations</span>
+<span class="sd">        :return: the `Translations` instance (``self``) so that `merge` calls</span>
+<span class="sd">                 can be easily chained</span>
+<span class="sd">        :rtype: `Translations`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">domain</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">translations</span><span class="p">,</span> <span class="s">&#39;domain&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">DEFAULT_DOMAIN</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">merge</span> <span class="ow">and</span> <span class="n">domain</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">domain</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">translations</span><span class="p">)</span>
+
+        <span class="n">existing</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_domains</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">domain</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">merge</span> <span class="ow">and</span> <span class="n">existing</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">existing</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">translations</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">translations</span><span class="o">.</span><span class="n">add_fallback</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_domains</span><span class="p">[</span><span class="n">domain</span><span class="p">]</span> <span class="o">=</span> <span class="n">translations</span>
+
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">merge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">translations</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Merge the given translations into the catalog.</span>
+
+<span class="sd">        Message translations in the specified catalog override any messages</span>
+<span class="sd">        with the same identifier in the existing catalog.</span>
+
+<span class="sd">        :param translations: the `Translations` instance with the messages to</span>
+<span class="sd">                             merge</span>
+<span class="sd">        :return: the `Translations` instance (``self``) so that `merge` calls</span>
+<span class="sd">                 can be easily chained</span>
+<span class="sd">        :rtype: `Translations`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">translations</span><span class="p">,</span> <span class="n">gettext</span><span class="o">.</span><span class="n">GNUTranslations</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_catalog</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">translations</span><span class="o">.</span><span class="n">_catalog</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">translations</span><span class="p">,</span> <span class="n">Translations</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">translations</span><span class="o">.</span><span class="n">files</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">dgettext</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Like ``gettext()``, but look the message up in the specified</span>
+<span class="sd">        domain.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_domains</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">gettext</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">ldgettext</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Like ``lgettext()``, but look the message up in the specified </span>
+<span class="sd">        domain.</span>
+<span class="sd">        &quot;&quot;&quot;</span> 
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_domains</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">lgettext</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">dugettext</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Like ``ugettext()``, but look the message up in the specified</span>
+<span class="sd">        domain.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">PY3</span><span class="p">:</span> <span class="c"># pragma: no cover</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_domains</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">gettext</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c"># pragma: no cover</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_domains</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">ugettext</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">dngettext</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">singular</span><span class="p">,</span> <span class="n">plural</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Like ``ngettext()``, but look the message up in the specified</span>
+<span class="sd">        domain.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_domains</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">ngettext</span><span class="p">(</span><span class="n">singular</span><span class="p">,</span> <span class="n">plural</span><span class="p">,</span> <span class="n">num</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">ldngettext</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">singular</span><span class="p">,</span> <span class="n">plural</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Like ``lngettext()``, but look the message up in the specified</span>
+<span class="sd">        domain.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_domains</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">lngettext</span><span class="p">(</span><span class="n">singular</span><span class="p">,</span> <span class="n">plural</span><span class="p">,</span> <span class="n">num</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">dungettext</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">domain</span><span class="p">,</span> <span class="n">singular</span><span class="p">,</span> <span class="n">plural</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Like ``ungettext()`` but look the message up in the specified</span>
+<span class="sd">        domain.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">PY3</span><span class="p">:</span> <span class="c"># pragma: no cover</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_domains</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">ngettext</span><span class="p">(</span>
+                <span class="n">singular</span><span class="p">,</span> <span class="n">plural</span><span class="p">,</span> <span class="n">num</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c"># pragma: no cover</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_domains</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">domain</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">ungettext</span><span class="p">(</span>
+                <span class="n">singular</span><span class="p">,</span> <span class="n">plural</span><span class="p">,</span> <span class="n">num</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">LocalizerRequestMixin</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="nd">@reify</span>
+    <span class="k">def</span> <span class="nf">localizer</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Convenience property to return a localizer &quot;&quot;&quot;</span>
+        <span class="n">registry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span>
+
+        <span class="n">current_locale_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">locale_name</span>
+        <span class="n">localizer</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">ILocalizer</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">current_locale_name</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">localizer</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># no localizer utility registered yet</span>
+            <span class="n">tdirs</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">ITranslationDirectories</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="p">[])</span>
+            <span class="n">localizer</span> <span class="o">=</span> <span class="n">make_localizer</span><span class="p">(</span><span class="n">current_locale_name</span><span class="p">,</span> <span class="n">tdirs</span><span class="p">)</span>
+
+            <span class="n">registry</span><span class="o">.</span><span class="n">registerUtility</span><span class="p">(</span><span class="n">localizer</span><span class="p">,</span> <span class="n">ILocalizer</span><span class="p">,</span>
+                                     <span class="n">name</span><span class="o">=</span><span class="n">current_locale_name</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">localizer</span>
+
+    <span class="nd">@reify</span>
+    <span class="k">def</span> <span class="nf">locale_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">locale_name</span> <span class="o">=</span> <span class="n">negotiate_locale_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">locale_name</span>
+        
+    
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

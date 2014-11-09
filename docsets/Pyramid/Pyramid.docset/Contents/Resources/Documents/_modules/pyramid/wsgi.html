@@ -1,0 +1,202 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.wsgi &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.wsgi</h1><div class="highlight"><pre>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">wraps</span>
+<span class="kn">from</span> <span class="nn">pyramid.request</span> <span class="kn">import</span> <span class="n">call_app_with_subpath_as_path_info</span>
+
+<div class="viewcode-block" id="wsgiapp"><a class="viewcode-back" href="../../api/wsgi.html#pyramid.wsgi.wsgiapp">[docs]</a><span class="k">def</span> <span class="nf">wsgiapp</span><span class="p">(</span><span class="n">wrapped</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Decorator to turn a WSGI application into a :app:`Pyramid`</span>
+<span class="sd">    :term:`view callable`.  This decorator differs from the</span>
+<span class="sd">    :func:`pyramid.wsgi.wsgiapp2` decorator inasmuch as fixups of</span>
+<span class="sd">    ``PATH_INFO`` and ``SCRIPT_NAME`` within the WSGI environment *are</span>
+<span class="sd">    not* performed before the application is invoked.</span>
+
+<span class="sd">    E.g., the following in a ``views.py`` module::</span>
+
+<span class="sd">      @wsgiapp</span>
+<span class="sd">      def hello_world(environ, start_response):</span>
+<span class="sd">          body = &#39;Hello world&#39;</span>
+<span class="sd">          start_response(&#39;200 OK&#39;, [ (&#39;Content-Type&#39;, &#39;text/plain&#39;),</span>
+<span class="sd">                                     (&#39;Content-Length&#39;, len(body)) ] )</span>
+<span class="sd">          return [body]</span>
+
+<span class="sd">    Allows the following call to</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.add_view`::</span>
+
+<span class="sd">        from views import hello_world</span>
+<span class="sd">        config.add_view(hello_world, name=&#39;hello_world.txt&#39;)</span>
+
+<span class="sd">    The ``wsgiapp`` decorator will convert the result of the WSGI</span>
+<span class="sd">    application to a :term:`Response` and return it to</span>
+<span class="sd">    :app:`Pyramid` as if the WSGI app were a :app:`Pyramid`</span>
+<span class="sd">    view.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">wrapped</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;wrapped can not be None&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">get_response</span><span class="p">(</span><span class="n">wrapped</span><span class="p">)</span>
+
+    <span class="c"># Support case where wrapped is a callable object instance</span>
+    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">wrapped</span><span class="p">,</span> <span class="s">&#39;__name__&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">wraps</span><span class="p">(</span><span class="n">wrapped</span><span class="p">)(</span><span class="n">decorator</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">wraps</span><span class="p">(</span><span class="n">wrapped</span><span class="p">,</span> <span class="p">(</span><span class="s">&#39;__module__&#39;</span><span class="p">,</span> <span class="s">&#39;__doc__&#39;</span><span class="p">))(</span><span class="n">decorator</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="wsgiapp2"><a class="viewcode-back" href="../../api/wsgi.html#pyramid.wsgi.wsgiapp2">[docs]</a><span class="k">def</span> <span class="nf">wsgiapp2</span><span class="p">(</span><span class="n">wrapped</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Decorator to turn a WSGI application into a :app:`Pyramid`</span>
+<span class="sd">    view callable.  This decorator differs from the</span>
+<span class="sd">    :func:`pyramid.wsgi.wsgiapp` decorator inasmuch as fixups of</span>
+<span class="sd">    ``PATH_INFO`` and ``SCRIPT_NAME`` within the WSGI environment</span>
+<span class="sd">    *are* performed before the application is invoked.</span>
+
+<span class="sd">    E.g. the following in a ``views.py`` module::</span>
+
+<span class="sd">      @wsgiapp2</span>
+<span class="sd">      def hello_world(environ, start_response):</span>
+<span class="sd">          body = &#39;Hello world&#39;</span>
+<span class="sd">          start_response(&#39;200 OK&#39;, [ (&#39;Content-Type&#39;, &#39;text/plain&#39;),</span>
+<span class="sd">                                     (&#39;Content-Length&#39;, len(body)) ] )</span>
+<span class="sd">          return [body]</span>
+
+<span class="sd">    Allows the following call to</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.add_view`::</span>
+
+<span class="sd">        from views import hello_world</span>
+<span class="sd">        config.add_view(hello_world, name=&#39;hello_world.txt&#39;)</span>
+
+<span class="sd">    The ``wsgiapp2`` decorator will convert the result of the WSGI</span>
+<span class="sd">    application to a Response and return it to :app:`Pyramid` as if the WSGI</span>
+<span class="sd">    app were a :app:`Pyramid` view.  The ``SCRIPT_NAME`` and ``PATH_INFO``</span>
+<span class="sd">    values present in the WSGI environment are fixed up before the</span>
+<span class="sd">    application is invoked.  In particular, a new WSGI environment is</span>
+<span class="sd">    generated, and the :term:`subpath` of the request passed to ``wsgiapp2``</span>
+<span class="sd">    is used as the new request&#39;s ``PATH_INFO`` and everything preceding the</span>
+<span class="sd">    subpath is used as the ``SCRIPT_NAME``.  The new environment is passed to</span>
+<span class="sd">    the downstream WSGI application.&quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">wrapped</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;wrapped can not be None&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">call_app_with_subpath_as_path_info</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">wrapped</span><span class="p">)</span>
+
+    <span class="c"># Support case where wrapped is a callable object instance</span>
+    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">wrapped</span><span class="p">,</span> <span class="s">&#39;__name__&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">wraps</span><span class="p">(</span><span class="n">wrapped</span><span class="p">)(</span><span class="n">decorator</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">wraps</span><span class="p">(</span><span class="n">wrapped</span><span class="p">,</span> <span class="p">(</span><span class="s">&#39;__module__&#39;</span><span class="p">,</span> <span class="s">&#39;__doc__&#39;</span><span class="p">))(</span><span class="n">decorator</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

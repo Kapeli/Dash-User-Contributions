@@ -1,0 +1,1066 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.url &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.url</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Utility functions for dealing with URLs in pyramid &quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">repoze.lru</span> <span class="kn">import</span> <span class="n">lru_cache</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">IResourceURL</span><span class="p">,</span>
+    <span class="n">IRoutesMapper</span><span class="p">,</span>
+    <span class="n">IStaticURLInfo</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.compat</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">bytes_</span><span class="p">,</span>
+    <span class="n">string_types</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="kn">from</span> <span class="nn">pyramid.encode</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">url_quote</span><span class="p">,</span>
+    <span class="n">urlencode</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">pyramid.path</span> <span class="kn">import</span> <span class="n">caller_package</span>
+<span class="kn">from</span> <span class="nn">pyramid.threadlocal</span> <span class="kn">import</span> <span class="n">get_current_registry</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.traversal</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ResourceURL</span><span class="p">,</span>
+    <span class="n">quote_path_segment</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="n">PATH_SAFE</span> <span class="o">=</span> <span class="s">&#39;/:@&amp;+$,&#39;</span> <span class="c"># from webob</span>
+<span class="n">QUERY_SAFE</span> <span class="o">=</span> <span class="s">&#39;/?:@!$&amp;</span><span class="se">\&#39;</span><span class="s">()*+,;=&#39;</span> <span class="c"># RFC 3986</span>
+<span class="n">ANCHOR_SAFE</span> <span class="o">=</span> <span class="n">QUERY_SAFE</span>
+
+<span class="k">def</span> <span class="nf">parse_url_overrides</span><span class="p">(</span><span class="n">kw</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Parse special arguments passed when generating urls.</span>
+
+<span class="sd">    The supplied dictionary is mutated, popping arguments as necessary.</span>
+<span class="sd">    Returns a 6-tuple of the format ``(app_url, scheme, host, port,</span>
+<span class="sd">    qs, anchor)``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">anchor</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="n">qs</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="n">app_url</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">scheme</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">port</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">if</span> <span class="s">&#39;_query&#39;</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">kw</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;_query&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">string_types</span><span class="p">):</span>
+            <span class="n">qs</span> <span class="o">=</span> <span class="s">&#39;?&#39;</span> <span class="o">+</span> <span class="n">url_quote</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">QUERY_SAFE</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">query</span><span class="p">:</span>
+            <span class="n">qs</span> <span class="o">=</span> <span class="s">&#39;?&#39;</span> <span class="o">+</span> <span class="n">urlencode</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">doseq</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s">&#39;_anchor&#39;</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+        <span class="n">anchor</span> <span class="o">=</span> <span class="n">kw</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;_anchor&#39;</span><span class="p">)</span>
+        <span class="n">anchor</span> <span class="o">=</span> <span class="n">url_quote</span><span class="p">(</span><span class="n">anchor</span><span class="p">,</span> <span class="n">ANCHOR_SAFE</span><span class="p">)</span>
+        <span class="n">anchor</span> <span class="o">=</span> <span class="s">&#39;#&#39;</span> <span class="o">+</span> <span class="n">anchor</span>
+
+    <span class="k">if</span> <span class="s">&#39;_app_url&#39;</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+        <span class="n">app_url</span> <span class="o">=</span> <span class="n">kw</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;_app_url&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s">&#39;_host&#39;</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+        <span class="n">host</span> <span class="o">=</span> <span class="n">kw</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;_host&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s">&#39;_scheme&#39;</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+        <span class="n">scheme</span> <span class="o">=</span> <span class="n">kw</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;_scheme&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s">&#39;_port&#39;</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="n">kw</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;_port&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">app_url</span><span class="p">,</span> <span class="n">scheme</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">qs</span><span class="p">,</span> <span class="n">anchor</span>
+
+<span class="k">class</span> <span class="nc">URLMethodsMixin</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Request methods mixin for BaseRequest having to do with URL</span>
+<span class="sd">    generation &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_partial_application_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scheme</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Construct the URL defined by request.application_url, replacing any</span>
+<span class="sd">        of the default scheme, host, or port portions with user-supplied</span>
+<span class="sd">        variants.</span>
+
+<span class="sd">        If ``scheme`` is passed as ``https``, and the ``port`` is *not*</span>
+<span class="sd">        passed, the ``port`` value is assumed to ``443``.  Likewise, if</span>
+<span class="sd">        ``scheme`` is passed as ``http`` and ``port`` is not passed, the</span>
+<span class="sd">        ``port`` value is assumed to be ``80``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">environ</span>
+        <span class="k">if</span> <span class="n">scheme</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">scheme</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s">&#39;wsgi.url_scheme&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">scheme</span> <span class="o">==</span> <span class="s">&#39;https&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">port</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="n">port</span> <span class="o">=</span> <span class="s">&#39;443&#39;</span>
+            <span class="k">if</span> <span class="n">scheme</span> <span class="o">==</span> <span class="s">&#39;http&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">port</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="n">port</span> <span class="o">=</span> <span class="s">&#39;80&#39;</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">scheme</span> <span class="o">+</span> <span class="s">&#39;://&#39;</span>
+        <span class="k">if</span> <span class="n">port</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">port</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">port</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">host</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">host</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;HTTP_HOST&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">host</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">host</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s">&#39;SERVER_NAME&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">port</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s">&#39;:&#39;</span> <span class="ow">in</span> <span class="n">host</span><span class="p">:</span>
+                <span class="n">host</span><span class="p">,</span> <span class="n">port</span> <span class="o">=</span> <span class="n">host</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;:&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">port</span> <span class="o">=</span> <span class="n">e</span><span class="p">[</span><span class="s">&#39;SERVER_PORT&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s">&#39;:&#39;</span> <span class="ow">in</span> <span class="n">host</span><span class="p">:</span>
+                <span class="n">host</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">host</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;:&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">scheme</span> <span class="o">==</span> <span class="s">&#39;https&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">port</span> <span class="o">==</span> <span class="s">&#39;443&#39;</span><span class="p">:</span>
+                <span class="n">port</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">elif</span> <span class="n">scheme</span> <span class="o">==</span> <span class="s">&#39;http&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">port</span> <span class="o">==</span> <span class="s">&#39;80&#39;</span><span class="p">:</span>
+                <span class="n">port</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">url</span> <span class="o">+=</span> <span class="n">host</span>
+        <span class="k">if</span> <span class="n">port</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">+=</span> <span class="s">&#39;:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">port</span>
+
+        <span class="n">url_encoding</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;url_encoding&#39;</span><span class="p">,</span> <span class="s">&#39;utf-8&#39;</span><span class="p">)</span> <span class="c"># webob 1.2b3+</span>
+        <span class="n">bscript_name</span> <span class="o">=</span> <span class="n">bytes_</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">script_name</span><span class="p">,</span> <span class="n">url_encoding</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">url</span> <span class="o">+</span> <span class="n">url_quote</span><span class="p">(</span><span class="n">bscript_name</span><span class="p">,</span> <span class="n">PATH_SAFE</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">route_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">route_name</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generates a fully qualified URL for a named :app:`Pyramid`</span>
+<span class="sd">        :term:`route configuration`.</span>
+
+<span class="sd">        Use the route&#39;s ``name`` as the first positional argument.</span>
+<span class="sd">        Additional positional arguments (``*elements``) are appended to the</span>
+<span class="sd">        URL as path segments after it is generated.</span>
+
+<span class="sd">        Use keyword arguments to supply values which match any dynamic</span>
+<span class="sd">        path elements in the route definition.  Raises a :exc:`KeyError`</span>
+<span class="sd">        exception if the URL cannot be generated for any reason (not</span>
+<span class="sd">        enough arguments, for example).</span>
+
+<span class="sd">        For example, if you&#39;ve defined a route named &quot;foobar&quot; with the path</span>
+<span class="sd">        ``{foo}/{bar}/*traverse``::</span>
+
+<span class="sd">            request.route_url(&#39;foobar&#39;,</span>
+<span class="sd">                               foo=&#39;1&#39;)             =&gt; &lt;KeyError exception&gt;</span>
+<span class="sd">            request.route_url(&#39;foobar&#39;,</span>
+<span class="sd">                               foo=&#39;1&#39;,</span>
+<span class="sd">                               bar=&#39;2&#39;)             =&gt; &lt;KeyError exception&gt;</span>
+<span class="sd">            request.route_url(&#39;foobar&#39;,</span>
+<span class="sd">                               foo=&#39;1&#39;,</span>
+<span class="sd">                               bar=&#39;2&#39;,</span>
+<span class="sd">                               traverse=(&#39;a&#39;,&#39;b&#39;))  =&gt; http://e.com/1/2/a/b</span>
+<span class="sd">            request.route_url(&#39;foobar&#39;,</span>
+<span class="sd">                               foo=&#39;1&#39;,</span>
+<span class="sd">                               bar=&#39;2&#39;,</span>
+<span class="sd">                               traverse=&#39;/a/b&#39;)     =&gt; http://e.com/1/2/a/b</span>
+
+<span class="sd">        Values replacing ``:segment`` arguments can be passed as strings</span>
+<span class="sd">        or Unicode objects.  They will be encoded to UTF-8 and URL-quoted</span>
+<span class="sd">        before being placed into the generated URL.</span>
+
+<span class="sd">        Values replacing ``*remainder`` arguments can be passed as strings</span>
+<span class="sd">        *or* tuples of Unicode/string values.  If a tuple is passed as a</span>
+<span class="sd">        ``*remainder`` replacement value, its values are URL-quoted and</span>
+<span class="sd">        encoded to UTF-8.  The resulting strings are joined with slashes</span>
+<span class="sd">        and rendered into the URL.  If a string is passed as a</span>
+<span class="sd">        ``*remainder`` replacement value, it is tacked on to the URL</span>
+<span class="sd">        after being URL-quoted-except-for-embedded-slashes.</span>
+
+<span class="sd">        If no ``_query`` keyword argument is provided, the request query string</span>
+<span class="sd">        will be returned in the URL. If it is present, it will be used to</span>
+<span class="sd">        compose a query string that will be tacked on to the end of the URL,</span>
+<span class="sd">        replacing any request query string.  The value of ``_query`` may be a</span>
+<span class="sd">        sequence of two-tuples *or* a data structure with an ``.items()``</span>
+<span class="sd">        method that returns a sequence of two-tuples (presumably a dictionary).</span>
+<span class="sd">        This data structure will be turned into a query string per the</span>
+<span class="sd">        documentation of :func:`pyramid.url.urlencode` function.  This will</span>
+<span class="sd">        produce a query string in the ``x-www-form-urlencoded`` format.  A</span>
+<span class="sd">        non-``x-www-form-urlencoded`` query string may be used by passing a</span>
+<span class="sd">        *string* value as ``_query`` in which case it will be URL-quoted</span>
+<span class="sd">        (e.g. query=&quot;foo bar&quot; will become &quot;foo%20bar&quot;).  However, the result</span>
+<span class="sd">        will not need to be in ``k=v`` form as required by</span>
+<span class="sd">        ``x-www-form-urlencoded``.  After the query data is turned into a query</span>
+<span class="sd">        string, a leading ``?`` is prepended, and the resulting string is</span>
+<span class="sd">        appended to the generated URL.</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           Python data structures that are passed as ``_query`` which are</span>
+<span class="sd">           sequences or dictionaries are turned into a string under the same</span>
+<span class="sd">           rules as when run through :func:`urllib.urlencode` with the ``doseq``</span>
+<span class="sd">           argument equal to ``True``.  This means that sequences can be passed</span>
+<span class="sd">           as values, and a k=v pair will be placed into the query string for</span>
+<span class="sd">           each value.</span>
+
+<span class="sd">        .. versionchanged:: 1.5</span>
+<span class="sd">           Allow the ``_query`` option to be a string to enable alternative</span>
+<span class="sd">           encodings.</span>
+
+<span class="sd">        If a keyword argument ``_anchor`` is present, its string</span>
+<span class="sd">        representation will be quoted per :rfc:`3986#section-3.5` and used as</span>
+<span class="sd">        a named anchor in the generated URL</span>
+<span class="sd">        (e.g. if ``_anchor`` is passed as ``foo`` and the route URL is</span>
+<span class="sd">        ``http://example.com/route/url``, the resulting generated URL will</span>
+<span class="sd">        be ``http://example.com/route/url#foo``).</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           If ``_anchor`` is passed as a string, it should be UTF-8 encoded. If</span>
+<span class="sd">           ``_anchor`` is passed as a Unicode object, it will be converted to</span>
+<span class="sd">           UTF-8 before being appended to the URL.</span>
+
+<span class="sd">        .. versionchanged:: 1.5</span>
+<span class="sd">           The ``_anchor`` option will be escaped instead of using</span>
+<span class="sd">           its raw string representation.</span>
+
+<span class="sd">        If both ``_anchor`` and ``_query`` are specified, the anchor</span>
+<span class="sd">        element will always follow the query element,</span>
+<span class="sd">        e.g. ``http://example.com?foo=1#bar``.</span>
+
+<span class="sd">        If any of the keyword arguments ``_scheme``, ``_host``, or ``_port``</span>
+<span class="sd">        is passed and is non-``None``, the provided value will replace the</span>
+<span class="sd">        named portion in the generated URL.  For example, if you pass</span>
+<span class="sd">        ``_host=&#39;foo.com&#39;``, and the URL that would have been generated</span>
+<span class="sd">        without the host replacement is ``http://example.com/a``, the result</span>
+<span class="sd">        will be ``https://foo.com/a``.</span>
+<span class="sd">        </span>
+<span class="sd">        Note that if ``_scheme`` is passed as ``https``, and ``_port`` is not</span>
+<span class="sd">        passed, the ``_port`` value is assumed to have been passed as</span>
+<span class="sd">        ``443``.  Likewise, if ``_scheme`` is passed as ``http`` and</span>
+<span class="sd">        ``_port`` is not passed, the ``_port`` value is assumed to have been</span>
+<span class="sd">        passed as ``80``. To avoid this behavior, always explicitly pass</span>
+<span class="sd">        ``_port`` whenever you pass ``_scheme``.</span>
+
+<span class="sd">        If a keyword ``_app_url`` is present, it will be used as the</span>
+<span class="sd">        protocol/hostname/port/leading path prefix of the generated URL.</span>
+<span class="sd">        For example, using an ``_app_url`` of</span>
+<span class="sd">        ``http://example.com:8080/foo`` would cause the URL</span>
+<span class="sd">        ``http://example.com:8080/foo/fleeb/flub`` to be returned from</span>
+<span class="sd">        this function if the expansion of the route pattern associated</span>
+<span class="sd">        with the ``route_name`` expanded to ``/fleeb/flub``.  If</span>
+<span class="sd">        ``_app_url`` is not specified, the result of</span>
+<span class="sd">        ``request.application_url`` will be used as the prefix (the</span>
+<span class="sd">        default).</span>
+
+<span class="sd">        If both ``_app_url`` and any of ``_scheme``, ``_host``, or ``_port``</span>
+<span class="sd">        are passed, ``_app_url`` takes precedence and any values passed for</span>
+<span class="sd">        ``_scheme``, ``_host``, and ``_port`` will be ignored.</span>
+
+<span class="sd">        This function raises a :exc:`KeyError` if the URL cannot be</span>
+<span class="sd">        generated due to missing replacement names.  Extra replacement</span>
+<span class="sd">        names are ignored.</span>
+
+<span class="sd">        If the route object which matches the ``route_name`` argument has</span>
+<span class="sd">        a :term:`pregenerator`, the ``*elements`` and ``**kw``</span>
+<span class="sd">        arguments passed to this function might be augmented or changed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">reg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="n">reg</span> <span class="o">=</span> <span class="n">get_current_registry</span><span class="p">()</span> <span class="c"># b/c</span>
+        <span class="n">mapper</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">getUtility</span><span class="p">(</span><span class="n">IRoutesMapper</span><span class="p">)</span>
+        <span class="n">route</span> <span class="o">=</span> <span class="n">mapper</span><span class="o">.</span><span class="n">get_route</span><span class="p">(</span><span class="n">route_name</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">route</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s">&#39;No such route named </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">route_name</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">route</span><span class="o">.</span><span class="n">pregenerator</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">elements</span><span class="p">,</span> <span class="n">kw</span> <span class="o">=</span> <span class="n">route</span><span class="o">.</span><span class="n">pregenerator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elements</span><span class="p">,</span> <span class="n">kw</span><span class="p">)</span>
+
+        <span class="n">app_url</span><span class="p">,</span> <span class="n">scheme</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">qs</span><span class="p">,</span> <span class="n">anchor</span> <span class="o">=</span> <span class="n">parse_url_overrides</span><span class="p">(</span><span class="n">kw</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">app_url</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">scheme</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">host</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">port</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">):</span>
+                <span class="n">app_url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partial_application_url</span><span class="p">(</span><span class="n">scheme</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">app_url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">application_url</span>
+
+        <span class="n">path</span> <span class="o">=</span> <span class="n">route</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">kw</span><span class="p">)</span> <span class="c"># raises KeyError if generate fails</span>
+
+        <span class="k">if</span> <span class="n">elements</span><span class="p">:</span>
+            <span class="n">suffix</span> <span class="o">=</span> <span class="n">_join_elements</span><span class="p">(</span><span class="n">elements</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">):</span>
+                <span class="n">suffix</span> <span class="o">=</span> <span class="s">&#39;/&#39;</span> <span class="o">+</span> <span class="n">suffix</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">suffix</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+
+        <span class="k">return</span> <span class="n">app_url</span> <span class="o">+</span> <span class="n">path</span> <span class="o">+</span> <span class="n">suffix</span> <span class="o">+</span> <span class="n">qs</span> <span class="o">+</span> <span class="n">anchor</span>
+
+    <span class="k">def</span> <span class="nf">route_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">route_name</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generates a path (aka a &#39;relative URL&#39;, a URL minus the host, scheme,</span>
+<span class="sd">        and port) for a named :app:`Pyramid` :term:`route configuration`.</span>
+
+<span class="sd">        This function accepts the same argument as</span>
+<span class="sd">        :meth:`pyramid.request.Request.route_url` and performs the same duty.</span>
+<span class="sd">        It just omits the host, port, and scheme information in the return</span>
+<span class="sd">        value; only the script_name, path, query parameters, and anchor data</span>
+<span class="sd">        are present in the returned string.</span>
+
+<span class="sd">        For example, if you&#39;ve defined a route named &#39;foobar&#39; with the path</span>
+<span class="sd">        ``/{foo}/{bar}``, this call to ``route_path``::</span>
+
+<span class="sd">            request.route_path(&#39;foobar&#39;, foo=&#39;1&#39;, bar=&#39;2&#39;)</span>
+
+<span class="sd">        Will return the string ``/1/2``.</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           Calling ``request.route_path(&#39;route&#39;)`` is the same as calling</span>
+<span class="sd">           ``request.route_url(&#39;route&#39;, _app_url=request.script_name)``.</span>
+<span class="sd">           :meth:`pyramid.request.Request.route_path` is, in fact,</span>
+<span class="sd">           implemented in terms of :meth:`pyramid.request.Request.route_url`</span>
+<span class="sd">           in just this way. As a result, any ``_app_url`` passed within the</span>
+<span class="sd">           ``**kw`` values to ``route_path`` will be ignored.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">kw</span><span class="p">[</span><span class="s">&#39;_app_url&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">script_name</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">route_url</span><span class="p">(</span><span class="n">route_name</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">resource_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resource</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Generate a string representing the absolute URL of the</span>
+<span class="sd">        :term:`resource` object based on the ``wsgi.url_scheme``,</span>
+<span class="sd">        ``HTTP_HOST`` or ``SERVER_NAME`` in the request, plus any</span>
+<span class="sd">        ``SCRIPT_NAME``.  The overall result of this method is always a</span>
+<span class="sd">        UTF-8 encoded string.</span>
+
+<span class="sd">        Examples::</span>
+
+<span class="sd">            request.resource_url(resource) =&gt;</span>
+
+<span class="sd">                                       http://example.com/</span>
+
+<span class="sd">            request.resource_url(resource, &#39;a.html&#39;) =&gt;</span>
+
+<span class="sd">                                       http://example.com/a.html</span>
+
+<span class="sd">            request.resource_url(resource, &#39;a.html&#39;, query={&#39;q&#39;:&#39;1&#39;}) =&gt;</span>
+
+<span class="sd">                                       http://example.com/a.html?q=1</span>
+
+<span class="sd">            request.resource_url(resource, &#39;a.html&#39;, anchor=&#39;abc&#39;) =&gt;</span>
+
+<span class="sd">                                       http://example.com/a.html#abc</span>
+
+<span class="sd">            request.resource_url(resource, app_url=&#39;&#39;) =&gt;</span>
+
+<span class="sd">                                       /</span>
+
+<span class="sd">        Any positional arguments passed in as ``elements`` must be strings</span>
+<span class="sd">        Unicode objects, or integer objects.  These will be joined by slashes</span>
+<span class="sd">        and appended to the generated resource URL.  Each of the elements</span>
+<span class="sd">        passed in is URL-quoted before being appended; if any element is</span>
+<span class="sd">        Unicode, it will converted to a UTF-8 bytestring before being</span>
+<span class="sd">        URL-quoted. If any element is an integer, it will be converted to its</span>
+<span class="sd">        string representation before being URL-quoted.</span>
+
+<span class="sd">        .. warning:: if no ``elements`` arguments are specified, the resource</span>
+<span class="sd">                     URL will end with a trailing slash.  If any</span>
+<span class="sd">                     ``elements`` are used, the generated URL will *not*</span>
+<span class="sd">                     end in a trailing slash.</span>
+
+<span class="sd">        If a keyword argument ``query`` is present, it will be used to compose</span>
+<span class="sd">        a query string that will be tacked on to the end of the URL.  The value</span>
+<span class="sd">        of ``query`` may be a sequence of two-tuples *or* a data structure with</span>
+<span class="sd">        an ``.items()`` method that returns a sequence of two-tuples</span>
+<span class="sd">        (presumably a dictionary).  This data structure will be turned into a</span>
+<span class="sd">        query string per the documentation of :func:``pyramid.url.urlencode``</span>
+<span class="sd">        function.  This will produce a query string in the</span>
+<span class="sd">        ``x-www-form-urlencoded`` encoding.  A non-``x-www-form-urlencoded``</span>
+<span class="sd">        query string may be used by passing a *string* value as ``query`` in</span>
+<span class="sd">        which case it will be URL-quoted (e.g. query=&quot;foo bar&quot; will become</span>
+<span class="sd">        &quot;foo%20bar&quot;).  However, the result will not need to be in ``k=v`` form</span>
+<span class="sd">        as required by ``x-www-form-urlencoded``.  After the query data is</span>
+<span class="sd">        turned into a query string, a leading ``?`` is prepended, and the</span>
+<span class="sd">        resulting string is appended to the generated URL.</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           Python data structures that are passed as ``query`` which are</span>
+<span class="sd">           sequences or dictionaries are turned into a string under the same</span>
+<span class="sd">           rules as when run through :func:`urllib.urlencode` with the ``doseq``</span>
+<span class="sd">           argument equal to ``True``.  This means that sequences can be passed</span>
+<span class="sd">           as values, and a k=v pair will be placed into the query string for</span>
+<span class="sd">           each value.</span>
+
+<span class="sd">        .. versionchanged:: 1.5</span>
+<span class="sd">           Allow the ``query`` option to be a string to enable alternative</span>
+<span class="sd">           encodings.</span>
+
+<span class="sd">        If a keyword argument ``anchor`` is present, its string</span>
+<span class="sd">        representation will be used as a named anchor in the generated URL</span>
+<span class="sd">        (e.g. if ``anchor`` is passed as ``foo`` and the resource URL is</span>
+<span class="sd">        ``http://example.com/resource/url``, the resulting generated URL will</span>
+<span class="sd">        be ``http://example.com/resource/url#foo``).</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           If ``anchor`` is passed as a string, it should be UTF-8 encoded. If</span>
+<span class="sd">           ``anchor`` is passed as a Unicode object, it will be converted to</span>
+<span class="sd">           UTF-8 before being appended to the URL.</span>
+
+<span class="sd">        .. versionchanged:: 1.5</span>
+<span class="sd">           The ``anchor`` option will be escaped instead of using</span>
+<span class="sd">           its raw string representation.</span>
+
+<span class="sd">        If both ``anchor`` and ``query`` are specified, the anchor element</span>
+<span class="sd">        will always follow the query element,</span>
+<span class="sd">        e.g. ``http://example.com?foo=1#bar``.</span>
+
+<span class="sd">        If any of the keyword arguments ``scheme``, ``host``, or ``port`` is</span>
+<span class="sd">        passed and is non-``None``, the provided value will replace the named</span>
+<span class="sd">        portion in the generated URL.  For example, if you pass</span>
+<span class="sd">        ``host=&#39;foo.com&#39;``, and the URL that would have been generated</span>
+<span class="sd">        without the host replacement is ``http://example.com/a``, the result</span>
+<span class="sd">        will be ``https://foo.com/a``.</span>
+<span class="sd">        </span>
+<span class="sd">        If ``scheme`` is passed as ``https``, and an explicit ``port`` is not</span>
+<span class="sd">        passed, the ``port`` value is assumed to have been passed as ``443``.</span>
+<span class="sd">        Likewise, if ``scheme`` is passed as ``http`` and ``port`` is not</span>
+<span class="sd">        passed, the ``port`` value is assumed to have been passed as</span>
+<span class="sd">        ``80``. To avoid this behavior, always explicitly pass ``port``</span>
+<span class="sd">        whenever you pass ``scheme``.</span>
+
+<span class="sd">        If a keyword argument ``app_url`` is passed and is not ``None``, it</span>
+<span class="sd">        should be a string that will be used as the port/hostname/initial</span>
+<span class="sd">        path portion of the generated URL instead of the default request</span>
+<span class="sd">        application URL.  For example, if ``app_url=&#39;http://foo&#39;``, then the</span>
+<span class="sd">        resulting url of a resource that has a path of ``/baz/bar`` will be</span>
+<span class="sd">        ``http://foo/baz/bar``.  If you want to generate completely relative</span>
+<span class="sd">        URLs with no leading scheme, host, port, or initial path, you can</span>
+<span class="sd">        pass ``app_url=&#39;&#39;``.  Passing ``app_url=&#39;&#39;`` when the resource path is</span>
+<span class="sd">        ``/baz/bar`` will return ``/baz/bar``.</span>
+
+<span class="sd">        .. versionadded:: 1.3</span>
+<span class="sd">           ``app_url``</span>
+
+<span class="sd">        If ``app_url`` is passed and any of ``scheme``, ``port``, or ``host``</span>
+<span class="sd">        are also passed, ``app_url`` will take precedence and the values</span>
+<span class="sd">        passed for ``scheme``, ``host``, and/or ``port`` will be ignored.</span>
+
+<span class="sd">        If the ``resource`` passed in has a ``__resource_url__`` method, it</span>
+<span class="sd">        will be used to generate the URL (scheme, host, port, path) for the</span>
+<span class="sd">        base resource which is operated upon by this function.</span>
+<span class="sd">        </span>
+<span class="sd">        .. seealso::</span>
+
+<span class="sd">            See also :ref:`overriding_resource_url_generation`.</span>
+
+<span class="sd">        .. versionadded:: 1.5</span>
+<span class="sd">           ``route_name``, ``route_kw``, and ``route_remainder_name``</span>
+<span class="sd">           </span>
+<span class="sd">        If ``route_name`` is passed, this function will delegate its URL</span>
+<span class="sd">        production to the ``route_url`` function.  Calling</span>
+<span class="sd">        ``resource_url(someresource, &#39;element1&#39;, &#39;element2&#39;, query={&#39;a&#39;:1},</span>
+<span class="sd">        route_name=&#39;blogentry&#39;)`` is roughly equivalent to doing::</span>
+
+<span class="sd">           remainder_path = request.resource_path(someobject)</span>
+<span class="sd">           url = request.route_url(</span>
+<span class="sd">                     &#39;blogentry&#39;,</span>
+<span class="sd">                     &#39;element1&#39;,</span>
+<span class="sd">                     &#39;element2&#39;,</span>
+<span class="sd">                     _query={&#39;a&#39;:&#39;1&#39;},</span>
+<span class="sd">                     traverse=traversal_path,</span>
+<span class="sd">                     )</span>
+
+<span class="sd">        It is only sensible to pass ``route_name`` if the route being named has</span>
+<span class="sd">        a ``*remainder`` stararg value such as ``*traverse``.  The remainder</span>
+<span class="sd">        value will be ignored in the output otherwise.</span>
+
+<span class="sd">        By default, the resource path value will be passed as the name</span>
+<span class="sd">        ``traverse`` when ``route_url`` is called.  You can influence this by</span>
+<span class="sd">        passing a different ``route_remainder_name`` value if the route has a</span>
+<span class="sd">        different ``*stararg`` value at its end.  For example if the route</span>
+<span class="sd">        pattern you want to replace has a ``*subpath`` stararg ala</span>
+<span class="sd">        ``/foo*subpath``::</span>
+
+<span class="sd">           request.resource_url(</span>
+<span class="sd">                          resource,</span>
+<span class="sd">                          route_name=&#39;myroute&#39;,</span>
+<span class="sd">                          route_remainder_name=&#39;subpath&#39;</span>
+<span class="sd">                          )</span>
+
+<span class="sd">        If ``route_name`` is passed, it is also permissible to pass</span>
+<span class="sd">        ``route_kw``, which will passed as additional keyword arguments to</span>
+<span class="sd">        ``route_url``.  Saying ``resource_url(someresource, &#39;element1&#39;,</span>
+<span class="sd">        &#39;element2&#39;, route_name=&#39;blogentry&#39;, route_kw={&#39;id&#39;:&#39;4&#39;},</span>
+<span class="sd">        _query={&#39;a&#39;:&#39;1&#39;})`` is roughly equivalent to::</span>
+
+<span class="sd">           remainder_path = request.resource_path_tuple(someobject)</span>
+<span class="sd">           kw = {&#39;id&#39;:&#39;4&#39;, &#39;_query&#39;:{&#39;a&#39;:&#39;1&#39;}, &#39;traverse&#39;:traversal_path}</span>
+<span class="sd">           url = request.route_url(</span>
+<span class="sd">                     &#39;blogentry&#39;,</span>
+<span class="sd">                     &#39;element1&#39;,</span>
+<span class="sd">                     &#39;element2&#39;,</span>
+<span class="sd">                     **kw,</span>
+<span class="sd">                     )</span>
+
+<span class="sd">        If ``route_kw`` or ``route_remainder_name`` is passed, but</span>
+<span class="sd">        ``route_name`` is not passed, both ``route_kw`` and</span>
+<span class="sd">        ``route_remainder_name`` will be ignored.  If ``route_name``</span>
+<span class="sd">        is passed, the ``__resource_url__`` method of the resource passed is</span>
+<span class="sd">        ignored unconditionally.  This feature is incompatible with</span>
+<span class="sd">        resources which generate their own URLs.</span>
+<span class="sd">        </span>
+<span class="sd">        .. note::</span>
+
+<span class="sd">           If the :term:`resource` used is the result of a :term:`traversal`, it</span>
+<span class="sd">           must be :term:`location`-aware.  The resource can also be the context</span>
+<span class="sd">           of a :term:`URL dispatch`; contexts found this way do not need to be</span>
+<span class="sd">           location-aware.</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           If a &#39;virtual root path&#39; is present in the request environment (the</span>
+<span class="sd">           value of the WSGI environ key ``HTTP_X_VHM_ROOT``), and the resource</span>
+<span class="sd">           was obtained via :term:`traversal`, the URL path will not include the</span>
+<span class="sd">           virtual root prefix (it will be stripped off the left hand side of</span>
+<span class="sd">           the generated URL).</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           For backwards compatibility purposes, this method is also</span>
+<span class="sd">           aliased as the ``model_url`` method of request.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">reg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="n">reg</span> <span class="o">=</span> <span class="n">get_current_registry</span><span class="p">()</span> <span class="c"># b/c</span>
+
+        <span class="n">url_adapter</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">queryMultiAdapter</span><span class="p">((</span><span class="n">resource</span><span class="p">,</span> <span class="bp">self</span><span class="p">),</span> <span class="n">IResourceURL</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">url_adapter</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">url_adapter</span> <span class="o">=</span> <span class="n">ResourceURL</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+
+        <span class="n">virtual_path</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">url_adapter</span><span class="p">,</span> <span class="s">&#39;virtual_path&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">virtual_path</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># old-style IContextURL adapter (Pyramid 1.2 and previous)</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s">&#39;Pyramid is using an IContextURL adapter to generate a &#39;</span>
+                <span class="s">&#39;resource URL; any &quot;app_url&quot;, &quot;host&quot;, &quot;port&quot;, or &quot;scheme&quot; &#39;</span>
+                <span class="s">&#39;arguments passed to resource_url are being ignored.  To &#39;</span>
+                <span class="s">&#39;avoid this behavior, as of Pyramid 1.3, register an &#39;</span>
+                <span class="s">&#39;IResourceURL adapter instead of an IContextURL &#39;</span>
+                <span class="s">&#39;adapter for the resource type(s).  IContextURL adapters &#39;</span>
+                <span class="s">&#39;will be ignored in a later major release of Pyramid.&#39;</span><span class="p">,</span>
+                <span class="ne">DeprecationWarning</span><span class="p">,</span>
+                <span class="mi">2</span><span class="p">)</span>
+
+            <span class="n">resource_url</span> <span class="o">=</span> <span class="n">url_adapter</span><span class="p">()</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># IResourceURL adapter (Pyramid 1.3 and after)</span>
+            <span class="n">app_url</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">scheme</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">host</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">port</span> <span class="o">=</span> <span class="bp">None</span>
+
+            <span class="k">if</span> <span class="s">&#39;route_name&#39;</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+                <span class="n">newkw</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="n">route_name</span> <span class="o">=</span> <span class="n">kw</span><span class="p">[</span><span class="s">&#39;route_name&#39;</span><span class="p">]</span>
+                <span class="n">remainder</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">url_adapter</span><span class="p">,</span> <span class="s">&#39;virtual_path_tuple&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">remainder</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="c"># older user-supplied IResourceURL adapter without 1.5</span>
+                    <span class="c"># virtual_path_tuple</span>
+                    <span class="n">remainder</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">url_adapter</span><span class="o">.</span><span class="n">virtual_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">))</span>
+                <span class="n">remainder_name</span> <span class="o">=</span> <span class="n">kw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;route_remainder_name&#39;</span><span class="p">,</span> <span class="s">&#39;traverse&#39;</span><span class="p">)</span>
+                <span class="n">newkw</span><span class="p">[</span><span class="n">remainder_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">remainder</span>
+
+                <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span>
+                    <span class="s">&#39;app_url&#39;</span><span class="p">,</span> <span class="s">&#39;scheme&#39;</span><span class="p">,</span> <span class="s">&#39;host&#39;</span><span class="p">,</span> <span class="s">&#39;port&#39;</span><span class="p">,</span> <span class="s">&#39;query&#39;</span><span class="p">,</span> <span class="s">&#39;anchor&#39;</span>
+                    <span class="p">):</span>
+                    <span class="n">val</span> <span class="o">=</span> <span class="n">kw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">val</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="n">newkw</span><span class="p">[</span><span class="s">&#39;_&#39;</span> <span class="o">+</span> <span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+                    
+                <span class="k">if</span> <span class="s">&#39;route_kw&#39;</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+                    <span class="n">route_kw</span> <span class="o">=</span> <span class="n">kw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;route_kw&#39;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">route_kw</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="n">newkw</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">route_kw</span><span class="p">)</span>
+
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">route_url</span><span class="p">(</span><span class="n">route_name</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">newkw</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="s">&#39;app_url&#39;</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+                <span class="n">app_url</span> <span class="o">=</span> <span class="n">kw</span><span class="p">[</span><span class="s">&#39;app_url&#39;</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="s">&#39;scheme&#39;</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+                <span class="n">scheme</span> <span class="o">=</span> <span class="n">kw</span><span class="p">[</span><span class="s">&#39;scheme&#39;</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="s">&#39;host&#39;</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+                <span class="n">host</span> <span class="o">=</span> <span class="n">kw</span><span class="p">[</span><span class="s">&#39;host&#39;</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="s">&#39;port&#39;</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+                <span class="n">port</span> <span class="o">=</span> <span class="n">kw</span><span class="p">[</span><span class="s">&#39;port&#39;</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">app_url</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">scheme</span> <span class="ow">or</span> <span class="n">host</span> <span class="ow">or</span> <span class="n">port</span><span class="p">:</span>
+                    <span class="n">app_url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partial_application_url</span><span class="p">(</span><span class="n">scheme</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">app_url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">application_url</span>
+
+            <span class="n">resource_url</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">local_url</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="s">&#39;__resource_url__&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">local_url</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="c"># the resource handles its own url generation</span>
+                <span class="n">d</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+                    <span class="n">virtual_path</span> <span class="o">=</span> <span class="n">virtual_path</span><span class="p">,</span>
+                    <span class="n">physical_path</span> <span class="o">=</span> <span class="n">url_adapter</span><span class="o">.</span><span class="n">physical_path</span><span class="p">,</span>
+                    <span class="n">app_url</span> <span class="o">=</span> <span class="n">app_url</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="c"># allow __resource_url__ to punt by returning None</span>
+                <span class="n">resource_url</span> <span class="o">=</span> <span class="n">local_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">resource_url</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="c"># the resource did not handle its own url generation or the</span>
+                <span class="c"># __resource_url__ function returned None</span>
+                <span class="n">resource_url</span> <span class="o">=</span> <span class="n">app_url</span> <span class="o">+</span> <span class="n">virtual_path</span>
+
+        <span class="n">qs</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="n">anchor</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+
+        <span class="k">if</span> <span class="s">&#39;query&#39;</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">kw</span><span class="p">[</span><span class="s">&#39;query&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">string_types</span><span class="p">):</span>
+                <span class="n">qs</span> <span class="o">=</span> <span class="s">&#39;?&#39;</span> <span class="o">+</span> <span class="n">url_quote</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">QUERY_SAFE</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">query</span><span class="p">:</span>
+                <span class="n">qs</span> <span class="o">=</span> <span class="s">&#39;?&#39;</span> <span class="o">+</span> <span class="n">urlencode</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">doseq</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s">&#39;anchor&#39;</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+            <span class="n">anchor</span> <span class="o">=</span> <span class="n">kw</span><span class="p">[</span><span class="s">&#39;anchor&#39;</span><span class="p">]</span>
+            <span class="n">anchor</span> <span class="o">=</span> <span class="n">url_quote</span><span class="p">(</span><span class="n">anchor</span><span class="p">,</span> <span class="n">ANCHOR_SAFE</span><span class="p">)</span>
+            <span class="n">anchor</span> <span class="o">=</span> <span class="s">&#39;#&#39;</span> <span class="o">+</span> <span class="n">anchor</span>
+
+        <span class="k">if</span> <span class="n">elements</span><span class="p">:</span>
+            <span class="n">suffix</span> <span class="o">=</span> <span class="n">_join_elements</span><span class="p">(</span><span class="n">elements</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">suffix</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+
+        <span class="k">return</span> <span class="n">resource_url</span> <span class="o">+</span> <span class="n">suffix</span> <span class="o">+</span> <span class="n">qs</span> <span class="o">+</span> <span class="n">anchor</span>
+
+    <span class="n">model_url</span> <span class="o">=</span> <span class="n">resource_url</span> <span class="c"># b/w compat forever</span>
+
+    <span class="k">def</span> <span class="nf">resource_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resource</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generates a path (aka a &#39;relative URL&#39;, a URL minus the host, scheme,</span>
+<span class="sd">        and port) for a :term:`resource`.</span>
+
+<span class="sd">        This function accepts the same argument as</span>
+<span class="sd">        :meth:`pyramid.request.Request.resource_url` and performs the same</span>
+<span class="sd">        duty.  It just omits the host, port, and scheme information in the</span>
+<span class="sd">        return value; only the script_name, path, query parameters, and</span>
+<span class="sd">        anchor data are present in the returned string.</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           Calling ``request.resource_path(resource)`` is the same as calling</span>
+<span class="sd">           ``request.resource_path(resource, app_url=request.script_name)``.</span>
+<span class="sd">           :meth:`pyramid.request.Request.resource_path` is, in fact,</span>
+<span class="sd">           implemented in terms of</span>
+<span class="sd">           :meth:`pyramid.request.Request.resource_url` in just this way. As</span>
+<span class="sd">           a result, any ``app_url`` passed within the ``**kw`` values to</span>
+<span class="sd">           ``route_path`` will be ignored.  ``scheme``, ``host``, and</span>
+<span class="sd">           ``port`` are also ignored.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">kw</span><span class="p">[</span><span class="s">&#39;app_url&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">script_name</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">resource_url</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">static_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generates a fully qualified URL for a static :term:`asset`.</span>
+<span class="sd">        The asset must live within a location defined via the</span>
+<span class="sd">        :meth:`pyramid.config.Configurator.add_static_view`</span>
+<span class="sd">        :term:`configuration declaration` (see :ref:`static_assets_section`).</span>
+
+<span class="sd">        Example::</span>
+
+<span class="sd">            request.static_url(&#39;mypackage:static/foo.css&#39;) =&gt;</span>
+
+<span class="sd">                                    http://example.com/static/foo.css</span>
+
+
+<span class="sd">        The ``path`` argument points at a file or directory on disk which</span>
+<span class="sd">        a URL should be generated for.  The ``path`` may be either a</span>
+<span class="sd">        relative path (e.g. ``static/foo.css``) or an absolute path (e.g.</span>
+<span class="sd">        ``/abspath/to/static/foo.css``) or a :term:`asset specification`</span>
+<span class="sd">        (e.g. ``mypackage:static/foo.css``).</span>
+
+<span class="sd">        The purpose of the ``**kw`` argument is the same as the purpose of</span>
+<span class="sd">        the :meth:`pyramid.request.Request.route_url` ``**kw`` argument.  See</span>
+<span class="sd">        the documentation for that function to understand the arguments which</span>
+<span class="sd">        you can provide to it.  However, typically, you don&#39;t need to pass</span>
+<span class="sd">        anything as ``*kw`` when generating a static asset URL.</span>
+
+<span class="sd">        This function raises a :exc:`ValueError` if a static view</span>
+<span class="sd">        definition cannot be found which matches the path specification.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="s">&#39;:&#39;</span> <span class="ow">in</span> <span class="n">path</span><span class="p">:</span>
+                <span class="c"># if it&#39;s not a package:relative/name and it&#39;s not an</span>
+                <span class="c"># /absolute/path it&#39;s a relative/path; this means its relative</span>
+                <span class="c"># to the package in which the caller&#39;s module is defined.</span>
+                <span class="n">package</span> <span class="o">=</span> <span class="n">caller_package</span><span class="p">()</span>
+                <span class="n">path</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">package</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">reg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="n">reg</span> <span class="o">=</span> <span class="n">get_current_registry</span><span class="p">()</span> <span class="c"># b/c</span>
+
+        <span class="n">info</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">IStaticURLInfo</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">info</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;No static URL definition matching </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">path</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">info</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">static_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generates a path (aka a &#39;relative URL&#39;, a URL minus the host, scheme,</span>
+<span class="sd">        and port) for a static resource.</span>
+
+<span class="sd">        This function accepts the same argument as</span>
+<span class="sd">        :meth:`pyramid.request.Request.static_url` and performs the</span>
+<span class="sd">        same duty.  It just omits the host, port, and scheme information in</span>
+<span class="sd">        the return value; only the script_name, path, query parameters, and</span>
+<span class="sd">        anchor data are present in the returned string.</span>
+
+<span class="sd">        Example::</span>
+
+<span class="sd">            request.static_path(&#39;mypackage:static/foo.css&#39;) =&gt;</span>
+
+<span class="sd">                                    /static/foo.css</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           Calling ``request.static_path(apath)`` is the same as calling</span>
+<span class="sd">           ``request.static_url(apath, _app_url=request.script_name)``.</span>
+<span class="sd">           :meth:`pyramid.request.Request.static_path` is, in fact, implemented</span>
+<span class="sd">           in terms of `:meth:`pyramid.request.Request.static_url` in just this</span>
+<span class="sd">           way. As a result, any ``_app_url`` passed within the ``**kw`` values</span>
+<span class="sd">           to ``static_path`` will be ignored.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="s">&#39;:&#39;</span> <span class="ow">in</span> <span class="n">path</span><span class="p">:</span>
+                <span class="c"># if it&#39;s not a package:relative/name and it&#39;s not an</span>
+                <span class="c"># /absolute/path it&#39;s a relative/path; this means its relative</span>
+                <span class="c"># to the package in which the caller&#39;s module is defined.</span>
+                <span class="n">package</span> <span class="o">=</span> <span class="n">caller_package</span><span class="p">()</span>
+                <span class="n">path</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">package</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+
+        <span class="n">kw</span><span class="p">[</span><span class="s">&#39;_app_url&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">script_name</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">static_url</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">current_route_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generates a fully qualified URL for a named :app:`Pyramid`</span>
+<span class="sd">        :term:`route configuration` based on the &#39;current route&#39;.</span>
+
+<span class="sd">        This function supplements</span>
+<span class="sd">        :meth:`pyramid.request.Request.route_url`. It presents an easy way to</span>
+<span class="sd">        generate a URL for the &#39;current route&#39; (defined as the route which</span>
+<span class="sd">        matched when the request was generated).</span>
+
+<span class="sd">        The arguments to this method have the same meaning as those with the</span>
+<span class="sd">        same names passed to :meth:`pyramid.request.Request.route_url`.  It</span>
+<span class="sd">        also understands an extra argument which ``route_url`` does not named</span>
+<span class="sd">        ``_route_name``.</span>
+
+<span class="sd">        The route name used to generate a URL is taken from either the</span>
+<span class="sd">        ``_route_name`` keyword argument or the name of the route which is</span>
+<span class="sd">        currently associated with the request if ``_route_name`` was not</span>
+<span class="sd">        passed.  Keys and values from the current request :term:`matchdict`</span>
+<span class="sd">        are combined with the ``kw`` arguments to form a set of defaults</span>
+<span class="sd">        named ``newkw``.  Then ``request.route_url(route_name, *elements,</span>
+<span class="sd">        **newkw)`` is called, returning a URL.</span>
+
+<span class="sd">        Examples follow.</span>
+
+<span class="sd">        If the &#39;current route&#39; has the route pattern ``/foo/{page}`` and the</span>
+<span class="sd">        current url path is ``/foo/1`` , the matchdict will be</span>
+<span class="sd">        ``{&#39;page&#39;:&#39;1&#39;}``.  The result of ``request.current_route_url()`` in</span>
+<span class="sd">        this situation will be ``/foo/1``.</span>
+
+<span class="sd">        If the &#39;current route&#39; has the route pattern ``/foo/{page}`` and the</span>
+<span class="sd">        current url path is ``/foo/1``, the matchdict will be</span>
+<span class="sd">        ``{&#39;page&#39;:&#39;1&#39;}``.  The result of</span>
+<span class="sd">        ``request.current_route_url(page=&#39;2&#39;)`` in this situation will be</span>
+<span class="sd">        ``/foo/2``.</span>
+
+<span class="sd">        Usage of the ``_route_name`` keyword argument: if our routing table</span>
+<span class="sd">        defines routes ``/foo/{action}`` named &#39;foo&#39; and</span>
+<span class="sd">        ``/foo/{action}/{page}`` named ``fooaction``, and the current url</span>
+<span class="sd">        pattern is ``/foo/view`` (which has matched the ``/foo/{action}``</span>
+<span class="sd">        route), we may want to use the matchdict args to generate a URL to</span>
+<span class="sd">        the ``fooaction`` route.  In this scenario,</span>
+<span class="sd">        ``request.current_route_url(_route_name=&#39;fooaction&#39;, page=&#39;5&#39;)``</span>
+<span class="sd">        Will return string like: ``/foo/view/5``.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="s">&#39;_route_name&#39;</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+            <span class="n">route_name</span> <span class="o">=</span> <span class="n">kw</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;_route_name&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">route</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&#39;matched_route&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+            <span class="n">route_name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">route</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">route_name</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Current request matches no route&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s">&#39;_query&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">kw</span><span class="p">:</span>
+            <span class="n">kw</span><span class="p">[</span><span class="s">&#39;_query&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GET</span>
+
+        <span class="n">newkw</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">newkw</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">matchdict</span><span class="p">)</span>
+        <span class="n">newkw</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kw</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">route_url</span><span class="p">(</span><span class="n">route_name</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">newkw</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">current_route_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generates a path (aka a &#39;relative URL&#39;, a URL minus the host, scheme,</span>
+<span class="sd">        and port) for the :app:`Pyramid` :term:`route configuration` matched</span>
+<span class="sd">        by the current request.</span>
+
+<span class="sd">        This function accepts the same argument as</span>
+<span class="sd">        :meth:`pyramid.request.Request.current_route_url` and performs the</span>
+<span class="sd">        same duty.  It just omits the host, port, and scheme information in</span>
+<span class="sd">        the return value; only the script_name, path, query parameters, and</span>
+<span class="sd">        anchor data are present in the returned string.</span>
+
+<span class="sd">        For example, if the route matched by the current request has the</span>
+<span class="sd">        pattern ``/{foo}/{bar}``, this call to ``current_route_path``::</span>
+
+<span class="sd">            request.current_route_path(foo=&#39;1&#39;, bar=&#39;2&#39;)</span>
+
+<span class="sd">        Will return the string ``/1/2``.</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">           Calling ``request.current_route_path(&#39;route&#39;)`` is the same</span>
+<span class="sd">           as calling ``request.current_route_url(&#39;route&#39;,</span>
+<span class="sd">           _app_url=request.script_name)``.</span>
+<span class="sd">           :meth:`pyramid.request.Request.current_route_path` is, in fact,</span>
+<span class="sd">           implemented in terms of</span>
+<span class="sd">           :meth:`pyramid.request.Request.current_route_url` in just this</span>
+<span class="sd">           way. As a result, any ``_app_url`` passed within the ``**kw``</span>
+<span class="sd">           values to ``current_route_path`` will be ignored.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">kw</span><span class="p">[</span><span class="s">&#39;_app_url&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">script_name</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_route_url</span><span class="p">(</span><span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="route_url"><a class="viewcode-back" href="../../api/url.html#pyramid.url.route_url">[docs]</a><span class="k">def</span> <span class="nf">route_url</span><span class="p">(</span><span class="n">route_name</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is a backwards compatibility function.  Its result is the same as</span>
+<span class="sd">    calling::</span>
+
+<span class="sd">        request.route_url(route_name, *elements, **kw)</span>
+
+<span class="sd">    See :meth:`pyramid.request.Request.route_url` for more information.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">route_url</span><span class="p">(</span><span class="n">route_name</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="route_path"><a class="viewcode-back" href="../../api/url.html#pyramid.url.route_path">[docs]</a><span class="k">def</span> <span class="nf">route_path</span><span class="p">(</span><span class="n">route_name</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is a backwards compatibility function.  Its result is the same as</span>
+<span class="sd">    calling::</span>
+
+<span class="sd">        request.route_path(route_name, *elements, **kw)</span>
+
+<span class="sd">    See :meth:`pyramid.request.Request.route_path` for more information.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">route_path</span><span class="p">(</span><span class="n">route_name</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="resource_url"><a class="viewcode-back" href="../../api/url.html#pyramid.url.resource_url">[docs]</a><span class="k">def</span> <span class="nf">resource_url</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is a backwards compatibility function.  Its result is the same as</span>
+<span class="sd">    calling::</span>
+
+<span class="sd">        request.resource_url(resource, *elements, **kw)</span>
+
+<span class="sd">    See :meth:`pyramid.request.Request.resource_url` for more information.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">resource_url</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+</div>
+<span class="n">model_url</span> <span class="o">=</span> <span class="n">resource_url</span> <span class="c"># b/w compat (forever)</span>
+
+<div class="viewcode-block" id="static_url"><a class="viewcode-back" href="../../api/url.html#pyramid.url.static_url">[docs]</a><span class="k">def</span> <span class="nf">static_url</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is a backwards compatibility function.  Its result is the same as</span>
+<span class="sd">    calling::</span>
+
+<span class="sd">        request.static_url(path, **kw)</span>
+
+<span class="sd">    See :meth:`pyramid.request.Request.static_url` for more information.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="s">&#39;:&#39;</span> <span class="ow">in</span> <span class="n">path</span><span class="p">:</span>
+            <span class="c"># if it&#39;s not a package:relative/name and it&#39;s not an</span>
+            <span class="c"># /absolute/path it&#39;s a relative/path; this means its relative</span>
+            <span class="c"># to the package in which the caller&#39;s module is defined.</span>
+            <span class="n">package</span> <span class="o">=</span> <span class="n">caller_package</span><span class="p">()</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">package</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">static_url</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="static_path"><a class="viewcode-back" href="../../api/url.html#pyramid.url.static_path">[docs]</a><span class="k">def</span> <span class="nf">static_path</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is a backwards compatibility function.  Its result is the same as</span>
+<span class="sd">    calling::</span>
+
+<span class="sd">        request.static_path(path, **kw)</span>
+
+<span class="sd">    See :meth:`pyramid.request.Request.static_path` for more information.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="s">&#39;:&#39;</span> <span class="ow">in</span> <span class="n">path</span><span class="p">:</span>
+            <span class="c"># if it&#39;s not a package:relative/name and it&#39;s not an</span>
+            <span class="c"># /absolute/path it&#39;s a relative/path; this means its relative</span>
+            <span class="c"># to the package in which the caller&#39;s module is defined.</span>
+            <span class="n">package</span> <span class="o">=</span> <span class="n">caller_package</span><span class="p">()</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">package</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">static_path</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="current_route_url"><a class="viewcode-back" href="../../api/url.html#pyramid.url.current_route_url">[docs]</a><span class="k">def</span> <span class="nf">current_route_url</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is a backwards compatibility function.  Its result is the same as</span>
+<span class="sd">    calling::</span>
+
+<span class="sd">        request.current_route_url(*elements, **kw)</span>
+
+<span class="sd">    See :meth:`pyramid.request.Request.current_route_url` for more</span>
+<span class="sd">    information.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">current_route_url</span><span class="p">(</span><span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="current_route_path"><a class="viewcode-back" href="../../api/url.html#pyramid.url.current_route_path">[docs]</a><span class="k">def</span> <span class="nf">current_route_path</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is a backwards compatibility function.  Its result is the same as</span>
+<span class="sd">    calling::</span>
+
+<span class="sd">        request.current_route_path(*elements, **kw)</span>
+
+<span class="sd">    See :meth:`pyramid.request.Request.current_route_path` for more</span>
+<span class="sd">    information.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">current_route_path</span><span class="p">(</span><span class="o">*</span><span class="n">elements</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+</div>
+<span class="nd">@lru_cache</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">_join_elements</span><span class="p">(</span><span class="n">elements</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">quote_path_segment</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="s">&#39;:@&amp;+$,&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">elements</span><span class="p">])</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

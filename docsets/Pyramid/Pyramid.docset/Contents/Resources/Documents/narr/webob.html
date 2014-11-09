@@ -1,0 +1,566 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Request and Response Objects &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="next" title="Sessions" href="sessions.html" />
+    <link rel="prev" title="Static Assets" href="assets.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="sessions.html" title="Sessions"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="assets.html" title="Static Assets"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="request-and-response-objects">
+<span id="webob-chapter"></span><span id="index-0"></span><h1>Request and Response Objects<a class="headerlink" href="#request-and-response-objects" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This chapter is adapted from a portion of the <a class="reference internal" href="../glossary.html#term-webob"><em class="xref std std-term">WebOb</em></a>
+documentation, originally written by Ian Bicking.</p>
+</div>
+<p><span>Pyramid</span> uses the <a class="reference internal" href="../glossary.html#term-webob"><em class="xref std std-term">WebOb</em></a> package as a basis for its
+<a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> and <a class="reference internal" href="../glossary.html#term-response"><em class="xref std std-term">response</em></a> object implementations.  The
+<a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> object that is passed to a <span>Pyramid</span> <a class="reference internal" href="../glossary.html#term-view"><em class="xref std std-term">view</em></a> is an
+instance of the <a class="reference internal" href="../api/request.html#pyramid.request.Request" title="pyramid.request.Request"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.request.Request</span></tt></a> class, which is a subclass
+of <tt class="xref py py-class docutils literal"><span class="pre">webob.Request</span></tt>.  The <a class="reference internal" href="../glossary.html#term-response"><em class="xref std std-term">response</em></a> returned from a
+<span>Pyramid</span> <a class="reference internal" href="../glossary.html#term-view"><em class="xref std std-term">view</em></a> <a class="reference internal" href="../glossary.html#term-renderer"><em class="xref std std-term">renderer</em></a> is an instance of the
+<a class="reference internal" href="../api/response.html#pyramid.response.Response" title="pyramid.response.Response"><tt class="xref py py-mod docutils literal"><span class="pre">pyramid.response.Response</span></tt></a> class, which is a subclass of the
+<tt class="xref py py-class docutils literal"><span class="pre">webob.Response</span></tt> class.  Users can also return an instance of
+<a class="reference internal" href="../api/response.html#pyramid.response.Response" title="pyramid.response.Response"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.response.Response</span></tt></a> directly from a view as necessary.</p>
+<p>WebOb is a project separate from <span>Pyramid</span> with a separate set of
+authors and a fully separate <a class="reference external" href="http://docs.webob.org/en/latest/index.html">set of documentation</a>.  Pyramid adds some
+functionality to the standard WebOb request, which is documented in the
+<a class="reference internal" href="../api/request.html#request-module"><em>pyramid.request</em></a> API documentation.</p>
+<p>WebOb provides objects for HTTP requests and responses.  Specifically it does
+this by wrapping the <a class="reference external" href="http://wsgi.org">WSGI</a> request environment and
+response status, header list, and app_iter (body) values.</p>
+<p>WebOb request and response objects provide many conveniences for parsing WSGI
+requests and forming WSGI responses.  WebOb is a nice way to represent &quot;raw&quot;
+WSGI requests and responses; however, we won't cover that use case in this
+document, as users of <span>Pyramid</span> don't typically need to use the
+WSGI-related features of WebOb directly.  The <a class="reference external" href="http://docs.webob.org/en/latest/reference.html">reference documentation</a> shows many examples of
+creating requests and using response objects in this manner, however.</p>
+<div class="section" id="request">
+<span id="index-1"></span><h2>Request<a class="headerlink" href="#request" title="Permalink to this headline">¶</a></h2>
+<p>The request object is a wrapper around the <a class="reference external" href="http://www.python.org/dev/peps/pep-0333/#environ-variables">WSGI environ dictionary</a>.  This
+dictionary contains keys for each header, keys that describe the
+request (including the path and query string), a file-like object for
+the request body, and a variety of custom keys.  You can always access
+the environ with <tt class="docutils literal"><span class="pre">req.environ</span></tt>.</p>
+<p>Some of the most important/interesting attributes of a request
+object:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">req.method</span></tt>:</dt>
+<dd>The request method, e.g., <tt class="docutils literal"><span class="pre">'GET'</span></tt>, <tt class="docutils literal"><span class="pre">'POST'</span></tt></dd>
+<dt><tt class="docutils literal"><span class="pre">req.GET</span></tt>:</dt>
+<dd>A <a class="reference internal" href="../glossary.html#term-multidict"><em class="xref std std-term">multidict</em></a> with all the variables in the query
+string.</dd>
+<dt><tt class="docutils literal"><span class="pre">req.POST</span></tt>:</dt>
+<dd>A <a class="reference internal" href="../glossary.html#term-multidict"><em class="xref std std-term">multidict</em></a> with all the variables in the request
+body.  This only has variables if the request was a <tt class="docutils literal"><span class="pre">POST</span></tt> and
+it is a form submission.</dd>
+<dt><tt class="docutils literal"><span class="pre">req.params</span></tt>:</dt>
+<dd>A <a class="reference internal" href="../glossary.html#term-multidict"><em class="xref std std-term">multidict</em></a> with a combination of everything in
+<tt class="docutils literal"><span class="pre">req.GET</span></tt> and <tt class="docutils literal"><span class="pre">req.POST</span></tt>.</dd>
+<dt><tt class="docutils literal"><span class="pre">req.body</span></tt>:</dt>
+<dd>The contents of the body of the request.  This contains the entire
+request body as a string.  This is useful when the request is a
+<tt class="docutils literal"><span class="pre">POST</span></tt> that is <em>not</em> a form submission, or a request like a
+<tt class="docutils literal"><span class="pre">PUT</span></tt>.  You can also get <tt class="docutils literal"><span class="pre">req.body_file</span></tt> for a file-like
+object.</dd>
+<dt><tt class="docutils literal"><span class="pre">req.json_body</span></tt></dt>
+<dd>The JSON-decoded contents of the body of the request. See
+<a class="reference internal" href="#request-json-body"><em>Dealing With A JSON-Encoded Request Body</em></a>.</dd>
+<dt><tt class="docutils literal"><span class="pre">req.cookies</span></tt>:</dt>
+<dd>A simple dictionary of all the cookies.</dd>
+<dt><tt class="docutils literal"><span class="pre">req.headers</span></tt>:</dt>
+<dd>A dictionary of all the headers.  This dictionary is case-insensitive.</dd>
+<dt><tt class="docutils literal"><span class="pre">req.urlvars</span></tt> and <tt class="docutils literal"><span class="pre">req.urlargs</span></tt>:</dt>
+<dd><tt class="docutils literal"><span class="pre">req.urlvars</span></tt> are the keyword parameters associated with the
+request URL.  <tt class="docutils literal"><span class="pre">req.urlargs</span></tt> are the positional parameters.
+These are set by products like <a class="reference external" href="http://routes.groovie.org/">Routes</a> and <a class="reference external" href="http://lukearno.com/projects/selector/">Selector</a>.</dd>
+</dl>
+<p>Also, for standard HTTP request headers there are usually attributes,
+for instance: <tt class="docutils literal"><span class="pre">req.accept_language</span></tt>, <tt class="docutils literal"><span class="pre">req.content_length</span></tt>,
+<tt class="docutils literal"><span class="pre">req.user_agent</span></tt>, as an example.  These properties expose the
+<em>parsed</em> form of each header, for whatever parsing makes sense.  For
+instance, <tt class="docutils literal"><span class="pre">req.if_modified_since</span></tt> returns a <a class="reference external" href="http://python.org/doc/current/lib/datetime-datetime.html">datetime</a> object
+(or None if the header is was not provided).</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Full API documentation for the <span>Pyramid</span> request
+object is available in <a class="reference internal" href="../api/request.html#request-module"><em>pyramid.request</em></a>.</p>
+</div>
+<div class="section" id="special-attributes-added-to-the-request-by-pyramid">
+<span id="special-request-attributes"></span><span id="index-2"></span><h3>Special Attributes Added to the Request by <span>Pyramid</span><a class="headerlink" href="#special-attributes-added-to-the-request-by-pyramid" title="Permalink to this headline">¶</a></h3>
+<p>In addition to the standard <a class="reference internal" href="../glossary.html#term-webob"><em class="xref std std-term">WebOb</em></a> attributes, <span>Pyramid</span> adds
+special attributes to every request: <tt class="docutils literal"><span class="pre">context</span></tt>, <tt class="docutils literal"><span class="pre">registry</span></tt>, <tt class="docutils literal"><span class="pre">root</span></tt>,
+<tt class="docutils literal"><span class="pre">subpath</span></tt>, <tt class="docutils literal"><span class="pre">traversed</span></tt>, <tt class="docutils literal"><span class="pre">view_name</span></tt>, <tt class="docutils literal"><span class="pre">virtual_root</span></tt>,
+<tt class="docutils literal"><span class="pre">virtual_root_path</span></tt>, <tt class="docutils literal"><span class="pre">session</span></tt>, <tt class="docutils literal"><span class="pre">matchdict</span></tt>, and <tt class="docutils literal"><span class="pre">matched_route</span></tt>.
+These attributes are documented further within the
+<a class="reference internal" href="../api/request.html#pyramid.request.Request" title="pyramid.request.Request"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.request.Request</span></tt></a> API documentation.</p>
+</div>
+<div class="section" id="urls">
+<span id="index-3"></span><h3>URLs<a class="headerlink" href="#urls" title="Permalink to this headline">¶</a></h3>
+<p>In addition to these attributes, there are several ways to get the URL
+of the request.  I'll show various values for an example URL
+<tt class="docutils literal"><span class="pre">http://localhost/app/blog?id=10</span></tt>, where the application is mounted at
+<tt class="docutils literal"><span class="pre">http://localhost/app</span></tt>.</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">req.url</span></tt>:</dt>
+<dd>The full request URL, with query string, e.g.,
+<tt class="docutils literal"><span class="pre">http://localhost/app/blog?id=10</span></tt></dd>
+<dt><tt class="docutils literal"><span class="pre">req.host</span></tt>:</dt>
+<dd>The host information in the URL, e.g.,
+<tt class="docutils literal"><span class="pre">localhost</span></tt></dd>
+<dt><tt class="docutils literal"><span class="pre">req.host_url</span></tt>:</dt>
+<dd>The URL with the host, e.g., <tt class="docutils literal"><span class="pre">http://localhost</span></tt></dd>
+<dt><tt class="docutils literal"><span class="pre">req.application_url</span></tt>:</dt>
+<dd>The URL of the application (just the SCRIPT_NAME portion of the
+path, not PATH_INFO).  E.g., <tt class="docutils literal"><span class="pre">http://localhost/app</span></tt></dd>
+<dt><tt class="docutils literal"><span class="pre">req.path_url</span></tt>:</dt>
+<dd>The URL of the application including the PATH_INFO. e.g.,
+<tt class="docutils literal"><span class="pre">http://localhost/app/blog</span></tt></dd>
+<dt><tt class="docutils literal"><span class="pre">req.path</span></tt>:</dt>
+<dd>The URL including PATH_INFO without the host or scheme. e.g.,
+<tt class="docutils literal"><span class="pre">/app/blog</span></tt></dd>
+<dt><tt class="docutils literal"><span class="pre">req.path_qs</span></tt>:</dt>
+<dd>The URL including PATH_INFO and the query string. e.g,
+<tt class="docutils literal"><span class="pre">/app/blog?id=10</span></tt></dd>
+<dt><tt class="docutils literal"><span class="pre">req.query_string</span></tt>:</dt>
+<dd>The query string in the URL, e.g.,
+<tt class="docutils literal"><span class="pre">id=10</span></tt></dd>
+<dt><tt class="docutils literal"><span class="pre">req.relative_url(url,</span> <span class="pre">to_application=False)</span></tt>:</dt>
+<dd>Gives a URL, relative to the current URL.  If <tt class="docutils literal"><span class="pre">to_application</span></tt>
+is True, then resolves it relative to <tt class="docutils literal"><span class="pre">req.application_url</span></tt>.</dd>
+</dl>
+</div>
+<div class="section" id="methods">
+<span id="index-4"></span><h3>Methods<a class="headerlink" href="#methods" title="Permalink to this headline">¶</a></h3>
+<p>There are methods of request objects documented in
+<a class="reference internal" href="../api/request.html#pyramid.request.Request" title="pyramid.request.Request"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.request.Request</span></tt></a> but you'll find that you won't use very many
+of them.  Here are a couple that might be useful:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">Request.blank(base_url)</span></tt>:</dt>
+<dd>Creates a new request with blank information, based at the given
+URL.  This can be useful for subrequests and artificial requests.
+You can also use <tt class="docutils literal"><span class="pre">req.copy()</span></tt> to copy an existing request, or
+for subrequests <tt class="docutils literal"><span class="pre">req.copy_get()</span></tt> which copies the request but
+always turns it into a GET (which is safer to share for
+subrequests).</dd>
+<dt><tt class="docutils literal"><span class="pre">req.get_response(wsgi_application)</span></tt>:</dt>
+<dd>This method calls the given WSGI application with this request, and
+returns a <a class="reference internal" href="../api/response.html#pyramid.response.Response" title="pyramid.response.Response"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.response.Response</span></tt></a> object.  You can also use
+this for subrequests, or testing.</dd>
+</dl>
+</div>
+<div class="section" id="unicode">
+<span id="index-5"></span><h3>Unicode<a class="headerlink" href="#unicode" title="Permalink to this headline">¶</a></h3>
+<p>Many of the properties in the request object will return unicode
+values if the request encoding/charset is provided.  The client <em>can</em>
+indicate the charset with something like <tt class="docutils literal"><span class="pre">Content-Type:</span>
+<span class="pre">application/x-www-form-urlencoded;</span> <span class="pre">charset=utf8</span></tt>, but browsers seldom
+set this.  You can set the charset with <tt class="docutils literal"><span class="pre">req.charset</span> <span class="pre">=</span> <span class="pre">'utf8'</span></tt>, or
+during instantiation with <tt class="docutils literal"><span class="pre">Request(environ,</span> <span class="pre">charset='utf8')</span></tt>.  If
+you subclass <tt class="docutils literal"><span class="pre">Request</span></tt> you can also set <tt class="docutils literal"><span class="pre">charset</span></tt> as a class-level
+attribute.</p>
+<p>If it is set, then <tt class="docutils literal"><span class="pre">req.POST</span></tt>, <tt class="docutils literal"><span class="pre">req.GET</span></tt>, <tt class="docutils literal"><span class="pre">req.params</span></tt>, and
+<tt class="docutils literal"><span class="pre">req.cookies</span></tt> will contain unicode strings.  Each has a
+corresponding <tt class="docutils literal"><span class="pre">req.str_*</span></tt> (e.g., <tt class="docutils literal"><span class="pre">req.str_POST</span></tt>) that is always
+a <tt class="docutils literal"><span class="pre">str</span></tt>, and never unicode.</p>
+</div>
+<div class="section" id="multidict">
+<span id="multidict-narr"></span><span id="index-6"></span><h3>Multidict<a class="headerlink" href="#multidict" title="Permalink to this headline">¶</a></h3>
+<p>Several attributes of a WebOb request are &quot;multidict&quot;; structures (such as
+<tt class="docutils literal"><span class="pre">request.GET</span></tt>, <tt class="docutils literal"><span class="pre">request.POST</span></tt>, and <tt class="docutils literal"><span class="pre">request.params</span></tt>).  A multidict is a
+dictionary where a key can have multiple values.  The quintessential example
+is a query string like <tt class="docutils literal"><span class="pre">?pref=red&amp;pref=blue</span></tt>; the <tt class="docutils literal"><span class="pre">pref</span></tt> variable has two
+values: <tt class="docutils literal"><span class="pre">red</span></tt> and <tt class="docutils literal"><span class="pre">blue</span></tt>.</p>
+<p>In a multidict, when you do <tt class="docutils literal"><span class="pre">request.GET['pref']</span></tt> you'll get back
+only <tt class="docutils literal"><span class="pre">'blue'</span></tt> (the last value of <tt class="docutils literal"><span class="pre">pref</span></tt>).  Sometimes returning a
+string, and sometimes returning a list, is the cause of frequent
+exceptions.  If you want <em>all</em> the values back, use
+<tt class="docutils literal"><span class="pre">request.GET.getall('pref')</span></tt>.  If you want to be sure there is <em>one
+and only one</em> value, use <tt class="docutils literal"><span class="pre">request.GET.getone('pref')</span></tt>, which will
+raise an exception if there is zero or more than one value for
+<tt class="docutils literal"><span class="pre">pref</span></tt>.</p>
+<p>When you use operations like <tt class="docutils literal"><span class="pre">request.GET.items()</span></tt> you'll get back
+something like <tt class="docutils literal"><span class="pre">[('pref',</span> <span class="pre">'red'),</span> <span class="pre">('pref',</span> <span class="pre">'blue')]</span></tt>.  All the
+key/value pairs will show up.  Similarly <tt class="docutils literal"><span class="pre">request.GET.keys()</span></tt>
+returns <tt class="docutils literal"><span class="pre">['pref',</span> <span class="pre">'pref']</span></tt>.  Multidict is a view on a list of
+tuples; all the keys are ordered, and all the values are ordered.</p>
+<p>API documentation for a multidict exists as
+<a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.IMultiDict" title="pyramid.interfaces.IMultiDict"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.IMultiDict</span></tt></a>.</p>
+</div>
+<div class="section" id="dealing-with-a-json-encoded-request-body">
+<span id="request-json-body"></span><span id="index-7"></span><h3>Dealing With A JSON-Encoded Request Body<a class="headerlink" href="#dealing-with-a-json-encoded-request-body" title="Permalink to this headline">¶</a></h3>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 1.1.</span></p>
+</div>
+<p><a class="reference internal" href="../api/request.html#pyramid.request.Request.json_body" title="pyramid.request.Request.json_body"><tt class="xref py py-attr docutils literal"><span class="pre">pyramid.request.Request.json_body</span></tt></a> is a property that returns a
+<a class="reference internal" href="../glossary.html#term-json"><em class="xref std std-term">JSON</em></a> -decoded representation of the request body.  If the request
+does not have a body, or the body is not a properly JSON-encoded value, an
+exception will be raised when this attribute is accessed.</p>
+<p>This attribute is useful when you invoke a Pyramid view callable via
+e.g. jQuery's <tt class="docutils literal"><span class="pre">$.ajax</span></tt> function, which has the potential to send a request
+with a JSON-encoded body.</p>
+<p>Using <tt class="docutils literal"><span class="pre">request.json_body</span></tt> is equivalent to:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">json</span> <span class="kn">import</span> <span class="n">loads</span>
+<span class="n">loads</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">charset</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Here's how to construct an AJAX request in Javascript using <a class="reference internal" href="../glossary.html#term-jquery"><em class="xref std std-term">jQuery</em></a>
+that allows you to use the <tt class="docutils literal"><span class="pre">request.json_body</span></tt> attribute when the request
+is sent to a Pyramid application:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="nx">jQuery</span><span class="p">.</span><span class="nx">ajax</span><span class="p">({</span><span class="nx">type</span><span class="o">:</span><span class="s1">&#39;POST&#39;</span><span class="p">,</span>
+             <span class="nx">url</span><span class="o">:</span> <span class="s1">&#39;http://localhost:6543/&#39;</span><span class="p">,</span> <span class="c1">// the pyramid server</span>
+             <span class="nx">data</span><span class="o">:</span> <span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">({</span><span class="s1">&#39;a&#39;</span><span class="o">:</span><span class="mi">1</span><span class="p">}),</span>
+             <span class="nx">contentType</span><span class="o">:</span> <span class="s1">&#39;application/json; charset=utf-8&#39;</span><span class="p">});</span>
+</pre></div>
+</div>
+<p>When such a request reaches a view in your application, the
+<tt class="docutils literal"><span class="pre">request.json_body</span></tt> attribute will be available in the view callable body.</p>
+<div class="highlight-javascript"><div class="highlight"><pre>@view_config(renderer=&#39;string&#39;)
+def aview(request):
+    print(request.json_body)
+    return &#39;OK&#39;
+</pre></div>
+</div>
+<p>For the above view, printed to the console will be:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span><span class="s">u&#39;a&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>For bonus points, here's a bit of client-side code that will produce a
+request that has a body suitable for reading via <tt class="docutils literal"><span class="pre">request.json_body</span></tt> using
+Python's <tt class="docutils literal"><span class="pre">urllib2</span></tt> instead of a Javascript AJAX request:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">urllib2</span>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="n">json_payload</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span><span class="s">&#39;a&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">})</span>
+<span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;Content-Type&#39;</span><span class="p">:</span><span class="s">&#39;application/json; charset=utf-8&#39;</span><span class="p">}</span>
+<span class="n">req</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">Request</span><span class="p">(</span><span class="s">&#39;http://localhost:6543/&#39;</span><span class="p">,</span> <span class="n">json_payload</span><span class="p">,</span> <span class="n">headers</span><span class="p">)</span>
+<span class="n">resp</span> <span class="o">=</span> <span class="n">urllib2</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">req</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="cleaning-up-after-a-request">
+<span id="index-8"></span><span id="id1"></span><h3>Cleaning Up After a Request<a class="headerlink" href="#cleaning-up-after-a-request" title="Permalink to this headline">¶</a></h3>
+<p>Sometimes it's required that some cleanup be performed at the end of a
+request when a database connection is involved.</p>
+<p>For example, let's say you have a <tt class="docutils literal"><span class="pre">mypackage</span></tt> <span>Pyramid</span> application
+package that uses SQLAlchemy, and you'd like the current SQLAlchemy database
+session to be removed after each request.  Put the following in the
+<tt class="docutils literal"><span class="pre">mypackage.__init__</span></tt> module:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">mypackage.models</span> <span class="kn">import</span> <span class="n">DBSession</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.events</span> <span class="kn">import</span> <span class="n">subscriber</span>
+<span class="kn">from</span> <span class="nn">pyramid.events</span> <span class="kn">import</span> <span class="n">NewRequest</span>
+
+<span class="k">def</span> <span class="nf">cleanup_callback</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">DBSession</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span>
+
+<span class="nd">@subscriber</span><span class="p">(</span><span class="n">NewRequest</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">add_cleanup_callback</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="n">event</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">add_finished_callback</span><span class="p">(</span><span class="n">cleanup_callback</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Registering the <tt class="docutils literal"><span class="pre">cleanup_callback</span></tt> finished callback at the start of a
+request (by causing the <tt class="docutils literal"><span class="pre">add_cleanup_callback</span></tt> to receive a
+<a class="reference internal" href="../api/events.html#pyramid.events.NewRequest" title="pyramid.events.NewRequest"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.events.NewRequest</span></tt></a> event at the start of each request) will
+cause the DBSession to be removed whenever request processing has ended.
+Note that in the example above, for the <a class="reference internal" href="../api/events.html#pyramid.events.subscriber" title="pyramid.events.subscriber"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.events.subscriber</span></tt></a>
+decorator to &quot;work&quot;, the <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.scan" title="pyramid.config.Configurator.scan"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.scan()</span></tt></a> method must
+be called against your <tt class="docutils literal"><span class="pre">mypackage</span></tt> package during application
+initialization.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This is only an example.  In particular, it is not necessary to
+cause <tt class="docutils literal"><span class="pre">DBSession.remove</span></tt> to be called in an application generated from
+any <span>Pyramid</span> scaffold, because these all use the <tt class="docutils literal"><span class="pre">pyramid_tm</span></tt>
+package.  The cleanup done by <tt class="docutils literal"><span class="pre">DBSession.remove</span></tt> is unnecessary when
+<tt class="docutils literal"><span class="pre">pyramid_tm</span></tt> <a class="reference internal" href="../glossary.html#term-middleware"><em class="xref std std-term">middleware</em></a> is configured into the application.</p>
+</div>
+</div>
+<div class="section" id="more-details">
+<h3>More Details<a class="headerlink" href="#more-details" title="Permalink to this headline">¶</a></h3>
+<p>More detail about the request object API is available in:</p>
+<ul class="simple">
+<li>The <a class="reference internal" href="../api/request.html#pyramid.request.Request" title="pyramid.request.Request"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.request.Request</span></tt></a> API documentation.</li>
+<li>The <a class="reference external" href="http://docs.webob.org/en/latest/index.html">WebOb documentation</a>.
+All methods and attributes of a <tt class="docutils literal"><span class="pre">webob.Request</span></tt> documented within the
+WebOb documentation will work with request objects created by
+<span>Pyramid</span>.</li>
+</ul>
+</div>
+</div>
+<div class="section" id="response">
+<span id="index-9"></span><h2>Response<a class="headerlink" href="#response" title="Permalink to this headline">¶</a></h2>
+<p>The <span>Pyramid</span> response object can be imported as
+<a class="reference internal" href="../api/response.html#pyramid.response.Response" title="pyramid.response.Response"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.response.Response</span></tt></a>.  This class is a subclass of the
+<tt class="docutils literal"><span class="pre">webob.Response</span></tt> class.  The subclass does not add or change any
+functionality, so the WebOb Response documentation will be completely
+relevant for this class as well.</p>
+<p>A response object has three fundamental parts:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">response.status</span></tt>:</dt>
+<dd>The response code plus reason message, like <tt class="docutils literal"><span class="pre">'200</span> <span class="pre">OK'</span></tt>.  To set
+the code without a message, use <tt class="docutils literal"><span class="pre">status_int</span></tt>, i.e.:
+<tt class="docutils literal"><span class="pre">response.status_int</span> <span class="pre">=</span> <span class="pre">200</span></tt>.</dd>
+<dt><tt class="docutils literal"><span class="pre">response.headerlist</span></tt>:</dt>
+<dd>A list of all the headers, like <tt class="docutils literal"><span class="pre">[('Content-Type',</span>
+<span class="pre">'text/html')]</span></tt>.  There's a case-insensitive <a class="reference internal" href="../glossary.html#term-multidict"><em class="xref std std-term">multidict</em></a>
+in <tt class="docutils literal"><span class="pre">response.headers</span></tt> that also allows you to access
+these same headers.</dd>
+<dt><tt class="docutils literal"><span class="pre">response.app_iter</span></tt>:</dt>
+<dd>An iterable (such as a list or generator) that will produce the
+content of the response.  This is also accessible as
+<tt class="docutils literal"><span class="pre">response.body</span></tt> (a string), <tt class="docutils literal"><span class="pre">response.unicode_body</span></tt> (a
+unicode object, informed by <tt class="docutils literal"><span class="pre">response.charset</span></tt>), and
+<tt class="docutils literal"><span class="pre">response.body_file</span></tt> (a file-like object; writing to it appends
+to <tt class="docutils literal"><span class="pre">app_iter</span></tt>).</dd>
+</dl>
+<p>Everything else in the object typically derives from this underlying state.
+Here are some highlights:</p>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">response.content_type</span></tt></dt>
+<dd>The content type <em>not</em> including the <tt class="docutils literal"><span class="pre">charset</span></tt> parameter.
+Typical use: <tt class="docutils literal"><span class="pre">response.content_type</span> <span class="pre">=</span> <span class="pre">'text/html'</span></tt>.</dd>
+<dt><tt class="docutils literal"><span class="pre">response.charset</span></tt>:</dt>
+<dd>The <tt class="docutils literal"><span class="pre">charset</span></tt> parameter of the content-type, it also informs
+encoding in <tt class="docutils literal"><span class="pre">response.unicode_body</span></tt>.
+<tt class="docutils literal"><span class="pre">response.content_type_params</span></tt> is a dictionary of all the
+parameters.</dd>
+<dt><tt class="docutils literal"><span class="pre">response.set_cookie(key,</span> <span class="pre">value,</span> <span class="pre">max_age=None,</span> <span class="pre">path='/',</span> <span class="pre">...)</span></tt>:</dt>
+<dd>Set a cookie.  The keyword arguments control the various cookie
+parameters.  The <tt class="docutils literal"><span class="pre">max_age</span></tt> argument is the length for the cookie
+to live in seconds (you may also use a timedelta object).  The
+<tt class="docutils literal"><span class="pre">Expires</span></tt> key will also be set based on the value of
+<tt class="docutils literal"><span class="pre">max_age</span></tt>.</dd>
+<dt><tt class="docutils literal"><span class="pre">response.delete_cookie(key,</span> <span class="pre">path='/',</span> <span class="pre">domain=None)</span></tt>:</dt>
+<dd>Delete a cookie from the client.  This sets <tt class="docutils literal"><span class="pre">max_age</span></tt> to 0 and
+the cookie value to <tt class="docutils literal"><span class="pre">''</span></tt>.</dd>
+<dt><tt class="docutils literal"><span class="pre">response.cache_expires(seconds=0)</span></tt>:</dt>
+<dd>This makes this response cacheable for the given number of seconds,
+or if <tt class="docutils literal"><span class="pre">seconds</span></tt> is 0 then the response is uncacheable (this also
+sets the <tt class="docutils literal"><span class="pre">Expires</span></tt> header).</dd>
+<dt><tt class="docutils literal"><span class="pre">response(environ,</span> <span class="pre">start_response)</span></tt>:</dt>
+<dd>The response object is a WSGI application.  As an application, it
+acts according to how you create it.  It <em>can</em> do conditional
+responses if you pass <tt class="docutils literal"><span class="pre">conditional_response=True</span></tt> when
+instantiating (or set that attribute later).  It can also do HEAD
+and Range requests.</dd>
+</dl>
+<div class="section" id="headers">
+<span id="index-10"></span><h3>Headers<a class="headerlink" href="#headers" title="Permalink to this headline">¶</a></h3>
+<p>Like the request, most HTTP response headers are available as
+properties.  These are parsed, so you can do things like
+<tt class="docutils literal"><span class="pre">response.last_modified</span> <span class="pre">=</span> <span class="pre">os.path.getmtime(filename)</span></tt>.</p>
+<p>The details are available in the <a class="reference external" href="http://docs.webob.org/en/latest/modules/webob.html#headers">extracted Response documentation</a>.</p>
+</div>
+<div class="section" id="instantiating-the-response">
+<span id="index-11"></span><h3>Instantiating the Response<a class="headerlink" href="#instantiating-the-response" title="Permalink to this headline">¶</a></h3>
+<p>Of course most of the time you just want to <em>make</em> a response.
+Generally any attribute of the response can be passed in as a keyword
+argument to the class; e.g.:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+<span class="n">response</span> <span class="o">=</span> <span class="n">Response</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="s">&#39;hello world!&#39;</span><span class="p">,</span> <span class="n">content_type</span><span class="o">=</span><span class="s">&#39;text/plain&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The status defaults to <tt class="docutils literal"><span class="pre">'200</span> <span class="pre">OK'</span></tt>.  The content_type does not default to
+anything, though if you subclass <a class="reference internal" href="../api/response.html#pyramid.response.Response" title="pyramid.response.Response"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.response.Response</span></tt></a> and set
+<tt class="docutils literal"><span class="pre">default_content_type</span></tt> you can override this behavior.</p>
+</div>
+<div class="section" id="exception-responses">
+<span id="index-12"></span><h3>Exception Responses<a class="headerlink" href="#exception-responses" title="Permalink to this headline">¶</a></h3>
+<p>To facilitate error responses like <tt class="docutils literal"><span class="pre">404</span> <span class="pre">Not</span> <span class="pre">Found</span></tt>, the module
+<a class="reference internal" href="../api/httpexceptions.html#module-pyramid.httpexceptions" title="pyramid.httpexceptions"><tt class="xref py py-mod docutils literal"><span class="pre">pyramid.httpexceptions</span></tt></a> contains classes for each kind of error
+response.  These include boring, but appropriate error bodies.  The
+exceptions exposed by this module, when used under <span>Pyramid</span>, should be
+imported from the <a class="reference internal" href="../api/httpexceptions.html#module-pyramid.httpexceptions" title="pyramid.httpexceptions"><tt class="xref py py-mod docutils literal"><span class="pre">pyramid.httpexceptions</span></tt></a> module.  This import location
+contains subclasses and replacements that mirror those in the <tt class="docutils literal"><span class="pre">webob.exc</span></tt>
+module.</p>
+<p>Each class is named <tt class="docutils literal"><span class="pre">pyramid.httpexceptions.HTTP*</span></tt>, where <tt class="docutils literal"><span class="pre">*</span></tt> is the
+reason for the error.  For instance,
+<a class="reference internal" href="../api/httpexceptions.html#pyramid.httpexceptions.HTTPNotFound" title="pyramid.httpexceptions.HTTPNotFound"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.httpexceptions.HTTPNotFound</span></tt></a> subclasses
+<a class="reference internal" href="../api/response.html#pyramid.response.Response" title="pyramid.response.Response"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.response.Response</span></tt></a>, so you can manipulate the instances in the same
+way.  A typical example is:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.httpexceptions</span> <span class="kn">import</span> <span class="n">HTTPNotFound</span>
+<span class="kn">from</span> <span class="nn">pyramid.httpexceptions</span> <span class="kn">import</span> <span class="n">HTTPMovedPermanently</span>
+
+<span class="n">response</span> <span class="o">=</span> <span class="n">HTTPNotFound</span><span class="p">(</span><span class="s">&#39;There is no such resource&#39;</span><span class="p">)</span>
+<span class="c"># or:</span>
+<span class="n">response</span> <span class="o">=</span> <span class="n">HTTPMovedPermanently</span><span class="p">(</span><span class="n">location</span><span class="o">=</span><span class="n">new_url</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+<div class="section" id="id2">
+<h3>More Details<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<p>More details about the response object API are available in the
+<a class="reference internal" href="../api/response.html#module-pyramid.response" title="pyramid.response"><tt class="xref py py-mod docutils literal"><span class="pre">pyramid.response</span></tt></a> documentation.  More details about exception
+responses are in the <a class="reference internal" href="../api/httpexceptions.html#module-pyramid.httpexceptions" title="pyramid.httpexceptions"><tt class="xref py py-mod docutils literal"><span class="pre">pyramid.httpexceptions</span></tt></a> API documentation.  The
+<a class="reference external" href="http://docs.webob.org/en/latest/index.html">WebOb documentation</a> is also
+useful.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Request and Response Objects</a><ul>
+<li><a class="reference internal" href="#request">Request</a><ul>
+<li><a class="reference internal" href="#special-attributes-added-to-the-request-by-pyramid">Special Attributes Added to the Request by <span>Pyramid</span></a></li>
+<li><a class="reference internal" href="#urls">URLs</a></li>
+<li><a class="reference internal" href="#methods">Methods</a></li>
+<li><a class="reference internal" href="#unicode">Unicode</a></li>
+<li><a class="reference internal" href="#multidict">Multidict</a></li>
+<li><a class="reference internal" href="#dealing-with-a-json-encoded-request-body">Dealing With A JSON-Encoded Request Body</a></li>
+<li><a class="reference internal" href="#cleaning-up-after-a-request">Cleaning Up After a Request</a></li>
+<li><a class="reference internal" href="#more-details">More Details</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#response">Response</a><ul>
+<li><a class="reference internal" href="#headers">Headers</a></li>
+<li><a class="reference internal" href="#instantiating-the-response">Instantiating the Response</a></li>
+<li><a class="reference internal" href="#exception-responses">Exception Responses</a></li>
+<li><a class="reference internal" href="#id2">More Details</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="assets.html"
+                        title="previous chapter">Static Assets</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="sessions.html"
+                        title="next chapter">Sessions</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="sessions.html" title="Sessions"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="assets.html" title="Static Assets"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

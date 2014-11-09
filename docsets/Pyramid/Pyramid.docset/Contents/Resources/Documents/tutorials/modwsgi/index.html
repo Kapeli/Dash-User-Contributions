@@ -1,0 +1,252 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Running a Pyramid Application under mod_wsgi &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="next" title="pyramid.authentication" href="../../api/authentication.html" />
+    <link rel="prev" title="Distributing Your Application" href="../wiki/distributing.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../api/authentication.html" title="pyramid.authentication"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../wiki/distributing.html" title="Distributing Your Application"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="running-a-pyramid-application-under-mod-wsgi">
+<span id="modwsgi-tutorial"></span><h1>Running a <span>Pyramid</span> Application under <tt class="docutils literal"><span class="pre">mod_wsgi</span></tt><a class="headerlink" href="#running-a-pyramid-application-under-mod-wsgi" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference internal" href="../../glossary.html#term-mod-wsgi"><em class="xref std std-term">mod_wsgi</em></a> is an Apache module developed by Graham Dumpleton.
+It allows <a class="reference internal" href="../../glossary.html#term-wsgi"><em class="xref std std-term">WSGI</em></a> programs to be served using the Apache web
+server.</p>
+<p>This guide will outline broad steps that can be used to get a <span>Pyramid</span>
+application running under Apache via <tt class="docutils literal"><span class="pre">mod_wsgi</span></tt>.  This particular tutorial
+was developed under Apple's Mac OS X platform (Snow Leopard, on a 32-bit
+Mac), but the instructions should be largely the same for all systems, delta
+specific path information for commands and files.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Unfortunately these instructions almost certainly won't work for
+deploying a <span>Pyramid</span> application on a Windows system using
+<tt class="docutils literal"><span class="pre">mod_wsgi</span></tt>.  If you have experience with <span>Pyramid</span> and <tt class="docutils literal"><span class="pre">mod_wsgi</span></tt>
+on Windows systems, please help us document this experience by submitting
+documentation to the <a class="reference external" href="http://groups.google.com/group/pylons-devel">Pylons-devel maillist</a>.</p>
+</div>
+<ol class="arabic">
+<li><p class="first">The tutorial assumes you have Apache already installed on your
+system.  If you do not, install Apache 2.X for your platform in
+whatever manner makes sense.</p>
+</li>
+<li><p class="first">Once you have Apache installed, install <tt class="docutils literal"><span class="pre">mod_wsgi</span></tt>.  Use the
+(excellent) <a class="reference external" href="http://code.google.com/p/modwsgi/wiki/InstallationInstructions">installation instructions</a>
+for your platform into your system's Apache installation.</p>
+</li>
+<li><p class="first">Install <a class="reference internal" href="../../glossary.html#term-virtualenv"><em class="xref std std-term">virtualenv</em></a> into the Python which mod_wsgi will
+run using the <tt class="docutils literal"><span class="pre">easy_install</span></tt> program.</p>
+<div class="highlight-text"><div class="highlight"><pre>$ sudo /usr/bin/easy_install-2.6 virtualenv
+</pre></div>
+</div>
+<p>This command may need to be performed as the root user.</p>
+</li>
+<li><p class="first">Create a <a class="reference internal" href="../../glossary.html#term-virtualenv"><em class="xref std std-term">virtualenv</em></a> which we'll use to install our
+application.</p>
+<div class="highlight-text"><div class="highlight"><pre>$ cd ~
+$ mkdir modwsgi
+$ cd modwsgi
+$ /usr/local/bin/virtualenv env
+</pre></div>
+</div>
+</li>
+<li><p class="first">Install <span>Pyramid</span> into the newly created virtualenv:</p>
+<div class="highlight-text"><div class="highlight"><pre>$ cd ~/modwsgi/env
+$ $VENV/bin/easy_install pyramid
+</pre></div>
+</div>
+</li>
+<li><p class="first">Create and install your <span>Pyramid</span> application.  For the purposes of
+this tutorial, we'll just be using the <tt class="docutils literal"><span class="pre">pyramid_starter</span></tt> application as
+a baseline application.  Substitute your existing <span>Pyramid</span>
+application as necessary if you already have one.</p>
+<div class="highlight-text"><div class="highlight"><pre>$ cd ~/modwsgi/env
+$ $VENV/bin/pcreate -s starter myapp
+$ cd myapp
+$ $VENV/bin/python setup.py install
+</pre></div>
+</div>
+</li>
+<li><p class="first">Within the virtualenv directory (<tt class="docutils literal"><span class="pre">~/modwsgi/env</span></tt>), create a
+script named <tt class="docutils literal"><span class="pre">pyramid.wsgi</span></tt>.  Give it these contents:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.paster</span> <span class="kn">import</span> <span class="n">get_app</span><span class="p">,</span> <span class="n">setup_logging</span>
+<span class="n">ini_path</span> <span class="o">=</span> <span class="s">&#39;/Users/chrism/modwsgi/env/myapp/production.ini&#39;</span>
+<span class="n">setup_logging</span><span class="p">(</span><span class="n">ini_path</span><span class="p">)</span>
+<span class="n">application</span> <span class="o">=</span> <span class="n">get_app</span><span class="p">(</span><span class="n">ini_path</span><span class="p">,</span> <span class="s">&#39;main&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The first argument to <tt class="docutils literal"><span class="pre">get_app</span></tt> is the project configuration file
+name.  It's best to use the <tt class="docutils literal"><span class="pre">production.ini</span></tt> file provided by your
+scaffold, as it contains settings appropriate for
+production.  The second is the name of the section within the .ini file
+that should be loaded by <tt class="docutils literal"><span class="pre">mod_wsgi</span></tt>.  The assignment to the name
+<tt class="docutils literal"><span class="pre">application</span></tt> is important: mod_wsgi requires finding such an
+assignment when it opens the file.</p>
+<p>The call to <tt class="docutils literal"><span class="pre">setup_logging</span></tt> initializes the standard library's
+<cite>logging</cite> module to allow logging within your application.
+See <a class="reference internal" href="../../narr/logging.html#logging-config"><em>Logging Configuration</em></a>.</p>
+<p>There is no need to make the <tt class="docutils literal"><span class="pre">pyramid.wsgi</span></tt> script executable.
+However, you'll need to make sure that <em>two</em> users have access to change
+into the <tt class="docutils literal"><span class="pre">~/modwsgi/env</span></tt> directory: your current user (mine is
+<tt class="docutils literal"><span class="pre">chrism</span></tt> and the user that Apache will run as often named <tt class="docutils literal"><span class="pre">apache</span></tt> or
+<tt class="docutils literal"><span class="pre">httpd</span></tt>).  Make sure both of these users can &quot;cd&quot; into that directory.</p>
+</li>
+<li><p class="first">Edit your Apache configuration and add some stuff.  I happened to
+create a file named <tt class="docutils literal"><span class="pre">/etc/apache2/other/modwsgi.conf</span></tt> on my own
+system while installing Apache, so this stuff went in there.</p>
+<div class="highlight-apache"><div class="highlight"><pre># Use only 1 Python sub-interpreter.  Multiple sub-interpreters
+# play badly with C extensions.  See
+# http://stackoverflow.com/a/10558360/209039
+WSGIApplicationGroup %{GLOBAL}
+WSGIPassAuthorization On
+WSGIDaemonProcess pyramid user=chrism group=staff threads=4 \
+   python-path=/Users/chrism/modwsgi/env/lib/python2.6/site-packages
+WSGIScriptAlias /myapp /Users/chrism/modwsgi/env/pyramid.wsgi
+
+&lt;Directory /Users/chrism/modwsgi/env&gt;
+  WSGIProcessGroup pyramid
+  Order allow,deny
+  Allow from all
+&lt;/Directory&gt;
+</pre></div>
+</div>
+</li>
+<li><p class="first">Restart Apache</p>
+<div class="highlight-text"><div class="highlight"><pre>$ sudo /usr/sbin/apachectl restart
+</pre></div>
+</div>
+</li>
+<li><p class="first">Visit <tt class="docutils literal"><span class="pre">http://localhost/myapp</span></tt> in a browser.  You should see the
+sample application rendered in your browser.</p>
+</li>
+</ol>
+<p><a class="reference internal" href="../../glossary.html#term-mod-wsgi"><em class="xref std std-term">mod_wsgi</em></a> has many knobs and a great variety of deployment
+modes.  This is just one representation of how you might use it to
+serve up a <span>Pyramid</span> application.  See the <a class="reference external" href="http://code.google.com/p/modwsgi/wiki/ConfigurationGuidelines">mod_wsgi
+configuration documentation</a> for
+more in-depth configuration information.</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../wiki/distributing.html"
+                        title="previous chapter">Distributing Your Application</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../../api/authentication.html"
+                        title="next chapter"><tt class="docutils literal"><span class="pre">pyramid.authentication</span></tt></a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../../api/authentication.html" title="pyramid.authentication"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../wiki/distributing.html" title="Distributing Your Application"
+             >previous</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,837 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Security &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="next" title="Combining Traversal and URL Dispatch" href="hybrid.html" />
+    <link rel="prev" title="Traversal" href="traversal.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="hybrid.html" title="Combining Traversal and URL Dispatch"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="traversal.html" title="Traversal"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="security">
+<span id="security-chapter"></span><span id="index-0"></span><h1>Security<a class="headerlink" href="#security" title="Permalink to this headline">¶</a></h1>
+<p><span>Pyramid</span> provides an optional declarative authorization system
+that can prevent a <a class="reference internal" href="../glossary.html#term-view"><em class="xref std std-term">view</em></a> from being invoked based on an
+<a class="reference internal" href="../glossary.html#term-authorization-policy"><em class="xref std std-term">authorization policy</em></a>. Before a view is invoked, the
+authorization system can use the credentials in the <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a>
+along with the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource to determine if access will be
+allowed.  Here's how it works at a high level:</p>
+<ul class="simple">
+<li>A <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> is generated when a user visits the application.</li>
+<li>Based on the request, a <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource is located through
+<a class="reference internal" href="../glossary.html#term-resource-location"><em class="xref std std-term">resource location</em></a>.  A context is located differently depending on
+whether the application uses <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> or <a class="reference internal" href="../glossary.html#term-url-dispatch"><em class="xref std std-term">URL dispatch</em></a>, but
+a context is ultimately found in either case.  See
+the <a class="reference internal" href="urldispatch.html#urldispatch-chapter"><em>URL Dispatch</em></a> chapter for more information.</li>
+<li>A <a class="reference internal" href="../glossary.html#term-view-callable"><em class="xref std std-term">view callable</em></a> is located by <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a> using the
+context as well as other attributes of the request.</li>
+<li>If an <a class="reference internal" href="../glossary.html#term-authentication-policy"><em class="xref std std-term">authentication policy</em></a> is in effect, it is passed the
+request; it returns some number of <a class="reference internal" href="../glossary.html#term-principal"><em class="xref std std-term">principal</em></a> identifiers.</li>
+<li>If an <a class="reference internal" href="../glossary.html#term-authorization-policy"><em class="xref std std-term">authorization policy</em></a> is in effect and the <a class="reference internal" href="../glossary.html#term-view-configuration"><em class="xref std std-term">view
+configuration</em></a> associated with the view callable that was found has
+a <a class="reference internal" href="../glossary.html#term-permission"><em class="xref std std-term">permission</em></a> associated with it, the authorization policy is
+passed the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a>, some number of <a class="reference internal" href="../glossary.html#term-principal"><em class="xref std std-term">principal</em></a>
+identifiers returned by the authentication policy, and the
+<a class="reference internal" href="../glossary.html#term-permission"><em class="xref std std-term">permission</em></a> associated with the view; it will allow or deny
+access.</li>
+<li>If the authorization policy allows access, the view callable is
+invoked.</li>
+<li>If the authorization policy denies access, the view callable is not
+invoked; instead the <a class="reference internal" href="../glossary.html#term-forbidden-view"><em class="xref std std-term">forbidden view</em></a> is invoked.</li>
+</ul>
+<p>Security in <span>Pyramid</span>, unlike many systems, cleanly and explicitly
+separates authentication and authorization. Authentication is merely the
+mechanism by which credentials provided in the <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> are
+resolved to one or more <a class="reference internal" href="../glossary.html#term-principal"><em class="xref std std-term">principal</em></a> identifiers. These identifiers
+represent the users and groups in effect during the request.
+Authorization then determines access based on the <a class="reference internal" href="../glossary.html#term-principal"><em class="xref std std-term">principal</em></a>
+identifiers, the <a class="reference internal" href="../glossary.html#term-view-callable"><em class="xref std std-term">view callable</em></a> being invoked, and the
+<a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource.</p>
+<p>Authorization is enabled by modifying your application to include an
+<a class="reference internal" href="../glossary.html#term-authentication-policy"><em class="xref std std-term">authentication policy</em></a> and <a class="reference internal" href="../glossary.html#term-authorization-policy"><em class="xref std std-term">authorization policy</em></a>.
+<span>Pyramid</span> comes with a variety of implementations of these
+policies.  To provide maximal flexibility, <span>Pyramid</span> also
+allows you to create custom authentication policies and authorization
+policies.</p>
+<div class="section" id="enabling-an-authorization-policy">
+<span id="enabling-authorization-policy"></span><span id="index-1"></span><h2>Enabling an Authorization Policy<a class="headerlink" href="#enabling-an-authorization-policy" title="Permalink to this headline">¶</a></h2>
+<p><span>Pyramid</span> does not enable any authorization policy by default.  All
+views are accessible by completely anonymous users.  In order to begin
+protecting views from execution based on security settings, you need
+to enable an authorization policy.</p>
+<div class="section" id="enabling-an-authorization-policy-imperatively">
+<h3>Enabling an Authorization Policy Imperatively<a class="headerlink" href="#enabling-an-authorization-policy-imperatively" title="Permalink to this headline">¶</a></h3>
+<p>Use the <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_authorization_policy" title="pyramid.config.Configurator.set_authorization_policy"><tt class="xref py py-meth docutils literal"><span class="pre">set_authorization_policy()</span></tt></a> method
+of the <a class="reference internal" href="../api/config.html#pyramid.config.Configurator" title="pyramid.config.Configurator"><tt class="xref py py-class docutils literal"><span class="pre">Configurator</span></tt></a> to enable an authorization
+policy.</p>
+<p>You must also enable an <a class="reference internal" href="../glossary.html#term-authentication-policy"><em class="xref std std-term">authentication policy</em></a> in order to enable the
+authorization policy.  This is because authorization, in general, depends
+upon authentication.  Use the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_authentication_policy" title="pyramid.config.Configurator.set_authentication_policy"><tt class="xref py py-meth docutils literal"><span class="pre">set_authentication_policy()</span></tt></a> method
+during application setup to specify the authentication policy.</p>
+<p>For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+<span class="kn">from</span> <span class="nn">pyramid.authentication</span> <span class="kn">import</span> <span class="n">AuthTktAuthenticationPolicy</span>
+<span class="kn">from</span> <span class="nn">pyramid.authorization</span> <span class="kn">import</span> <span class="n">ACLAuthorizationPolicy</span>
+<span class="n">authn_policy</span> <span class="o">=</span> <span class="n">AuthTktAuthenticationPolicy</span><span class="p">(</span><span class="s">&#39;seekrit&#39;</span><span class="p">,</span> <span class="n">hashalg</span><span class="o">=</span><span class="s">&#39;sha512&#39;</span><span class="p">)</span>
+<span class="n">authz_policy</span> <span class="o">=</span> <span class="n">ACLAuthorizationPolicy</span><span class="p">()</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+<span class="n">config</span><span class="o">.</span><span class="n">set_authentication_policy</span><span class="p">(</span><span class="n">authn_policy</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">set_authorization_policy</span><span class="p">(</span><span class="n">authz_policy</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The <tt class="docutils literal"><span class="pre">authentication_policy</span></tt> and <tt class="docutils literal"><span class="pre">authorization_policy</span></tt>
+arguments may also be passed to their respective methods mentioned above
+as <a class="reference internal" href="../glossary.html#term-dotted-python-name"><em class="xref std std-term">dotted Python name</em></a> values, each representing the dotted name
+path to a suitable implementation global defined at Python module scope.</p>
+</div>
+<p>The above configuration enables a policy which compares the value of an &quot;auth
+ticket&quot; cookie passed in the request's environment which contains a reference
+to a single <a class="reference internal" href="../glossary.html#term-principal"><em class="xref std std-term">principal</em></a> against the principals present in any
+<a class="reference internal" href="../glossary.html#term-acl"><em class="xref std std-term">ACL</em></a> found in the resource tree when attempting to call some
+<a class="reference internal" href="../glossary.html#term-view"><em class="xref std std-term">view</em></a>.</p>
+<p>While it is possible to mix and match different authentication and
+authorization policies, it is an error to configure a Pyramid application
+with an authentication policy but without the authorization policy or vice
+versa.  If you do this, you'll receive an error at application startup time.</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last">See also the <a class="reference internal" href="../api/authorization.html#module-pyramid.authorization" title="pyramid.authorization"><tt class="xref py py-mod docutils literal"><span class="pre">pyramid.authorization</span></tt></a> and
+<a class="reference internal" href="../api/authentication.html#module-pyramid.authentication" title="pyramid.authentication"><tt class="xref py py-mod docutils literal"><span class="pre">pyramid.authentication</span></tt></a> modules for alternate implementations of
+authorization and authentication policies.</p>
+</div>
+</div>
+</div>
+<div class="section" id="protecting-views-with-permissions">
+<span id="protecting-views"></span><span id="index-2"></span><h2>Protecting Views with Permissions<a class="headerlink" href="#protecting-views-with-permissions" title="Permalink to this headline">¶</a></h2>
+<p>To protect a <a class="reference internal" href="../glossary.html#term-view-callable"><em class="xref std std-term">view callable</em></a> from invocation based on a user's security
+settings when a particular type of resource becomes the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a>, you
+must pass a <a class="reference internal" href="../glossary.html#term-permission"><em class="xref std std-term">permission</em></a> to <a class="reference internal" href="../glossary.html#term-view-configuration"><em class="xref std std-term">view configuration</em></a>.  Permissions
+are usually just strings, and they have no required composition: you can name
+permissions whatever you like.</p>
+<p>For example, the following view declaration protects the view named
+<tt class="docutils literal"><span class="pre">add_entry.html</span></tt> when the context resource is of type <tt class="docutils literal"><span class="pre">Blog</span></tt> with the
+<tt class="docutils literal"><span class="pre">add</span></tt> permission using the <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_view" title="pyramid.config.Configurator.add_view"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_view()</span></tt></a>
+API:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6</pre></div></td><td class="code"><div class="highlight"><pre><span class="c"># config is an instance of pyramid.config.Configurator</span>
+
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;mypackage.views.blog_entry_add_view&#39;</span><span class="p">,</span>
+                <span class="n">name</span><span class="o">=</span><span class="s">&#39;add_entry.html&#39;</span><span class="p">,</span>
+                <span class="n">context</span><span class="o">=</span><span class="s">&#39;mypackage.resources.Blog&#39;</span><span class="p">,</span>
+                <span class="n">permission</span><span class="o">=</span><span class="s">&#39;add&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The equivalent view registration including the <tt class="docutils literal"><span class="pre">add</span></tt> permission name
+may be performed via the <tt class="docutils literal"><span class="pre">&#64;view_config</span></tt> decorator:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.view</span> <span class="kn">import</span> <span class="n">view_config</span>
+<span class="kn">from</span> <span class="nn">resources</span> <span class="kn">import</span> <span class="n">Blog</span>
+
+<span class="nd">@view_config</span><span class="p">(</span><span class="n">context</span><span class="o">=</span><span class="n">Blog</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;add_entry.html&#39;</span><span class="p">,</span> <span class="n">permission</span><span class="o">=</span><span class="s">&#39;add&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">blog_entry_add_view</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Add blog entry code goes here &quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+</pre></div>
+</td></tr></table></div>
+<p>As a result of any of these various view configuration statements, if an
+authorization policy is in place when the view callable is found during
+normal application operations, the requesting user will need to possess the
+<tt class="docutils literal"><span class="pre">add</span></tt> permission against the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource in order to be able
+to invoke the <tt class="docutils literal"><span class="pre">blog_entry_add_view</span></tt> view.  If he does not, the
+<a class="reference internal" href="../glossary.html#term-forbidden-view"><em class="xref std std-term">Forbidden view</em></a> will be invoked.</p>
+<div class="section" id="setting-a-default-permission">
+<span id="index-3"></span><span id="id1"></span><h3>Setting a Default Permission<a class="headerlink" href="#setting-a-default-permission" title="Permalink to this headline">¶</a></h3>
+<p>If a permission is not supplied to a view configuration, the registered
+view will always be executable by entirely anonymous users: any
+authorization policy in effect is ignored.</p>
+<p>In support of making it easier to configure applications which are
+&quot;secure by default&quot;, <span>Pyramid</span> allows you to configure a
+<em>default</em> permission.  If supplied, the default permission is used as
+the permission string to all view registrations which don't otherwise
+name a <tt class="docutils literal"><span class="pre">permission</span></tt> argument.</p>
+<p>The <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_default_permission" title="pyramid.config.Configurator.set_default_permission"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.set_default_permission()</span></tt></a> method
+supports configuring a default permission for an application.</p>
+<p>When a default permission is registered:</p>
+<ul class="simple">
+<li>If a view configuration names an explicit <tt class="docutils literal"><span class="pre">permission</span></tt>, the default
+permission is ignored for that view registration, and the
+view-configuration-named permission is used.</li>
+<li>If a view configuration names the permission
+<a class="reference internal" href="../api/security.html#pyramid.security.NO_PERMISSION_REQUIRED" title="pyramid.security.NO_PERMISSION_REQUIRED"><tt class="xref py py-data docutils literal"><span class="pre">pyramid.security.NO_PERMISSION_REQUIRED</span></tt></a>, the default permission
+is ignored, and the view is registered <em>without</em> a permission (making it
+available to all callers regardless of their credentials).</li>
+</ul>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">When you register a default permission, <em>all</em> views (even <a class="reference internal" href="../glossary.html#term-exception-view"><em class="xref std std-term">exception
+view</em></a> views) are protected by a permission.  For all views which are truly
+meant to be anonymously accessible, you will need to associate the view's
+configuration with the <a class="reference internal" href="../api/security.html#pyramid.security.NO_PERMISSION_REQUIRED" title="pyramid.security.NO_PERMISSION_REQUIRED"><tt class="xref py py-data docutils literal"><span class="pre">pyramid.security.NO_PERMISSION_REQUIRED</span></tt></a>
+permission.</p>
+</div>
+</div>
+</div>
+<div class="section" id="assigning-acls-to-your-resource-objects">
+<span id="assigning-acls"></span><span id="index-4"></span><h2>Assigning ACLs to your Resource Objects<a class="headerlink" href="#assigning-acls-to-your-resource-objects" title="Permalink to this headline">¶</a></h2>
+<p>When the default <span>Pyramid</span> <a class="reference internal" href="../glossary.html#term-authorization-policy"><em class="xref std std-term">authorization policy</em></a> determines
+whether a user possesses a particular permission with respect to a resource,
+it examines the <a class="reference internal" href="../glossary.html#term-acl"><em class="xref std std-term">ACL</em></a> associated with the resource.  An ACL is
+associated with a resource by adding an <tt class="docutils literal"><span class="pre">__acl__</span></tt> attribute to the resource
+object.  This attribute can be defined on the resource <em>instance</em> if you need
+instance-level security, or it can be defined on the resource <em>class</em> if you
+just need type-level security.</p>
+<p>For example, an ACL might be attached to the resource for a blog via its
+class:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Allow</span>
+<span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Everyone</span>
+
+<span class="k">class</span> <span class="nc">Blog</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="n">__acl__</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="n">Everyone</span><span class="p">,</span> <span class="s">&#39;view&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="s">&#39;group:editors&#39;</span><span class="p">,</span> <span class="s">&#39;add&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="s">&#39;group:editors&#39;</span><span class="p">,</span> <span class="s">&#39;edit&#39;</span><span class="p">),</span>
+        <span class="p">]</span>
+</pre></div>
+</td></tr></table></div>
+<p>Or, if your resources are persistent, an ACL might be specified via the
+<tt class="docutils literal"><span class="pre">__acl__</span></tt> attribute of an <em>instance</em> of a resource:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Allow</span>
+<span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Everyone</span>
+
+<span class="k">class</span> <span class="nc">Blog</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<span class="n">blog</span> <span class="o">=</span> <span class="n">Blog</span><span class="p">()</span>
+
+<span class="n">blog</span><span class="o">.</span><span class="n">__acl__</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="n">Everyone</span><span class="p">,</span> <span class="s">&#39;view&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="s">&#39;group:editors&#39;</span><span class="p">,</span> <span class="s">&#39;add&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="s">&#39;group:editors&#39;</span><span class="p">,</span> <span class="s">&#39;edit&#39;</span><span class="p">),</span>
+        <span class="p">]</span>
+</pre></div>
+</td></tr></table></div>
+<p>Whether an ACL is attached to a resource's class or an instance of the
+resource itself, the effect is the same.  It is useful to decorate individual
+resource instances with an ACL (as opposed to just decorating their class) in
+applications such as &quot;CMS&quot; systems where fine-grained access is required on
+an object-by-object basis.</p>
+<p>Dynamic ACLs are also possible by turning the ACL into a callable on the
+resource. This may allow the ACL to dynamically generate rules based on
+properties of the instance.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Allow</span>
+<span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Everyone</span>
+
+<span class="k">class</span> <span class="nc">Blog</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__acl__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="n">Everyone</span><span class="p">,</span> <span class="s">&#39;view&#39;</span><span class="p">),</span>
+            <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">owner</span><span class="p">,</span> <span class="s">&#39;edit&#39;</span><span class="p">),</span>
+            <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="s">&#39;group:editors&#39;</span><span class="p">,</span> <span class="s">&#39;edit&#39;</span><span class="p">),</span>
+        <span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">owner</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">owner</span> <span class="o">=</span> <span class="n">owner</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+<div class="section" id="elements-of-an-acl">
+<span id="index-5"></span><h2>Elements of an ACL<a class="headerlink" href="#elements-of-an-acl" title="Permalink to this headline">¶</a></h2>
+<p>Here's an example ACL:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Allow</span>
+<span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Everyone</span>
+
+<span class="n">__acl__</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="n">Everyone</span><span class="p">,</span> <span class="s">&#39;view&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="s">&#39;group:editors&#39;</span><span class="p">,</span> <span class="s">&#39;add&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="s">&#39;group:editors&#39;</span><span class="p">,</span> <span class="s">&#39;edit&#39;</span><span class="p">),</span>
+        <span class="p">]</span>
+</pre></div>
+</td></tr></table></div>
+<p>The example ACL indicates that the
+<a class="reference internal" href="../api/security.html#pyramid.security.Everyone" title="pyramid.security.Everyone"><tt class="xref py py-data docutils literal"><span class="pre">pyramid.security.Everyone</span></tt></a> principal -- a special
+system-defined principal indicating, literally, everyone -- is allowed
+to view the blog, the <tt class="docutils literal"><span class="pre">group:editors</span></tt> principal is allowed to add to
+and edit the blog.</p>
+<p>Each element of an ACL is an <a class="reference internal" href="../glossary.html#term-ace"><em class="xref std std-term">ACE</em></a> or access control entry.
+For example, in the above code block, there are three ACEs: <tt class="docutils literal"><span class="pre">(Allow,</span>
+<span class="pre">Everyone,</span> <span class="pre">'view')</span></tt>, <tt class="docutils literal"><span class="pre">(Allow,</span> <span class="pre">'group:editors',</span> <span class="pre">'add')</span></tt>, and
+<tt class="docutils literal"><span class="pre">(Allow,</span> <span class="pre">'group:editors',</span> <span class="pre">'edit')</span></tt>.</p>
+<p>The first element of any ACE is either
+<a class="reference internal" href="../api/security.html#pyramid.security.Allow" title="pyramid.security.Allow"><tt class="xref py py-data docutils literal"><span class="pre">pyramid.security.Allow</span></tt></a>, or
+<a class="reference internal" href="../api/security.html#pyramid.security.Deny" title="pyramid.security.Deny"><tt class="xref py py-data docutils literal"><span class="pre">pyramid.security.Deny</span></tt></a>, representing the action to take when
+the ACE matches.  The second element is a <a class="reference internal" href="../glossary.html#term-principal"><em class="xref std std-term">principal</em></a>.  The
+third argument is a permission or sequence of permission names.</p>
+<p>A principal is usually a user id, however it also may be a group id if your
+authentication system provides group information and the effective
+<a class="reference internal" href="../glossary.html#term-authentication-policy"><em class="xref std std-term">authentication policy</em></a> policy is written to respect group information.
+For example, the
+<a class="reference internal" href="../api/authentication.html#pyramid.authentication.RepozeWho1AuthenticationPolicy" title="pyramid.authentication.RepozeWho1AuthenticationPolicy"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.authentication.RepozeWho1AuthenticationPolicy</span></tt></a> respects group
+information if you configure it with a <tt class="docutils literal"><span class="pre">callback</span></tt>.</p>
+<p>Each ACE in an ACL is processed by an authorization policy <em>in the
+order dictated by the ACL</em>.  So if you have an ACL like this:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Allow</span>
+<span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Deny</span>
+<span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Everyone</span>
+
+<span class="n">__acl__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="n">Everyone</span><span class="p">,</span> <span class="s">&#39;view&#39;</span><span class="p">),</span>
+    <span class="p">(</span><span class="n">Deny</span><span class="p">,</span> <span class="n">Everyone</span><span class="p">,</span> <span class="s">&#39;view&#39;</span><span class="p">),</span>
+    <span class="p">]</span>
+</pre></div>
+</td></tr></table></div>
+<p>The default authorization policy will <em>allow</em> everyone the view
+permission, even though later in the ACL you have an ACE that denies
+everyone the view permission.  On the other hand, if you have an ACL
+like this:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Everyone</span>
+<span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Allow</span>
+<span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Deny</span>
+
+<span class="n">__acl__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="n">Deny</span><span class="p">,</span> <span class="n">Everyone</span><span class="p">,</span> <span class="s">&#39;view&#39;</span><span class="p">),</span>
+    <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="n">Everyone</span><span class="p">,</span> <span class="s">&#39;view&#39;</span><span class="p">),</span>
+    <span class="p">]</span>
+</pre></div>
+</td></tr></table></div>
+<p>The authorization policy will deny everyone the view permission, even
+though later in the ACL is an ACE that allows everyone.</p>
+<p>The third argument in an ACE can also be a sequence of permission
+names instead of a single permission name.  So instead of creating
+multiple ACEs representing a number of different permission grants to
+a single <tt class="docutils literal"><span class="pre">group:editors</span></tt> group, we can collapse this into a single
+ACE, as below.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Allow</span>
+<span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Everyone</span>
+
+<span class="n">__acl__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="n">Everyone</span><span class="p">,</span> <span class="s">&#39;view&#39;</span><span class="p">),</span>
+    <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="s">&#39;group:editors&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s">&#39;add&#39;</span><span class="p">,</span> <span class="s">&#39;edit&#39;</span><span class="p">)),</span>
+    <span class="p">]</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+<div class="section" id="special-principal-names">
+<span id="index-6"></span><h2>Special Principal Names<a class="headerlink" href="#special-principal-names" title="Permalink to this headline">¶</a></h2>
+<p>Special principal names exist in the <a class="reference internal" href="../api/security.html#module-pyramid.security" title="pyramid.security"><tt class="xref py py-mod docutils literal"><span class="pre">pyramid.security</span></tt></a>
+module.  They can be imported for use in your own code to populate
+ACLs, e.g. <a class="reference internal" href="../api/security.html#pyramid.security.Everyone" title="pyramid.security.Everyone"><tt class="xref py py-data docutils literal"><span class="pre">pyramid.security.Everyone</span></tt></a>.</p>
+<p><a class="reference internal" href="../api/security.html#pyramid.security.Everyone" title="pyramid.security.Everyone"><tt class="xref py py-data docutils literal"><span class="pre">pyramid.security.Everyone</span></tt></a></p>
+<blockquote>
+<div>Literally, everyone, no matter what.  This object is actually a
+string &quot;under the hood&quot; (<tt class="docutils literal"><span class="pre">system.Everyone</span></tt>).  Every user &quot;is&quot; the
+principal named Everyone during every request, even if a security
+policy is not in use.</div></blockquote>
+<p><a class="reference internal" href="../api/security.html#pyramid.security.Authenticated" title="pyramid.security.Authenticated"><tt class="xref py py-data docutils literal"><span class="pre">pyramid.security.Authenticated</span></tt></a></p>
+<blockquote>
+<div>Any user with credentials as determined by the current security
+policy.  You might think of it as any user that is &quot;logged in&quot;.
+This object is actually a string &quot;under the hood&quot;
+(<tt class="docutils literal"><span class="pre">system.Authenticated</span></tt>).</div></blockquote>
+</div>
+<div class="section" id="special-permissions">
+<span id="index-7"></span><h2>Special Permissions<a class="headerlink" href="#special-permissions" title="Permalink to this headline">¶</a></h2>
+<p>Special permission names exist in the <a class="reference internal" href="../api/security.html#module-pyramid.security" title="pyramid.security"><tt class="xref py py-mod docutils literal"><span class="pre">pyramid.security</span></tt></a>
+module.  These can be imported for use in ACLs.</p>
+<p id="all-permissions"><a class="reference internal" href="../api/security.html#pyramid.security.ALL_PERMISSIONS" title="pyramid.security.ALL_PERMISSIONS"><tt class="xref py py-data docutils literal"><span class="pre">pyramid.security.ALL_PERMISSIONS</span></tt></a></p>
+<blockquote>
+<div>An object representing, literally, <em>all</em> permissions.  Useful in an
+ACL like so: <tt class="docutils literal"><span class="pre">(Allow,</span> <span class="pre">'fred',</span> <span class="pre">ALL_PERMISSIONS)</span></tt>.  The
+<tt class="docutils literal"><span class="pre">ALL_PERMISSIONS</span></tt> object is actually a stand-in object that has a
+<tt class="docutils literal"><span class="pre">__contains__</span></tt> method that always returns <tt class="docutils literal"><span class="pre">True</span></tt>, which, for all
+known authorization policies, has the effect of indicating that a
+given principal &quot;has&quot; any permission asked for by the system.</div></blockquote>
+</div>
+<div class="section" id="special-aces">
+<span id="index-8"></span><h2>Special ACEs<a class="headerlink" href="#special-aces" title="Permalink to this headline">¶</a></h2>
+<p>A convenience <a class="reference internal" href="../glossary.html#term-ace"><em class="xref std std-term">ACE</em></a> is defined representing a deny to everyone of all
+permissions in <a class="reference internal" href="../api/security.html#pyramid.security.DENY_ALL" title="pyramid.security.DENY_ALL"><tt class="xref py py-data docutils literal"><span class="pre">pyramid.security.DENY_ALL</span></tt></a>.  This ACE is often used as
+the <em>last</em> ACE of an ACL to explicitly cause inheriting authorization
+policies to &quot;stop looking up the traversal tree&quot; (effectively breaking any
+inheritance).  For example, an ACL which allows <em>only</em> <tt class="docutils literal"><span class="pre">fred</span></tt> the view
+permission for a particular resource despite what inherited ACLs may say when
+the default authorization policy is in effect might look like so:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">Allow</span>
+<span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">DENY_ALL</span>
+
+<span class="n">__acl__</span> <span class="o">=</span> <span class="p">[</span> <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="s">&#39;fred&#39;</span><span class="p">,</span> <span class="s">&#39;view&#39;</span><span class="p">),</span> <span class="n">DENY_ALL</span> <span class="p">]</span>
+</pre></div>
+</td></tr></table></div>
+<p>&quot;Under the hood&quot;, the <a class="reference internal" href="../api/security.html#pyramid.security.DENY_ALL" title="pyramid.security.DENY_ALL"><tt class="xref py py-data docutils literal"><span class="pre">pyramid.security.DENY_ALL</span></tt></a> ACE equals
+the following:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="n">ALL_PERMISSIONS</span>
+<span class="n">__acl__</span> <span class="o">=</span> <span class="p">[</span> <span class="p">(</span><span class="n">Deny</span><span class="p">,</span> <span class="n">Everyone</span><span class="p">,</span> <span class="n">ALL_PERMISSIONS</span><span class="p">)</span> <span class="p">]</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+<div class="section" id="acl-inheritance-and-location-awareness">
+<span id="index-9"></span><h2>ACL Inheritance and Location-Awareness<a class="headerlink" href="#acl-inheritance-and-location-awareness" title="Permalink to this headline">¶</a></h2>
+<p>While the default <a class="reference internal" href="../glossary.html#term-authorization-policy"><em class="xref std std-term">authorization policy</em></a> is in place, if a resource
+object does not have an ACL when it is the context, its <em>parent</em> is consulted
+for an ACL.  If that object does not have an ACL, <em>its</em> parent is consulted
+for an ACL, ad infinitum, until we've reached the root and there are no more
+parents left.</p>
+<p>In order to allow the security machinery to perform ACL inheritance, resource
+objects must provide <em>location-awareness</em>.  Providing <em>location-awareness</em>
+means two things: the root object in the resource tree must have a
+<tt class="docutils literal"><span class="pre">__name__</span></tt> attribute and a <tt class="docutils literal"><span class="pre">__parent__</span></tt> attribute.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">class</span> <span class="nc">Blog</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="n">__name__</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="n">__parent__</span> <span class="o">=</span> <span class="bp">None</span>
+</pre></div>
+</td></tr></table></div>
+<p>An object with a <tt class="docutils literal"><span class="pre">__parent__</span></tt> attribute and a <tt class="docutils literal"><span class="pre">__name__</span></tt> attribute
+is said to be <em>location-aware</em>.  Location-aware objects define an
+<tt class="docutils literal"><span class="pre">__parent__</span></tt> attribute which points at their parent object.  The
+root object's <tt class="docutils literal"><span class="pre">__parent__</span></tt> is <tt class="docutils literal"><span class="pre">None</span></tt>.</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last">See also <a class="reference internal" href="../api/location.html#location-module"><em>pyramid.location</em></a> for documentations of functions which use
+location-awareness.</p>
+</div>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last">See also <a class="reference internal" href="resources.html#location-aware"><em>Location-Aware Resources</em></a>.</p>
+</div>
+</div>
+<div class="section" id="changing-the-forbidden-view">
+<span id="index-10"></span><h2>Changing the Forbidden View<a class="headerlink" href="#changing-the-forbidden-view" title="Permalink to this headline">¶</a></h2>
+<p>When <span>Pyramid</span> denies a view invocation due to an
+authorization denial, the special <tt class="docutils literal"><span class="pre">forbidden</span></tt> view is invoked.  &quot;Out
+of the box&quot;, this forbidden view is very plain.  See
+<a class="reference internal" href="hooks.html#changing-the-forbidden-view"><em>Changing the Forbidden View</em></a> within <a class="reference internal" href="hooks.html#hooks-chapter"><em>Using Hooks</em></a> for
+instructions on how to create a custom forbidden view and arrange for
+it to be called when view authorization is denied.</p>
+</div>
+<div class="section" id="debugging-view-authorization-failures">
+<span id="debug-authorization-section"></span><span id="index-11"></span><h2>Debugging View Authorization Failures<a class="headerlink" href="#debugging-view-authorization-failures" title="Permalink to this headline">¶</a></h2>
+<p>If your application in your judgment is allowing or denying view
+access inappropriately, start your application under a shell using the
+<tt class="docutils literal"><span class="pre">PYRAMID_DEBUG_AUTHORIZATION</span></tt> environment variable set to <tt class="docutils literal"><span class="pre">1</span></tt>.  For
+example:</p>
+<div class="highlight-text"><div class="highlight"><pre>$ PYRAMID_DEBUG_AUTHORIZATION=1 $VENV/bin/pserve myproject.ini
+</pre></div>
+</div>
+<p>When any authorization takes place during a top-level view rendering,
+a message will be logged to the console (to stderr) about what ACE in
+which ACL permitted or denied the authorization based on
+authentication information.</p>
+<p>This behavior can also be turned on in the application <tt class="docutils literal"><span class="pre">.ini</span></tt> file
+by setting the <tt class="docutils literal"><span class="pre">pyramid.debug_authorization</span></tt> key to <tt class="docutils literal"><span class="pre">true</span></tt> within the
+application's configuration section, e.g.:</p>
+<div class="highlight-ini"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">[app:main]</span>
+<span class="na">use</span> <span class="o">=</span> <span class="s">egg:MyProject</span>
+<span class="na">pyramid.debug_authorization</span> <span class="o">=</span> <span class="s">true</span>
+</pre></div>
+</td></tr></table></div>
+<p>With this debug flag turned on, the response sent to the browser will
+also contain security debugging information in its body.</p>
+</div>
+<div class="section" id="debugging-imperative-authorization-failures">
+<h2>Debugging Imperative Authorization Failures<a class="headerlink" href="#debugging-imperative-authorization-failures" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference internal" href="../api/request.html#pyramid.request.Request.has_permission" title="pyramid.request.Request.has_permission"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.has_permission()</span></tt></a> API is used to check
+security within view functions imperatively.  It returns instances of
+objects that are effectively booleans.  But these objects are not raw
+<tt class="docutils literal"><span class="pre">True</span></tt> or <tt class="docutils literal"><span class="pre">False</span></tt> objects, and have information attached to them
+about why the permission was allowed or denied.  The object will be
+one of <a class="reference internal" href="../api/security.html#pyramid.security.ACLAllowed" title="pyramid.security.ACLAllowed"><tt class="xref py py-data docutils literal"><span class="pre">pyramid.security.ACLAllowed</span></tt></a>,
+<a class="reference internal" href="../api/security.html#pyramid.security.ACLDenied" title="pyramid.security.ACLDenied"><tt class="xref py py-data docutils literal"><span class="pre">pyramid.security.ACLDenied</span></tt></a>,
+<a class="reference internal" href="../api/security.html#pyramid.security.Allowed" title="pyramid.security.Allowed"><tt class="xref py py-data docutils literal"><span class="pre">pyramid.security.Allowed</span></tt></a>, or
+<a class="reference internal" href="../api/security.html#pyramid.security.Denied" title="pyramid.security.Denied"><tt class="xref py py-data docutils literal"><span class="pre">pyramid.security.Denied</span></tt></a>, as documented in
+<a class="reference internal" href="../api/security.html#security-module"><em>pyramid.security</em></a>.  At the very minimum these objects will have a
+<tt class="docutils literal"><span class="pre">msg</span></tt> attribute, which is a string indicating why the permission was
+denied or allowed.  Introspecting this information in the debugger or
+via print statements when a call to
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.has_permission" title="pyramid.request.Request.has_permission"><tt class="xref py py-meth docutils literal"><span class="pre">has_permission()</span></tt></a> fails is often useful.</p>
+</div>
+<div class="section" id="creating-your-own-authentication-policy">
+<span id="creating-an-authentication-policy"></span><span id="index-12"></span><h2>Creating Your Own Authentication Policy<a class="headerlink" href="#creating-your-own-authentication-policy" title="Permalink to this headline">¶</a></h2>
+<p><span>Pyramid</span> ships with a number of useful out-of-the-box
+security policies (see <a class="reference internal" href="../api/authentication.html#module-pyramid.authentication" title="pyramid.authentication"><tt class="xref py py-mod docutils literal"><span class="pre">pyramid.authentication</span></tt></a>).  However,
+creating your own authentication policy is often necessary when you
+want to control the &quot;horizontal and vertical&quot; of how your users
+authenticate.  Doing so is a matter of creating an instance of something
+that implements the following interface:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">class</span> <span class="nc">IAuthenticationPolicy</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; An object representing a Pyramid authentication policy. &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">authenticated_userid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the authenticated userid or ``None`` if no</span>
+<span class="sd">        authenticated userid can be found. This method of the policy</span>
+<span class="sd">        should ensure that a record exists in whatever persistent store is</span>
+<span class="sd">        used related to the user (the user should not have been deleted);</span>
+<span class="sd">        if a record associated with the current id does not exist in a</span>
+<span class="sd">        persistent store, it should return ``None``.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">unauthenticated_userid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the *unauthenticated* userid.  This method performs the</span>
+<span class="sd">        same duty as ``authenticated_userid`` but is permitted to return the</span>
+<span class="sd">        userid based only on data present in the request; it needn&#39;t (and</span>
+<span class="sd">        shouldn&#39;t) check any persistent store to ensure that the user record</span>
+<span class="sd">        related to the request userid exists.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">effective_principals</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return a sequence representing the effective principals</span>
+<span class="sd">        including the userid and any groups belonged to by the current</span>
+<span class="sd">        user, including &#39;system&#39; groups such as</span>
+<span class="sd">        ``pyramid.security.Everyone`` and</span>
+<span class="sd">        ``pyramid.security.Authenticated``. &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">remember</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">principal</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return a set of headers suitable for &#39;remembering&#39; the</span>
+<span class="sd">        principal named ``principal`` when set in a response.  An</span>
+<span class="sd">        individual authentication policy and its consumers can decide</span>
+<span class="sd">        on the composition and meaning of **kw. &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">forget</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return a set of headers suitable for &#39;forgetting&#39; the</span>
+<span class="sd">        current user on subsequent requests. &quot;&quot;&quot;</span>
+</pre></div>
+</td></tr></table></div>
+<p>After you do so, you can pass an instance of such a class into the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_authentication_policy" title="pyramid.config.Configurator.set_authentication_policy"><tt class="xref py py-class docutils literal"><span class="pre">set_authentication_policy</span></tt></a> method
+configuration time to use it.</p>
+</div>
+<div class="section" id="creating-your-own-authorization-policy">
+<span id="creating-an-authorization-policy"></span><span id="index-13"></span><h2>Creating Your Own Authorization Policy<a class="headerlink" href="#creating-your-own-authorization-policy" title="Permalink to this headline">¶</a></h2>
+<p>An authorization policy is a policy that allows or denies access after a user
+has been authenticated.  Most <span>Pyramid</span> applications will use the
+default <a class="reference internal" href="../api/authorization.html#pyramid.authorization.ACLAuthorizationPolicy" title="pyramid.authorization.ACLAuthorizationPolicy"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.authorization.ACLAuthorizationPolicy</span></tt></a>.</p>
+<p>However, in some cases, it's useful to be able to use a different
+authorization policy than the default
+<a class="reference internal" href="../api/authorization.html#pyramid.authorization.ACLAuthorizationPolicy" title="pyramid.authorization.ACLAuthorizationPolicy"><tt class="xref py py-class docutils literal"><span class="pre">ACLAuthorizationPolicy</span></tt></a>.  For example, it
+might be desirable to construct an alternate authorization policy which
+allows the application to use an authorization mechanism that does not
+involve <a class="reference internal" href="../glossary.html#term-acl"><em class="xref std std-term">ACL</em></a> objects.</p>
+<p><span>Pyramid</span> ships with only a single default authorization
+policy, so you'll need to create your own if you'd like to use a
+different one.  Creating and using your own authorization policy is a
+matter of creating an instance of an object that implements the
+following interface:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">class</span> <span class="nc">IAuthorizationPolicy</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; An object representing a Pyramid authorization policy. &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">permits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">principals</span><span class="p">,</span> <span class="n">permission</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return ``True`` if any of the ``principals`` is allowed the</span>
+<span class="sd">        ``permission`` in the current ``context``, else return ``False``</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">principals_allowed_by_permission</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">permission</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return a set of principal identifiers allowed by the</span>
+<span class="sd">        ``permission`` in ``context``.  This behavior is optional; if you</span>
+<span class="sd">        choose to not implement it you should define this method as</span>
+<span class="sd">        something which raises a ``NotImplementedError``.  This method</span>
+<span class="sd">        will only be called when the</span>
+<span class="sd">        ``pyramid.security.principals_allowed_by_permission`` API is</span>
+<span class="sd">        used.&quot;&quot;&quot;</span>
+</pre></div>
+</td></tr></table></div>
+<p>After you do so, you can pass an instance of such a class into the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_authorization_policy" title="pyramid.config.Configurator.set_authorization_policy"><tt class="xref py py-class docutils literal"><span class="pre">set_authorization_policy</span></tt></a> method at
+configuration time to use it.</p>
+</div>
+<div class="section" id="admonishment-against-secret-sharing">
+<span id="id2"></span><h2>Admonishment Against Secret-Sharing<a class="headerlink" href="#admonishment-against-secret-sharing" title="Permalink to this headline">¶</a></h2>
+<p>A &quot;secret&quot; is required by various components of Pyramid.  For example, the
+<a class="reference internal" href="../glossary.html#term-authentication-policy"><em class="xref std std-term">authentication policy</em></a> below uses a secret value <tt class="docutils literal"><span class="pre">seekrit</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">authn_policy</span> <span class="o">=</span> <span class="n">AuthTktAuthenticationPolicy</span><span class="p">(</span><span class="s">&#39;seekrit&#39;</span><span class="p">,</span> <span class="n">hashalg</span><span class="o">=</span><span class="s">&#39;sha512&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>A <a class="reference internal" href="../glossary.html#term-session-factory"><em class="xref std std-term">session factory</em></a> also requires a secret:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">my_session_factory</span> <span class="o">=</span> <span class="n">SignedCookieSessionFactory</span><span class="p">(</span><span class="s">&#39;itsaseekreet&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>It is tempting to use the same secret for multiple Pyramid subsystems.  For
+example, you might be tempted to use the value <tt class="docutils literal"><span class="pre">seekrit</span></tt> as the secret for
+both the authentication policy and the session factory defined above.  This is
+a bad idea, because in both cases, these secrets are used to sign the payload
+of the data.</p>
+<p>If you use the same secret for two different parts of your application for
+signing purposes, it may allow an attacker to get his chosen plaintext signed,
+which would allow the attacker to control the content of the payload.  Re-using
+a secret across two different subsystems might drop the security of signing to
+zero. Keys should not be re-used across different contexts where an attacker
+has the possibility of providing a chosen plaintext.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Security</a><ul>
+<li><a class="reference internal" href="#enabling-an-authorization-policy">Enabling an Authorization Policy</a><ul>
+<li><a class="reference internal" href="#enabling-an-authorization-policy-imperatively">Enabling an Authorization Policy Imperatively</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#protecting-views-with-permissions">Protecting Views with Permissions</a><ul>
+<li><a class="reference internal" href="#setting-a-default-permission">Setting a Default Permission</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#assigning-acls-to-your-resource-objects">Assigning ACLs to your Resource Objects</a></li>
+<li><a class="reference internal" href="#elements-of-an-acl">Elements of an ACL</a></li>
+<li><a class="reference internal" href="#special-principal-names">Special Principal Names</a></li>
+<li><a class="reference internal" href="#special-permissions">Special Permissions</a></li>
+<li><a class="reference internal" href="#special-aces">Special ACEs</a></li>
+<li><a class="reference internal" href="#acl-inheritance-and-location-awareness">ACL Inheritance and Location-Awareness</a></li>
+<li><a class="reference internal" href="#changing-the-forbidden-view">Changing the Forbidden View</a></li>
+<li><a class="reference internal" href="#debugging-view-authorization-failures">Debugging View Authorization Failures</a></li>
+<li><a class="reference internal" href="#debugging-imperative-authorization-failures">Debugging Imperative Authorization Failures</a></li>
+<li><a class="reference internal" href="#creating-your-own-authentication-policy">Creating Your Own Authentication Policy</a></li>
+<li><a class="reference internal" href="#creating-your-own-authorization-policy">Creating Your Own Authorization Policy</a></li>
+<li><a class="reference internal" href="#admonishment-against-secret-sharing">Admonishment Against Secret-Sharing</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="traversal.html"
+                        title="previous chapter">Traversal</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="hybrid.html"
+                        title="next chapter">Combining Traversal and URL Dispatch</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="hybrid.html" title="Combining Traversal and URL Dispatch"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="traversal.html" title="Traversal"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

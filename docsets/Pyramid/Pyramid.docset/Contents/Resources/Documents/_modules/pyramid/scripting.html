@@ -1,0 +1,234 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.scripting &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.scripting</h1><div class="highlight"><pre>
+<span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">global_registries</span>
+<span class="kn">from</span> <span class="nn">pyramid.exceptions</span> <span class="kn">import</span> <span class="n">ConfigurationError</span>
+<span class="kn">from</span> <span class="nn">pyramid.request</span> <span class="kn">import</span> <span class="n">Request</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">IRequestExtensions</span><span class="p">,</span>
+    <span class="n">IRequestFactory</span><span class="p">,</span>
+    <span class="n">IRootFactory</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.threadlocal</span> <span class="kn">import</span> <span class="n">manager</span> <span class="k">as</span> <span class="n">threadlocal_manager</span>
+<span class="kn">from</span> <span class="nn">pyramid.traversal</span> <span class="kn">import</span> <span class="n">DefaultRootFactory</span>
+
+<div class="viewcode-block" id="get_root"><a class="viewcode-back" href="../../api/scripting.html#pyramid.scripting.get_root">[docs]</a><span class="k">def</span> <span class="nf">get_root</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Return a tuple composed of ``(root, closer)`` when provided a</span>
+<span class="sd">    :term:`router` instance as the ``app`` argument.  The ``root``</span>
+<span class="sd">    returned is the application root object.  The ``closer`` returned</span>
+<span class="sd">    is a callable (accepting no arguments) that should be called when</span>
+<span class="sd">    your scripting application is finished using the root.</span>
+
+<span class="sd">    ``request`` is passed to the :app:`Pyramid` application root</span>
+<span class="sd">    factory to compute the root. If ``request`` is None, a default</span>
+<span class="sd">    will be constructed using the registry&#39;s :term:`Request Factory`</span>
+<span class="sd">    via the :meth:`pyramid.interfaces.IRequestFactory.blank` method.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">registry</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">registry</span>
+    <span class="k">if</span> <span class="n">request</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">request</span> <span class="o">=</span> <span class="n">_make_request</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">,</span> <span class="n">registry</span><span class="p">)</span>
+    <span class="n">threadlocals</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;registry&#39;</span><span class="p">:</span><span class="n">registry</span><span class="p">,</span> <span class="s">&#39;request&#39;</span><span class="p">:</span><span class="n">request</span><span class="p">}</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">threadlocal_manager</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">threadlocals</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">closer</span><span class="p">(</span><span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">):</span> <span class="c"># keep request alive via this function default</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">threadlocal_manager</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+    <span class="n">root</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">root_factory</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">root</span><span class="p">,</span> <span class="n">closer</span>
+</div>
+<div class="viewcode-block" id="prepare"><a class="viewcode-back" href="../../api/scripting.html#pyramid.scripting.prepare">[docs]</a><span class="k">def</span> <span class="nf">prepare</span><span class="p">(</span><span class="n">request</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">registry</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; This function pushes data onto the Pyramid threadlocal stack</span>
+<span class="sd">    (request and registry), making those objects &#39;current&#39;.  It</span>
+<span class="sd">    returns a dictionary useful for bootstrapping a Pyramid</span>
+<span class="sd">    application in a scripting environment.</span>
+
+<span class="sd">    ``request`` is passed to the :app:`Pyramid` application root</span>
+<span class="sd">    factory to compute the root. If ``request`` is None, a default</span>
+<span class="sd">    will be constructed using the registry&#39;s :term:`Request Factory`</span>
+<span class="sd">    via the :meth:`pyramid.interfaces.IRequestFactory.blank` method.</span>
+
+<span class="sd">    If ``registry`` is not supplied, the last registry loaded from</span>
+<span class="sd">    :attr:`pyramid.config.global_registries` will be used. If you</span>
+<span class="sd">    have loaded more than one :app:`Pyramid` application in the</span>
+<span class="sd">    current process, you may not want to use the last registry</span>
+<span class="sd">    loaded, thus you can search the ``global_registries`` and supply</span>
+<span class="sd">    the appropriate one based on your own criteria.</span>
+
+<span class="sd">    The function returns a dictionary composed of ``root``,</span>
+<span class="sd">    ``closer``, ``registry``, ``request`` and ``root_factory``.  The</span>
+<span class="sd">    ``root`` returned is the application&#39;s root resource object.  The</span>
+<span class="sd">    ``closer`` returned is a callable (accepting no arguments) that</span>
+<span class="sd">    should be called when your scripting application is finished</span>
+<span class="sd">    using the root.  ``registry`` is the registry object passed or</span>
+<span class="sd">    the last registry loaded into</span>
+<span class="sd">    :attr:`pyramid.config.global_registries` if no registry is passed.</span>
+<span class="sd">    ``request`` is the request object passed or the constructed request</span>
+<span class="sd">    if no request is passed.  ``root_factory`` is the root factory used</span>
+<span class="sd">    to construct the root.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">registry</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">registry</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s">&#39;registry&#39;</span><span class="p">,</span> <span class="n">global_registries</span><span class="o">.</span><span class="n">last</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">registry</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">ConfigurationError</span><span class="p">(</span><span class="s">&#39;No valid Pyramid applications could be &#39;</span>
+                                 <span class="s">&#39;found, make sure one has been created &#39;</span>
+                                 <span class="s">&#39;before trying to activate it.&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">request</span> <span class="o">=</span> <span class="n">_make_request</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">,</span> <span class="n">registry</span><span class="p">)</span>
+    <span class="c"># NB: even though _make_request might have already set registry on</span>
+    <span class="c"># request, we reset it in case someone has passed in their own</span>
+    <span class="c"># request.</span>
+    <span class="n">request</span><span class="o">.</span><span class="n">registry</span> <span class="o">=</span> <span class="n">registry</span> 
+    <span class="n">threadlocals</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;registry&#39;</span><span class="p">:</span><span class="n">registry</span><span class="p">,</span> <span class="s">&#39;request&#39;</span><span class="p">:</span><span class="n">request</span><span class="p">}</span>
+    <span class="n">threadlocal_manager</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">threadlocals</span><span class="p">)</span>
+    <span class="n">extensions</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">IRequestExtensions</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">extensions</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">request</span><span class="o">.</span><span class="n">_set_extensions</span><span class="p">(</span><span class="n">extensions</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">closer</span><span class="p">():</span>
+        <span class="n">threadlocal_manager</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+    <span class="n">root_factory</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">IRootFactory</span><span class="p">,</span>
+                                         <span class="n">default</span><span class="o">=</span><span class="n">DefaultRootFactory</span><span class="p">)</span>
+    <span class="n">root</span> <span class="o">=</span> <span class="n">root_factory</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s">&#39;context&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">request</span><span class="o">.</span><span class="n">context</span> <span class="o">=</span> <span class="n">root</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;root&#39;</span><span class="p">:</span><span class="n">root</span><span class="p">,</span> <span class="s">&#39;closer&#39;</span><span class="p">:</span><span class="n">closer</span><span class="p">,</span> <span class="s">&#39;registry&#39;</span><span class="p">:</span><span class="n">registry</span><span class="p">,</span>
+            <span class="s">&#39;request&#39;</span><span class="p">:</span><span class="n">request</span><span class="p">,</span> <span class="s">&#39;root_factory&#39;</span><span class="p">:</span><span class="n">root_factory</span><span class="p">}</span>
+</div>
+<span class="k">def</span> <span class="nf">_make_request</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">registry</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Return a :meth:`pyramid.request.Request` object anchored at a</span>
+<span class="sd">    given path. The object returned will be generated from the supplied</span>
+<span class="sd">    registry&#39;s :term:`Request Factory` using the</span>
+<span class="sd">    :meth:`pyramid.interfaces.IRequestFactory.blank` method.</span>
+
+<span class="sd">    This request object can be passed to :meth:`pyramid.scripting.get_root`</span>
+<span class="sd">    or :meth:`pyramid.scripting.prepare` to initialize an application in</span>
+<span class="sd">    preparation for executing a script with a proper environment setup.</span>
+<span class="sd">    URLs can then be generated with the object, as well as rendering</span>
+<span class="sd">    templates.</span>
+
+<span class="sd">    If ``registry`` is not supplied, the last registry loaded from</span>
+<span class="sd">    :attr:`pyramid.config.global_registries` will be used. If you have</span>
+<span class="sd">    loaded more than one :app:`Pyramid` application in the current</span>
+<span class="sd">    process, you may not want to use the last registry loaded, thus</span>
+<span class="sd">    you can search the ``global_registries`` and supply the appropriate</span>
+<span class="sd">    one based on your own criteria.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">registry</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">registry</span> <span class="o">=</span> <span class="n">global_registries</span><span class="o">.</span><span class="n">last</span>
+    <span class="n">request_factory</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">IRequestFactory</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">Request</span><span class="p">)</span>
+    <span class="n">request</span> <span class="o">=</span> <span class="n">request_factory</span><span class="o">.</span><span class="n">blank</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">request</span><span class="o">.</span><span class="n">registry</span> <span class="o">=</span> <span class="n">registry</span>
+    <span class="k">return</span> <span class="n">request</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,356 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Using the Zope Component Architecture in Pyramid &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="next" title="SQLAlchemy + URL Dispatch Wiki Tutorial" href="../tutorials/wiki2/index.html" />
+    <link rel="prev" title="Thread Locals" href="threadlocals.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../tutorials/wiki2/index.html" title="SQLAlchemy + URL Dispatch Wiki Tutorial"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="threadlocals.html" title="Thread Locals"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="using-the-zope-component-architecture-in-pyramid">
+<span id="zca-chapter"></span><span id="index-0"></span><h1>Using the Zope Component Architecture in <span>Pyramid</span><a class="headerlink" href="#using-the-zope-component-architecture-in-pyramid" title="Permalink to this headline">¶</a></h1>
+<p>Under the hood, <span>Pyramid</span> uses a <a class="reference internal" href="../glossary.html#term-zope-component-architecture"><em class="xref std std-term">Zope Component
+Architecture</em></a> component registry as its <a class="reference internal" href="../glossary.html#term-application-registry"><em class="xref std std-term">application registry</em></a>.
+The Zope Component Architecture is referred to colloquially as the
+&quot;ZCA.&quot;</p>
+<p>The <tt class="docutils literal"><span class="pre">zope.component</span></tt> API used to access data in a traditional Zope
+application can be opaque.  For example, here is a typical &quot;unnamed
+utility&quot; lookup using the <a class="reference external" href="http://docs.zope.org/zope.component/api/utility.html#zope.component.getUtility" title="(in zope.configuration v4.0)"><tt class="xref py py-func docutils literal"><span class="pre">zope.component.getUtility()</span></tt></a> global API
+as it might appear in a traditional Zope application:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="n">ISettings</span>
+<span class="kn">from</span> <span class="nn">zope.component</span> <span class="kn">import</span> <span class="n">getUtility</span>
+<span class="n">settings</span> <span class="o">=</span> <span class="n">getUtility</span><span class="p">(</span><span class="n">ISettings</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>After this code runs, <tt class="docutils literal"><span class="pre">settings</span></tt> will be a Python dictionary.  But
+it's unlikely that any &quot;civilian&quot; will be able to figure this out just
+by reading the code casually.  When the <tt class="docutils literal"><span class="pre">zope.component.getUtility</span></tt>
+API is used by a developer, the conceptual load on a casual reader of
+code is high.</p>
+<p>While the ZCA is an excellent tool with which to build a <em>framework</em>
+such as <span>Pyramid</span>, it is not always the best tool with which
+to build an <em>application</em> due to the opacity of the <tt class="docutils literal"><span class="pre">zope.component</span></tt>
+APIs.  Accordingly, <span>Pyramid</span> tends to hide the presence of the
+ZCA from application developers.  You needn't understand the ZCA to
+create a <span>Pyramid</span> application; its use is effectively only a
+framework implementation detail.</p>
+<p>However, developers who are already used to writing <a class="reference internal" href="../glossary.html#term-zope"><em class="xref std std-term">Zope</em></a>
+applications often still wish to use the ZCA while building a
+<span>Pyramid</span> application; <span>Pyramid</span> makes this possible.</p>
+<div class="section" id="using-the-zca-global-api-in-a-pyramid-application">
+<span id="index-1"></span><h2>Using the ZCA Global API in a <span>Pyramid</span> Application<a class="headerlink" href="#using-the-zca-global-api-in-a-pyramid-application" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference internal" href="../glossary.html#term-zope"><em class="xref std std-term">Zope</em></a> uses a single ZCA registry -- the &quot;global&quot; ZCA registry
+-- for all Zope applications that run in the same Python process,
+effectively making it impossible to run more than one Zope application
+in a single process.</p>
+<p>However, for ease of deployment, it's often useful to be able to run more
+than a single application per process.  For example, use of a
+<a class="reference internal" href="../glossary.html#term-pastedeploy"><em class="xref std std-term">PasteDeploy</em></a> &quot;composite&quot; allows you to run separate individual WSGI
+applications in the same process, each answering requests for some URL
+prefix.  This makes it possible to run, for example, a TurboGears application
+at <tt class="docutils literal"><span class="pre">/turbogears</span></tt> and a <span>Pyramid</span> application at <tt class="docutils literal"><span class="pre">/pyramid</span></tt>, both
+served up using the same <a class="reference internal" href="../glossary.html#term-wsgi"><em class="xref std std-term">WSGI</em></a> server within a single Python process.</p>
+<p>Most production Zope applications are relatively large, making it
+impractical due to memory constraints to run more than one Zope
+application per Python process.  However, a <span>Pyramid</span> application
+may be very small and consume very little memory, so it's a reasonable
+goal to be able to run more than one <span>Pyramid</span> application per
+process.</p>
+<p>In order to make it possible to run more than one <span>Pyramid</span>
+application in a single process, <span>Pyramid</span> defaults to using a
+separate ZCA registry <em>per application</em>.</p>
+<p>While this services a reasonable goal, it causes some issues when
+trying to use patterns which you might use to build a typical
+<a class="reference internal" href="../glossary.html#term-zope"><em class="xref std std-term">Zope</em></a> application to build a <span>Pyramid</span> application.
+Without special help, ZCA &quot;global&quot; APIs such as
+<a class="reference external" href="http://docs.zope.org/zope.component/api/utility.html#zope.component.getUtility" title="(in zope.configuration v4.0)"><tt class="xref py py-func docutils literal"><span class="pre">zope.component.getUtility()</span></tt></a> and <a class="reference external" href="http://docs.zope.org/zope.component/api/sitemanager.html#zope.component.getSiteManager" title="(in zope.configuration v4.0)"><tt class="xref py py-func docutils literal"><span class="pre">zope.component.getSiteManager()</span></tt></a>
+will use the ZCA &quot;global&quot; registry.  Therefore, these APIs
+will appear to fail when used in a <span>Pyramid</span> application,
+because they'll be consulting the ZCA global registry rather than the
+component registry associated with your <span>Pyramid</span> application.</p>
+<p>There are three ways to fix this: by disusing the ZCA global API
+entirely, by using
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.hook_zca" title="pyramid.config.Configurator.hook_zca"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.hook_zca()</span></tt></a> or by passing
+the ZCA global registry to the <a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">Configurator</em></a> constructor at
+startup time.  We'll describe all three methods in this section.</p>
+<div class="section" id="disusing-the-global-zca-api">
+<span id="index-2"></span><span id="id1"></span><h3>Disusing the Global ZCA API<a class="headerlink" href="#disusing-the-global-zca-api" title="Permalink to this headline">¶</a></h3>
+<p>ZCA &quot;global&quot; API functions such as <tt class="docutils literal"><span class="pre">zope.component.getSiteManager</span></tt>,
+<tt class="docutils literal"><span class="pre">zope.component.getUtility</span></tt>, <a class="reference external" href="http://docs.zope.org/zope.component/api/adapter.html#zope.component.getAdapter" title="(in zope.configuration v4.0)"><tt class="xref py py-func docutils literal"><span class="pre">zope.component.getAdapter()</span></tt></a>, and
+<a class="reference external" href="http://docs.zope.org/zope.component/api/adapter.html#zope.component.getMultiAdapter" title="(in zope.configuration v4.0)"><tt class="xref py py-func docutils literal"><span class="pre">zope.component.getMultiAdapter()</span></tt></a> aren't strictly necessary.  Every
+component registry has a method API that offers the same
+functionality; it can be used instead.  For example, presuming the
+<tt class="docutils literal"><span class="pre">registry</span></tt> value below is a Zope Component Architecture component
+registry, the following bit of code is equivalent to
+<tt class="docutils literal"><span class="pre">zope.component.getUtility(IFoo)</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">registry</span><span class="o">.</span><span class="n">getUtility</span><span class="p">(</span><span class="n">IFoo</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The full method API is documented in the <tt class="docutils literal"><span class="pre">zope.component</span></tt> package,
+but it largely mirrors the &quot;global&quot; API almost exactly.</p>
+<p>If you are willing to disuse the &quot;global&quot; ZCA APIs and use the method
+interface of a registry instead, you need only know how to obtain the
+<span>Pyramid</span> component registry.</p>
+<p>There are two ways of doing so:</p>
+<ul class="simple">
+<li>use the <a class="reference internal" href="../api/threadlocal.html#pyramid.threadlocal.get_current_registry" title="pyramid.threadlocal.get_current_registry"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.threadlocal.get_current_registry()</span></tt></a>
+function within <span>Pyramid</span> view or resource code.  This will
+always return the &quot;current&quot; <span>Pyramid</span> application registry.</li>
+<li>use the attribute of the <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> object named <tt class="docutils literal"><span class="pre">registry</span></tt>
+in your <span>Pyramid</span> view code, eg. <tt class="docutils literal"><span class="pre">request.registry</span></tt>.  This
+is the ZCA component registry related to the running
+<span>Pyramid</span> application.</li>
+</ul>
+<p>See <a class="reference internal" href="threadlocals.html#threadlocals-chapter"><em>Thread Locals</em></a> for more information about
+<a class="reference internal" href="../api/threadlocal.html#pyramid.threadlocal.get_current_registry" title="pyramid.threadlocal.get_current_registry"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.threadlocal.get_current_registry()</span></tt></a>.</p>
+</div>
+<div class="section" id="enabling-the-zca-global-api-by-using-hook-zca">
+<span id="hook-zca"></span><span id="index-3"></span><h3>Enabling the ZCA Global API by Using <tt class="docutils literal"><span class="pre">hook_zca</span></tt><a class="headerlink" href="#enabling-the-zca-global-api-by-using-hook-zca" title="Permalink to this headline">¶</a></h3>
+<p>Consider the following bit of idiomatic <span>Pyramid</span> startup code:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+
+<span class="k">def</span> <span class="nf">app</span><span class="p">(</span><span class="n">global_settings</span><span class="p">,</span> <span class="o">**</span><span class="n">settings</span><span class="p">):</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">(</span><span class="n">settings</span><span class="o">=</span><span class="n">settings</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="s">&#39;some.other.package&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+</pre></div>
+</td></tr></table></div>
+<p>When the <tt class="docutils literal"><span class="pre">app</span></tt> function above is run, a <a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">Configurator</em></a> is
+constructed.  When the configurator is created, it creates a <em>new</em>
+<a class="reference internal" href="../glossary.html#term-application-registry"><em class="xref std std-term">application registry</em></a> (a ZCA component registry).  A new
+registry is constructed whenever the <tt class="docutils literal"><span class="pre">registry</span></tt> argument is omitted
+when a <a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">Configurator</em></a> constructor is called, or when a
+<tt class="docutils literal"><span class="pre">registry</span></tt> argument with a value of <tt class="docutils literal"><span class="pre">None</span></tt> is passed to a
+<a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">Configurator</em></a> constructor.</p>
+<p>During a request, the application registry created by the Configurator
+is &quot;made current&quot;.  This means calls to
+<a class="reference internal" href="../api/threadlocal.html#pyramid.threadlocal.get_current_registry" title="pyramid.threadlocal.get_current_registry"><tt class="xref py py-func docutils literal"><span class="pre">get_current_registry()</span></tt></a> in the thread
+handling the request will return the component registry associated
+with the application.</p>
+<p>As a result, application developers can use <tt class="docutils literal"><span class="pre">get_current_registry</span></tt>
+to get the registry and thus get access to utilities and such, as per
+<a class="reference internal" href="#disusing-the-global-zca-api"><em>Disusing the Global ZCA API</em></a>.  But they still cannot use the
+global ZCA API.  Without special treatment, the ZCA global APIs will
+always return the global ZCA registry (the one in
+<tt class="docutils literal"><span class="pre">zope.component.globalregistry.base</span></tt>).</p>
+<p>To &quot;fix&quot; this and make the ZCA global APIs use the &quot;current&quot;
+<span>Pyramid</span> registry, you need to call
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.hook_zca" title="pyramid.config.Configurator.hook_zca"><tt class="xref py py-meth docutils literal"><span class="pre">hook_zca()</span></tt></a> within your setup code.
+For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+
+<span class="k">def</span> <span class="nf">app</span><span class="p">(</span><span class="n">global_settings</span><span class="p">,</span> <span class="o">**</span><span class="n">settings</span><span class="p">):</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">(</span><span class="n">settings</span><span class="o">=</span><span class="n">settings</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">hook_zca</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="s">&#39;some.other.application&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+</pre></div>
+</td></tr></table></div>
+<p>We've added a line to our original startup code, line number 6, which
+calls <tt class="docutils literal"><span class="pre">config.hook_zca()</span></tt>.  The effect of this line under the hood
+is that an analogue of the following code is executed:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">zope.component</span> <span class="kn">import</span> <span class="n">getSiteManager</span>
+<span class="kn">from</span> <span class="nn">pyramid.threadlocal</span> <span class="kn">import</span> <span class="n">get_current_registry</span>
+<span class="n">getSiteManager</span><span class="o">.</span><span class="n">sethook</span><span class="p">(</span><span class="n">get_current_registry</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>This causes the ZCA global API to start using the <span>Pyramid</span>
+application registry in threads which are running a <span>Pyramid</span>
+request.</p>
+<p>Calling <tt class="docutils literal"><span class="pre">hook_zca</span></tt> is usually sufficient to &quot;fix&quot; the problem of
+being able to use the global ZCA API within a <span>Pyramid</span>
+application.  However, it also means that a Zope application that is
+running in the same process may start using the <span>Pyramid</span>
+global registry instead of the Zope global registry, effectively
+inverting the original problem.  In such a case, follow the steps in
+the next section, <a class="reference internal" href="#using-the-zca-global-registry"><em>Enabling the ZCA Global API by Using The ZCA Global Registry</em></a>.</p>
+</div>
+<div class="section" id="enabling-the-zca-global-api-by-using-the-zca-global-registry">
+<span id="using-the-zca-global-registry"></span><span id="index-4"></span><h3>Enabling the ZCA Global API by Using The ZCA Global Registry<a class="headerlink" href="#enabling-the-zca-global-api-by-using-the-zca-global-registry" title="Permalink to this headline">¶</a></h3>
+<p>You can tell your <span>Pyramid</span> application to use the ZCA global
+registry at startup time instead of constructing a new one:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">zope.component</span> <span class="kn">import</span> <span class="n">getGlobalSiteManager</span>
+<span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+
+<span class="k">def</span> <span class="nf">app</span><span class="p">(</span><span class="n">global_settings</span><span class="p">,</span> <span class="o">**</span><span class="n">settings</span><span class="p">):</span>
+    <span class="n">globalreg</span> <span class="o">=</span> <span class="n">getGlobalSiteManager</span><span class="p">()</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">(</span><span class="n">registry</span><span class="o">=</span><span class="n">globalreg</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">setup_registry</span><span class="p">(</span><span class="n">settings</span><span class="o">=</span><span class="n">settings</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="s">&#39;some.other.application&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+</pre></div>
+</td></tr></table></div>
+<p>Lines 5, 6, and 7 above are the interesting ones.  Line 5 retrieves
+the global ZCA component registry.  Line 6 creates a
+<a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">Configurator</em></a>, passing the global ZCA registry into its
+constructor as the <tt class="docutils literal"><span class="pre">registry</span></tt> argument.  Line 7 &quot;sets up&quot; the global
+registry with Pyramid-specific registrations; this is code that is
+normally executed when a registry is constructed rather than created,
+but we must call it &quot;by hand&quot; when we pass an explicit registry.</p>
+<p>At this point, <span>Pyramid</span> will use the ZCA global registry
+rather than creating a new application-specific registry; since by
+default the ZCA global API will use this registry, things will work as
+you might expect a Zope app to when you use the global ZCA API.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Using the Zope Component Architecture in <span>Pyramid</span></a><ul>
+<li><a class="reference internal" href="#using-the-zca-global-api-in-a-pyramid-application">Using the ZCA Global API in a <span>Pyramid</span> Application</a><ul>
+<li><a class="reference internal" href="#disusing-the-global-zca-api">Disusing the Global ZCA API</a></li>
+<li><a class="reference internal" href="#enabling-the-zca-global-api-by-using-hook-zca">Enabling the ZCA Global API by Using <tt class="docutils literal"><span class="pre">hook_zca</span></tt></a></li>
+<li><a class="reference internal" href="#enabling-the-zca-global-api-by-using-the-zca-global-registry">Enabling the ZCA Global API by Using The ZCA Global Registry</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="threadlocals.html"
+                        title="previous chapter">Thread Locals</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../tutorials/wiki2/index.html"
+                        title="next chapter">SQLAlchemy + URL Dispatch Wiki Tutorial</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../tutorials/wiki2/index.html" title="SQLAlchemy + URL Dispatch Wiki Tutorial"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="threadlocals.html" title="Thread Locals"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

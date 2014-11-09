@@ -1,0 +1,745 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.session &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.session</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">base64</span>
+<span class="kn">import</span> <span class="nn">binascii</span>
+<span class="kn">import</span> <span class="nn">hashlib</span>
+<span class="kn">import</span> <span class="nn">hmac</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">from</span> <span class="nn">zope.deprecation</span> <span class="kn">import</span> <span class="n">deprecated</span>
+<span class="kn">from</span> <span class="nn">zope.interface</span> <span class="kn">import</span> <span class="n">implementer</span>
+
+<span class="kn">from</span> <span class="nn">webob.cookies</span> <span class="kn">import</span> <span class="n">SignedSerializer</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.compat</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">pickle</span><span class="p">,</span>
+    <span class="n">PY3</span><span class="p">,</span>
+    <span class="n">text_</span><span class="p">,</span>
+    <span class="n">bytes_</span><span class="p">,</span>
+    <span class="n">native_</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.exceptions</span> <span class="kn">import</span> <span class="n">BadCSRFToken</span>
+<span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="n">ISession</span>
+<span class="kn">from</span> <span class="nn">pyramid.util</span> <span class="kn">import</span> <span class="n">strings_differ</span>
+
+<span class="k">def</span> <span class="nf">manage_accessed</span><span class="p">(</span><span class="n">wrapped</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Decorator which causes a cookie to be renewed when an accessor</span>
+<span class="sd">    method is called.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">accessed</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="n">session</span><span class="o">.</span><span class="n">accessed</span> <span class="o">=</span> <span class="n">now</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">session</span><span class="o">.</span><span class="n">_reissue_time</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">now</span> <span class="o">-</span> <span class="n">session</span><span class="o">.</span><span class="n">renewed</span> <span class="o">&gt;</span> <span class="n">session</span><span class="o">.</span><span class="n">_reissue_time</span><span class="p">:</span>
+                <span class="n">session</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">wrapped</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+    <span class="n">accessed</span><span class="o">.</span><span class="n">__doc__</span> <span class="o">=</span> <span class="n">wrapped</span><span class="o">.</span><span class="n">__doc__</span>
+    <span class="k">return</span> <span class="n">accessed</span>
+
+<span class="k">def</span> <span class="nf">manage_changed</span><span class="p">(</span><span class="n">wrapped</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Decorator which causes a cookie to be set when a setter method</span>
+<span class="sd">    is called.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">changed</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="n">session</span><span class="o">.</span><span class="n">accessed</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
+        <span class="n">session</span><span class="o">.</span><span class="n">changed</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">wrapped</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+    <span class="n">changed</span><span class="o">.</span><span class="n">__doc__</span> <span class="o">=</span> <span class="n">wrapped</span><span class="o">.</span><span class="n">__doc__</span>
+    <span class="k">return</span> <span class="n">changed</span>
+
+<div class="viewcode-block" id="signed_serialize"><a class="viewcode-back" href="../../api/session.html#pyramid.session.signed_serialize">[docs]</a><span class="k">def</span> <span class="nf">signed_serialize</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">secret</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Serialize any pickleable structure (``data``) and sign it</span>
+<span class="sd">    using the ``secret`` (must be a string).  Return the</span>
+<span class="sd">    serialization, which includes the signature as its first 40 bytes.</span>
+<span class="sd">    The ``signed_deserialize`` method will deserialize such a value.</span>
+
+<span class="sd">    This function is useful for creating signed cookies.  For example:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       cookieval = signed_serialize({&#39;a&#39;:1}, &#39;secret&#39;)</span>
+<span class="sd">       response.set_cookie(&#39;signed_cookie&#39;, cookieval)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pickled</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">pickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c"># bw-compat with pyramid &lt;= 1.5b1 where latin1 is the default</span>
+        <span class="n">secret</span> <span class="o">=</span> <span class="n">bytes_</span><span class="p">(</span><span class="n">secret</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">UnicodeEncodeError</span><span class="p">:</span>
+        <span class="n">secret</span> <span class="o">=</span> <span class="n">bytes_</span><span class="p">(</span><span class="n">secret</span><span class="p">,</span> <span class="s">&#39;utf-8&#39;</span><span class="p">)</span>
+    <span class="n">sig</span> <span class="o">=</span> <span class="n">hmac</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">secret</span><span class="p">,</span> <span class="n">pickled</span><span class="p">,</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha1</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">sig</span> <span class="o">+</span> <span class="n">native_</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">pickled</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="signed_deserialize"><a class="viewcode-back" href="../../api/session.html#pyramid.session.signed_deserialize">[docs]</a><span class="k">def</span> <span class="nf">signed_deserialize</span><span class="p">(</span><span class="n">serialized</span><span class="p">,</span> <span class="n">secret</span><span class="p">,</span> <span class="n">hmac</span><span class="o">=</span><span class="n">hmac</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Deserialize the value returned from ``signed_serialize``.  If</span>
+<span class="sd">    the value cannot be deserialized for any reason, a</span>
+<span class="sd">    :exc:`ValueError` exception will be raised.</span>
+
+<span class="sd">    This function is useful for deserializing a signed cookie value</span>
+<span class="sd">    created by ``signed_serialize``.  For example:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">       cookieval = request.cookies[&#39;signed_cookie&#39;]</span>
+<span class="sd">       data = signed_deserialize(cookieval, &#39;secret&#39;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># hmac parameterized only for unit tests</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">input_sig</span><span class="p">,</span> <span class="n">pickled</span> <span class="o">=</span> <span class="p">(</span><span class="n">bytes_</span><span class="p">(</span><span class="n">serialized</span><span class="p">[:</span><span class="mi">40</span><span class="p">]),</span>
+                              <span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">bytes_</span><span class="p">(</span><span class="n">serialized</span><span class="p">[</span><span class="mi">40</span><span class="p">:])))</span>
+    <span class="k">except</span> <span class="p">(</span><span class="n">binascii</span><span class="o">.</span><span class="n">Error</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="c"># Badly formed data can make base64 die</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Badly formed base64 data: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c"># bw-compat with pyramid &lt;= 1.5b1 where latin1 is the default</span>
+        <span class="n">secret</span> <span class="o">=</span> <span class="n">bytes_</span><span class="p">(</span><span class="n">secret</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">UnicodeEncodeError</span><span class="p">:</span>
+        <span class="n">secret</span> <span class="o">=</span> <span class="n">bytes_</span><span class="p">(</span><span class="n">secret</span><span class="p">,</span> <span class="s">&#39;utf-8&#39;</span><span class="p">)</span>
+    <span class="n">sig</span> <span class="o">=</span> <span class="n">bytes_</span><span class="p">(</span><span class="n">hmac</span><span class="o">.</span><span class="n">new</span><span class="p">(</span><span class="n">secret</span><span class="p">,</span> <span class="n">pickled</span><span class="p">,</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha1</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">())</span>
+
+    <span class="c"># Avoid timing attacks (see</span>
+    <span class="c"># http://seb.dbzteam.org/crypto/python-oauth-timing-hmac.pdf)</span>
+    <span class="k">if</span> <span class="n">strings_differ</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="n">input_sig</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;Invalid signature&#39;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">pickled</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="check_csrf_token"><a class="viewcode-back" href="../../api/session.html#pyramid.session.check_csrf_token">[docs]</a><span class="k">def</span> <span class="nf">check_csrf_token</span><span class="p">(</span><span class="n">request</span><span class="p">,</span>
+                     <span class="n">token</span><span class="o">=</span><span class="s">&#39;csrf_token&#39;</span><span class="p">,</span>
+                     <span class="n">header</span><span class="o">=</span><span class="s">&#39;X-CSRF-Token&#39;</span><span class="p">,</span>
+                     <span class="n">raises</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Check the CSRF token in the request&#39;s session against the value in</span>
+<span class="sd">    ``request.params.get(token)`` or ``request.headers.get(header)``.</span>
+<span class="sd">    If a ``token`` keyword is not supplied to this function, the string</span>
+<span class="sd">    ``csrf_token`` will be used to look up the token in ``request.params``.</span>
+<span class="sd">    If a ``header`` keyword is not supplied to this function, the string</span>
+<span class="sd">    ``X-CSRF-Token`` will be used to look up the token in ``request.headers``.</span>
+
+<span class="sd">    If the value supplied by param or by header doesn&#39;t match the value</span>
+<span class="sd">    supplied by ``request.session.get_csrf_token()``, and ``raises`` is</span>
+<span class="sd">    ``True``, this function will raise an</span>
+<span class="sd">    :exc:`pyramid.exceptions.BadCSRFToken` exception.</span>
+<span class="sd">    If the check does succeed and ``raises`` is ``False``, this</span>
+<span class="sd">    function will return ``False``.  If the CSRF check is successful, this</span>
+<span class="sd">    function will return ``True`` unconditionally.</span>
+
+<span class="sd">    Note that using this function requires that a :term:`session factory` is</span>
+<span class="sd">    configured.</span>
+
+<span class="sd">    .. versionadded:: 1.4a2</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">supplied_token</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">header</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">supplied_token</span> <span class="o">!=</span> <span class="n">request</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">get_csrf_token</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">raises</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">BadCSRFToken</span><span class="p">(</span><span class="s">&#39;check_csrf_token(): Invalid token&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">return</span> <span class="bp">True</span>
+</div>
+<span class="k">class</span> <span class="nc">PickleSerializer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A Webob cookie serializer that uses the pickle protocol to dump Python</span>
+<span class="sd">    data to bytes.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">loads</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bstruct</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">bstruct</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">dumps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">appstruct</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">appstruct</span><span class="p">,</span> <span class="n">pickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
+
+<div class="viewcode-block" id="BaseCookieSessionFactory"><a class="viewcode-back" href="../../api/session.html#pyramid.session.BaseCookieSessionFactory">[docs]</a><span class="k">def</span> <span class="nf">BaseCookieSessionFactory</span><span class="p">(</span>
+    <span class="n">serializer</span><span class="p">,</span>
+    <span class="n">cookie_name</span><span class="o">=</span><span class="s">&#39;session&#39;</span><span class="p">,</span>
+    <span class="n">max_age</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+    <span class="n">path</span><span class="o">=</span><span class="s">&#39;/&#39;</span><span class="p">,</span>
+    <span class="n">domain</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+    <span class="n">secure</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+    <span class="n">httponly</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="mi">1200</span><span class="p">,</span>
+    <span class="n">reissue_time</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">set_on_exception</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+    <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    .. versionadded:: 1.5</span>
+<span class="sd">    </span>
+<span class="sd">    Configure a :term:`session factory` which will provide cookie-based</span>
+<span class="sd">    sessions.  The return value of this function is a :term:`session factory`,</span>
+<span class="sd">    which may be provided as the ``session_factory`` argument of a</span>
+<span class="sd">    :class:`pyramid.config.Configurator` constructor, or used as the</span>
+<span class="sd">    ``session_factory`` argument of the</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.set_session_factory` method.</span>
+
+<span class="sd">    The session factory returned by this function will create sessions</span>
+<span class="sd">    which are limited to storing fewer than 4000 bytes of data (as the</span>
+<span class="sd">    payload must fit into a single cookie).</span>
+
+<span class="sd">    .. warning:</span>
+
+<span class="sd">       This class provides no protection from tampering and is only intended</span>
+<span class="sd">       to be used by framework authors to create their own cookie-based</span>
+<span class="sd">       session factories.</span>
+
+<span class="sd">    Parameters:</span>
+
+<span class="sd">    ``serializer``</span>
+<span class="sd">      An object with two methods: ``loads`` and ``dumps``.  The ``loads``</span>
+<span class="sd">      method should accept bytes and return a Python object.  The ``dumps``</span>
+<span class="sd">      method should accept a Python object and return bytes.  A ``ValueError``</span>
+<span class="sd">      should be raised for malformed inputs.</span>
+
+<span class="sd">    ``cookie_name``</span>
+<span class="sd">      The name of the cookie used for sessioning. Default: ``&#39;session&#39;``.</span>
+
+<span class="sd">    ``max_age``</span>
+<span class="sd">      The maximum age of the cookie used for sessioning (in seconds).</span>
+<span class="sd">      Default: ``None`` (browser scope).</span>
+
+<span class="sd">    ``path``</span>
+<span class="sd">      The path used for the session cookie. Default: ``&#39;/&#39;``.</span>
+
+<span class="sd">    ``domain``</span>
+<span class="sd">      The domain used for the session cookie.  Default: ``None`` (no domain).</span>
+
+<span class="sd">    ``secure``</span>
+<span class="sd">      The &#39;secure&#39; flag of the session cookie. Default: ``False``.</span>
+
+<span class="sd">    ``httponly``</span>
+<span class="sd">      Hide the cookie from Javascript by setting the &#39;HttpOnly&#39; flag of the</span>
+<span class="sd">      session cookie. Default: ``False``.</span>
+
+<span class="sd">    ``timeout``</span>
+<span class="sd">      A number of seconds of inactivity before a session times out. If</span>
+<span class="sd">      ``None`` then the cookie never expires. This lifetime only applies</span>
+<span class="sd">      to the *value* within the cookie. Meaning that if the cookie expires</span>
+<span class="sd">      due to a lower ``max_age``, then this setting has no effect.</span>
+<span class="sd">      Default: ``1200``.</span>
+
+<span class="sd">    ``reissue_time``</span>
+<span class="sd">      The number of seconds that must pass before the cookie is automatically</span>
+<span class="sd">      reissued as the result of a request which accesses the session. The</span>
+<span class="sd">      duration is measured as the number of seconds since the last session</span>
+<span class="sd">      cookie was issued and &#39;now&#39;.  If this value is ``0``, a new cookie</span>
+<span class="sd">      will be reissued on every request accessing the session. If ``None``</span>
+<span class="sd">      then the cookie&#39;s lifetime will never be extended.</span>
+
+<span class="sd">      A good rule of thumb: if you want auto-expired cookies based on</span>
+<span class="sd">      inactivity: set the ``timeout`` value to 1200 (20 mins) and set the</span>
+<span class="sd">      ``reissue_time`` value to perhaps a tenth of the ``timeout`` value</span>
+<span class="sd">      (120 or 2 mins).  It&#39;s nonsensical to set the ``timeout`` value lower</span>
+<span class="sd">      than the ``reissue_time`` value, as the ticket will never be reissued.</span>
+<span class="sd">      However, such a configuration is not explicitly prevented.</span>
+
+<span class="sd">      Default: ``0``.</span>
+
+<span class="sd">    ``set_on_exception``</span>
+<span class="sd">      If ``True``, set a session cookie even if an exception occurs</span>
+<span class="sd">      while rendering a view. Default: ``True``.</span>
+
+<span class="sd">    .. versionadded: 1.5a3</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@implementer</span><span class="p">(</span><span class="n">ISession</span><span class="p">)</span>
+    <span class="k">class</span> <span class="nc">CookieSession</span><span class="p">(</span><span class="nb">dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Dictionary-like session object &quot;&quot;&quot;</span>
+
+        <span class="c"># configuration parameters</span>
+        <span class="n">_cookie_name</span> <span class="o">=</span> <span class="n">cookie_name</span>
+        <span class="n">_cookie_max_age</span> <span class="o">=</span> <span class="n">max_age</span>
+        <span class="n">_cookie_path</span> <span class="o">=</span> <span class="n">path</span>
+        <span class="n">_cookie_domain</span> <span class="o">=</span> <span class="n">domain</span>
+        <span class="n">_cookie_secure</span> <span class="o">=</span> <span class="n">secure</span>
+        <span class="n">_cookie_httponly</span> <span class="o">=</span> <span class="n">httponly</span>
+        <span class="n">_cookie_on_exception</span> <span class="o">=</span> <span class="n">set_on_exception</span>
+        <span class="n">_timeout</span> <span class="o">=</span> <span class="n">timeout</span>
+        <span class="n">_reissue_time</span> <span class="o">=</span> <span class="n">reissue_time</span>
+
+        <span class="c"># dirty flag</span>
+        <span class="n">_dirty</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">request</span> <span class="o">=</span> <span class="n">request</span>
+            <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="n">created</span> <span class="o">=</span> <span class="n">renewed</span> <span class="o">=</span> <span class="n">now</span>
+            <span class="n">new</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">cookieval</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">cookies</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_cookie_name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">cookieval</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">value</span> <span class="o">=</span> <span class="n">serializer</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">bytes_</span><span class="p">(</span><span class="n">cookieval</span><span class="p">))</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="c"># the cookie failed to deserialize, dropped</span>
+                    <span class="n">value</span> <span class="o">=</span> <span class="bp">None</span>
+
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="c"># since the value is not necessarily signed, we have</span>
+                    <span class="c"># to unpack it a little carefully</span>
+                    <span class="n">rval</span><span class="p">,</span> <span class="n">cval</span><span class="p">,</span> <span class="n">sval</span> <span class="o">=</span> <span class="n">value</span>
+                    <span class="n">renewed</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">rval</span><span class="p">)</span>
+                    <span class="n">created</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">cval</span><span class="p">)</span>
+                    <span class="n">state</span> <span class="o">=</span> <span class="n">sval</span>
+                    <span class="n">new</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+                    <span class="c"># value failed to unpack properly or renewed was not</span>
+                    <span class="c"># a numeric type so we&#39;ll fail deserialization here</span>
+                    <span class="n">state</span> <span class="o">=</span> <span class="p">{}</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">now</span> <span class="o">-</span> <span class="n">renewed</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">_timeout</span><span class="p">:</span>
+                    <span class="c"># expire the session because it was not renewed</span>
+                    <span class="c"># before the timeout threshold</span>
+                    <span class="n">state</span> <span class="o">=</span> <span class="p">{}</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">created</span> <span class="o">=</span> <span class="n">created</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">accessed</span> <span class="o">=</span> <span class="n">renewed</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">renewed</span> <span class="o">=</span> <span class="n">renewed</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">new</span> <span class="o">=</span> <span class="n">new</span>
+            <span class="nb">dict</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">)</span>
+
+        <span class="c"># ISession methods</span>
+        <span class="k">def</span> <span class="nf">changed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dirty</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_dirty</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="k">def</span> <span class="nf">set_cookie_callback</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">response</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_set_cookie</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">request</span> <span class="o">=</span> <span class="bp">None</span> <span class="c"># explicitly break cycle for gc</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">add_response_callback</span><span class="p">(</span><span class="n">set_cookie_callback</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">invalidate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span> <span class="c"># XXX probably needs to unset cookie</span>
+
+        <span class="c"># non-modifying dictionary methods</span>
+        <span class="n">get</span> <span class="o">=</span> <span class="n">manage_accessed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">get</span><span class="p">)</span>
+        <span class="n">__getitem__</span> <span class="o">=</span> <span class="n">manage_accessed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">__getitem__</span><span class="p">)</span>
+        <span class="n">items</span> <span class="o">=</span> <span class="n">manage_accessed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">items</span><span class="p">)</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="n">manage_accessed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="n">manage_accessed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">keys</span><span class="p">)</span>
+        <span class="n">__contains__</span> <span class="o">=</span> <span class="n">manage_accessed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">__contains__</span><span class="p">)</span>
+        <span class="n">__len__</span> <span class="o">=</span> <span class="n">manage_accessed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">__len__</span><span class="p">)</span>
+        <span class="n">__iter__</span> <span class="o">=</span> <span class="n">manage_accessed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">__iter__</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">PY3</span><span class="p">:</span>
+            <span class="n">iteritems</span> <span class="o">=</span> <span class="n">manage_accessed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">)</span>
+            <span class="n">itervalues</span> <span class="o">=</span> <span class="n">manage_accessed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">itervalues</span><span class="p">)</span>
+            <span class="n">iterkeys</span> <span class="o">=</span> <span class="n">manage_accessed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">)</span>
+            <span class="n">has_key</span> <span class="o">=</span> <span class="n">manage_accessed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">has_key</span><span class="p">)</span>
+
+        <span class="c"># modifying dictionary methods</span>
+        <span class="n">clear</span> <span class="o">=</span> <span class="n">manage_changed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">clear</span><span class="p">)</span>
+        <span class="n">update</span> <span class="o">=</span> <span class="n">manage_changed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">update</span><span class="p">)</span>
+        <span class="n">setdefault</span> <span class="o">=</span> <span class="n">manage_changed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">setdefault</span><span class="p">)</span>
+        <span class="n">pop</span> <span class="o">=</span> <span class="n">manage_changed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">pop</span><span class="p">)</span>
+        <span class="n">popitem</span> <span class="o">=</span> <span class="n">manage_changed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">popitem</span><span class="p">)</span>
+        <span class="n">__setitem__</span> <span class="o">=</span> <span class="n">manage_changed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">__setitem__</span><span class="p">)</span>
+        <span class="n">__delitem__</span> <span class="o">=</span> <span class="n">manage_changed</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">__delitem__</span><span class="p">)</span>
+
+        <span class="c"># flash API methods</span>
+        <span class="nd">@manage_changed</span>
+        <span class="k">def</span> <span class="nf">flash</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">queue</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">allow_duplicate</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+            <span class="n">storage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s">&#39;_f_&#39;</span> <span class="o">+</span> <span class="n">queue</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="k">if</span> <span class="n">allow_duplicate</span> <span class="ow">or</span> <span class="p">(</span><span class="n">msg</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">storage</span><span class="p">):</span>
+                <span class="n">storage</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="nd">@manage_changed</span>
+        <span class="k">def</span> <span class="nf">pop_flash</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queue</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">):</span>
+            <span class="n">storage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;_f_&#39;</span> <span class="o">+</span> <span class="n">queue</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="k">return</span> <span class="n">storage</span>
+
+        <span class="nd">@manage_accessed</span>
+        <span class="k">def</span> <span class="nf">peek_flash</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queue</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">):</span>
+            <span class="n">storage</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;_f_&#39;</span> <span class="o">+</span> <span class="n">queue</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="k">return</span> <span class="n">storage</span>
+
+        <span class="c"># CSRF API methods</span>
+        <span class="nd">@manage_changed</span>
+        <span class="k">def</span> <span class="nf">new_csrf_token</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="n">token</span> <span class="o">=</span> <span class="n">text_</span><span class="p">(</span><span class="n">binascii</span><span class="o">.</span><span class="n">hexlify</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">urandom</span><span class="p">(</span><span class="mi">20</span><span class="p">)))</span>
+            <span class="bp">self</span><span class="p">[</span><span class="s">&#39;_csrft_&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">token</span>
+            <span class="k">return</span> <span class="n">token</span>
+
+        <span class="nd">@manage_accessed</span>
+        <span class="k">def</span> <span class="nf">get_csrf_token</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;_csrft_&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">token</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">token</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_csrf_token</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">token</span>
+
+        <span class="c"># non-API methods</span>
+        <span class="k">def</span> <span class="nf">_set_cookie</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">response</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cookie_on_exception</span><span class="p">:</span>
+                <span class="n">exception</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="p">,</span> <span class="s">&#39;exception&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">exception</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span> <span class="c"># dont set a cookie during exceptions</span>
+                    <span class="k">return</span> <span class="bp">False</span>
+            <span class="n">cookieval</span> <span class="o">=</span> <span class="n">native_</span><span class="p">(</span><span class="n">serializer</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">accessed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">created</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+                <span class="p">))</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cookieval</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">4064</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s">&#39;Cookie value is too long to store (</span><span class="si">%s</span><span class="s"> bytes)&#39;</span> <span class="o">%</span>
+                    <span class="nb">len</span><span class="p">(</span><span class="n">cookieval</span><span class="p">)</span>
+                    <span class="p">)</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">set_cookie</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_cookie_name</span><span class="p">,</span>
+                <span class="n">value</span><span class="o">=</span><span class="n">cookieval</span><span class="p">,</span>
+                <span class="n">max_age</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_cookie_max_age</span><span class="p">,</span>
+                <span class="n">path</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_cookie_path</span><span class="p">,</span>
+                <span class="n">domain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_cookie_domain</span><span class="p">,</span>
+                <span class="n">secure</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_cookie_secure</span><span class="p">,</span>
+                <span class="n">httponly</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_cookie_httponly</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="k">return</span> <span class="n">CookieSession</span>
+
+</div>
+<div class="viewcode-block" id="UnencryptedCookieSessionFactoryConfig"><a class="viewcode-back" href="../../api/session.html#pyramid.session.UnencryptedCookieSessionFactoryConfig">[docs]</a><span class="k">def</span> <span class="nf">UnencryptedCookieSessionFactoryConfig</span><span class="p">(</span>
+    <span class="n">secret</span><span class="p">,</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="mi">1200</span><span class="p">,</span>
+    <span class="n">cookie_name</span><span class="o">=</span><span class="s">&#39;session&#39;</span><span class="p">,</span>
+    <span class="n">cookie_max_age</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+    <span class="n">cookie_path</span><span class="o">=</span><span class="s">&#39;/&#39;</span><span class="p">,</span>
+    <span class="n">cookie_domain</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+    <span class="n">cookie_secure</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+    <span class="n">cookie_httponly</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+    <span class="n">cookie_on_exception</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+    <span class="n">signed_serialize</span><span class="o">=</span><span class="n">signed_serialize</span><span class="p">,</span>
+    <span class="n">signed_deserialize</span><span class="o">=</span><span class="n">signed_deserialize</span><span class="p">,</span>
+    <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    .. deprecated:: 1.5</span>
+<span class="sd">        Use :func:`pyramid.session.SignedCookieSessionFactory` instead.</span>
+<span class="sd">        Caveat: Cookies generated using ``SignedCookieSessionFactory`` are not</span>
+<span class="sd">        compatible with cookies generated using</span>
+<span class="sd">        ``UnencryptedCookieSessionFactory``, so existing user session data</span>
+<span class="sd">        will be destroyed if you switch to it.</span>
+<span class="sd">    </span>
+<span class="sd">    Configure a :term:`session factory` which will provide unencrypted</span>
+<span class="sd">    (but signed) cookie-based sessions.  The return value of this</span>
+<span class="sd">    function is a :term:`session factory`, which may be provided as</span>
+<span class="sd">    the ``session_factory`` argument of a</span>
+<span class="sd">    :class:`pyramid.config.Configurator` constructor, or used</span>
+<span class="sd">    as the ``session_factory`` argument of the</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.set_session_factory`</span>
+<span class="sd">    method.</span>
+
+<span class="sd">    The session factory returned by this function will create sessions</span>
+<span class="sd">    which are limited to storing fewer than 4000 bytes of data (as the</span>
+<span class="sd">    payload must fit into a single cookie).</span>
+
+<span class="sd">    Parameters:</span>
+
+<span class="sd">    ``secret``</span>
+<span class="sd">      A string which is used to sign the cookie.</span>
+
+<span class="sd">    ``timeout``</span>
+<span class="sd">      A number of seconds of inactivity before a session times out.</span>
+
+<span class="sd">    ``cookie_name``</span>
+<span class="sd">      The name of the cookie used for sessioning.</span>
+
+<span class="sd">    ``cookie_max_age``</span>
+<span class="sd">      The maximum age of the cookie used for sessioning (in seconds).</span>
+<span class="sd">      Default: ``None`` (browser scope).</span>
+
+<span class="sd">    ``cookie_path``</span>
+<span class="sd">      The path used for the session cookie.</span>
+
+<span class="sd">    ``cookie_domain``</span>
+<span class="sd">      The domain used for the session cookie.  Default: ``None`` (no domain).</span>
+
+<span class="sd">    ``cookie_secure``</span>
+<span class="sd">      The &#39;secure&#39; flag of the session cookie.</span>
+
+<span class="sd">    ``cookie_httponly``</span>
+<span class="sd">      The &#39;httpOnly&#39; flag of the session cookie.</span>
+
+<span class="sd">    ``cookie_on_exception``</span>
+<span class="sd">      If ``True``, set a session cookie even if an exception occurs</span>
+<span class="sd">      while rendering a view.</span>
+
+<span class="sd">    ``signed_serialize``</span>
+<span class="sd">      A callable which takes more or less arbitrary Python data structure and</span>
+<span class="sd">      a secret and returns a signed serialization in bytes.</span>
+<span class="sd">      Default: ``signed_serialize`` (using pickle).</span>
+
+<span class="sd">    ``signed_deserialize``</span>
+<span class="sd">      A callable which takes a signed and serialized data structure in bytes</span>
+<span class="sd">      and a secret and returns the original data structure if the signature</span>
+<span class="sd">      is valid. Default: ``signed_deserialize`` (using pickle).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">class</span> <span class="nc">SerializerWrapper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">secret</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">secret</span> <span class="o">=</span> <span class="n">secret</span>
+            
+        <span class="k">def</span> <span class="nf">loads</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bstruct</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">signed_deserialize</span><span class="p">(</span><span class="n">bstruct</span><span class="p">,</span> <span class="n">secret</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">dumps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">appstruct</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">signed_serialize</span><span class="p">(</span><span class="n">appstruct</span><span class="p">,</span> <span class="n">secret</span><span class="p">)</span>
+
+    <span class="n">serializer</span> <span class="o">=</span> <span class="n">SerializerWrapper</span><span class="p">(</span><span class="n">secret</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">BaseCookieSessionFactory</span><span class="p">(</span>
+        <span class="n">serializer</span><span class="p">,</span>
+        <span class="n">cookie_name</span><span class="o">=</span><span class="n">cookie_name</span><span class="p">,</span>
+        <span class="n">max_age</span><span class="o">=</span><span class="n">cookie_max_age</span><span class="p">,</span>
+        <span class="n">path</span><span class="o">=</span><span class="n">cookie_path</span><span class="p">,</span>
+        <span class="n">domain</span><span class="o">=</span><span class="n">cookie_domain</span><span class="p">,</span>
+        <span class="n">secure</span><span class="o">=</span><span class="n">cookie_secure</span><span class="p">,</span>
+        <span class="n">httponly</span><span class="o">=</span><span class="n">cookie_httponly</span><span class="p">,</span>
+        <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="n">reissue_time</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="c"># to keep session.accessed == session.renewed</span>
+        <span class="n">set_on_exception</span><span class="o">=</span><span class="n">cookie_on_exception</span><span class="p">,</span>
+    <span class="p">)</span>
+</div>
+<span class="n">deprecated</span><span class="p">(</span>
+    <span class="s">&#39;UnencryptedCookieSessionFactoryConfig&#39;</span><span class="p">,</span>
+    <span class="s">&#39;The UnencryptedCookieSessionFactoryConfig callable is deprecated as of &#39;</span>
+    <span class="s">&#39;Pyramid 1.5.  Use ``pyramid.session.SignedCookieSessionFactory`` instead.&#39;</span>
+    <span class="s">&#39; Caveat: Cookies generated using SignedCookieSessionFactory are not &#39;</span>
+    <span class="s">&#39;compatible with cookies generated using UnencryptedCookieSessionFactory, &#39;</span>
+    <span class="s">&#39;so existing user session data will be destroyed if you switch to it.&#39;</span>
+    <span class="p">)</span>
+
+<div class="viewcode-block" id="SignedCookieSessionFactory"><a class="viewcode-back" href="../../api/session.html#pyramid.session.SignedCookieSessionFactory">[docs]</a><span class="k">def</span> <span class="nf">SignedCookieSessionFactory</span><span class="p">(</span>
+    <span class="n">secret</span><span class="p">,</span>
+    <span class="n">cookie_name</span><span class="o">=</span><span class="s">&#39;session&#39;</span><span class="p">,</span>
+    <span class="n">max_age</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+    <span class="n">path</span><span class="o">=</span><span class="s">&#39;/&#39;</span><span class="p">,</span>
+    <span class="n">domain</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+    <span class="n">secure</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+    <span class="n">httponly</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+    <span class="n">set_on_exception</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="mi">1200</span><span class="p">,</span>
+    <span class="n">reissue_time</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">hashalg</span><span class="o">=</span><span class="s">&#39;sha512&#39;</span><span class="p">,</span>
+    <span class="n">salt</span><span class="o">=</span><span class="s">&#39;pyramid.session.&#39;</span><span class="p">,</span>
+    <span class="n">serializer</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+    <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    .. versionadded:: 1.5</span>
+<span class="sd">    </span>
+<span class="sd">    Configure a :term:`session factory` which will provide signed</span>
+<span class="sd">    cookie-based sessions.  The return value of this</span>
+<span class="sd">    function is a :term:`session factory`, which may be provided as</span>
+<span class="sd">    the ``session_factory`` argument of a</span>
+<span class="sd">    :class:`pyramid.config.Configurator` constructor, or used</span>
+<span class="sd">    as the ``session_factory`` argument of the</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.set_session_factory`</span>
+<span class="sd">    method.</span>
+
+<span class="sd">    The session factory returned by this function will create sessions</span>
+<span class="sd">    which are limited to storing fewer than 4000 bytes of data (as the</span>
+<span class="sd">    payload must fit into a single cookie).</span>
+
+<span class="sd">    Parameters:</span>
+
+<span class="sd">    ``secret``</span>
+<span class="sd">      A string which is used to sign the cookie. The secret should be at</span>
+<span class="sd">      least as long as the block size of the selected hash algorithm. For</span>
+<span class="sd">      ``sha512`` this would mean a 128 bit (64 character) secret.  It should</span>
+<span class="sd">      be unique within the set of secret values provided to Pyramid for</span>
+<span class="sd">      its various subsystems (see :ref:`admonishment_against_secret_sharing`).</span>
+
+<span class="sd">    ``hashalg``</span>
+<span class="sd">      The HMAC digest algorithm to use for signing. The algorithm must be</span>
+<span class="sd">      supported by the :mod:`hashlib` library. Default: ``&#39;sha512&#39;``.</span>
+
+<span class="sd">    ``salt``</span>
+<span class="sd">      A namespace to avoid collisions between different uses of a shared</span>
+<span class="sd">      secret. Reusing a secret for different parts of an application is</span>
+<span class="sd">      strongly discouraged (see :ref:`admonishment_against_secret_sharing`).</span>
+<span class="sd">      Default: ``&#39;pyramid.session.&#39;``.</span>
+
+<span class="sd">    ``cookie_name``</span>
+<span class="sd">      The name of the cookie used for sessioning. Default: ``&#39;session&#39;``.</span>
+
+<span class="sd">    ``max_age``</span>
+<span class="sd">      The maximum age of the cookie used for sessioning (in seconds).</span>
+<span class="sd">      Default: ``None`` (browser scope).</span>
+
+<span class="sd">    ``path``</span>
+<span class="sd">      The path used for the session cookie. Default: ``&#39;/&#39;``.</span>
+
+<span class="sd">    ``domain``</span>
+<span class="sd">      The domain used for the session cookie.  Default: ``None`` (no domain).</span>
+
+<span class="sd">    ``secure``</span>
+<span class="sd">      The &#39;secure&#39; flag of the session cookie. Default: ``False``.</span>
+
+<span class="sd">    ``httponly``</span>
+<span class="sd">      Hide the cookie from Javascript by setting the &#39;HttpOnly&#39; flag of the</span>
+<span class="sd">      session cookie. Default: ``False``.</span>
+
+<span class="sd">    ``timeout``</span>
+<span class="sd">      A number of seconds of inactivity before a session times out. If</span>
+<span class="sd">      ``None`` then the cookie never expires. This lifetime only applies</span>
+<span class="sd">      to the *value* within the cookie. Meaning that if the cookie expires</span>
+<span class="sd">      due to a lower ``max_age``, then this setting has no effect.</span>
+<span class="sd">      Default: ``1200``.</span>
+
+<span class="sd">    ``reissue_time``</span>
+<span class="sd">      The number of seconds that must pass before the cookie is automatically</span>
+<span class="sd">      reissued as the result of accessing the session. The</span>
+<span class="sd">      duration is measured as the number of seconds since the last session</span>
+<span class="sd">      cookie was issued and &#39;now&#39;.  If this value is ``0``, a new cookie</span>
+<span class="sd">      will be reissued on every request accessing the session. If ``None``</span>
+<span class="sd">      then the cookie&#39;s lifetime will never be extended.</span>
+
+<span class="sd">      A good rule of thumb: if you want auto-expired cookies based on</span>
+<span class="sd">      inactivity: set the ``timeout`` value to 1200 (20 mins) and set the</span>
+<span class="sd">      ``reissue_time`` value to perhaps a tenth of the ``timeout`` value</span>
+<span class="sd">      (120 or 2 mins).  It&#39;s nonsensical to set the ``timeout`` value lower</span>
+<span class="sd">      than the ``reissue_time`` value, as the ticket will never be reissued.</span>
+<span class="sd">      However, such a configuration is not explicitly prevented.</span>
+
+<span class="sd">      Default: ``0``.</span>
+
+<span class="sd">    ``set_on_exception``</span>
+<span class="sd">      If ``True``, set a session cookie even if an exception occurs</span>
+<span class="sd">      while rendering a view. Default: ``True``.</span>
+
+<span class="sd">    ``serializer``</span>
+<span class="sd">      An object with two methods: ``loads`` and ``dumps``.  The ``loads``</span>
+<span class="sd">      method should accept bytes and return a Python object.  The ``dumps``</span>
+<span class="sd">      method should accept a Python object and return bytes.  A ``ValueError``</span>
+<span class="sd">      should be raised for malformed inputs.  If a serializer is not passed,</span>
+<span class="sd">      the :class:`pyramid.session.PickleSerializer` serializer will be used.</span>
+
+<span class="sd">    .. versionadded: 1.5a3</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">serializer</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">serializer</span> <span class="o">=</span> <span class="n">PickleSerializer</span><span class="p">()</span>
+
+    <span class="n">signed_serializer</span> <span class="o">=</span> <span class="n">SignedSerializer</span><span class="p">(</span>
+        <span class="n">secret</span><span class="p">,</span>
+        <span class="n">salt</span><span class="p">,</span>
+        <span class="n">hashalg</span><span class="p">,</span>
+        <span class="n">serializer</span><span class="o">=</span><span class="n">serializer</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">BaseCookieSessionFactory</span><span class="p">(</span>
+        <span class="n">signed_serializer</span><span class="p">,</span>
+        <span class="n">cookie_name</span><span class="o">=</span><span class="n">cookie_name</span><span class="p">,</span>
+        <span class="n">max_age</span><span class="o">=</span><span class="n">max_age</span><span class="p">,</span>
+        <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span>
+        <span class="n">domain</span><span class="o">=</span><span class="n">domain</span><span class="p">,</span>
+        <span class="n">secure</span><span class="o">=</span><span class="n">secure</span><span class="p">,</span>
+        <span class="n">httponly</span><span class="o">=</span><span class="n">httponly</span><span class="p">,</span>
+        <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
+        <span class="n">reissue_time</span><span class="o">=</span><span class="n">reissue_time</span><span class="p">,</span>
+        <span class="n">set_on_exception</span><span class="o">=</span><span class="n">set_on_exception</span><span class="p">,</span>
+    <span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

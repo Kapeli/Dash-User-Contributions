@@ -1,0 +1,1314 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.config &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.config</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">operator</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">venusian</span>
+
+<span class="kn">from</span> <span class="nn">webob.exc</span> <span class="kn">import</span> <span class="n">WSGIHTTPException</span> <span class="k">as</span> <span class="n">WebobWSGIHTTPException</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">IDebugLogger</span><span class="p">,</span>
+    <span class="n">IExceptionResponse</span><span class="p">,</span>
+    <span class="n">IPredicateList</span><span class="p">,</span>
+    <span class="n">PHASE1_CONFIG</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.asset</span> <span class="kn">import</span> <span class="n">resolve_asset_spec</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.authorization</span> <span class="kn">import</span> <span class="n">ACLAuthorizationPolicy</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.compat</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">text_</span><span class="p">,</span>
+    <span class="n">reraise</span><span class="p">,</span>
+    <span class="n">string_types</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.events</span> <span class="kn">import</span> <span class="n">ApplicationCreated</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.exceptions</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ConfigurationConflictError</span><span class="p">,</span>
+    <span class="n">ConfigurationError</span><span class="p">,</span>
+    <span class="n">ConfigurationExecutionError</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.httpexceptions</span> <span class="kn">import</span> <span class="n">default_exceptionresponse_view</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.path</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">caller_package</span><span class="p">,</span>
+    <span class="n">package_of</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.registry</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Introspectable</span><span class="p">,</span>
+    <span class="n">Introspector</span><span class="p">,</span>
+    <span class="n">Registry</span><span class="p">,</span>
+    <span class="n">undefer</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.router</span> <span class="kn">import</span> <span class="n">Router</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.settings</span> <span class="kn">import</span> <span class="n">aslist</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.threadlocal</span> <span class="kn">import</span> <span class="n">manager</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.util</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">WeakOrderedSet</span><span class="p">,</span>
+    <span class="n">object_description</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.config.adapters</span> <span class="kn">import</span> <span class="n">AdaptersConfiguratorMixin</span>
+<span class="kn">from</span> <span class="nn">pyramid.config.assets</span> <span class="kn">import</span> <span class="n">AssetsConfiguratorMixin</span>
+<span class="kn">from</span> <span class="nn">pyramid.config.factories</span> <span class="kn">import</span> <span class="n">FactoriesConfiguratorMixin</span>
+<span class="kn">from</span> <span class="nn">pyramid.config.i18n</span> <span class="kn">import</span> <span class="n">I18NConfiguratorMixin</span>
+<span class="kn">from</span> <span class="nn">pyramid.config.rendering</span> <span class="kn">import</span> <span class="n">RenderingConfiguratorMixin</span>
+<span class="kn">from</span> <span class="nn">pyramid.config.routes</span> <span class="kn">import</span> <span class="n">RoutesConfiguratorMixin</span>
+<span class="kn">from</span> <span class="nn">pyramid.config.security</span> <span class="kn">import</span> <span class="n">SecurityConfiguratorMixin</span>
+<span class="kn">from</span> <span class="nn">pyramid.config.settings</span> <span class="kn">import</span> <span class="n">SettingsConfiguratorMixin</span>
+<span class="kn">from</span> <span class="nn">pyramid.config.testing</span> <span class="kn">import</span> <span class="n">TestingConfiguratorMixin</span>
+<span class="kn">from</span> <span class="nn">pyramid.config.tweens</span> <span class="kn">import</span> <span class="n">TweensConfiguratorMixin</span>
+<span class="kn">from</span> <span class="nn">pyramid.config.util</span> <span class="kn">import</span> <span class="n">PredicateList</span><span class="p">,</span> <span class="n">not_</span>
+<span class="kn">from</span> <span class="nn">pyramid.config.views</span> <span class="kn">import</span> <span class="n">ViewsConfiguratorMixin</span>
+<span class="kn">from</span> <span class="nn">pyramid.config.zca</span> <span class="kn">import</span> <span class="n">ZCAConfiguratorMixin</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.path</span> <span class="kn">import</span> <span class="n">DottedNameResolver</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.util</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">action_method</span><span class="p">,</span>
+    <span class="n">ActionInfo</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="n">empty</span> <span class="o">=</span> <span class="n">text_</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+<span class="n">_marker</span> <span class="o">=</span> <span class="nb">object</span><span class="p">()</span>
+
+<span class="n">ConfigurationError</span> <span class="o">=</span> <span class="n">ConfigurationError</span> <span class="c"># pyflakes</span>
+
+<span class="n">not_</span> <span class="o">=</span> <span class="n">not_</span> <span class="c"># pyflakes, this is an API</span>
+
+
+<div class="viewcode-block" id="Configurator"><a class="viewcode-back" href="../../api/config.html#pyramid.config.Configurator">[docs]</a><span class="k">class</span> <span class="nc">Configurator</span><span class="p">(</span>
+    <span class="n">TestingConfiguratorMixin</span><span class="p">,</span>
+    <span class="n">TweensConfiguratorMixin</span><span class="p">,</span>
+    <span class="n">SecurityConfiguratorMixin</span><span class="p">,</span>
+    <span class="n">ViewsConfiguratorMixin</span><span class="p">,</span>
+    <span class="n">RoutesConfiguratorMixin</span><span class="p">,</span>
+    <span class="n">ZCAConfiguratorMixin</span><span class="p">,</span>
+    <span class="n">I18NConfiguratorMixin</span><span class="p">,</span>
+    <span class="n">RenderingConfiguratorMixin</span><span class="p">,</span>
+    <span class="n">AssetsConfiguratorMixin</span><span class="p">,</span>
+    <span class="n">SettingsConfiguratorMixin</span><span class="p">,</span>
+    <span class="n">FactoriesConfiguratorMixin</span><span class="p">,</span>
+    <span class="n">AdaptersConfiguratorMixin</span><span class="p">,</span>
+    <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A Configurator is used to configure a :app:`Pyramid`</span>
+<span class="sd">    :term:`application registry`.</span>
+
+<span class="sd">    If the ``registry`` argument is not ``None``, it must</span>
+<span class="sd">    be an instance of the :class:`pyramid.registry.Registry` class</span>
+<span class="sd">    representing the registry to configure.  If ``registry`` is ``None``, the</span>
+<span class="sd">    configurator will create a :class:`pyramid.registry.Registry` instance</span>
+<span class="sd">    itself; it will also perform some default configuration that would not</span>
+<span class="sd">    otherwise be done.  After its construction, the configurator may be used</span>
+<span class="sd">    to add further configuration to the registry.</span>
+
+<span class="sd">    .. warning:: If ``registry`` is assigned the above-mentioned class</span>
+<span class="sd">       instance, all other constructor arguments are ignored,</span>
+<span class="sd">       with the exception of ``package``.</span>
+
+<span class="sd">    If the ``package`` argument is passed, it must be a reference to a Python</span>
+<span class="sd">    :term:`package` (e.g. ``sys.modules[&#39;thepackage&#39;]``) or a :term:`dotted</span>
+<span class="sd">    Python name` to the same.  This value is used as a basis to convert</span>
+<span class="sd">    relative paths passed to various configuration methods, such as methods</span>
+<span class="sd">    which accept a ``renderer`` argument, into absolute paths.  If ``None``</span>
+<span class="sd">    is passed (the default), the package is assumed to be the Python package</span>
+<span class="sd">    in which the *caller* of the ``Configurator`` constructor lives.</span>
+
+<span class="sd">    If the ``settings`` argument is passed, it should be a Python dictionary</span>
+<span class="sd">    representing the :term:`deployment settings` for this application.  These</span>
+<span class="sd">    are later retrievable using the</span>
+<span class="sd">    :attr:`pyramid.registry.Registry.settings` attribute (aka</span>
+<span class="sd">    ``request.registry.settings``).</span>
+
+<span class="sd">    If the ``root_factory`` argument is passed, it should be an object</span>
+<span class="sd">    representing the default :term:`root factory` for your application or a</span>
+<span class="sd">    :term:`dotted Python name` to the same.  If it is ``None``, a default</span>
+<span class="sd">    root factory will be used.</span>
+
+<span class="sd">    If ``authentication_policy`` is passed, it should be an instance</span>
+<span class="sd">    of an :term:`authentication policy` or a :term:`dotted Python</span>
+<span class="sd">    name` to the same.</span>
+
+<span class="sd">    If ``authorization_policy`` is passed, it should be an instance of</span>
+<span class="sd">    an :term:`authorization policy` or a :term:`dotted Python name` to</span>
+<span class="sd">    the same.</span>
+
+<span class="sd">    .. note:: A ``ConfigurationError`` will be raised when an</span>
+<span class="sd">       authorization policy is supplied without also supplying an</span>
+<span class="sd">       authentication policy (authorization requires authentication).</span>
+
+<span class="sd">    If ``renderers`` is ``None`` (the default), a default set of</span>
+<span class="sd">    :term:`renderer` factories is used. Else, it should be a list of</span>
+<span class="sd">    tuples representing a set of renderer factories which should be</span>
+<span class="sd">    configured into this application, and each tuple representing a set of</span>
+<span class="sd">    positional values that should be passed to</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.add_renderer`.</span>
+
+<span class="sd">    If ``debug_logger`` is not passed, a default debug logger that logs to a</span>
+<span class="sd">    logger will be used (the logger name will be the package name of the</span>
+<span class="sd">    *caller* of this configurator).  If it is passed, it should be an</span>
+<span class="sd">    instance of the :class:`logging.Logger` (PEP 282) standard library class</span>
+<span class="sd">    or a Python logger name.  The debug logger is used by :app:`Pyramid`</span>
+<span class="sd">    itself to log warnings and authorization debugging information.</span>
+
+<span class="sd">    If ``locale_negotiator`` is passed, it should be a :term:`locale</span>
+<span class="sd">    negotiator` implementation or a :term:`dotted Python name` to</span>
+<span class="sd">    same.  See :ref:`custom_locale_negotiator`.</span>
+
+<span class="sd">    If ``request_factory`` is passed, it should be a :term:`request</span>
+<span class="sd">    factory` implementation or a :term:`dotted Python name` to the same.</span>
+<span class="sd">    See :ref:`changing_the_request_factory`.  By default it is ``None``,</span>
+<span class="sd">    which means use the default request factory.</span>
+
+<span class="sd">    If ``default_permission`` is passed, it should be a</span>
+<span class="sd">    :term:`permission` string to be used as the default permission for</span>
+<span class="sd">    all view configuration registrations performed against this</span>
+<span class="sd">    Configurator.  An example of a permission string:``&#39;view&#39;``.</span>
+<span class="sd">    Adding a default permission makes it unnecessary to protect each</span>
+<span class="sd">    view configuration with an explicit permission, unless your</span>
+<span class="sd">    application policy requires some exception for a particular view.</span>
+<span class="sd">    By default, ``default_permission`` is ``None``, meaning that view</span>
+<span class="sd">    configurations which do not explicitly declare a permission will</span>
+<span class="sd">    always be executable by entirely anonymous users (any</span>
+<span class="sd">    authorization policy in effect is ignored).</span>
+<span class="sd">    </span>
+<span class="sd">    .. seealso::</span>
+
+<span class="sd">        See also :ref:`setting_a_default_permission`.</span>
+
+<span class="sd">    If ``session_factory`` is passed, it should be an object which</span>
+<span class="sd">    implements the :term:`session factory` interface.  If a nondefault</span>
+<span class="sd">    value is passed, the ``session_factory`` will be used to create a</span>
+<span class="sd">    session object when ``request.session`` is accessed.  Note that</span>
+<span class="sd">    the same outcome can be achieved by calling</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.set_session_factory`.  By</span>
+<span class="sd">    default, this argument is ``None``, indicating that no session</span>
+<span class="sd">    factory will be configured (and thus accessing ``request.session``</span>
+<span class="sd">    will throw an error) unless ``set_session_factory`` is called later</span>
+<span class="sd">    during configuration.</span>
+
+<span class="sd">    If ``autocommit`` is ``True``, every method called on the configurator</span>
+<span class="sd">    will cause an immediate action, and no configuration conflict detection</span>
+<span class="sd">    will be used. If ``autocommit`` is ``False``, most methods of the</span>
+<span class="sd">    configurator will defer their action until</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.commit` is called.  When</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.commit` is called, the actions implied</span>
+<span class="sd">    by the called methods will be checked for configuration conflicts unless</span>
+<span class="sd">    ``autocommit`` is ``True``.  If a conflict is detected, a</span>
+<span class="sd">    ``ConfigurationConflictError`` will be raised.  Calling</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.make_wsgi_app` always implies a final</span>
+<span class="sd">    commit.</span>
+
+<span class="sd">    If ``default_view_mapper`` is passed, it will be used as the default</span>
+<span class="sd">    :term:`view mapper` factory for view configurations that don&#39;t otherwise</span>
+<span class="sd">    specify one (see :class:`pyramid.interfaces.IViewMapperFactory`).  If</span>
+<span class="sd">    ``default_view_mapper`` is not passed, a superdefault view mapper will be</span>
+<span class="sd">    used.</span>
+
+<span class="sd">    If ``exceptionresponse_view`` is passed, it must be a :term:`view</span>
+<span class="sd">    callable` or ``None``.  If it is a view callable, it will be used as an</span>
+<span class="sd">    exception view callable when an :term:`exception response` is raised. If</span>
+<span class="sd">    ``exceptionresponse_view`` is ``None``, no exception response view will</span>
+<span class="sd">    be registered, and all raised exception responses will be bubbled up to</span>
+<span class="sd">    Pyramid&#39;s caller.  By</span>
+<span class="sd">    default, the ``pyramid.httpexceptions.default_exceptionresponse_view``</span>
+<span class="sd">    function is used as the ``exceptionresponse_view``.</span>
+
+<span class="sd">    If ``route_prefix`` is passed, all routes added with</span>
+<span class="sd">    :meth:`pyramid.config.Configurator.add_route` will have the specified path</span>
+<span class="sd">    prepended to their pattern.</span>
+
+<span class="sd">    If ``introspection`` is passed, it must be a boolean value.  If it&#39;s</span>
+<span class="sd">    ``True``, introspection values during actions will be kept for use</span>
+<span class="sd">    for tools like the debug toolbar.  If it&#39;s ``False``, introspection</span>
+<span class="sd">    values provided by registrations will be ignored.  By default, it is</span>
+<span class="sd">    ``True``.</span>
+
+<span class="sd">    .. versionadded:: 1.1</span>
+<span class="sd">       The ``exceptionresponse_view`` argument.</span>
+
+<span class="sd">    .. versionadded:: 1.2</span>
+<span class="sd">       The ``route_prefix`` argument.</span>
+
+<span class="sd">    .. versionadded:: 1.3</span>
+<span class="sd">       The ``introspection`` argument.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">manager</span> <span class="o">=</span> <span class="n">manager</span> <span class="c"># for testing injection</span>
+    <span class="n">venusian</span> <span class="o">=</span> <span class="n">venusian</span> <span class="c"># for testing injection</span>
+    <span class="n">_ainfo</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">basepath</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">includepath</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="n">info</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+    <span class="n">object_description</span> <span class="o">=</span> <span class="nb">staticmethod</span><span class="p">(</span><span class="n">object_description</span><span class="p">)</span>
+    <span class="n">introspectable</span> <span class="o">=</span> <span class="n">Introspectable</span>
+    <span class="n">inspect</span> <span class="o">=</span> <span class="n">inspect</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">registry</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">package</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">settings</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">root_factory</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">authentication_policy</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">authorization_policy</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">renderers</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">debug_logger</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">locale_negotiator</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">request_factory</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">default_permission</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">session_factory</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">default_view_mapper</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">autocommit</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">exceptionresponse_view</span><span class="o">=</span><span class="n">default_exceptionresponse_view</span><span class="p">,</span>
+                 <span class="n">route_prefix</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">introspection</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                 <span class="p">):</span>
+        <span class="k">if</span> <span class="n">package</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">package</span> <span class="o">=</span> <span class="n">caller_package</span><span class="p">()</span>
+        <span class="n">name_resolver</span> <span class="o">=</span> <span class="n">DottedNameResolver</span><span class="p">(</span><span class="n">package</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name_resolver</span> <span class="o">=</span> <span class="n">name_resolver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">package_name</span> <span class="o">=</span> <span class="n">name_resolver</span><span class="o">.</span><span class="n">get_package_name</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">package</span> <span class="o">=</span> <span class="n">name_resolver</span><span class="o">.</span><span class="n">get_package</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registry</span> <span class="o">=</span> <span class="n">registry</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">autocommit</span> <span class="o">=</span> <span class="n">autocommit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">route_prefix</span> <span class="o">=</span> <span class="n">route_prefix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">introspection</span> <span class="o">=</span> <span class="n">introspection</span>
+        <span class="k">if</span> <span class="n">registry</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">registry</span> <span class="o">=</span> <span class="n">Registry</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">package_name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">registry</span> <span class="o">=</span> <span class="n">registry</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setup_registry</span><span class="p">(</span>
+                <span class="n">settings</span><span class="o">=</span><span class="n">settings</span><span class="p">,</span>
+                <span class="n">root_factory</span><span class="o">=</span><span class="n">root_factory</span><span class="p">,</span>
+                <span class="n">authentication_policy</span><span class="o">=</span><span class="n">authentication_policy</span><span class="p">,</span>
+                <span class="n">authorization_policy</span><span class="o">=</span><span class="n">authorization_policy</span><span class="p">,</span>
+                <span class="n">renderers</span><span class="o">=</span><span class="n">renderers</span><span class="p">,</span>
+                <span class="n">debug_logger</span><span class="o">=</span><span class="n">debug_logger</span><span class="p">,</span>
+                <span class="n">locale_negotiator</span><span class="o">=</span><span class="n">locale_negotiator</span><span class="p">,</span>
+                <span class="n">request_factory</span><span class="o">=</span><span class="n">request_factory</span><span class="p">,</span>
+                <span class="n">default_permission</span><span class="o">=</span><span class="n">default_permission</span><span class="p">,</span>
+                <span class="n">session_factory</span><span class="o">=</span><span class="n">session_factory</span><span class="p">,</span>
+                <span class="n">default_view_mapper</span><span class="o">=</span><span class="n">default_view_mapper</span><span class="p">,</span>
+                <span class="n">exceptionresponse_view</span><span class="o">=</span><span class="n">exceptionresponse_view</span><span class="p">,</span>
+                <span class="p">)</span>
+
+<div class="viewcode-block" id="Configurator.setup_registry"><a class="viewcode-back" href="../../api/config.html#pyramid.config.Configurator.setup_registry">[docs]</a>    <span class="k">def</span> <span class="nf">setup_registry</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                       <span class="n">settings</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                       <span class="n">root_factory</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                       <span class="n">authentication_policy</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                       <span class="n">authorization_policy</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                       <span class="n">renderers</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                       <span class="n">debug_logger</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                       <span class="n">locale_negotiator</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                       <span class="n">request_factory</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                       <span class="n">default_permission</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                       <span class="n">session_factory</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                       <span class="n">default_view_mapper</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                       <span class="n">exceptionresponse_view</span><span class="o">=</span><span class="n">default_exceptionresponse_view</span><span class="p">,</span>
+                       <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; When you pass a non-``None`` ``registry`` argument to the</span>
+<span class="sd">        :term:`Configurator` constructor, no initial setup is performed</span>
+<span class="sd">        against the registry.  This is because the registry you pass in may</span>
+<span class="sd">        have already been initialized for use under :app:`Pyramid` via a</span>
+<span class="sd">        different configurator.  However, in some circumstances (such as when</span>
+<span class="sd">        you want to use a global registry instead of a registry created as a</span>
+<span class="sd">        result of the Configurator constructor), or when you want to reset</span>
+<span class="sd">        the initial setup of a registry, you *do* want to explicitly</span>
+<span class="sd">        initialize the registry associated with a Configurator for use under</span>
+<span class="sd">        :app:`Pyramid`.  Use ``setup_registry`` to do this initialization.</span>
+
+<span class="sd">        ``setup_registry`` configures settings, a root factory, security</span>
+<span class="sd">        policies, renderers, a debug logger, a locale negotiator, and various</span>
+<span class="sd">        other settings using the configurator&#39;s current registry, as per the</span>
+<span class="sd">        descriptions in the Configurator constructor.&quot;&quot;&quot;</span>
+
+        <span class="n">registry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fix_registry</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_settings</span><span class="p">(</span><span class="n">settings</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">debug_logger</span><span class="p">,</span> <span class="n">string_types</span><span class="p">):</span>
+            <span class="n">debug_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">debug_logger</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">debug_logger</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">debug_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">package_name</span><span class="p">)</span>
+
+        <span class="n">registry</span><span class="o">.</span><span class="n">registerUtility</span><span class="p">(</span><span class="n">debug_logger</span><span class="p">,</span> <span class="n">IDebugLogger</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_default_response_adapters</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_default_renderers</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_default_view_predicates</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_default_route_predicates</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">exceptionresponse_view</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">exceptionresponse_view</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">maybe_dotted</span><span class="p">(</span><span class="n">exceptionresponse_view</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">exceptionresponse_view</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="n">IExceptionResponse</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">exceptionresponse_view</span><span class="p">,</span><span class="n">context</span><span class="o">=</span><span class="n">WebobWSGIHTTPException</span><span class="p">)</span>
+
+        <span class="c"># commit below because:</span>
+        <span class="c">#</span>
+        <span class="c"># - the default exceptionresponse_view requires the superdefault view</span>
+        <span class="c">#   mapper, so we need to configure it before adding default_view_mapper</span>
+        <span class="c">#</span>
+        <span class="c"># - superdefault renderers should be overrideable without requiring</span>
+        <span class="c">#   the user to commit before calling config.add_renderer</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+        <span class="c"># self.commit() should not be called within this method after this</span>
+        <span class="c"># point because the following registrations should be treated as</span>
+        <span class="c"># analogues of methods called by the user after configurator</span>
+        <span class="c"># construction.  Rationale: user-supplied implementations should be</span>
+        <span class="c"># preferred rather than add-on author implementations with the help of</span>
+        <span class="c"># automatic conflict resolution.</span>
+
+        <span class="k">if</span> <span class="n">authentication_policy</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">authorization_policy</span><span class="p">:</span>
+            <span class="n">authorization_policy</span> <span class="o">=</span> <span class="n">ACLAuthorizationPolicy</span><span class="p">()</span> <span class="c"># default</span>
+
+        <span class="k">if</span> <span class="n">authorization_policy</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_authorization_policy</span><span class="p">(</span><span class="n">authorization_policy</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">authentication_policy</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_authentication_policy</span><span class="p">(</span><span class="n">authentication_policy</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">default_view_mapper</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_view_mapper</span><span class="p">(</span><span class="n">default_view_mapper</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">renderers</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">renderer</span> <span class="ow">in</span> <span class="n">renderers</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_renderer</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">renderer</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">root_factory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_root_factory</span><span class="p">(</span><span class="n">root_factory</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">locale_negotiator</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_locale_negotiator</span><span class="p">(</span><span class="n">locale_negotiator</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">request_factory</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_request_factory</span><span class="p">(</span><span class="n">request_factory</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">default_permission</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_default_permission</span><span class="p">(</span><span class="n">default_permission</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">session_factory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_session_factory</span><span class="p">(</span><span class="n">session_factory</span><span class="p">)</span>
+
+        <span class="n">tweens</span>   <span class="o">=</span> <span class="n">aslist</span><span class="p">(</span><span class="n">registry</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;pyramid.tweens&#39;</span><span class="p">,</span> <span class="p">[]))</span>
+        <span class="k">for</span> <span class="n">factory</span> <span class="ow">in</span> <span class="n">tweens</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_add_tween</span><span class="p">(</span><span class="n">factory</span><span class="p">,</span> <span class="n">explicit</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+        <span class="n">includes</span> <span class="o">=</span> <span class="n">aslist</span><span class="p">(</span><span class="n">registry</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;pyramid.includes&#39;</span><span class="p">,</span> <span class="p">[]))</span>
+        <span class="k">for</span> <span class="n">inc</span> <span class="ow">in</span> <span class="n">includes</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="n">inc</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">_make_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path_or_spec</span><span class="p">):</span>
+        <span class="n">package</span><span class="p">,</span> <span class="n">filename</span> <span class="o">=</span> <span class="n">resolve_asset_spec</span><span class="p">(</span><span class="n">path_or_spec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">package_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">package</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">filename</span> <span class="c"># absolute filename</span>
+        <span class="k">return</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_split_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path_or_spec</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">resolve_asset_spec</span><span class="p">(</span><span class="n">path_or_spec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">package_name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_fix_registry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Fix up a ZCA component registry that is not a</span>
+<span class="sd">        pyramid.registry.Registry by adding analogues of ``has_listeners``,</span>
+<span class="sd">        ``notify``, ``queryAdapterOrSelf``, and ``registerSelfAdapter``</span>
+<span class="sd">        through monkey-patching.&quot;&quot;&quot;</span>
+
+        <span class="n">_registry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">_registry</span><span class="p">,</span> <span class="s">&#39;notify&#39;</span><span class="p">):</span>
+            <span class="k">def</span> <span class="nf">notify</span><span class="p">(</span><span class="o">*</span><span class="n">events</span><span class="p">):</span>
+                <span class="p">[</span> <span class="n">_</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">_registry</span><span class="o">.</span><span class="n">subscribers</span><span class="p">(</span><span class="n">events</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span> <span class="p">]</span>
+            <span class="n">_registry</span><span class="o">.</span><span class="n">notify</span> <span class="o">=</span> <span class="n">notify</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">_registry</span><span class="p">,</span> <span class="s">&#39;has_listeners&#39;</span><span class="p">):</span>
+            <span class="n">_registry</span><span class="o">.</span><span class="n">has_listeners</span> <span class="o">=</span> <span class="bp">True</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">_registry</span><span class="p">,</span> <span class="s">&#39;queryAdapterOrSelf&#39;</span><span class="p">):</span>
+            <span class="k">def</span> <span class="nf">queryAdapterOrSelf</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">interface</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">interface</span><span class="o">.</span><span class="n">providedBy</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="n">_registry</span><span class="o">.</span><span class="n">queryAdapter</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">interface</span><span class="p">,</span>
+                                                  <span class="n">default</span><span class="o">=</span><span class="n">default</span><span class="p">)</span>
+                <span class="k">return</span> <span class="nb">object</span>
+            <span class="n">_registry</span><span class="o">.</span><span class="n">queryAdapterOrSelf</span> <span class="o">=</span> <span class="n">queryAdapterOrSelf</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">_registry</span><span class="p">,</span> <span class="s">&#39;registerSelfAdapter&#39;</span><span class="p">):</span>
+            <span class="k">def</span> <span class="nf">registerSelfAdapter</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">provided</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                    <span class="n">name</span><span class="o">=</span><span class="n">empty</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="n">empty</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">_registry</span><span class="o">.</span><span class="n">registerAdapter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span>
+                                                 <span class="n">required</span><span class="o">=</span><span class="n">required</span><span class="p">,</span>
+                                                 <span class="n">provided</span><span class="o">=</span><span class="n">provided</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+                                                 <span class="n">info</span><span class="o">=</span><span class="n">info</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="n">event</span><span class="p">)</span>
+            <span class="n">_registry</span><span class="o">.</span><span class="n">registerSelfAdapter</span> <span class="o">=</span> <span class="n">registerSelfAdapter</span>
+
+    <span class="c"># API</span>
+            
+    <span class="k">def</span> <span class="nf">_get_introspector</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">introspector</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">,</span> <span class="s">&#39;introspector&#39;</span><span class="p">,</span> <span class="n">_marker</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">introspector</span> <span class="ow">is</span> <span class="n">_marker</span><span class="p">:</span>
+            <span class="n">introspector</span> <span class="o">=</span> <span class="n">Introspector</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_introspector</span><span class="p">(</span><span class="n">introspector</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">introspector</span>
+
+    <span class="k">def</span> <span class="nf">_set_introspector</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">introspector</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">introspector</span> <span class="o">=</span> <span class="n">introspector</span>
+
+    <span class="k">def</span> <span class="nf">_del_introspector</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">introspector</span>
+
+    <span class="n">introspector</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span>
+        <span class="n">_get_introspector</span><span class="p">,</span> <span class="n">_set_introspector</span><span class="p">,</span> <span class="n">_del_introspector</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_predlist</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="n">predlist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">IPredicateList</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">predlist</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">predlist</span> <span class="o">=</span> <span class="n">PredicateList</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">registerUtility</span><span class="p">(</span><span class="n">predlist</span><span class="p">,</span> <span class="n">IPredicateList</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">predlist</span>
+
+    <span class="k">def</span> <span class="nf">_add_predicate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">factory</span><span class="p">,</span> <span class="n">weighs_more_than</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                       <span class="n">weighs_less_than</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">factory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">maybe_dotted</span><span class="p">(</span><span class="n">factory</span><span class="p">)</span>
+        <span class="n">discriminator</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> predicate&#39;</span> <span class="o">%</span> <span class="nb">type</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="n">intr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">introspectable</span><span class="p">(</span>
+            <span class="s">&#39;</span><span class="si">%s</span><span class="s"> predicates&#39;</span> <span class="o">%</span> <span class="nb">type</span><span class="p">,</span>
+            <span class="n">discriminator</span><span class="p">,</span>
+            <span class="s">&#39;</span><span class="si">%s</span><span class="s"> predicate named </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">type</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span>
+            <span class="s">&#39;</span><span class="si">%s</span><span class="s"> predicate&#39;</span> <span class="o">%</span> <span class="nb">type</span><span class="p">)</span>
+        <span class="n">intr</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="n">intr</span><span class="p">[</span><span class="s">&#39;factory&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">factory</span>
+        <span class="n">intr</span><span class="p">[</span><span class="s">&#39;weighs_more_than&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">weighs_more_than</span>
+        <span class="n">intr</span><span class="p">[</span><span class="s">&#39;weighs_less_than&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">weighs_less_than</span>
+        <span class="k">def</span> <span class="nf">register</span><span class="p">():</span>
+            <span class="n">predlist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_predlist</span><span class="p">(</span><span class="nb">type</span><span class="p">)</span>
+            <span class="n">predlist</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">factory</span><span class="p">,</span> <span class="n">weighs_more_than</span><span class="o">=</span><span class="n">weighs_more_than</span><span class="p">,</span>
+                         <span class="n">weighs_less_than</span><span class="o">=</span><span class="n">weighs_less_than</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">action</span><span class="p">(</span><span class="n">discriminator</span><span class="p">,</span> <span class="n">register</span><span class="p">,</span> <span class="n">introspectables</span><span class="o">=</span><span class="p">(</span><span class="n">intr</span><span class="p">,),</span>
+                    <span class="n">order</span><span class="o">=</span><span class="n">PHASE1_CONFIG</span><span class="p">)</span> <span class="c"># must be registered early</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">action_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span> <span class="c"># usually a ZCML action (ParserInfo) if self.info</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">info</span><span class="p">:</span>
+            <span class="c"># Try to provide more accurate info for conflict reports</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ainfo</span><span class="p">:</span>
+                <span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ainfo</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">info</span> <span class="o">=</span> <span class="n">ActionInfo</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">info</span>
+
+<div class="viewcode-block" id="Configurator.action"><a class="viewcode-back" href="../../api/config.html#pyramid.config.Configurator.action">[docs]</a>    <span class="k">def</span> <span class="nf">action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">discriminator</span><span class="p">,</span> <span class="nb">callable</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(),</span> <span class="n">kw</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+               <span class="n">introspectables</span><span class="o">=</span><span class="p">(),</span> <span class="o">**</span><span class="n">extra</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Register an action which will be executed when</span>
+<span class="sd">        :meth:`pyramid.config.Configurator.commit` is called (or executed</span>
+<span class="sd">        immediately if ``autocommit`` is ``True``).</span>
+
+<span class="sd">        .. warning:: This method is typically only used by :app:`Pyramid`</span>
+<span class="sd">           framework extension authors, not by :app:`Pyramid` application</span>
+<span class="sd">           developers.</span>
+
+<span class="sd">        The ``discriminator`` uniquely identifies the action.  It must be</span>
+<span class="sd">        given, but it can be ``None``, to indicate that the action never</span>
+<span class="sd">        conflicts.  It must be a hashable value.</span>
+
+<span class="sd">        The ``callable`` is a callable object which performs the task</span>
+<span class="sd">        associated with the action when the action is executed.  It is</span>
+<span class="sd">        optional.</span>
+
+<span class="sd">        ``args`` and ``kw`` are tuple and dict objects respectively, which</span>
+<span class="sd">        are passed to ``callable`` when this action is executed.  Both are</span>
+<span class="sd">        optional.</span>
+
+<span class="sd">        ``order`` is a grouping mechanism; an action with a lower order will</span>
+<span class="sd">        be executed before an action with a higher order (has no effect when</span>
+<span class="sd">        autocommit is ``True``).</span>
+
+<span class="sd">        ``introspectables`` is a sequence of :term:`introspectable` objects</span>
+<span class="sd">        (or the empty sequence if no introspectable objects are associated</span>
+<span class="sd">        with this action).  If this configurator&#39;s ``introspection``</span>
+<span class="sd">        attribute is ``False``, these introspectables will be ignored.</span>
+
+<span class="sd">        ``extra`` provides a facility for inserting extra keys and values</span>
+<span class="sd">        into an action dictionary.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># catch nonhashable discriminators here; most unit tests use</span>
+        <span class="c"># autocommit=False, which won&#39;t catch unhashable discriminators</span>
+        <span class="k">assert</span> <span class="nb">hash</span><span class="p">(</span><span class="n">discriminator</span><span class="p">)</span> 
+
+        <span class="k">if</span> <span class="n">kw</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">kw</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">autocommit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">autocommit</span>
+        <span class="n">action_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_info</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">introspection</span><span class="p">:</span>
+            <span class="c"># if we&#39;re not introspecting, ignore any introspectables passed</span>
+            <span class="c"># to us</span>
+            <span class="n">introspectables</span> <span class="o">=</span> <span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">autocommit</span><span class="p">:</span>
+            <span class="c"># callables can depend on the side effects of resolving a</span>
+            <span class="c"># deferred discriminator</span>
+            <span class="n">undefer</span><span class="p">(</span><span class="n">discriminator</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">callable</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="nb">callable</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">introspectable</span> <span class="ow">in</span> <span class="n">introspectables</span><span class="p">:</span>
+                <span class="n">introspectable</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">introspector</span><span class="p">,</span> <span class="n">action_info</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">action</span> <span class="o">=</span> <span class="n">extra</span>
+            <span class="n">action</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                <span class="nb">dict</span><span class="p">(</span>
+                    <span class="n">discriminator</span><span class="o">=</span><span class="n">discriminator</span><span class="p">,</span>
+                    <span class="nb">callable</span><span class="o">=</span><span class="nb">callable</span><span class="p">,</span>
+                    <span class="n">args</span><span class="o">=</span><span class="n">args</span><span class="p">,</span>
+                    <span class="n">kw</span><span class="o">=</span><span class="n">kw</span><span class="p">,</span>
+                    <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span>
+                    <span class="n">info</span><span class="o">=</span><span class="n">action_info</span><span class="p">,</span>
+                    <span class="n">includepath</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">includepath</span><span class="p">,</span>
+                    <span class="n">introspectables</span><span class="o">=</span><span class="n">introspectables</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">action_state</span><span class="o">.</span><span class="n">action</span><span class="p">(</span><span class="o">**</span><span class="n">action</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">_get_action_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">registry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">action_state</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="n">ActionState</span><span class="p">()</span>
+            <span class="n">registry</span><span class="o">.</span><span class="n">action_state</span> <span class="o">=</span> <span class="n">state</span>
+        <span class="k">return</span> <span class="n">state</span>
+
+    <span class="k">def</span> <span class="nf">_set_action_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">action_state</span> <span class="o">=</span> <span class="n">state</span>
+
+    <span class="n">action_state</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">_get_action_state</span><span class="p">,</span> <span class="n">_set_action_state</span><span class="p">)</span>
+
+    <span class="n">_ctx</span> <span class="o">=</span> <span class="n">action_state</span> <span class="c"># bw compat</span>
+
+<div class="viewcode-block" id="Configurator.commit"><a class="viewcode-back" href="../../api/config.html#pyramid.config.Configurator.commit">[docs]</a>    <span class="k">def</span> <span class="nf">commit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Commit any pending configuration actions. If a configuration</span>
+<span class="sd">        conflict is detected in the pending configuration actions, this method</span>
+<span class="sd">        will raise a :exc:`ConfigurationConflictError`; within the traceback</span>
+<span class="sd">        of this error will be information about the source of the conflict,</span>
+<span class="sd">        usually including file names and line numbers of the cause of the</span>
+<span class="sd">        configuration conflicts.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">action_state</span><span class="o">.</span><span class="n">execute_actions</span><span class="p">(</span><span class="n">introspector</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">introspector</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">action_state</span> <span class="o">=</span> <span class="n">ActionState</span><span class="p">()</span> <span class="c"># old actions have been processed</span>
+</div>
+<div class="viewcode-block" id="Configurator.include"><a class="viewcode-back" href="../../api/config.html#pyramid.config.Configurator.include">[docs]</a>    <span class="k">def</span> <span class="nf">include</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">callable</span><span class="p">,</span> <span class="n">route_prefix</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Include a configuration callable, to support imperative</span>
+<span class="sd">        application extensibility.</span>
+
+<span class="sd">        .. warning:: In versions of :app:`Pyramid` prior to 1.2, this</span>
+<span class="sd">            function accepted ``*callables``, but this has been changed</span>
+<span class="sd">            to support only a single callable.</span>
+
+<span class="sd">        A configuration callable should be a callable that accepts a single</span>
+<span class="sd">        argument named ``config``, which will be an instance of a</span>
+<span class="sd">        :term:`Configurator`.  However, be warned that it will not be the same</span>
+<span class="sd">        configurator instance on which you call this method.  The</span>
+<span class="sd">        code which runs as a result of calling the callable should invoke</span>
+<span class="sd">        methods on the configurator passed to it which add configuration</span>
+<span class="sd">        state.  The return value of a callable will be ignored.</span>
+
+<span class="sd">        Values allowed to be presented via the ``callable`` argument to</span>
+<span class="sd">        this method: any callable Python object or any :term:`dotted Python</span>
+<span class="sd">        name` which resolves to a callable Python object.  It may also be a</span>
+<span class="sd">        Python :term:`module`, in which case, the module will be searched for</span>
+<span class="sd">        a callable named ``includeme``, which will be treated as the</span>
+<span class="sd">        configuration callable.</span>
+
+<span class="sd">        For example, if the ``includeme`` function below lives in a module</span>
+<span class="sd">        named ``myapp.myconfig``:</span>
+
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">           :linenos:</span>
+
+<span class="sd">           # myapp.myconfig module</span>
+
+<span class="sd">           def my_view(request):</span>
+<span class="sd">               from pyramid.response import Response</span>
+<span class="sd">               return Response(&#39;OK&#39;)</span>
+
+<span class="sd">           def includeme(config):</span>
+<span class="sd">               config.add_view(my_view)</span>
+
+<span class="sd">        You might cause it to be included within your Pyramid application like</span>
+<span class="sd">        so:</span>
+
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">           :linenos:</span>
+
+<span class="sd">           from pyramid.config import Configurator</span>
+
+<span class="sd">           def main(global_config, **settings):</span>
+<span class="sd">               config = Configurator()</span>
+<span class="sd">               config.include(&#39;myapp.myconfig.includeme&#39;)</span>
+
+<span class="sd">        Because the function is named ``includeme``, the function name can</span>
+<span class="sd">        also be omitted from the dotted name reference:</span>
+
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">           :linenos:</span>
+
+<span class="sd">           from pyramid.config import Configurator</span>
+
+<span class="sd">           def main(global_config, **settings):</span>
+<span class="sd">               config = Configurator()</span>
+<span class="sd">               config.include(&#39;myapp.myconfig&#39;)</span>
+
+<span class="sd">        Included configuration statements will be overridden by local</span>
+<span class="sd">        configuration statements if an included callable causes a</span>
+<span class="sd">        configuration conflict by registering something with the same</span>
+<span class="sd">        configuration parameters.</span>
+
+<span class="sd">        If the ``route_prefix`` is supplied, it must be a string.  Any calls</span>
+<span class="sd">        to :meth:`pyramid.config.Configurator.add_route` within the included</span>
+<span class="sd">        callable will have their pattern prefixed with the value of</span>
+<span class="sd">        ``route_prefix``. This can be used to help mount a set of routes at a</span>
+<span class="sd">        different location than the included callable&#39;s author intended, while</span>
+<span class="sd">        still maintaining the same route names.  For example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">           :linenos:</span>
+
+<span class="sd">           from pyramid.config import Configurator</span>
+
+<span class="sd">           def included(config):</span>
+<span class="sd">               config.add_route(&#39;show_users&#39;, &#39;/show&#39;)</span>
+
+<span class="sd">           def main(global_config, **settings):</span>
+<span class="sd">               config = Configurator()</span>
+<span class="sd">               config.include(included, route_prefix=&#39;/users&#39;)</span>
+
+<span class="sd">        In the above configuration, the ``show_users`` route will have an</span>
+<span class="sd">        effective route pattern of ``/users/show``, instead of ``/show``</span>
+<span class="sd">        because the ``route_prefix`` argument will be prepended to the</span>
+<span class="sd">        pattern.</span>
+
+<span class="sd">        .. versionadded:: 1.2</span>
+<span class="sd">           The ``route_prefix`` parameter.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># &quot;&quot;&quot; &lt;-- emacs</span>
+
+        <span class="n">action_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">action_state</span>
+
+        <span class="k">if</span> <span class="n">route_prefix</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">route_prefix</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+
+        <span class="n">old_route_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">route_prefix</span>
+        <span class="k">if</span> <span class="n">old_route_prefix</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">old_route_prefix</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+
+        <span class="n">route_prefix</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+            <span class="n">old_route_prefix</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">),</span>
+            <span class="n">route_prefix</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="n">route_prefix</span> <span class="o">=</span> <span class="n">route_prefix</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">route_prefix</span><span class="p">:</span>
+            <span class="n">route_prefix</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">maybe_dotted</span><span class="p">(</span><span class="nb">callable</span><span class="p">)</span>
+        <span class="n">module</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inspect</span><span class="o">.</span><span class="n">getmodule</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">module</span> <span class="ow">is</span> <span class="n">c</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">c</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="s">&#39;includeme&#39;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ConfigurationError</span><span class="p">(</span>
+                    <span class="s">&quot;module </span><span class="si">%r</span><span class="s"> has no attribute &#39;includeme&#39;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+                    <span class="p">)</span>
+                                                       
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">__name__</span> <span class="o">+</span> <span class="s">&#39;:&#39;</span> <span class="o">+</span> <span class="n">c</span><span class="o">.</span><span class="n">__name__</span>
+        <span class="n">sourcefile</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inspect</span><span class="o">.</span><span class="n">getsourcefile</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">sourcefile</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ConfigurationError</span><span class="p">(</span>
+                <span class="s">&#39;No source file for module </span><span class="si">%r</span><span class="s"> (.py file must exist, &#39;</span>
+                <span class="s">&#39;refusing to use orphan .pyc or .pyo file).&#39;</span> <span class="o">%</span> <span class="n">module</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+            
+
+        <span class="k">if</span> <span class="n">action_state</span><span class="o">.</span><span class="n">processSpec</span><span class="p">(</span><span class="n">spec</span><span class="p">):</span>
+            <span class="n">configurator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="p">(</span>
+                <span class="n">registry</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">,</span>
+                <span class="n">package</span><span class="o">=</span><span class="n">package_of</span><span class="p">(</span><span class="n">module</span><span class="p">),</span>
+                <span class="n">autocommit</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">autocommit</span><span class="p">,</span>
+                <span class="n">route_prefix</span><span class="o">=</span><span class="n">route_prefix</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="n">configurator</span><span class="o">.</span><span class="n">basepath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">sourcefile</span><span class="p">)</span>
+            <span class="n">configurator</span><span class="o">.</span><span class="n">includepath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">includepath</span> <span class="o">+</span> <span class="p">(</span><span class="n">spec</span><span class="p">,)</span>
+            <span class="n">c</span><span class="p">(</span><span class="n">configurator</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Configurator.add_directive"><a class="viewcode-back" href="../../api/config.html#pyramid.config.Configurator.add_directive">[docs]</a>    <span class="k">def</span> <span class="nf">add_directive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">directive</span><span class="p">,</span> <span class="n">action_wrap</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a directive method to the configurator.</span>
+
+<span class="sd">        .. warning:: This method is typically only used by :app:`Pyramid`</span>
+<span class="sd">           framework extension authors, not by :app:`Pyramid` application</span>
+<span class="sd">           developers.</span>
+
+<span class="sd">        Framework extenders can add directive methods to a configurator by</span>
+<span class="sd">        instructing their users to call ``config.add_directive(&#39;somename&#39;,</span>
+<span class="sd">        &#39;some.callable&#39;)``.  This will make ``some.callable`` accessible as</span>
+<span class="sd">        ``config.somename``.  ``some.callable`` should be a function which</span>
+<span class="sd">        accepts ``config`` as a first argument, and arbitrary positional and</span>
+<span class="sd">        keyword arguments following.  It should use config.action as</span>
+<span class="sd">        necessary to perform actions.  Directive methods can then be invoked</span>
+<span class="sd">        like &#39;built-in&#39; directives such as ``add_view``, ``add_route``, etc.</span>
+
+<span class="sd">        The ``action_wrap`` argument should be ``True`` for directives which</span>
+<span class="sd">        perform ``config.action`` with potentially conflicting</span>
+<span class="sd">        discriminators.  ``action_wrap`` will cause the directive to be</span>
+<span class="sd">        wrapped in a decorator which provides more accurate conflict</span>
+<span class="sd">        cause information.</span>
+
+<span class="sd">        ``add_directive`` does not participate in conflict detection, and</span>
+<span class="sd">        later calls to ``add_directive`` will override earlier calls.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">maybe_dotted</span><span class="p">(</span><span class="n">directive</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">,</span> <span class="s">&#39;_directives&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">_directives</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">_directives</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">action_wrap</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="c"># allow directive extension names to work</span>
+        <span class="n">directives</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">,</span> <span class="s">&#39;_directives&#39;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">directives</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">c</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">c</span><span class="p">,</span> <span class="n">action_wrap</span> <span class="o">=</span> <span class="n">c</span>
+        <span class="k">if</span> <span class="n">action_wrap</span><span class="p">:</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">action_method</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+        <span class="c"># Create a bound method (works on both Py2 and Py3)</span>
+        <span class="c"># http://stackoverflow.com/a/1015405/209039</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">m</span>
+
+<div class="viewcode-block" id="Configurator.with_package"><a class="viewcode-back" href="../../api/config.html#pyramid.config.Configurator.with_package">[docs]</a>    <span class="k">def</span> <span class="nf">with_package</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">package</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return a new Configurator instance with the same registry</span>
+<span class="sd">        as this configurator. ``package`` may be an actual Python package</span>
+<span class="sd">        object or a :term:`dotted Python name` representing a package.&quot;&quot;&quot;</span>
+        <span class="n">configurator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="p">(</span>
+            <span class="n">registry</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">,</span>
+            <span class="n">package</span><span class="o">=</span><span class="n">package</span><span class="p">,</span>
+            <span class="n">autocommit</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">autocommit</span><span class="p">,</span>
+            <span class="n">route_prefix</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">route_prefix</span><span class="p">,</span>
+            <span class="n">introspection</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">introspection</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="n">configurator</span><span class="o">.</span><span class="n">basepath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">basepath</span>
+        <span class="n">configurator</span><span class="o">.</span><span class="n">includepath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">includepath</span>
+        <span class="n">configurator</span><span class="o">.</span><span class="n">info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">info</span>
+        <span class="k">return</span> <span class="n">configurator</span>
+</div>
+<div class="viewcode-block" id="Configurator.maybe_dotted"><a class="viewcode-back" href="../../api/config.html#pyramid.config.Configurator.maybe_dotted">[docs]</a>    <span class="k">def</span> <span class="nf">maybe_dotted</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dotted</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Resolve the :term:`dotted Python name` ``dotted`` to a</span>
+<span class="sd">        global Python object.  If ``dotted`` is not a string, return</span>
+<span class="sd">        it without attempting to do any name resolution.  If</span>
+<span class="sd">        ``dotted`` is a relative dotted name (e.g. ``.foo.bar``,</span>
+<span class="sd">        consider it relative to the ``package`` argument supplied to</span>
+<span class="sd">        this Configurator&#39;s constructor.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name_resolver</span><span class="o">.</span><span class="n">maybe_resolve</span><span class="p">(</span><span class="n">dotted</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Configurator.absolute_asset_spec"><a class="viewcode-back" href="../../api/config.html#pyramid.config.Configurator.absolute_asset_spec">[docs]</a>    <span class="k">def</span> <span class="nf">absolute_asset_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relative_spec</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Resolve the potentially relative :term:`asset</span>
+<span class="sd">        specification` string passed as ``relative_spec`` into an</span>
+<span class="sd">        absolute asset specification string and return the string.</span>
+<span class="sd">        Use the ``package`` of this configurator as the package to</span>
+<span class="sd">        which the asset specification will be considered relative</span>
+<span class="sd">        when generating an absolute asset specification.  If the</span>
+<span class="sd">        provided ``relative_spec`` argument is already absolute, or if</span>
+<span class="sd">        the ``relative_spec`` is not a string, it is simply returned.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">relative_spec</span><span class="p">,</span> <span class="n">string_types</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">relative_spec</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_spec</span><span class="p">(</span><span class="n">relative_spec</span><span class="p">)</span>
+</div>
+    <span class="n">absolute_resource_spec</span> <span class="o">=</span> <span class="n">absolute_asset_spec</span> <span class="c"># b/w compat forever</span>
+
+<div class="viewcode-block" id="Configurator.begin"><a class="viewcode-back" href="../../api/config.html#pyramid.config.Configurator.begin">[docs]</a>    <span class="k">def</span> <span class="nf">begin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Indicate that application or test configuration has begun.</span>
+<span class="sd">        This pushes a dictionary containing the :term:`application</span>
+<span class="sd">        registry` implied by ``registry`` attribute of this</span>
+<span class="sd">        configurator and the :term:`request` implied by the</span>
+<span class="sd">        ``request`` argument onto the :term:`thread local` stack</span>
+<span class="sd">        consulted by various :mod:`pyramid.threadlocal` API</span>
+<span class="sd">        functions.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">push</span><span class="p">({</span><span class="s">&#39;registry&#39;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">,</span> <span class="s">&#39;request&#39;</span><span class="p">:</span><span class="n">request</span><span class="p">})</span>
+</div>
+<div class="viewcode-block" id="Configurator.end"><a class="viewcode-back" href="../../api/config.html#pyramid.config.Configurator.end">[docs]</a>    <span class="k">def</span> <span class="nf">end</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Indicate that application or test configuration has ended.</span>
+<span class="sd">        This pops the last value pushed onto the :term:`thread local`</span>
+<span class="sd">        stack (usually by the ``begin`` method) and returns that</span>
+<span class="sd">        value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+
+    <span class="c"># this is *not* an action method (uses caller_package)</span></div>
+<div class="viewcode-block" id="Configurator.scan"><a class="viewcode-back" href="../../api/config.html#pyramid.config.Configurator.scan">[docs]</a>    <span class="k">def</span> <span class="nf">scan</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">package</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">categories</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">onerror</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">ignore</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+             <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Scan a Python package and any of its subpackages for objects</span>
+<span class="sd">        marked with :term:`configuration decoration` such as</span>
+<span class="sd">        :class:`pyramid.view.view_config`.  Any decorated object found will</span>
+<span class="sd">        influence the current configuration state.</span>
+
+<span class="sd">        The ``package`` argument should be a Python :term:`package` or module</span>
+<span class="sd">        object (or a :term:`dotted Python name` which refers to such a</span>
+<span class="sd">        package or module).  If ``package`` is ``None``, the package of the</span>
+<span class="sd">        *caller* is used.</span>
+
+<span class="sd">        The ``categories`` argument, if provided, should be the</span>
+<span class="sd">        :term:`Venusian` &#39;scan categories&#39; to use during scanning.  Providing</span>
+<span class="sd">        this argument is not often necessary; specifying scan categories is</span>
+<span class="sd">        an extremely advanced usage.  By default, ``categories`` is ``None``</span>
+<span class="sd">        which will execute *all* Venusian decorator callbacks including</span>
+<span class="sd">        :app:`Pyramid`-related decorators such as</span>
+<span class="sd">        :class:`pyramid.view.view_config`.  See the :term:`Venusian`</span>
+<span class="sd">        documentation for more information about limiting a scan by using an</span>
+<span class="sd">        explicit set of categories.</span>
+
+<span class="sd">        The ``onerror`` argument, if provided, should be a Venusian</span>
+<span class="sd">        ``onerror`` callback function.  The onerror function is passed to</span>
+<span class="sd">        :meth:`venusian.Scanner.scan` to influence error behavior when an</span>
+<span class="sd">        exception is raised during the scanning process.  See the</span>
+<span class="sd">        :term:`Venusian` documentation for more information about ``onerror``</span>
+<span class="sd">        callbacks.</span>
+
+<span class="sd">        The ``ignore`` argument, if provided, should be a Venusian ``ignore``</span>
+<span class="sd">        value.  Providing an ``ignore`` argument allows the scan to ignore</span>
+<span class="sd">        particular modules, packages, or global objects during a scan.</span>
+<span class="sd">        ``ignore`` can be a string or a callable, or a list containing</span>
+<span class="sd">        strings or callables.  The simplest usage of ``ignore`` is to provide</span>
+<span class="sd">        a module or package by providing a full path to its dotted name.  For</span>
+<span class="sd">        example: ``config.scan(ignore=&#39;my.module.subpackage&#39;)`` would ignore</span>
+<span class="sd">        the ``my.module.subpackage`` package during a scan, which would</span>
+<span class="sd">        prevent the subpackage and any of its submodules from being imported</span>
+<span class="sd">        and scanned.  See the :term:`Venusian` documentation for more</span>
+<span class="sd">        information about the ``ignore`` argument.</span>
+
+<span class="sd">        To perform a ``scan``, Pyramid creates a Venusian ``Scanner`` object.</span>
+<span class="sd">        The ``kw`` argument represents a set of keyword arguments to pass to</span>
+<span class="sd">        the Venusian ``Scanner`` object&#39;s constructor.  See the</span>
+<span class="sd">        :term:`venusian` documentation (its ``Scanner`` class) for more</span>
+<span class="sd">        information about the constructor.  By default, the only keyword</span>
+<span class="sd">        arguments passed to the Scanner constructor are ``{&#39;config&#39;:self}``</span>
+<span class="sd">        where ``self`` is this configurator object.  This services the</span>
+<span class="sd">        requirement of all built-in Pyramid decorators, but extension systems</span>
+<span class="sd">        may require additional arguments.  Providing this argument is not</span>
+<span class="sd">        often necessary; it&#39;s an advanced usage.</span>
+
+<span class="sd">        .. versionadded:: 1.1</span>
+<span class="sd">           The ``**kw`` argument.</span>
+
+<span class="sd">        .. versionadded:: 1.3</span>
+<span class="sd">           The ``ignore`` argument.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">package</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">maybe_dotted</span><span class="p">(</span><span class="n">package</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">package</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="c"># pragma: no cover</span>
+            <span class="n">package</span> <span class="o">=</span> <span class="n">caller_package</span><span class="p">()</span>
+
+        <span class="n">ctorkw</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;config&#39;</span><span class="p">:</span><span class="bp">self</span><span class="p">}</span>
+        <span class="n">ctorkw</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kw</span><span class="p">)</span>
+
+        <span class="n">scanner</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">venusian</span><span class="o">.</span><span class="n">Scanner</span><span class="p">(</span><span class="o">**</span><span class="n">ctorkw</span><span class="p">)</span>
+        
+        <span class="n">scanner</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="n">categories</span><span class="o">=</span><span class="n">categories</span><span class="p">,</span> <span class="n">onerror</span><span class="o">=</span><span class="n">onerror</span><span class="p">,</span>
+                     <span class="n">ignore</span><span class="o">=</span><span class="n">ignore</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Configurator.make_wsgi_app"><a class="viewcode-back" href="../../api/config.html#pyramid.config.Configurator.make_wsgi_app">[docs]</a>    <span class="k">def</span> <span class="nf">make_wsgi_app</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Commits any pending configuration statements, sends a</span>
+<span class="sd">        :class:`pyramid.events.ApplicationCreated` event to all listeners,</span>
+<span class="sd">        adds this configuration&#39;s registry to</span>
+<span class="sd">        :attr:`pyramid.config.global_registries`, and returns a</span>
+<span class="sd">        :app:`Pyramid` WSGI application representing the committed</span>
+<span class="sd">        configuration state.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="n">app</span> <span class="o">=</span> <span class="n">Router</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">)</span>
+
+        <span class="c"># Allow tools like &quot;pshell development.ini&quot; to find the &#39;last&#39;</span>
+        <span class="c"># registry configured.</span>
+        <span class="n">global_registries</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">)</span>
+
+        <span class="c"># Push the registry onto the stack in case any code that depends on</span>
+        <span class="c"># the registry threadlocal APIs used in listeners subscribed to the</span>
+        <span class="c"># IApplicationCreated event.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">push</span><span class="p">({</span><span class="s">&#39;registry&#39;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">,</span> <span class="s">&#39;request&#39;</span><span class="p">:</span><span class="bp">None</span><span class="p">})</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">notify</span><span class="p">(</span><span class="n">ApplicationCreated</span><span class="p">(</span><span class="n">app</span><span class="p">))</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">app</span>
+
+<span class="c"># this class is licensed under the ZPL (stolen from Zope)</span></div></div>
+<span class="k">class</span> <span class="nc">ActionState</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># NB &quot;actions&quot; is an API, dep&#39;d upon by pyramid_zcml&#39;s load_zcml func</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actions</span> <span class="o">=</span> <span class="p">[]</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">_seen_files</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">processSpec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spec</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check whether a callable needs to be processed.  The ``spec``</span>
+<span class="sd">        refers to a unique identifier for the callable.</span>
+
+<span class="sd">        Return True if processing is needed and False otherwise. If</span>
+<span class="sd">        the callable needs to be processed, it will be marked as</span>
+<span class="sd">        processed, assuming that the caller will procces the callable if</span>
+<span class="sd">        it needs to be processed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">spec</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_seen_files</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_seen_files</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">discriminator</span><span class="p">,</span> <span class="nb">callable</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(),</span> <span class="n">kw</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+               <span class="n">includepath</span><span class="o">=</span><span class="p">(),</span> <span class="n">info</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">introspectables</span><span class="o">=</span><span class="p">(),</span> <span class="o">**</span><span class="n">extra</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add an action with the given discriminator, callable and arguments</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">kw</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">kw</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">action</span> <span class="o">=</span> <span class="n">extra</span>
+        <span class="n">action</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="nb">dict</span><span class="p">(</span>
+                <span class="n">discriminator</span><span class="o">=</span><span class="n">discriminator</span><span class="p">,</span>
+                <span class="nb">callable</span><span class="o">=</span><span class="nb">callable</span><span class="p">,</span>
+                <span class="n">args</span><span class="o">=</span><span class="n">args</span><span class="p">,</span>
+                <span class="n">kw</span><span class="o">=</span><span class="n">kw</span><span class="p">,</span>
+                <span class="n">includepath</span><span class="o">=</span><span class="n">includepath</span><span class="p">,</span>
+                <span class="n">info</span><span class="o">=</span><span class="n">info</span><span class="p">,</span>
+                <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span>
+                <span class="n">introspectables</span><span class="o">=</span><span class="n">introspectables</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">execute_actions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">clear</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">introspector</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Execute the configuration actions</span>
+
+<span class="sd">        This calls the action callables after resolving conflicts</span>
+
+<span class="sd">        For example:</span>
+
+<span class="sd">        &gt;&gt;&gt; output = []</span>
+<span class="sd">        &gt;&gt;&gt; def f(*a, **k):</span>
+<span class="sd">        ...    output.append((&#39;f&#39;, a, k))</span>
+<span class="sd">        &gt;&gt;&gt; context = ActionState()</span>
+<span class="sd">        &gt;&gt;&gt; context.actions = [</span>
+<span class="sd">        ...   (1, f, (1,)),</span>
+<span class="sd">        ...   (1, f, (11,), {}, (&#39;x&#39;, )),</span>
+<span class="sd">        ...   (2, f, (2,)),</span>
+<span class="sd">        ...   ]</span>
+<span class="sd">        &gt;&gt;&gt; context.execute_actions()</span>
+<span class="sd">        &gt;&gt;&gt; output</span>
+<span class="sd">        [(&#39;f&#39;, (1,), {}), (&#39;f&#39;, (2,), {})]</span>
+
+<span class="sd">        If the action raises an error, we convert it to a</span>
+<span class="sd">        ConfigurationExecutionError.</span>
+
+<span class="sd">        &gt;&gt;&gt; output = []</span>
+<span class="sd">        &gt;&gt;&gt; def bad():</span>
+<span class="sd">        ...    bad.xxx</span>
+<span class="sd">        &gt;&gt;&gt; context.actions = [</span>
+<span class="sd">        ...   (1, f, (1,)),</span>
+<span class="sd">        ...   (1, f, (11,), {}, (&#39;x&#39;, )),</span>
+<span class="sd">        ...   (2, f, (2,)),</span>
+<span class="sd">        ...   (3, bad, (), {}, (), &#39;oops&#39;)</span>
+<span class="sd">        ...   ]</span>
+<span class="sd">        &gt;&gt;&gt; try:</span>
+<span class="sd">        ...    v = context.execute_actions()</span>
+<span class="sd">        ... except ConfigurationExecutionError, v:</span>
+<span class="sd">        ...    pass</span>
+<span class="sd">        &gt;&gt;&gt; print(v)</span>
+<span class="sd">        exceptions.AttributeError: &#39;function&#39; object has no attribute &#39;xxx&#39;</span>
+<span class="sd">          in:</span>
+<span class="sd">          oops</span>
+
+<span class="sd">        Note that actions executed before the error still have an effect:</span>
+
+<span class="sd">        &gt;&gt;&gt; output</span>
+<span class="sd">        [(&#39;f&#39;, (1,), {}), (&#39;f&#39;, (2,), {})]</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">action</span> <span class="ow">in</span> <span class="n">resolveConflicts</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">actions</span><span class="p">):</span>
+                <span class="nb">callable</span> <span class="o">=</span> <span class="n">action</span><span class="p">[</span><span class="s">&#39;callable&#39;</span><span class="p">]</span>
+                <span class="n">args</span> <span class="o">=</span> <span class="n">action</span><span class="p">[</span><span class="s">&#39;args&#39;</span><span class="p">]</span>
+                <span class="n">kw</span> <span class="o">=</span> <span class="n">action</span><span class="p">[</span><span class="s">&#39;kw&#39;</span><span class="p">]</span>
+                <span class="n">info</span> <span class="o">=</span> <span class="n">action</span><span class="p">[</span><span class="s">&#39;info&#39;</span><span class="p">]</span>
+                <span class="c"># we use &quot;get&quot; below in case an action was added via a ZCML</span>
+                <span class="c"># directive that did not know about introspectables</span>
+                <span class="n">introspectables</span> <span class="o">=</span> <span class="n">action</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;introspectables&#39;</span><span class="p">,</span> <span class="p">())</span>
+
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">callable</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="nb">callable</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">KeyboardInterrupt</span><span class="p">,</span> <span class="ne">SystemExit</span><span class="p">):</span> <span class="c"># pragma: no cover</span>
+                    <span class="k">raise</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">t</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">tb</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">reraise</span><span class="p">(</span><span class="n">ConfigurationExecutionError</span><span class="p">,</span>
+                                <span class="n">ConfigurationExecutionError</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">info</span><span class="p">),</span>
+                                <span class="n">tb</span><span class="p">)</span>
+                    <span class="k">finally</span><span class="p">:</span>
+                       <span class="k">del</span> <span class="n">t</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">tb</span>
+
+                <span class="k">if</span> <span class="n">introspector</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">introspectable</span> <span class="ow">in</span> <span class="n">introspectables</span><span class="p">:</span>
+                        <span class="n">introspectable</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">introspector</span><span class="p">,</span> <span class="n">info</span><span class="p">)</span>
+                
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">clear</span><span class="p">:</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">actions</span><span class="p">[:]</span>
+
+<span class="c"># this function is licensed under the ZPL (stolen from Zope)</span>
+<span class="k">def</span> <span class="nf">resolveConflicts</span><span class="p">(</span><span class="n">actions</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Resolve conflicting actions</span>
+
+<span class="sd">    Given an actions list, identify and try to resolve conflicting actions.</span>
+<span class="sd">    Actions conflict if they have the same non-None discriminator.</span>
+<span class="sd">    Conflicting actions can be resolved if the include path of one of</span>
+<span class="sd">    the actions is a prefix of the includepaths of the other</span>
+<span class="sd">    conflicting actions and is unequal to the include paths in the</span>
+<span class="sd">    other conflicting actions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">orderandpos</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+        <span class="n">n</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">v</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="c"># old-style tuple action</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">expand_action</span><span class="p">(</span><span class="o">*</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="s">&#39;order&#39;</span><span class="p">]</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+
+    <span class="n">sactions</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">actions</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="n">orderandpos</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">orderonly</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+        <span class="n">n</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">v</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="c"># old-style tuple action</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">expand_action</span><span class="p">(</span><span class="o">*</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">v</span><span class="p">[</span><span class="s">&#39;order&#39;</span><span class="p">]</span> <span class="ow">or</span> <span class="mi">0</span>
+
+    <span class="k">for</span> <span class="n">order</span><span class="p">,</span> <span class="n">actiongroup</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">sactions</span><span class="p">,</span> <span class="n">orderonly</span><span class="p">):</span>
+        <span class="c"># &quot;order&quot; is an integer grouping. Actions in a lower order will be</span>
+        <span class="c"># executed before actions in a higher order.  All of the actions in</span>
+        <span class="c"># one grouping will be executed (its callable, if any will be called)</span>
+        <span class="c"># before any of the actions in the next.</span>
+        
+        <span class="n">unique</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">action</span> <span class="ow">in</span> <span class="n">actiongroup</span><span class="p">:</span>
+            <span class="c"># Within an order, actions are executed sequentially based on</span>
+            <span class="c"># original action ordering (&quot;i&quot;).</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="c"># old-style tuple action</span>
+                <span class="n">action</span> <span class="o">=</span> <span class="n">expand_action</span><span class="p">(</span><span class="o">*</span><span class="n">action</span><span class="p">)</span>
+
+            <span class="c"># &quot;ainfo&quot; is a tuple of (order, i, action) where &quot;order&quot; is a</span>
+            <span class="c"># user-supplied grouping, &quot;i&quot; is an integer expressing the relative</span>
+            <span class="c"># position of this action in the action list being resolved, and</span>
+            <span class="c"># &quot;action&quot; is an action dictionary.  The purpose of an ainfo is to</span>
+            <span class="c"># associate an &quot;order&quot; and an &quot;i&quot; with a particular action; &quot;order&quot;</span>
+            <span class="c"># and &quot;i&quot; exist for sorting purposes after conflict resolution.</span>
+            <span class="n">ainfo</span> <span class="o">=</span> <span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">action</span><span class="p">)</span>
+
+            <span class="n">discriminator</span> <span class="o">=</span> <span class="n">undefer</span><span class="p">(</span><span class="n">action</span><span class="p">[</span><span class="s">&#39;discriminator&#39;</span><span class="p">])</span>
+            <span class="n">action</span><span class="p">[</span><span class="s">&#39;discriminator&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">discriminator</span>
+
+            <span class="k">if</span> <span class="n">discriminator</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="c"># The discriminator is None, so this action can never conflict.</span>
+                <span class="c"># We can add it directly to the result.</span>
+                <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ainfo</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="n">L</span> <span class="o">=</span> <span class="n">unique</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">discriminator</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="n">L</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ainfo</span><span class="p">)</span>
+
+        <span class="c"># Check for conflicts</span>
+        <span class="n">conflicts</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">discriminator</span><span class="p">,</span> <span class="n">ainfos</span> <span class="ow">in</span> <span class="n">unique</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="c"># We use (includepath, order, i) as a sort key because we need to</span>
+            <span class="c"># sort the actions by the paths so that the shortest path with a</span>
+            <span class="c"># given prefix comes first.  The &quot;first&quot; action is the one with the</span>
+            <span class="c"># shortest include path.  We break sorting ties using &quot;order&quot;, then</span>
+            <span class="c"># &quot;i&quot;.</span>
+            <span class="k">def</span> <span class="nf">bypath</span><span class="p">(</span><span class="n">ainfo</span><span class="p">):</span>
+                <span class="n">path</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">i</span> <span class="o">=</span> <span class="n">ainfo</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="s">&#39;includepath&#39;</span><span class="p">],</span> <span class="n">ainfo</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ainfo</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">return</span> <span class="n">path</span><span class="p">,</span> <span class="n">order</span><span class="p">,</span> <span class="n">i</span>
+
+            <span class="n">ainfos</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">bypath</span><span class="p">)</span>
+            <span class="n">ainfo</span><span class="p">,</span> <span class="n">rest</span> <span class="o">=</span> <span class="n">ainfos</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ainfos</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ainfo</span><span class="p">)</span>
+            <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">action</span> <span class="o">=</span> <span class="n">ainfo</span>
+            <span class="n">basepath</span><span class="p">,</span> <span class="n">baseinfo</span><span class="p">,</span> <span class="n">discriminator</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">action</span><span class="p">[</span><span class="s">&#39;includepath&#39;</span><span class="p">],</span>
+                <span class="n">action</span><span class="p">[</span><span class="s">&#39;info&#39;</span><span class="p">],</span>
+                <span class="n">action</span><span class="p">[</span><span class="s">&#39;discriminator&#39;</span><span class="p">],</span>
+                <span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">action</span> <span class="ow">in</span> <span class="n">rest</span><span class="p">:</span>
+                <span class="n">includepath</span> <span class="o">=</span> <span class="n">action</span><span class="p">[</span><span class="s">&#39;includepath&#39;</span><span class="p">]</span>
+                <span class="c"># Test whether path is a prefix of opath</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">includepath</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">basepath</span><span class="p">)]</span> <span class="o">!=</span> <span class="n">basepath</span> <span class="c"># not a prefix</span>
+                    <span class="ow">or</span> <span class="n">includepath</span> <span class="o">==</span> <span class="n">basepath</span><span class="p">):</span>
+                    <span class="n">L</span> <span class="o">=</span> <span class="n">conflicts</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">discriminator</span><span class="p">,</span> <span class="p">[</span><span class="n">baseinfo</span><span class="p">])</span>
+                    <span class="n">L</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">action</span><span class="p">[</span><span class="s">&#39;info&#39;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">conflicts</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ConfigurationConflictError</span><span class="p">(</span><span class="n">conflicts</span><span class="p">)</span>
+
+        <span class="c"># sort conflict-resolved actions by (order, i) and yield them one by one</span>
+        <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))]:</span>
+            <span class="k">yield</span> <span class="n">a</span>
+                
+<span class="k">def</span> <span class="nf">expand_action</span><span class="p">(</span><span class="n">discriminator</span><span class="p">,</span> <span class="nb">callable</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(),</span> <span class="n">kw</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                  <span class="n">includepath</span><span class="o">=</span><span class="p">(),</span> <span class="n">info</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">introspectables</span><span class="o">=</span><span class="p">()):</span>
+    <span class="k">if</span> <span class="n">kw</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">kw</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">discriminator</span><span class="o">=</span><span class="n">discriminator</span><span class="p">,</span>
+        <span class="nb">callable</span><span class="o">=</span><span class="nb">callable</span><span class="p">,</span>
+        <span class="n">args</span><span class="o">=</span><span class="n">args</span><span class="p">,</span>
+        <span class="n">kw</span><span class="o">=</span><span class="n">kw</span><span class="p">,</span>
+        <span class="n">includepath</span><span class="o">=</span><span class="n">includepath</span><span class="p">,</span>
+        <span class="n">info</span><span class="o">=</span><span class="n">info</span><span class="p">,</span>
+        <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">,</span>
+        <span class="n">introspectables</span><span class="o">=</span><span class="n">introspectables</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<span class="n">global_registries</span> <span class="o">=</span> <span class="n">WeakOrderedSet</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

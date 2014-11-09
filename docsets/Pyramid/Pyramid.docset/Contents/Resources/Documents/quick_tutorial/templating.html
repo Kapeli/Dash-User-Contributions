@@ -1,0 +1,461 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>08: HTML Generation With Templating &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="up" title="Quick Tutorial for Pyramid" href="index.html" />
+    <link rel="next" title="09: Organizing Views With View Classes" href="view_classes.html" />
+    <link rel="prev" title="07: Basic Web Handling With Views" href="views.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="view_classes.html" title="09: Organizing Views With View Classes"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="views.html" title="07: Basic Web Handling With Views"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Quick Tutorial for Pyramid</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="html-generation-with-templating">
+<span id="qtut-templating"></span><h1>08: HTML Generation With Templating<a class="headerlink" href="#html-generation-with-templating" title="Permalink to this headline">¶</a></h1>
+<p>Most web frameworks don't embed HTML in programming code. Instead,
+they pass data into a templating system. In this step we look at the
+basics of using HTML templates in Pyramid.</p>
+<div class="section" id="background">
+<h2>Background<a class="headerlink" href="#background" title="Permalink to this headline">¶</a></h2>
+<p>Ouch. We have been making our own <tt class="docutils literal"><span class="pre">Response</span></tt> and filling the response
+body with HTML. You usually won't embed an HTML string directly in
+Python, but instead, will use a templating language.</p>
+<p>Pyramid doesn't mandate a particular database system, form library,
+etc. It encourages replaceability. This applies equally to templating,
+which is fortunate: developers have strong views about template
+languages. As of Pyramid 1.5a2, Pyramid doesn't even bundle a template
+language!</p>
+<p>It does, however, have strong ties to Jinja2, Mako, and Chameleon. In
+this step we see how to add <tt class="docutils literal"><span class="pre">pyramid_chameleon</span></tt> to your project,
+then change your views to use templating.</p>
+</div>
+<div class="section" id="objectives">
+<h2>Objectives<a class="headerlink" href="#objectives" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Enable the <tt class="docutils literal"><span class="pre">pyramid_chameleon</span></tt> Pyramid add-on</li>
+<li>Generate HTML from template files</li>
+<li>Connect the templates as &quot;renderers&quot; for view code</li>
+<li>Change the view code to simply return data</li>
+</ul>
+</div>
+<div class="section" id="steps">
+<h2>Steps<a class="headerlink" href="#steps" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">Let's begin by using the previous package as a starting point for a
+new project:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span><span class="nb">cd</span> ..; cp -r views templating; <span class="nb">cd </span>templating
+</pre></div>
+</div>
+</li>
+<li><p class="first">This step depends on <tt class="docutils literal"><span class="pre">pyramid_chameleon</span></tt>, so add it as a dependency
+in <tt class="docutils literal"><span class="pre">templating/setup.py</span></tt>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">setuptools</span> <span class="kn">import</span> <span class="n">setup</span>
+
+<span class="n">requires</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s">&#39;pyramid&#39;</span><span class="p">,</span>
+    <span class="s">&#39;pyramid_chameleon&#39;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="n">setup</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;tutorial&#39;</span><span class="p">,</span>
+      <span class="n">install_requires</span><span class="o">=</span><span class="n">requires</span><span class="p">,</span>
+      <span class="n">entry_points</span><span class="o">=</span><span class="s">&quot;&quot;&quot;</span><span class="se">\</span>
+<span class="s">      [paste.app_factory]</span>
+<span class="s">      main = tutorial:main</span>
+<span class="s">      &quot;&quot;&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Now we can activate the development-mode distribution:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ $VENV</span>/bin/python setup.py develop
+</pre></div>
+</div>
+</li>
+<li><p class="first">We need to connect <tt class="docutils literal"><span class="pre">pyramid_chameleon</span></tt> as a renderer by making a
+call in the setup of <tt class="docutils literal"><span class="pre">templating/tutorial/__init__.py</span></tt>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">global_config</span><span class="p">,</span> <span class="o">**</span><span class="n">settings</span><span class="p">):</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">(</span><span class="n">settings</span><span class="o">=</span><span class="n">settings</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="s">&#39;pyramid_chameleon&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;home&#39;</span><span class="p">,</span> <span class="s">&#39;/&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;hello&#39;</span><span class="p">,</span> <span class="s">&#39;/howdy&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="s">&#39;.views&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Our <tt class="docutils literal"><span class="pre">templating/tutorial/views.py</span></tt> no longer has HTML in it:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.view</span> <span class="kn">import</span> <span class="n">view_config</span>
+
+
+<span class="c"># First view, available at http://localhost:6543/</span>
+<span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;home&#39;</span><span class="p">,</span> <span class="n">renderer</span><span class="o">=</span><span class="s">&#39;home.pt&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">home</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;Home View&#39;</span><span class="p">}</span>
+
+
+<span class="c"># /howdy</span>
+<span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;hello&#39;</span><span class="p">,</span> <span class="n">renderer</span><span class="o">=</span><span class="s">&#39;home.pt&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;Hello View&#39;</span><span class="p">}</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Instead we have <tt class="docutils literal"><span class="pre">templating/tutorial/home.pt</span></tt> as a template:</p>
+<div class="highlight-html"><div class="highlight"><pre><span class="cp">&lt;!DOCTYPE html&gt;</span>
+<span class="nt">&lt;html</span> <span class="na">lang=</span><span class="s">&quot;en&quot;</span><span class="nt">&gt;</span>
+<span class="nt">&lt;head&gt;</span>
+    <span class="nt">&lt;title&gt;</span>Quick Tour: ${name}<span class="nt">&lt;/title&gt;</span>
+<span class="nt">&lt;/head&gt;</span>
+<span class="nt">&lt;body&gt;</span>
+<span class="nt">&lt;h1&gt;</span>Hi ${name}<span class="nt">&lt;/h1&gt;</span>
+<span class="nt">&lt;/body&gt;</span>
+<span class="nt">&lt;/html&gt;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">For convenience, change <tt class="docutils literal"><span class="pre">templating/development.ini</span></tt> to reload
+templates automatically with <tt class="docutils literal"><span class="pre">pyramid.reload_templates</span></tt>:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span class="k">[app:main]</span>
+<span class="na">use</span> <span class="o">=</span> <span class="s">egg:tutorial</span>
+<span class="na">pyramid.reload_templates</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">pyramid.includes</span> <span class="o">=</span><span class="s"></span>
+<span class="s">    pyramid_debugtoolbar</span>
+
+<span class="k">[server:main]</span>
+<span class="na">use</span> <span class="o">=</span> <span class="s">egg:pyramid#wsgiref</span>
+<span class="na">host</span> <span class="o">=</span> <span class="s">0.0.0.0</span>
+<span class="na">port</span> <span class="o">=</span> <span class="s">6543</span>
+
+<span class="c1"># Begin logging configuration</span>
+
+<span class="k">[loggers]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">root, tutorial</span>
+
+<span class="k">[logger_tutorial]</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">DEBUG</span>
+<span class="na">handlers</span> <span class="o">=</span>
+<span class="na">qualname</span> <span class="o">=</span> <span class="s">tutorial</span>
+
+<span class="k">[handlers]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">console</span>
+
+<span class="k">[formatters]</span>
+<span class="na">keys</span> <span class="o">=</span> <span class="s">generic</span>
+
+<span class="k">[logger_root]</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">INFO</span>
+<span class="na">handlers</span> <span class="o">=</span> <span class="s">console</span>
+
+<span class="k">[handler_console]</span>
+<span class="na">class</span> <span class="o">=</span> <span class="s">StreamHandler</span>
+<span class="na">args</span> <span class="o">=</span> <span class="s">(sys.stderr,)</span>
+<span class="na">level</span> <span class="o">=</span> <span class="s">NOTSET</span>
+<span class="na">formatter</span> <span class="o">=</span> <span class="s">generic</span>
+
+<span class="k">[formatter_generic]</span>
+<span class="na">format</span> <span class="o">=</span> <span class="s">%(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s</span>
+
+<span class="c1"># End logging configuration</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Our unit tests in <tt class="docutils literal"><span class="pre">templating/tutorial/tests.py</span></tt> can focus on
+data:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">unittest</span>
+
+<span class="kn">from</span> <span class="nn">pyramid</span> <span class="kn">import</span> <span class="n">testing</span>
+
+
+<span class="k">class</span> <span class="nc">TutorialViewTests</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">testing</span><span class="o">.</span><span class="n">setUp</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">tearDown</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">testing</span><span class="o">.</span><span class="n">tearDown</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">test_home</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">.views</span> <span class="kn">import</span> <span class="n">home</span>
+
+        <span class="n">request</span> <span class="o">=</span> <span class="n">testing</span><span class="o">.</span><span class="n">DummyRequest</span><span class="p">()</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">home</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="c"># Our view now returns data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="s">&#39;Home View&#39;</span><span class="p">,</span> <span class="n">response</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">test_hello</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">.views</span> <span class="kn">import</span> <span class="n">hello</span>
+
+        <span class="n">request</span> <span class="o">=</span> <span class="n">testing</span><span class="o">.</span><span class="n">DummyRequest</span><span class="p">()</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">hello</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="c"># Our view now returns data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="s">&#39;Hello View&#39;</span><span class="p">,</span> <span class="n">response</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">])</span>
+
+
+<span class="k">class</span> <span class="nc">TutorialFunctionalTests</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">tutorial</span> <span class="kn">import</span> <span class="n">main</span>
+        <span class="n">app</span> <span class="o">=</span> <span class="n">main</span><span class="p">({})</span>
+        <span class="kn">from</span> <span class="nn">webtest</span> <span class="kn">import</span> <span class="n">TestApp</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">testapp</span> <span class="o">=</span> <span class="n">TestApp</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">test_home</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">testapp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertIn</span><span class="p">(</span><span class="n">b</span><span class="s">&#39;&lt;h1&gt;Hi Home View&#39;</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">test_hello</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">testapp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;/howdy&#39;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertIn</span><span class="p">(</span><span class="n">b</span><span class="s">&#39;&lt;h1&gt;Hi Hello View&#39;</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Now run the tests:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ $VENV</span>/bin/nosetests tutorial
+.
+----------------------------------------------------------------------
+Ran 4 tests in 0.141s
+
+OK
+</pre></div>
+</div>
+</li>
+<li><p class="first">Run your Pyramid application with:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ $VENV</span>/bin/pserve development.ini --reload
+</pre></div>
+</div>
+</li>
+<li><p class="first">Open <a class="reference external" href="http://localhost:6543/">http://localhost:6543/</a> and <a class="reference external" href="http://localhost:6543/howdy">http://localhost:6543/howdy</a>
+in your browser.</p>
+</li>
+</ol>
+</div>
+<div class="section" id="analysis">
+<h2>Analysis<a class="headerlink" href="#analysis" title="Permalink to this headline">¶</a></h2>
+<p>Ahh, that looks better. We have a view that is focused on Python code.
+Our <tt class="docutils literal"><span class="pre">&#64;view_config</span></tt> decorator specifies a <a class="reference internal" href="../glossary.html#term-renderer"><em class="xref std std-term">renderer</em></a> that points
+our template file. Our view then simply returns data which is then
+supplied to our template. Note that we used the same template for both
+views.</p>
+<p>Note the effect on testing. We can focus on having a data-oriented
+contract with our view code.</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../narr/templates.html#templates-chapter"><em>Templates</em></a>, <a class="reference internal" href="../narr/templates.html#debugging-templates"><em>Debugging Templates</em></a>, and
+<a class="reference internal" href="../narr/templates.html#available-template-system-bindings"><em>Available Add-On Template System Bindings</em></a>.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">08: HTML Generation With Templating</a><ul>
+<li><a class="reference internal" href="#background">Background</a></li>
+<li><a class="reference internal" href="#objectives">Objectives</a></li>
+<li><a class="reference internal" href="#steps">Steps</a></li>
+<li><a class="reference internal" href="#analysis">Analysis</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="views.html"
+                        title="previous chapter">07: Basic Web Handling With Views</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="view_classes.html"
+                        title="next chapter">09: Organizing Views With View Classes</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="view_classes.html" title="09: Organizing Views With View Classes"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="views.html" title="07: Basic Web Handling With Views"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" >Quick Tutorial for Pyramid</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

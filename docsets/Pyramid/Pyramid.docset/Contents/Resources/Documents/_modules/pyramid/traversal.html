@@ -1,0 +1,942 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.traversal &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.traversal</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">zope.deprecation</span> <span class="kn">import</span> <span class="n">deprecated</span>
+
+<span class="kn">from</span> <span class="nn">zope.interface</span> <span class="kn">import</span> <span class="n">implementer</span>
+<span class="kn">from</span> <span class="nn">zope.interface.interfaces</span> <span class="kn">import</span> <span class="n">IInterface</span>
+
+<span class="kn">from</span> <span class="nn">repoze.lru</span> <span class="kn">import</span> <span class="n">lru_cache</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">IResourceURL</span><span class="p">,</span>
+    <span class="n">IRequestFactory</span><span class="p">,</span>
+    <span class="n">ITraverser</span><span class="p">,</span>
+    <span class="n">VH_ROOT_KEY</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+    <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s">&#39;ignore&#39;</span><span class="p">)</span>
+    <span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="n">IContextURL</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.compat</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">PY3</span><span class="p">,</span>
+    <span class="n">native_</span><span class="p">,</span>
+    <span class="n">text_</span><span class="p">,</span>
+    <span class="n">ascii_native_</span><span class="p">,</span>
+    <span class="n">text_type</span><span class="p">,</span>
+    <span class="n">binary_type</span><span class="p">,</span>
+    <span class="n">is_nonstr_iter</span><span class="p">,</span>
+    <span class="n">decode_path_info</span><span class="p">,</span>
+    <span class="n">unquote_bytes_to_wsgi</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.encode</span> <span class="kn">import</span> <span class="n">url_quote</span>
+<span class="kn">from</span> <span class="nn">pyramid.exceptions</span> <span class="kn">import</span> <span class="n">URLDecodeError</span>
+<span class="kn">from</span> <span class="nn">pyramid.location</span> <span class="kn">import</span> <span class="n">lineage</span>
+<span class="kn">from</span> <span class="nn">pyramid.threadlocal</span> <span class="kn">import</span> <span class="n">get_current_registry</span>
+
+<span class="n">empty</span> <span class="o">=</span> <span class="n">text_</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="find_root"><a class="viewcode-back" href="../../api/traversal.html#pyramid.traversal.find_root">[docs]</a><span class="k">def</span> <span class="nf">find_root</span><span class="p">(</span><span class="n">resource</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Find the root node in the resource tree to which ``resource``</span>
+<span class="sd">    belongs. Note that ``resource`` should be :term:`location`-aware.</span>
+<span class="sd">    Note that the root resource is available in the request object by</span>
+<span class="sd">    accessing the ``request.root`` attribute.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">location</span> <span class="ow">in</span> <span class="n">lineage</span><span class="p">(</span><span class="n">resource</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">location</span><span class="o">.</span><span class="n">__parent__</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">resource</span> <span class="o">=</span> <span class="n">location</span>
+            <span class="k">break</span>
+    <span class="k">return</span> <span class="n">resource</span>
+</div>
+<div class="viewcode-block" id="find_resource"><a class="viewcode-back" href="../../api/traversal.html#pyramid.traversal.find_resource">[docs]</a><span class="k">def</span> <span class="nf">find_resource</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Given a resource object and a string or tuple representing a path</span>
+<span class="sd">    (such as the return value of :func:`pyramid.traversal.resource_path` or</span>
+<span class="sd">    :func:`pyramid.traversal.resource_path_tuple`), return a resource in this</span>
+<span class="sd">    application&#39;s resource tree at the specified path.  The resource passed</span>
+<span class="sd">    in *must* be :term:`location`-aware.  If the path cannot be resolved (if</span>
+<span class="sd">    the respective node in the resource tree does not exist), a</span>
+<span class="sd">    :exc:`KeyError` will be raised.</span>
+
+<span class="sd">    This function is the logical inverse of</span>
+<span class="sd">    :func:`pyramid.traversal.resource_path` and</span>
+<span class="sd">    :func:`pyramid.traversal.resource_path_tuple`; it can resolve any</span>
+<span class="sd">    path string or tuple generated by either of those functions.</span>
+
+<span class="sd">    Rules for passing a *string* as the ``path`` argument: if the</span>
+<span class="sd">    first character in the path string is the ``/``</span>
+<span class="sd">    character, the path is considered absolute and the resource tree</span>
+<span class="sd">    traversal will start at the root resource.  If the first character</span>
+<span class="sd">    of the path string is *not* the ``/`` character, the path is</span>
+<span class="sd">    considered relative and resource tree traversal will begin at the resource</span>
+<span class="sd">    object supplied to the function as the ``resource`` argument.  If an</span>
+<span class="sd">    empty string is passed as ``path``, the ``resource`` passed in will</span>
+<span class="sd">    be returned.  Resource path strings must be escaped in the following</span>
+<span class="sd">    manner: each Unicode path segment must be encoded as UTF-8 and as</span>
+<span class="sd">    each path segment must escaped via Python&#39;s :mod:`urllib.quote`.</span>
+<span class="sd">    For example, ``/path/to%20the/La%20Pe%C3%B1a`` (absolute) or</span>
+<span class="sd">    ``to%20the/La%20Pe%C3%B1a`` (relative).  The</span>
+<span class="sd">    :func:`pyramid.traversal.resource_path` function generates strings</span>
+<span class="sd">    which follow these rules (albeit only absolute ones).</span>
+
+<span class="sd">    Rules for passing *text* (Unicode) as the ``path`` argument are the same</span>
+<span class="sd">    as those for a string.  In particular, the text may not have any nonascii</span>
+<span class="sd">    characters in it.</span>
+
+<span class="sd">    Rules for passing a *tuple* as the ``path`` argument: if the first</span>
+<span class="sd">    element in the path tuple is the empty string (for example ``(&#39;&#39;,</span>
+<span class="sd">    &#39;a&#39;, &#39;b&#39;, &#39;c&#39;)``, the path is considered absolute and the resource tree</span>
+<span class="sd">    traversal will start at the resource tree root object.  If the first</span>
+<span class="sd">    element in the path tuple is not the empty string (for example</span>
+<span class="sd">    ``(&#39;a&#39;, &#39;b&#39;, &#39;c&#39;)``), the path is considered relative and resource tree</span>
+<span class="sd">    traversal will begin at the resource object supplied to the function</span>
+<span class="sd">    as the ``resource`` argument.  If an empty sequence is passed as</span>
+<span class="sd">    ``path``, the ``resource`` passed in itself will be returned.  No</span>
+<span class="sd">    URL-quoting or UTF-8-encoding of individual path segments within</span>
+<span class="sd">    the tuple is required (each segment may be any string or unicode</span>
+<span class="sd">    object representing a resource name).  Resource path tuples generated by</span>
+<span class="sd">    :func:`pyramid.traversal.resource_path_tuple` can always be</span>
+<span class="sd">    resolved by ``find_resource``.</span>
+
+<span class="sd">    .. note:: For backwards compatibility purposes, this function can also</span>
+<span class="sd">       be imported as :func:`pyramid.traversal.find_model`, although doing so</span>
+<span class="sd">       will emit a deprecation warning.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">text_type</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">ascii_native_</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="n">traverse</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+    <span class="n">view_name</span> <span class="o">=</span> <span class="n">D</span><span class="p">[</span><span class="s">&#39;view_name&#39;</span><span class="p">]</span>
+    <span class="n">context</span> <span class="o">=</span> <span class="n">D</span><span class="p">[</span><span class="s">&#39;context&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">view_name</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%r</span><span class="s"> has no subelement </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">view_name</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">context</span>
+</div>
+<span class="n">find_model</span> <span class="o">=</span> <span class="n">find_resource</span> <span class="c"># b/w compat (forever)</span>
+
+<div class="viewcode-block" id="find_interface"><a class="viewcode-back" href="../../api/traversal.html#pyramid.traversal.find_interface">[docs]</a><span class="k">def</span> <span class="nf">find_interface</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="n">class_or_interface</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return the first resource found in the :term:`lineage` of ``resource``</span>
+<span class="sd">    which, a) if ``class_or_interface`` is a Python class object, is an</span>
+<span class="sd">    instance of the class or any subclass of that class or b) if</span>
+<span class="sd">    ``class_or_interface`` is a :term:`interface`, provides the specified</span>
+<span class="sd">    interface.  Return ``None`` if no resource providing ``interface_or_class``</span>
+<span class="sd">    can be found in the lineage.  The ``resource`` passed in *must* be</span>
+<span class="sd">    :term:`location`-aware.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">IInterface</span><span class="o">.</span><span class="n">providedBy</span><span class="p">(</span><span class="n">class_or_interface</span><span class="p">):</span>
+        <span class="n">test</span> <span class="o">=</span> <span class="n">class_or_interface</span><span class="o">.</span><span class="n">providedBy</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">test</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">arg</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="n">class_or_interface</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">location</span> <span class="ow">in</span> <span class="n">lineage</span><span class="p">(</span><span class="n">resource</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">test</span><span class="p">(</span><span class="n">location</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">location</span>
+</div>
+<div class="viewcode-block" id="resource_path"><a class="viewcode-back" href="../../api/traversal.html#pyramid.traversal.resource_path">[docs]</a><span class="k">def</span> <span class="nf">resource_path</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Return a string object representing the absolute physical path of the</span>
+<span class="sd">    resource object based on its position in the resource tree, e.g</span>
+<span class="sd">    ``/foo/bar``.  Any positional arguments passed in as ``elements`` will be</span>
+<span class="sd">    appended as path segments to the end of the resource path.  For instance,</span>
+<span class="sd">    if the resource&#39;s path is ``/foo/bar`` and ``elements`` equals ``(&#39;a&#39;,</span>
+<span class="sd">    &#39;b&#39;)``, the returned string will be ``/foo/bar/a/b``.  The first</span>
+<span class="sd">    character in the string will always be the ``/`` character (a leading</span>
+<span class="sd">    ``/`` character in a path string represents that the path is absolute).</span>
+
+<span class="sd">    Resource path strings returned will be escaped in the following</span>
+<span class="sd">    manner: each unicode path segment will be encoded as UTF-8 and</span>
+<span class="sd">    each path segment will be escaped via Python&#39;s :mod:`urllib.quote`.</span>
+<span class="sd">    For example, ``/path/to%20the/La%20Pe%C3%B1a``.</span>
+
+<span class="sd">    This function is a logical inverse of</span>
+<span class="sd">    :mod:`pyramid.traversal.find_resource`: it can be used to generate</span>
+<span class="sd">    path references that can later be resolved via that function.</span>
+
+<span class="sd">    The ``resource`` passed in *must* be :term:`location`-aware.</span>
+
+<span class="sd">    .. note::</span>
+
+<span class="sd">       Each segment in the path string returned will use the ``__name__``</span>
+<span class="sd">       attribute of the resource it represents within the resource tree.  Each</span>
+<span class="sd">       of these segments *should* be a unicode or string object (as per the</span>
+<span class="sd">       contract of :term:`location`-awareness).  However, no conversion or</span>
+<span class="sd">       safety checking of resource names is performed.  For instance, if one of</span>
+<span class="sd">       the resources in your tree has a ``__name__`` which (by error) is a</span>
+<span class="sd">       dictionary, the :func:`pyramid.traversal.resource_path` function will</span>
+<span class="sd">       attempt to append it to a string and it will cause a</span>
+<span class="sd">       :exc:`pyramid.exceptions.URLDecodeError`.</span>
+
+<span class="sd">    .. note::</span>
+
+<span class="sd">       The :term:`root` resource *must* have a ``__name__`` attribute with a</span>
+<span class="sd">       value of either ``None`` or the empty string for paths to be generated</span>
+<span class="sd">       properly.  If the root resource has a non-null ``__name__`` attribute,</span>
+<span class="sd">       its name will be prepended to the generated path rather than a single</span>
+<span class="sd">       leading &#39;/&#39; character.</span>
+
+<span class="sd">    .. note::</span>
+
+<span class="sd">       For backwards compatibility purposes, this function can also</span>
+<span class="sd">       be imported as ``model_path``, although doing so will cause</span>
+<span class="sd">       a deprecation warning to be emitted.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># joining strings is a bit expensive so we delegate to a function</span>
+    <span class="c"># which caches the joined result for us</span>
+    <span class="k">return</span> <span class="n">_join_path_tuple</span><span class="p">(</span><span class="n">resource_path_tuple</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">))</span>
+</div>
+<span class="n">model_path</span> <span class="o">=</span> <span class="n">resource_path</span> <span class="c"># b/w compat (forever)</span>
+
+<div class="viewcode-block" id="traverse"><a class="viewcode-back" href="../../api/traversal.html#pyramid.traversal.traverse">[docs]</a><span class="k">def</span> <span class="nf">traverse</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Given a resource object as ``resource`` and a string or tuple</span>
+<span class="sd">    representing a path as ``path`` (such as the return value of</span>
+<span class="sd">    :func:`pyramid.traversal.resource_path` or</span>
+<span class="sd">    :func:`pyramid.traversal.resource_path_tuple` or the value of</span>
+<span class="sd">    ``request.environ[&#39;PATH_INFO&#39;]``), return a dictionary with the</span>
+<span class="sd">    keys ``context``, ``root``, ``view_name``, ``subpath``,</span>
+<span class="sd">    ``traversed``, ``virtual_root``, and ``virtual_root_path``.</span>
+
+<span class="sd">    A definition of each value in the returned dictionary:</span>
+
+<span class="sd">    - ``context``: The :term:`context` (a :term:`resource` object) found</span>
+<span class="sd">      via traversal or url dispatch.  If the ``path`` passed in is the</span>
+<span class="sd">      empty string, the value of the ``resource`` argument passed to this</span>
+<span class="sd">      function is returned.</span>
+
+<span class="sd">    - ``root``: The resource object at which :term:`traversal` begins.</span>
+<span class="sd">      If the ``resource`` passed in was found via url dispatch or if the</span>
+<span class="sd">      ``path`` passed in was relative (non-absolute), the value of the</span>
+<span class="sd">      ``resource`` argument passed to this function is returned.</span>
+
+<span class="sd">    - ``view_name``: The :term:`view name` found during</span>
+<span class="sd">      :term:`traversal` or :term:`url dispatch`; if the ``resource`` was</span>
+<span class="sd">      found via traversal, this is usually a representation of the</span>
+<span class="sd">      path segment which directly follows the path to the ``context``</span>
+<span class="sd">      in the ``path``.  The ``view_name`` will be a Unicode object or</span>
+<span class="sd">      the empty string.  The ``view_name`` will be the empty string if</span>
+<span class="sd">      there is no element which follows the ``context`` path.  An</span>
+<span class="sd">      example: if the path passed is ``/foo/bar``, and a resource</span>
+<span class="sd">      object is found at ``/foo`` (but not at ``/foo/bar``), the &#39;view</span>
+<span class="sd">      name&#39; will be ``u&#39;bar&#39;``.  If the ``resource`` was found via</span>
+<span class="sd">      urldispatch, the view_name will be the name the route found was</span>
+<span class="sd">      registered with.</span>
+
+<span class="sd">    - ``subpath``: For a ``resource`` found via :term:`traversal`, this</span>
+<span class="sd">      is a sequence of path segments found in the ``path`` that follow</span>
+<span class="sd">      the ``view_name`` (if any).  Each of these items is a Unicode</span>
+<span class="sd">      object.  If no path segments follow the ``view_name``, the</span>
+<span class="sd">      subpath will be the empty sequence.  An example: if the path</span>
+<span class="sd">      passed is ``/foo/bar/baz/buz``, and a resource object is found at</span>
+<span class="sd">      ``/foo`` (but not ``/foo/bar``), the &#39;view name&#39; will be</span>
+<span class="sd">      ``u&#39;bar&#39;`` and the :term:`subpath` will be ``[u&#39;baz&#39;, u&#39;buz&#39;]``.</span>
+<span class="sd">      For a ``resource`` found via url dispatch, the subpath will be a</span>
+<span class="sd">      sequence of values discerned from ``*subpath`` in the route</span>
+<span class="sd">      pattern matched or the empty sequence.</span>
+
+<span class="sd">    - ``traversed``: The sequence of path elements traversed from the</span>
+<span class="sd">      root to find the ``context`` object during :term:`traversal`.</span>
+<span class="sd">      Each of these items is a Unicode object.  If no path segments</span>
+<span class="sd">      were traversed to find the ``context`` object (e.g. if the</span>
+<span class="sd">      ``path`` provided is the empty string), the ``traversed`` value</span>
+<span class="sd">      will be the empty sequence.  If the ``resource`` is a resource found</span>
+<span class="sd">      via :term:`url dispatch`, traversed will be None.</span>
+
+<span class="sd">    - ``virtual_root``: A resource object representing the &#39;virtual&#39; root</span>
+<span class="sd">      of the resource tree being traversed during :term:`traversal`.</span>
+<span class="sd">      See :ref:`vhosting_chapter` for a definition of the virtual root</span>
+<span class="sd">      object.  If no virtual hosting is in effect, and the ``path``</span>
+<span class="sd">      passed in was absolute, the ``virtual_root`` will be the</span>
+<span class="sd">      *physical* root resource object (the object at which :term:`traversal`</span>
+<span class="sd">      begins).  If the ``resource`` passed in was found via :term:`URL</span>
+<span class="sd">      dispatch` or if the ``path`` passed in was relative, the</span>
+<span class="sd">      ``virtual_root`` will always equal the ``root`` object (the</span>
+<span class="sd">      resource passed in).</span>
+
+<span class="sd">    - ``virtual_root_path`` -- If :term:`traversal` was used to find</span>
+<span class="sd">      the ``resource``, this will be the sequence of path elements</span>
+<span class="sd">      traversed to find the ``virtual_root`` resource.  Each of these</span>
+<span class="sd">      items is a Unicode object.  If no path segments were traversed</span>
+<span class="sd">      to find the ``virtual_root`` resource (e.g. if virtual hosting is</span>
+<span class="sd">      not in effect), the ``traversed`` value will be the empty list.</span>
+<span class="sd">      If url dispatch was used to find the ``resource``, this will be</span>
+<span class="sd">      ``None``.</span>
+
+<span class="sd">    If the path cannot be resolved, a :exc:`KeyError` will be raised.</span>
+
+<span class="sd">    Rules for passing a *string* as the ``path`` argument: if the</span>
+<span class="sd">    first character in the path string is the with the ``/``</span>
+<span class="sd">    character, the path will considered absolute and the resource tree</span>
+<span class="sd">    traversal will start at the root resource.  If the first character</span>
+<span class="sd">    of the path string is *not* the ``/`` character, the path is</span>
+<span class="sd">    considered relative and resource tree traversal will begin at the resource</span>
+<span class="sd">    object supplied to the function as the ``resource`` argument.  If an</span>
+<span class="sd">    empty string is passed as ``path``, the ``resource`` passed in will</span>
+<span class="sd">    be returned.  Resource path strings must be escaped in the following</span>
+<span class="sd">    manner: each Unicode path segment must be encoded as UTF-8 and</span>
+<span class="sd">    each path segment must escaped via Python&#39;s :mod:`urllib.quote`.</span>
+<span class="sd">    For example, ``/path/to%20the/La%20Pe%C3%B1a`` (absolute) or</span>
+<span class="sd">    ``to%20the/La%20Pe%C3%B1a`` (relative).  The</span>
+<span class="sd">    :func:`pyramid.traversal.resource_path` function generates strings</span>
+<span class="sd">    which follow these rules (albeit only absolute ones).</span>
+
+<span class="sd">    Rules for passing a *tuple* as the ``path`` argument: if the first</span>
+<span class="sd">    element in the path tuple is the empty string (for example ``(&#39;&#39;,</span>
+<span class="sd">    &#39;a&#39;, &#39;b&#39;, &#39;c&#39;)``, the path is considered absolute and the resource tree</span>
+<span class="sd">    traversal will start at the resource tree root object.  If the first</span>
+<span class="sd">    element in the path tuple is not the empty string (for example</span>
+<span class="sd">    ``(&#39;a&#39;, &#39;b&#39;, &#39;c&#39;)``), the path is considered relative and resource tree</span>
+<span class="sd">    traversal will begin at the resource object supplied to the function</span>
+<span class="sd">    as the ``resource`` argument.  If an empty sequence is passed as</span>
+<span class="sd">    ``path``, the ``resource`` passed in itself will be returned.  No</span>
+<span class="sd">    URL-quoting or UTF-8-encoding of individual path segments within</span>
+<span class="sd">    the tuple is required (each segment may be any string or unicode</span>
+<span class="sd">    object representing a resource name).</span>
+
+<span class="sd">    Explanation of the conversion of ``path`` segment values to</span>
+<span class="sd">    Unicode during traversal: Each segment is URL-unquoted, and</span>
+<span class="sd">    decoded into Unicode. Each segment is assumed to be encoded using</span>
+<span class="sd">    the UTF-8 encoding (or a subset, such as ASCII); a</span>
+<span class="sd">    :exc:`pyramid.exceptions.URLDecodeError` is raised if a segment</span>
+<span class="sd">    cannot be decoded.  If a segment name is empty or if it is ``.``,</span>
+<span class="sd">    it is ignored.  If a segment name is ``..``, the previous segment</span>
+<span class="sd">    is deleted, and the ``..`` is ignored.  As a result of this</span>
+<span class="sd">    process, the return values ``view_name``, each element in the</span>
+<span class="sd">    ``subpath``, each element in ``traversed``, and each element in</span>
+<span class="sd">    the ``virtual_root_path`` will be Unicode as opposed to a string,</span>
+<span class="sd">    and will be URL-decoded.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">is_nonstr_iter</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="c"># the traverser factory expects PATH_INFO to be a string, not</span>
+        <span class="c"># unicode and it expects path segments to be utf-8 and</span>
+        <span class="c"># urlencoded (it&#39;s the same traverser which accepts PATH_INFO</span>
+        <span class="c"># from user agents; user agents always send strings).</span>
+        <span class="k">if</span> <span class="n">path</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">_join_path_tuple</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+
+    <span class="c"># The user is supposed to pass us a string object, never Unicode.  In</span>
+    <span class="c"># practice, however, users indeed pass Unicode to this API.  If they do</span>
+    <span class="c"># pass a Unicode object, its data *must* be entirely encodeable to ASCII,</span>
+    <span class="c"># so we encode it here as a convenience to the user and to prevent</span>
+    <span class="c"># second-order failures from cropping up (all failures will occur at this</span>
+    <span class="c"># step rather than later down the line as the result of calling</span>
+    <span class="c"># ``traversal_path``).</span>
+
+    <span class="n">path</span> <span class="o">=</span> <span class="n">ascii_native_</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">path</span> <span class="ow">and</span> <span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;/&#39;</span><span class="p">:</span>
+        <span class="n">resource</span> <span class="o">=</span> <span class="n">find_root</span><span class="p">(</span><span class="n">resource</span><span class="p">)</span>
+
+    <span class="n">reg</span> <span class="o">=</span> <span class="n">get_current_registry</span><span class="p">()</span>
+
+    <span class="n">request_factory</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">IRequestFactory</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">request_factory</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">pyramid.request</span> <span class="kn">import</span> <span class="n">Request</span> <span class="c"># avoid circdep</span>
+        <span class="n">request_factory</span> <span class="o">=</span> <span class="n">Request</span>
+
+    <span class="n">request</span> <span class="o">=</span> <span class="n">request_factory</span><span class="o">.</span><span class="n">blank</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">request</span><span class="o">.</span><span class="n">registry</span> <span class="o">=</span> <span class="n">reg</span>
+    <span class="n">traverser</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">queryAdapter</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="n">ITraverser</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">traverser</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">traverser</span> <span class="o">=</span> <span class="n">ResourceTreeTraverser</span><span class="p">(</span><span class="n">resource</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">traverser</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="resource_path_tuple"><a class="viewcode-back" href="../../api/traversal.html#pyramid.traversal.resource_path_tuple">[docs]</a><span class="k">def</span> <span class="nf">resource_path_tuple</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return a tuple representing the absolute physical path of the</span>
+<span class="sd">    ``resource`` object based on its position in a resource tree, e.g</span>
+<span class="sd">    ``(&#39;&#39;, &#39;foo&#39;, &#39;bar&#39;)``.  Any positional arguments passed in as</span>
+<span class="sd">    ``elements`` will be appended as elements in the tuple</span>
+<span class="sd">    representing the resource path.  For instance, if the resource&#39;s</span>
+<span class="sd">    path is ``(&#39;&#39;, &#39;foo&#39;, &#39;bar&#39;)`` and elements equals ``(&#39;a&#39;, &#39;b&#39;)``,</span>
+<span class="sd">    the returned tuple will be ``(&#39;&#39;, &#39;foo&#39;, &#39;bar&#39;, &#39;a&#39;, &#39;b&#39;)``.  The</span>
+<span class="sd">    first element of this tuple will always be the empty string (a</span>
+<span class="sd">    leading empty string element in a path tuple represents that the</span>
+<span class="sd">    path is absolute).</span>
+
+<span class="sd">    This function is a logical inverse of</span>
+<span class="sd">    :func:`pyramid.traversal.find_resource`: it can be used to</span>
+<span class="sd">    generate path references that can later be resolved by that function.</span>
+
+<span class="sd">    The ``resource`` passed in *must* be :term:`location`-aware.</span>
+
+<span class="sd">    .. note::</span>
+
+<span class="sd">       Each segment in the path tuple returned will equal the ``__name__``</span>
+<span class="sd">       attribute of the resource it represents within the resource tree.  Each</span>
+<span class="sd">       of these segments *should* be a unicode or string object (as per the</span>
+<span class="sd">       contract of :term:`location`-awareness).  However, no conversion or</span>
+<span class="sd">       safety checking of resource names is performed.  For instance, if one of</span>
+<span class="sd">       the resources in your tree has a ``__name__`` which (by error) is a</span>
+<span class="sd">       dictionary, that dictionary will be placed in the path tuple; no warning</span>
+<span class="sd">       or error will be given.</span>
+
+<span class="sd">    .. note::</span>
+
+<span class="sd">       The :term:`root` resource *must* have a ``__name__`` attribute with a</span>
+<span class="sd">       value of either ``None`` or the empty string for path tuples to be</span>
+<span class="sd">       generated properly.  If the root resource has a non-null ``__name__``</span>
+<span class="sd">       attribute, its name will be the first element in the generated path tuple</span>
+<span class="sd">       rather than the empty string.</span>
+
+<span class="sd">    .. note::</span>
+
+<span class="sd">       For backwards compatibility purposes, this function can also be imported</span>
+<span class="sd">       as ``model_path_tuple``, although doing so will cause a deprecation</span>
+<span class="sd">       warning to be emitted.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">_resource_path_list</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">))</span>
+</div>
+<span class="n">model_path_tuple</span> <span class="o">=</span> <span class="n">resource_path_tuple</span>  <span class="c"># b/w compat (forever)</span>
+
+<span class="k">def</span> <span class="nf">_resource_path_list</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="o">*</span><span class="n">elements</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Implementation detail shared by resource_path and resource_path_tuple&quot;&quot;&quot;</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="p">[</span><span class="n">loc</span><span class="o">.</span><span class="n">__name__</span> <span class="ow">or</span> <span class="s">&#39;&#39;</span> <span class="k">for</span> <span class="n">loc</span> <span class="ow">in</span> <span class="n">lineage</span><span class="p">(</span><span class="n">resource</span><span class="p">)]</span>
+    <span class="n">path</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+    <span class="n">path</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">elements</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">path</span>
+
+<span class="n">_model_path_list</span> <span class="o">=</span> <span class="n">_resource_path_list</span> <span class="c"># b/w compat, not an API</span>
+
+<div class="viewcode-block" id="virtual_root"><a class="viewcode-back" href="../../api/traversal.html#pyramid.traversal.virtual_root">[docs]</a><span class="k">def</span> <span class="nf">virtual_root</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Provided any :term:`resource` and a :term:`request` object, return</span>
+<span class="sd">    the resource object representing the :term:`virtual root` of the</span>
+<span class="sd">    current :term:`request`.  Using a virtual root in a</span>
+<span class="sd">    :term:`traversal` -based :app:`Pyramid` application permits</span>
+<span class="sd">    rooting, for example, the resource at the traversal path ``/cms`` at</span>
+<span class="sd">    ``http://example.com/`` instead of rooting it at</span>
+<span class="sd">    ``http://example.com/cms/``.</span>
+
+<span class="sd">    If the ``resource`` passed in is a context obtained via</span>
+<span class="sd">    :term:`traversal`, and if the ``HTTP_X_VHM_ROOT`` key is in the</span>
+<span class="sd">    WSGI environment, the value of this key will be treated as a</span>
+<span class="sd">    &#39;virtual root path&#39;: the :func:`pyramid.traversal.find_resource`</span>
+<span class="sd">    API will be used to find the virtual root resource using this path;</span>
+<span class="sd">    if the resource is found, it will be returned.  If the</span>
+<span class="sd">    ``HTTP_X_VHM_ROOT`` key is not present in the WSGI environment,</span>
+<span class="sd">    the physical :term:`root` of the resource tree will be returned instead.</span>
+
+<span class="sd">    Virtual roots are not useful at all in applications that use</span>
+<span class="sd">    :term:`URL dispatch`. Contexts obtained via URL dispatch don&#39;t</span>
+<span class="sd">    really support being virtually rooted (each URL dispatch context</span>
+<span class="sd">    is both its own physical and virtual root).  However if this API</span>
+<span class="sd">    is called with a ``resource`` argument which is a context obtained</span>
+<span class="sd">    via URL dispatch, the resource passed in will be returned</span>
+<span class="sd">    unconditionally.&quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">registry</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="n">get_current_registry</span><span class="p">()</span> <span class="c"># b/c</span>
+    <span class="n">urlgenerator</span> <span class="o">=</span> <span class="n">reg</span><span class="o">.</span><span class="n">queryMultiAdapter</span><span class="p">((</span><span class="n">resource</span><span class="p">,</span> <span class="n">request</span><span class="p">),</span> <span class="n">IContextURL</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">urlgenerator</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">urlgenerator</span> <span class="o">=</span> <span class="n">TraversalContextURL</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="n">request</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">urlgenerator</span><span class="o">.</span><span class="n">virtual_root</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="traversal_path"><a class="viewcode-back" href="../../api/traversal.html#pyramid.traversal.traversal_path">[docs]</a><span class="k">def</span> <span class="nf">traversal_path</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Variant of :func:`pyramid.traversal.traversal_path_info` suitable for</span>
+<span class="sd">    decoding paths that are URL-encoded.</span>
+
+<span class="sd">    If this function is passed a Unicode object instead of a sequence of</span>
+<span class="sd">    bytes as ``path``, that Unicode object *must* directly encodeable to</span>
+<span class="sd">    ASCII.  For example, u&#39;/foo&#39; will work but u&#39;/&lt;unprintable unicode&gt;&#39; (a</span>
+<span class="sd">    Unicode object with characters that cannot be encoded to ascii) will</span>
+<span class="sd">    not. A :exc:`UnicodeEncodeError` will be raised if the Unicode cannot be</span>
+<span class="sd">    encoded directly to ASCII.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">text_type</span><span class="p">):</span>
+        <span class="c"># must not possess characters outside ascii</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&#39;ascii&#39;</span><span class="p">)</span>
+    <span class="c"># we unquote this path exactly like a PEP 3333 server would</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">unquote_bytes_to_wsgi</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="c"># result will be a native string</span>
+    <span class="k">return</span> <span class="n">traversal_path_info</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="c"># result will be a tuple of unicode</span>
+</div>
+<span class="nd">@lru_cache</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">traversal_path_info</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Given``path``, return a tuple representing that path which can be</span>
+<span class="sd">    used to traverse a resource tree.  ``path`` is assumed to be an</span>
+<span class="sd">    already-URL-decoded ``str`` type as if it had come to us from an upstream</span>
+<span class="sd">    WSGI server as the ``PATH_INFO`` environ variable.</span>
+
+<span class="sd">    The ``path`` is first decoded to from its WSGI representation to Unicode;</span>
+<span class="sd">    it is decoded differently depending on platform:</span>
+
+<span class="sd">    - On Python 2, ``path`` is decoded to Unicode from bytes using the UTF-8</span>
+<span class="sd">      decoding directly; a :exc:`pyramid.exc.URLDecodeError` is raised if a the</span>
+<span class="sd">      URL cannot be decoded.</span>
+
+<span class="sd">    - On Python 3, as per the PEP 3333 spec, ``path`` is first encoded to</span>
+<span class="sd">      bytes using the Latin-1 encoding; the resulting set of bytes is</span>
+<span class="sd">      subsequently decoded to text using the UTF-8 encoding; a</span>
+<span class="sd">      :exc:`pyramid.exc.URLDecodeError` is raised if a the URL cannot be</span>
+<span class="sd">      decoded.</span>
+
+<span class="sd">    The ``path`` is split on slashes, creating a list of segments.  If a</span>
+<span class="sd">    segment name is empty or if it is ``.``, it is ignored.  If a segment</span>
+<span class="sd">    name is ``..``, the previous segment is deleted, and the ``..`` is</span>
+<span class="sd">    ignored.</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">    ``/``</span>
+
+<span class="sd">        ()</span>
+
+<span class="sd">    ``/foo/bar/baz``</span>
+
+<span class="sd">        (u&#39;foo&#39;, u&#39;bar&#39;, u&#39;baz&#39;)</span>
+
+<span class="sd">    ``foo/bar/baz``</span>
+
+<span class="sd">        (u&#39;foo&#39;, u&#39;bar&#39;, u&#39;baz&#39;)</span>
+
+<span class="sd">    ``/foo/bar/baz/``</span>
+
+<span class="sd">        (u&#39;foo&#39;, u&#39;bar&#39;, u&#39;baz&#39;)</span>
+
+<span class="sd">    ``/foo//bar//baz/``</span>
+
+<span class="sd">        (u&#39;foo&#39;, u&#39;bar&#39;, u&#39;baz&#39;)</span>
+
+<span class="sd">    ``/foo/bar/baz/..``</span>
+
+<span class="sd">        (u&#39;foo&#39;, u&#39;bar&#39;)</span>
+
+<span class="sd">    ``/my%20archives/hello``</span>
+
+<span class="sd">        (u&#39;my archives&#39;, u&#39;hello&#39;)</span>
+
+<span class="sd">    ``/archives/La%20Pe%C3%B1a``</span>
+
+<span class="sd">        (u&#39;archives&#39;, u&#39;&lt;unprintable unicode&gt;&#39;)</span>
+
+<span class="sd">    .. note::</span>
+
+<span class="sd">      This function does not generate the same type of tuples that</span>
+<span class="sd">      :func:`pyramid.traversal.resource_path_tuple` does.  In particular, the</span>
+<span class="sd">      leading empty string is not present in the tuple it returns, unlike tuples</span>
+<span class="sd">      returned by :func:`pyramid.traversal.resource_path_tuple`.  As a result,</span>
+<span class="sd">      tuples generated by ``traversal_path`` are not resolveable by the</span>
+<span class="sd">      :func:`pyramid.traversal.find_resource` API.  ``traversal_path`` is a</span>
+<span class="sd">      function mostly used by the internals of :app:`Pyramid` and by people</span>
+<span class="sd">      writing their own traversal machinery, as opposed to users writing</span>
+<span class="sd">      applications in :app:`Pyramid`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">decode_path_info</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="c"># result will be Unicode</span>
+    <span class="k">except</span> <span class="ne">UnicodeDecodeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">URLDecodeError</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">encoding</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">object</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">end</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">reason</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">split_path_info</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="c"># result will be tuple of Unicode</span>
+
+<span class="nd">@lru_cache</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">split_path_info</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="c"># suitable for splitting an already-unquoted-already-decoded (unicode)</span>
+    <span class="c"># path value</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span>
+    <span class="n">clean</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">segment</span> <span class="ow">in</span> <span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">segment</span> <span class="ow">or</span> <span class="n">segment</span> <span class="o">==</span> <span class="s">&#39;.&#39;</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">elif</span> <span class="n">segment</span> <span class="o">==</span> <span class="s">&#39;..&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">clean</span><span class="p">:</span>
+                <span class="k">del</span> <span class="n">clean</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">clean</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">segment</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">clean</span><span class="p">)</span>
+
+<span class="n">_segment_cache</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="n">quote_path_segment_doc</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot; </span><span class="se">\</span>
+<span class="s">Return a quoted representation of a &#39;path segment&#39; (such as</span>
+<span class="s">the string ``__name__`` attribute of a resource) as a string.  If the</span>
+<span class="s">``segment`` passed in is a unicode object, it is converted to a</span>
+<span class="s">UTF-8 string, then it is URL-quoted using Python&#39;s</span>
+<span class="s">``urllib.quote``.  If the ``segment`` passed in is a string, it is</span>
+<span class="s">URL-quoted using Python&#39;s :mod:`urllib.quote`.  If the segment</span>
+<span class="s">passed in is not a string or unicode object, an error will be</span>
+<span class="s">raised.  The return value of ``quote_path_segment`` is always a</span>
+<span class="s">string, never Unicode.</span>
+
+<span class="s">You may pass a string of characters that need not be encoded as</span>
+<span class="s">the ``safe`` argument to this function.  This corresponds to the</span>
+<span class="s">``safe`` argument to :mod:`urllib.quote`.</span>
+
+<span class="s">.. note::</span>
+
+<span class="s">   The return value for each segment passed to this</span>
+<span class="s">   function is cached in a module-scope dictionary for</span>
+<span class="s">   speed: the cached version is returned when possible</span>
+<span class="s">   rather than recomputing the quoted version.  No cache</span>
+<span class="s">   emptying is ever done for the lifetime of an</span>
+<span class="s">   application, however.  If you pass arbitrary</span>
+<span class="s">   user-supplied strings to this function (as opposed to</span>
+<span class="s">   some bounded set of values from a &#39;working set&#39; known to</span>
+<span class="s">   your application), it may become a memory leak.</span>
+<span class="s">&quot;&quot;&quot;</span>
+
+
+<span class="k">if</span> <span class="n">PY3</span><span class="p">:</span> <span class="c"># pragma: no cover</span>
+    <span class="c"># special-case on Python 2 for speed?  unchecked</span>
+    <span class="k">def</span> <span class="nf">quote_path_segment</span><span class="p">(</span><span class="n">segment</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; %s &quot;&quot;&quot;</span> <span class="o">%</span> <span class="n">quote_path_segment_doc</span>
+        <span class="c"># The bit of this code that deals with ``_segment_cache`` is an</span>
+        <span class="c"># optimization: we cache all the computation of URL path segments</span>
+        <span class="c"># in this module-scope dictionary with the original string (or</span>
+        <span class="c"># unicode value) as the key, so we can look it up later without</span>
+        <span class="c"># needing to reencode or re-url-quote it</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_segment_cache</span><span class="p">[(</span><span class="n">segment</span><span class="p">,</span> <span class="n">safe</span><span class="p">)]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">segment</span><span class="o">.</span><span class="n">__class__</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="n">text_type</span><span class="p">,</span> <span class="n">binary_type</span><span class="p">):</span>
+                <span class="n">segment</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">segment</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">url_quote</span><span class="p">(</span><span class="n">native_</span><span class="p">(</span><span class="n">segment</span><span class="p">,</span> <span class="s">&#39;utf-8&#39;</span><span class="p">),</span> <span class="n">safe</span><span class="p">)</span>
+            <span class="c"># we don&#39;t need a lock to mutate _segment_cache, as the below</span>
+            <span class="c"># will generate exactly one Python bytecode (STORE_SUBSCR)</span>
+            <span class="n">_segment_cache</span><span class="p">[(</span><span class="n">segment</span><span class="p">,</span> <span class="n">safe</span><span class="p">)]</span> <span class="o">=</span> <span class="n">result</span>
+            <span class="k">return</span> <span class="n">result</span>
+<span class="k">else</span><span class="p">:</span>
+<div class="viewcode-block" id="quote_path_segment"><a class="viewcode-back" href="../../api/traversal.html#pyramid.traversal.quote_path_segment">[docs]</a>    <span class="k">def</span> <span class="nf">quote_path_segment</span><span class="p">(</span><span class="n">segment</span><span class="p">,</span> <span class="n">safe</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; %s &quot;&quot;&quot;</span> <span class="o">%</span> <span class="n">quote_path_segment_doc</span>
+        <span class="c"># The bit of this code that deals with ``_segment_cache`` is an</span>
+        <span class="c"># optimization: we cache all the computation of URL path segments</span>
+        <span class="c"># in this module-scope dictionary with the original string (or</span>
+        <span class="c"># unicode value) as the key, so we can look it up later without</span>
+        <span class="c"># needing to reencode or re-url-quote it</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_segment_cache</span><span class="p">[(</span><span class="n">segment</span><span class="p">,</span> <span class="n">safe</span><span class="p">)]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">segment</span><span class="o">.</span><span class="n">__class__</span> <span class="ow">is</span> <span class="n">text_type</span><span class="p">:</span> <span class="c">#isinstance slighly slower (~15%)</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">url_quote</span><span class="p">(</span><span class="n">segment</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&#39;utf-8&#39;</span><span class="p">),</span> <span class="n">safe</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">url_quote</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">segment</span><span class="p">),</span> <span class="n">safe</span><span class="p">)</span>
+            <span class="c"># we don&#39;t need a lock to mutate _segment_cache, as the below</span>
+            <span class="c"># will generate exactly one Python bytecode (STORE_SUBSCR)</span>
+            <span class="n">_segment_cache</span><span class="p">[(</span><span class="n">segment</span><span class="p">,</span> <span class="n">safe</span><span class="p">)]</span> <span class="o">=</span> <span class="n">result</span>
+            <span class="k">return</span> <span class="n">result</span>
+    </div>
+<span class="n">slash</span> <span class="o">=</span> <span class="n">text_</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span>
+
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">ITraverser</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">ResourceTreeTraverser</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A resource tree traverser that should be used (for speed) when</span>
+<span class="sd">    every resource in the tree supplies a ``__name__`` and</span>
+<span class="sd">    ``__parent__`` attribute (ie. every resource in the tree is</span>
+<span class="sd">    :term:`location` aware) .&quot;&quot;&quot;</span>
+
+
+    <span class="n">VIEW_SELECTOR</span> <span class="o">=</span> <span class="s">&#39;@@&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">root</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">=</span> <span class="n">root</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="n">environ</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">environ</span>
+        <span class="n">matchdict</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">matchdict</span>
+
+        <span class="k">if</span> <span class="n">matchdict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+
+            <span class="n">path</span> <span class="o">=</span> <span class="n">matchdict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;traverse&#39;</span><span class="p">,</span> <span class="n">slash</span><span class="p">)</span> <span class="ow">or</span> <span class="n">slash</span>
+            <span class="k">if</span> <span class="n">is_nonstr_iter</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+                <span class="c"># this is a *traverse stararg (not a {traverse})</span>
+                <span class="c"># routing has already decoded these elements, so we just</span>
+                <span class="c"># need to join them</span>
+                <span class="n">path</span> <span class="o">=</span> <span class="s">&#39;/&#39;</span> <span class="o">+</span> <span class="n">slash</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="ow">or</span> <span class="n">slash</span>
+
+            <span class="n">subpath</span> <span class="o">=</span> <span class="n">matchdict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;subpath&#39;</span><span class="p">,</span> <span class="p">())</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">is_nonstr_iter</span><span class="p">(</span><span class="n">subpath</span><span class="p">):</span>
+                <span class="c"># this is not a *subpath stararg (just a {subpath})</span>
+                <span class="c"># routing has already decoded this string, so we just need</span>
+                <span class="c"># to split it</span>
+                <span class="n">subpath</span> <span class="o">=</span> <span class="n">split_path_info</span><span class="p">(</span><span class="n">subpath</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># this request did not match a route</span>
+            <span class="n">subpath</span> <span class="o">=</span> <span class="p">()</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c"># empty if mounted under a path in mod_wsgi, for example</span>
+                <span class="n">path</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">path_info</span> <span class="ow">or</span> <span class="n">slash</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="c"># if environ[&#39;PATH_INFO&#39;] is just not there</span>
+                <span class="n">path</span> <span class="o">=</span> <span class="n">slash</span>
+            <span class="k">except</span> <span class="ne">UnicodeDecodeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">URLDecodeError</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">encoding</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">object</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">end</span><span class="p">,</span>
+                                     <span class="n">e</span><span class="o">.</span><span class="n">reason</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">VH_ROOT_KEY</span> <span class="ow">in</span> <span class="n">environ</span><span class="p">:</span>
+            <span class="c"># HTTP_X_VHM_ROOT</span>
+            <span class="n">vroot_path</span> <span class="o">=</span> <span class="n">decode_path_info</span><span class="p">(</span><span class="n">environ</span><span class="p">[</span><span class="n">VH_ROOT_KEY</span><span class="p">])</span> 
+            <span class="n">vroot_tuple</span> <span class="o">=</span> <span class="n">split_path_info</span><span class="p">(</span><span class="n">vroot_path</span><span class="p">)</span>
+            <span class="n">vpath</span> <span class="o">=</span> <span class="n">vroot_path</span> <span class="o">+</span> <span class="n">path</span> <span class="c"># both will (must) be unicode or asciistr</span>
+            <span class="n">vroot_idx</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">vroot_tuple</span><span class="p">)</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">vroot_tuple</span> <span class="o">=</span> <span class="p">()</span>
+            <span class="n">vpath</span> <span class="o">=</span> <span class="n">path</span>
+            <span class="n">vroot_idx</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="n">root</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">root</span>
+        <span class="n">ob</span> <span class="o">=</span> <span class="n">vroot</span> <span class="o">=</span> <span class="n">root</span>
+
+        <span class="k">if</span> <span class="n">vpath</span> <span class="o">==</span> <span class="n">slash</span><span class="p">:</span> <span class="c"># invariant: vpath must not be empty</span>
+            <span class="c"># prevent a call to traversal_path if we know it&#39;s going</span>
+            <span class="c"># to return the empty tuple</span>
+            <span class="n">vpath_tuple</span> <span class="o">=</span> <span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># we do dead reckoning here via tuple slicing instead of</span>
+            <span class="c"># pushing and popping temporary lists for speed purposes</span>
+            <span class="c"># and this hurts readability; apologies</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">view_selector</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">VIEW_SELECTOR</span>
+            <span class="n">vpath_tuple</span> <span class="o">=</span> <span class="n">split_path_info</span><span class="p">(</span><span class="n">vpath</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">segment</span> <span class="ow">in</span> <span class="n">vpath_tuple</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">segment</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="n">view_selector</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;context&#39;</span><span class="p">:</span><span class="n">ob</span><span class="p">,</span>
+                            <span class="s">&#39;view_name&#39;</span><span class="p">:</span><span class="n">segment</span><span class="p">[</span><span class="mi">2</span><span class="p">:],</span>
+                            <span class="s">&#39;subpath&#39;</span><span class="p">:</span><span class="n">vpath_tuple</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">:],</span>
+                            <span class="s">&#39;traversed&#39;</span><span class="p">:</span><span class="n">vpath_tuple</span><span class="p">[:</span><span class="n">vroot_idx</span><span class="o">+</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span>
+                            <span class="s">&#39;virtual_root&#39;</span><span class="p">:</span><span class="n">vroot</span><span class="p">,</span>
+                            <span class="s">&#39;virtual_root_path&#39;</span><span class="p">:</span><span class="n">vroot_tuple</span><span class="p">,</span>
+                            <span class="s">&#39;root&#39;</span><span class="p">:</span><span class="n">root</span><span class="p">}</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">getitem</span> <span class="o">=</span> <span class="n">ob</span><span class="o">.</span><span class="n">__getitem__</span>
+                <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;context&#39;</span><span class="p">:</span><span class="n">ob</span><span class="p">,</span>
+                            <span class="s">&#39;view_name&#39;</span><span class="p">:</span><span class="n">segment</span><span class="p">,</span>
+                            <span class="s">&#39;subpath&#39;</span><span class="p">:</span><span class="n">vpath_tuple</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">:],</span>
+                            <span class="s">&#39;traversed&#39;</span><span class="p">:</span><span class="n">vpath_tuple</span><span class="p">[:</span><span class="n">vroot_idx</span><span class="o">+</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span>
+                            <span class="s">&#39;virtual_root&#39;</span><span class="p">:</span><span class="n">vroot</span><span class="p">,</span>
+                            <span class="s">&#39;virtual_root_path&#39;</span><span class="p">:</span><span class="n">vroot_tuple</span><span class="p">,</span>
+                            <span class="s">&#39;root&#39;</span><span class="p">:</span><span class="n">root</span><span class="p">}</span>
+
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="nb">next</span> <span class="o">=</span> <span class="n">getitem</span><span class="p">(</span><span class="n">segment</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;context&#39;</span><span class="p">:</span><span class="n">ob</span><span class="p">,</span>
+                            <span class="s">&#39;view_name&#39;</span><span class="p">:</span><span class="n">segment</span><span class="p">,</span>
+                            <span class="s">&#39;subpath&#39;</span><span class="p">:</span><span class="n">vpath_tuple</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">:],</span>
+                            <span class="s">&#39;traversed&#39;</span><span class="p">:</span><span class="n">vpath_tuple</span><span class="p">[:</span><span class="n">vroot_idx</span><span class="o">+</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span>
+                            <span class="s">&#39;virtual_root&#39;</span><span class="p">:</span><span class="n">vroot</span><span class="p">,</span>
+                            <span class="s">&#39;virtual_root_path&#39;</span><span class="p">:</span><span class="n">vroot_tuple</span><span class="p">,</span>
+                            <span class="s">&#39;root&#39;</span><span class="p">:</span><span class="n">root</span><span class="p">}</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">vroot_idx</span><span class="p">:</span>
+                    <span class="n">vroot</span> <span class="o">=</span> <span class="nb">next</span>
+                <span class="n">ob</span> <span class="o">=</span> <span class="nb">next</span>
+                <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;context&#39;</span><span class="p">:</span><span class="n">ob</span><span class="p">,</span> <span class="s">&#39;view_name&#39;</span><span class="p">:</span><span class="n">empty</span><span class="p">,</span> <span class="s">&#39;subpath&#39;</span><span class="p">:</span><span class="n">subpath</span><span class="p">,</span>
+                <span class="s">&#39;traversed&#39;</span><span class="p">:</span><span class="n">vpath_tuple</span><span class="p">,</span> <span class="s">&#39;virtual_root&#39;</span><span class="p">:</span><span class="n">vroot</span><span class="p">,</span>
+                <span class="s">&#39;virtual_root_path&#39;</span><span class="p">:</span><span class="n">vroot_tuple</span><span class="p">,</span> <span class="s">&#39;root&#39;</span><span class="p">:</span><span class="n">root</span><span class="p">}</span>
+
+<span class="n">ModelGraphTraverser</span> <span class="o">=</span> <span class="n">ResourceTreeTraverser</span> <span class="c"># b/w compat, not API, used in wild</span>
+
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">IResourceURL</span><span class="p">,</span> <span class="n">IContextURL</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">ResourceURL</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="n">vroot_varname</span> <span class="o">=</span> <span class="n">VH_ROOT_KEY</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resource</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="n">physical_path_tuple</span> <span class="o">=</span> <span class="n">resource_path_tuple</span><span class="p">(</span><span class="n">resource</span><span class="p">)</span>
+        <span class="n">physical_path</span> <span class="o">=</span> <span class="n">_join_path_tuple</span><span class="p">(</span><span class="n">physical_path_tuple</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">physical_path_tuple</span> <span class="o">!=</span> <span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">,):</span>
+            <span class="n">physical_path_tuple</span> <span class="o">=</span> <span class="n">physical_path_tuple</span> <span class="o">+</span> <span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">,)</span>
+            <span class="n">physical_path</span> <span class="o">=</span> <span class="n">physical_path</span> <span class="o">+</span> <span class="s">&#39;/&#39;</span>
+
+        <span class="n">virtual_path</span> <span class="o">=</span> <span class="n">physical_path</span>
+        <span class="n">virtual_path_tuple</span> <span class="o">=</span> <span class="n">physical_path_tuple</span>
+
+        <span class="n">environ</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">environ</span>
+        <span class="n">vroot_path</span> <span class="o">=</span> <span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vroot_varname</span><span class="p">)</span>
+
+        <span class="c"># if the physical path starts with the virtual root path, trim it out</span>
+        <span class="c"># of the virtual path</span>
+        <span class="k">if</span> <span class="n">vroot_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">vroot_path</span> <span class="o">=</span> <span class="n">vroot_path</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">vroot_path</span> <span class="ow">and</span> <span class="n">physical_path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">vroot_path</span><span class="p">):</span>
+                <span class="n">vroot_path_tuple</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">vroot_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">))</span>
+                <span class="n">numels</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">vroot_path_tuple</span><span class="p">)</span>
+                <span class="n">virtual_path_tuple</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">,)</span> <span class="o">+</span> <span class="n">physical_path_tuple</span><span class="p">[</span><span class="n">numels</span><span class="p">:]</span>
+                <span class="n">virtual_path</span> <span class="o">=</span> <span class="n">physical_path</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">vroot_path</span><span class="p">):]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">virtual_path</span> <span class="o">=</span> <span class="n">virtual_path</span>    <span class="c"># IResourceURL attr</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">physical_path</span> <span class="o">=</span> <span class="n">physical_path</span>  <span class="c"># IResourceURL attr</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">virtual_path_tuple</span> <span class="o">=</span> <span class="n">virtual_path_tuple</span> <span class="c"># IResourceURL attr (1.5)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">physical_path_tuple</span> <span class="o">=</span> <span class="n">physical_path_tuple</span> <span class="c"># IResourceURL attr (1.5)</span>
+
+        <span class="c"># bw compat for IContextURL methods</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resource</span> <span class="o">=</span> <span class="n">resource</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">context</span> <span class="o">=</span> <span class="n">resource</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">request</span> <span class="o">=</span> <span class="n">request</span>
+
+    <span class="c"># IContextURL method (deprecated in 1.3)</span>
+    <span class="k">def</span> <span class="nf">virtual_root</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">environ</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">environ</span>
+        <span class="n">vroot_varname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vroot_varname</span>
+        <span class="k">if</span> <span class="n">vroot_varname</span> <span class="ow">in</span> <span class="n">environ</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">find_resource</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="p">,</span> <span class="n">environ</span><span class="p">[</span><span class="n">vroot_varname</span><span class="p">])</span>
+        <span class="c"># shortcut instead of using find_root; we probably already</span>
+        <span class="c"># have it on the request</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">root</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">find_root</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="p">)</span>
+
+    <span class="c"># IContextURL method (deprecated in 1.3)</span>
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Generate a URL based on the :term:`lineage` of a :term:`resource`</span>
+<span class="sd">        object that is ``self.context``.  If any resource in the context</span>
+<span class="sd">        lineage has a Unicode name, it will be converted to a UTF-8 string</span>
+<span class="sd">        before being attached to the URL.  If a ``HTTP_X_VHM_ROOT`` key is</span>
+<span class="sd">        present in the WSGI environment, its value will be treated as a</span>
+<span class="sd">        &#39;virtual root path&#39;: the path of the URL generated by this will be</span>
+<span class="sd">        left-stripped of this virtual root path value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">local_url</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="p">,</span> <span class="s">&#39;__resource_url__&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">local_url</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">local_url</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="p">,</span>
+                <span class="p">{</span><span class="s">&#39;virtual_path&#39;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">virtual_path</span><span class="p">,</span>
+                 <span class="s">&#39;physical_path&#39;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">physical_path</span><span class="p">},</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="c"># allow it to punt by returning ``None``</span>
+                <span class="k">return</span> <span class="n">result</span>
+
+        <span class="n">app_url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">application_url</span> <span class="c"># never ends in a slash</span>
+        <span class="k">return</span> <span class="n">app_url</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">virtual_path</span>
+
+<span class="n">TraversalContextURL</span> <span class="o">=</span> <span class="n">ResourceURL</span> <span class="c"># deprecated as of 1.3</span>
+
+<span class="n">deprecated</span><span class="p">(</span>
+    <span class="s">&#39;TraversalContextURL&#39;</span><span class="p">,</span>
+    <span class="s">&#39;As of Pyramid 1.3 the, &quot;pyramid.traversal.TraversalContextURL&quot; class is &#39;</span>
+    <span class="s">&#39;scheduled to be removed.   Use the &#39;</span>
+    <span class="s">&#39;&quot;pyramid.config.Configurator.add_resource_url_adapter&quot; method to register &#39;</span>
+    <span class="s">&#39;a class that implements &quot;pyramid.interfaces.IResourceURL&quot; instead. &#39;</span>
+    <span class="s">&#39;See the &quot;What</span><span class="se">\&#39;</span><span class="s">s new In Pyramid 1.3&quot; document for a further description.&#39;</span>
+    <span class="p">)</span>
+
+<span class="nd">@lru_cache</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">_join_path_tuple</span><span class="p">(</span><span class="nb">tuple</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">tuple</span> <span class="ow">and</span> <span class="s">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">quote_path_segment</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">tuple</span><span class="p">])</span> <span class="ow">or</span> <span class="s">&#39;/&#39;</span>
+
+<span class="k">class</span> <span class="nc">DefaultRootFactory</span><span class="p">:</span>
+    <span class="n">__parent__</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">__name__</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="k">pass</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

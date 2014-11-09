@@ -1,0 +1,370 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Invoking a Subrequest &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="next" title="Using Hooks" href="hooks.html" />
+    <link rel="prev" title="Combining Traversal and URL Dispatch" href="hybrid.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="hooks.html" title="Using Hooks"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="hybrid.html" title="Combining Traversal and URL Dispatch"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="invoking-a-subrequest">
+<span id="subrequest-chapter"></span><span id="index-0"></span><h1>Invoking a Subrequest<a class="headerlink" href="#invoking-a-subrequest" title="Permalink to this headline">¶</a></h1>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 1.4.</span></p>
+</div>
+<p><span>Pyramid</span> allows you to invoke a subrequest at any point during the
+processing of a request.  Invoking a subrequest allows you to obtain a
+<a class="reference internal" href="../glossary.html#term-response"><em class="xref std std-term">response</em></a> object from a view callable within your <span>Pyramid</span>
+application while you're executing a different view callable within the same
+application.</p>
+<p>Here's an example application which uses a subrequest:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">wsgiref.simple_server</span> <span class="kn">import</span> <span class="n">make_server</span>
+<span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+<span class="kn">from</span> <span class="nn">pyramid.request</span> <span class="kn">import</span> <span class="n">Request</span>
+
+<span class="k">def</span> <span class="nf">view_one</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">subreq</span> <span class="o">=</span> <span class="n">Request</span><span class="o">.</span><span class="n">blank</span><span class="p">(</span><span class="s">&#39;/view_two&#39;</span><span class="p">)</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">invoke_subrequest</span><span class="p">(</span><span class="n">subreq</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">response</span>
+
+<span class="k">def</span> <span class="nf">view_two</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">request</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">body</span> <span class="o">=</span> <span class="s">&#39;This came from view_two&#39;</span>
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">response</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;one&#39;</span><span class="p">,</span> <span class="s">&#39;/view_one&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;two&#39;</span><span class="p">,</span> <span class="s">&#39;/view_two&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">view_one</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;one&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">view_two</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;two&#39;</span><span class="p">)</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+    <span class="n">server</span> <span class="o">=</span> <span class="n">make_server</span><span class="p">(</span><span class="s">&#39;0.0.0.0&#39;</span><span class="p">,</span> <span class="mi">8080</span><span class="p">,</span> <span class="n">app</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>When <tt class="docutils literal"><span class="pre">/view_one</span></tt> is visted in a browser, the text printed in the browser
+pane will be <tt class="docutils literal"><span class="pre">This</span> <span class="pre">came</span> <span class="pre">from</span> <span class="pre">view_two</span></tt>.  The <tt class="docutils literal"><span class="pre">view_one</span></tt> view used the
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.invoke_subrequest" title="pyramid.request.Request.invoke_subrequest"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.invoke_subrequest()</span></tt></a> API to obtain a response
+from another view (<tt class="docutils literal"><span class="pre">view_two</span></tt>) within the same application when it
+executed.  It did so by constructing a new request that had a URL that it
+knew would match the <tt class="docutils literal"><span class="pre">view_two</span></tt> view registration, and passed that new
+request along to <a class="reference internal" href="../api/request.html#pyramid.request.Request.invoke_subrequest" title="pyramid.request.Request.invoke_subrequest"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.invoke_subrequest()</span></tt></a>.  The
+<tt class="docutils literal"><span class="pre">view_two</span></tt> view callable was invoked, and it returned a response.  The
+<tt class="docutils literal"><span class="pre">view_one</span></tt> view callable then simply returned the response it obtained from
+the <tt class="docutils literal"><span class="pre">view_two</span></tt> view callable.</p>
+<p>Note that it doesn't matter if the view callable invoked via a subrequest
+actually returns a <em>literal</em> Response object.  Any view callable that uses a
+renderer or which returns an object that can be interpreted by a response
+adapter when found and invoked via
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.invoke_subrequest" title="pyramid.request.Request.invoke_subrequest"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.invoke_subrequest()</span></tt></a> will return a Response
+object:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">wsgiref.simple_server</span> <span class="kn">import</span> <span class="n">make_server</span>
+<span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+<span class="kn">from</span> <span class="nn">pyramid.request</span> <span class="kn">import</span> <span class="n">Request</span>
+
+<span class="k">def</span> <span class="nf">view_one</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">subreq</span> <span class="o">=</span> <span class="n">Request</span><span class="o">.</span><span class="n">blank</span><span class="p">(</span><span class="s">&#39;/view_two&#39;</span><span class="p">)</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">invoke_subrequest</span><span class="p">(</span><span class="n">subreq</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">response</span>
+
+<span class="k">def</span> <span class="nf">view_two</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&#39;This came from view_two&#39;</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;one&#39;</span><span class="p">,</span> <span class="s">&#39;/view_one&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;two&#39;</span><span class="p">,</span> <span class="s">&#39;/view_two&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">view_one</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;one&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">view_two</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;two&#39;</span><span class="p">,</span> <span class="n">renderer</span><span class="o">=</span><span class="s">&#39;string&#39;</span><span class="p">)</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+    <span class="n">server</span> <span class="o">=</span> <span class="n">make_server</span><span class="p">(</span><span class="s">&#39;0.0.0.0&#39;</span><span class="p">,</span> <span class="mi">8080</span><span class="p">,</span> <span class="n">app</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Even though the <tt class="docutils literal"><span class="pre">view_two</span></tt> view callable returned a string, it was invoked
+in such a way that the <tt class="docutils literal"><span class="pre">string</span></tt> renderer associated with the view
+registration that was found turned it into a &quot;real&quot; response object for
+consumption by <tt class="docutils literal"><span class="pre">view_one</span></tt>.</p>
+<p>Being able to unconditionally obtain a response object by invoking a view
+callable indirectly is the main advantage to using
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.invoke_subrequest" title="pyramid.request.Request.invoke_subrequest"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.invoke_subrequest()</span></tt></a> instead of simply importing
+a view callable and executing it directly.  Note that there's not much
+advantage to invoking a view using a subrequest if you <em>can</em> invoke a view
+callable directly.  Subrequests are slower and are less convenient if you
+actually do want just the literal information returned by a function that
+happens to be a view callable.</p>
+<p>Note that, by default, if a view callable invoked by a subrequest raises an
+exception, the exception will be raised to the caller of
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.invoke_subrequest" title="pyramid.request.Request.invoke_subrequest"><tt class="xref py py-meth docutils literal"><span class="pre">invoke_subrequest()</span></tt></a> even if you have a
+<a class="reference internal" href="../glossary.html#term-exception-view"><em class="xref std std-term">exception view</em></a> configured:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">wsgiref.simple_server</span> <span class="kn">import</span> <span class="n">make_server</span>
+<span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+<span class="kn">from</span> <span class="nn">pyramid.request</span> <span class="kn">import</span> <span class="n">Request</span>
+
+<span class="k">def</span> <span class="nf">view_one</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">subreq</span> <span class="o">=</span> <span class="n">Request</span><span class="o">.</span><span class="n">blank</span><span class="p">(</span><span class="s">&#39;/view_two&#39;</span><span class="p">)</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">invoke_subrequest</span><span class="p">(</span><span class="n">subreq</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">response</span>
+
+<span class="k">def</span> <span class="nf">view_two</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;foo&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">excview</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">request</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">body</span> <span class="o">=</span> <span class="n">b</span><span class="s">&#39;An exception was raised&#39;</span>
+    <span class="n">request</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">500</span>
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">response</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;one&#39;</span><span class="p">,</span> <span class="s">&#39;/view_one&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;two&#39;</span><span class="p">,</span> <span class="s">&#39;/view_two&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">view_one</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;one&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">view_two</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;two&#39;</span><span class="p">,</span> <span class="n">renderer</span><span class="o">=</span><span class="s">&#39;string&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">excview</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="ne">Exception</span><span class="p">)</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+    <span class="n">server</span> <span class="o">=</span> <span class="n">make_server</span><span class="p">(</span><span class="s">&#39;0.0.0.0&#39;</span><span class="p">,</span> <span class="mi">8080</span><span class="p">,</span> <span class="n">app</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>When we run the above code and visit <tt class="docutils literal"><span class="pre">/view_one</span></tt> in a browser, the
+<tt class="docutils literal"><span class="pre">excview</span></tt> <a class="reference internal" href="../glossary.html#term-exception-view"><em class="xref std std-term">exception view</em></a> will <em>not</em> be executed.  Instead, the call
+to <a class="reference internal" href="../api/request.html#pyramid.request.Request.invoke_subrequest" title="pyramid.request.Request.invoke_subrequest"><tt class="xref py py-meth docutils literal"><span class="pre">invoke_subrequest()</span></tt></a> will cause a
+<a class="reference external" href="http://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.4)"><tt class="xref py py-exc docutils literal"><span class="pre">ValueError</span></tt></a> exception to be raised and a response will never be
+generated.  We can change this behavior; how to do so is described below in
+our discussion of the <tt class="docutils literal"><span class="pre">use_tweens</span></tt> argument.</p>
+<p>The <a class="reference internal" href="../api/request.html#pyramid.request.Request.invoke_subrequest" title="pyramid.request.Request.invoke_subrequest"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.invoke_subrequest()</span></tt></a> API accepts two
+arguments: a positional argument <tt class="docutils literal"><span class="pre">request</span></tt> that must be provided, and
+<tt class="docutils literal"><span class="pre">use_tweens</span></tt> keyword argument that is optional; it defaults to <tt class="docutils literal"><span class="pre">False</span></tt>.</p>
+<p>The <tt class="docutils literal"><span class="pre">request</span></tt> object passed to the API must be an object that implements
+the Pyramid request interface (such as a <a class="reference internal" href="../api/request.html#pyramid.request.Request" title="pyramid.request.Request"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.request.Request</span></tt></a>
+instance).  If <tt class="docutils literal"><span class="pre">use_tweens</span></tt> is <tt class="docutils literal"><span class="pre">True</span></tt>, the request will be sent to the
+<a class="reference internal" href="../glossary.html#term-tween"><em class="xref std std-term">tween</em></a> in the tween stack closest to the request ingress.  If
+<tt class="docutils literal"><span class="pre">use_tweens</span></tt> is <tt class="docutils literal"><span class="pre">False</span></tt>, the request will be sent to the main router
+handler, and no tweens will be invoked.</p>
+<p>In the example above, the call to
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.invoke_subrequest" title="pyramid.request.Request.invoke_subrequest"><tt class="xref py py-meth docutils literal"><span class="pre">invoke_subrequest()</span></tt></a> will always raise an
+exception.  This is because it's using the default value for <tt class="docutils literal"><span class="pre">use_tweens</span></tt>,
+which is <tt class="docutils literal"><span class="pre">False</span></tt>.  You can pass <tt class="docutils literal"><span class="pre">use_tweens=True</span></tt> instead to ensure that
+it will convert an exception to a Response if an <a class="reference internal" href="../glossary.html#term-exception-view"><em class="xref std std-term">exception view</em></a> is
+configured instead of raising the exception.  This is because exception views
+are called by the exception view <a class="reference internal" href="../glossary.html#term-tween"><em class="xref std std-term">tween</em></a> as described in
+<a class="reference internal" href="views.html#exception-views"><em>Custom Exception Views</em></a> when any view raises an exception.</p>
+<p>We can cause the subrequest to be run through the tween stack by passing
+<tt class="docutils literal"><span class="pre">use_tweens=True</span></tt> to the call to
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.invoke_subrequest" title="pyramid.request.Request.invoke_subrequest"><tt class="xref py py-meth docutils literal"><span class="pre">invoke_subrequest()</span></tt></a>, like this:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">wsgiref.simple_server</span> <span class="kn">import</span> <span class="n">make_server</span>
+<span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+<span class="kn">from</span> <span class="nn">pyramid.request</span> <span class="kn">import</span> <span class="n">Request</span>
+
+<span class="k">def</span> <span class="nf">view_one</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">subreq</span> <span class="o">=</span> <span class="n">Request</span><span class="o">.</span><span class="n">blank</span><span class="p">(</span><span class="s">&#39;/view_two&#39;</span><span class="p">)</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">invoke_subrequest</span><span class="p">(</span><span class="n">subreq</span><span class="p">,</span> <span class="n">use_tweens</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">response</span>
+
+<span class="k">def</span> <span class="nf">view_two</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;foo&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">excview</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">request</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">body</span> <span class="o">=</span> <span class="n">b</span><span class="s">&#39;An exception was raised&#39;</span>
+    <span class="n">request</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">500</span>
+    <span class="k">return</span> <span class="n">request</span><span class="o">.</span><span class="n">response</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;one&#39;</span><span class="p">,</span> <span class="s">&#39;/view_one&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;two&#39;</span><span class="p">,</span> <span class="s">&#39;/view_two&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">view_one</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;one&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">view_two</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;two&#39;</span><span class="p">,</span> <span class="n">renderer</span><span class="o">=</span><span class="s">&#39;string&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">excview</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="ne">Exception</span><span class="p">)</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+    <span class="n">server</span> <span class="o">=</span> <span class="n">make_server</span><span class="p">(</span><span class="s">&#39;0.0.0.0&#39;</span><span class="p">,</span> <span class="mi">8080</span><span class="p">,</span> <span class="n">app</span><span class="p">)</span>
+    <span class="n">server</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>In the above case, the call to <tt class="docutils literal"><span class="pre">request.invoke_subrequest(subreq)</span></tt> will not
+raise an exception.  Instead, it will retrieve a &quot;500&quot; response from the
+attempted invocation of <tt class="docutils literal"><span class="pre">view_two</span></tt>, because the tween which invokes an
+exception view to generate a response is run, and therefore <tt class="docutils literal"><span class="pre">excview</span></tt> is
+executed.</p>
+<p>This is one of the major differences between specifying the
+<tt class="docutils literal"><span class="pre">use_tweens=True</span></tt> and <tt class="docutils literal"><span class="pre">use_tweens=False</span></tt> arguments to
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.invoke_subrequest" title="pyramid.request.Request.invoke_subrequest"><tt class="xref py py-meth docutils literal"><span class="pre">invoke_subrequest()</span></tt></a>.  <tt class="docutils literal"><span class="pre">use_tweens=True</span></tt> may
+also imply invoking transaction commit/abort for the logic executed in the
+subrequest if you've got <tt class="docutils literal"><span class="pre">pyramid_tm</span></tt> in the tween list, injecting debug
+HTML if you've got <tt class="docutils literal"><span class="pre">pyramid_debugtoolbar</span></tt> in the tween list, and other
+tween-related side effects as defined by your particular tween list.</p>
+<p>The <a class="reference internal" href="../api/request.html#pyramid.request.Request.invoke_subrequest" title="pyramid.request.Request.invoke_subrequest"><tt class="xref py py-meth docutils literal"><span class="pre">invoke_subrequest()</span></tt></a> function also
+unconditionally:</p>
+<ul class="simple">
+<li>manages the threadlocal stack so that
+<a class="reference internal" href="../api/threadlocal.html#pyramid.threadlocal.get_current_request" title="pyramid.threadlocal.get_current_request"><tt class="xref py py-func docutils literal"><span class="pre">get_current_request()</span></tt></a> and
+<a class="reference internal" href="../api/threadlocal.html#pyramid.threadlocal.get_current_registry" title="pyramid.threadlocal.get_current_registry"><tt class="xref py py-func docutils literal"><span class="pre">get_current_registry()</span></tt></a> work during a request
+(they will return the subrequest instead of the original request)</li>
+<li>Adds a <tt class="docutils literal"><span class="pre">registry</span></tt> attribute and a <tt class="docutils literal"><span class="pre">invoke_subrequest</span></tt> attribute (a
+callable) to the request object it's handed.</li>
+<li>sets request extensions (such as those added via
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_request_method" title="pyramid.config.Configurator.add_request_method"><tt class="xref py py-meth docutils literal"><span class="pre">add_request_method()</span></tt></a> or
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.set_request_property" title="pyramid.config.Configurator.set_request_property"><tt class="xref py py-meth docutils literal"><span class="pre">set_request_property()</span></tt></a>) on the subrequest
+object passed as <tt class="docutils literal"><span class="pre">request</span></tt></li>
+<li>causes a <a class="reference internal" href="../api/events.html#pyramid.events.NewRequest" title="pyramid.events.NewRequest"><tt class="xref py py-class docutils literal"><span class="pre">NewRequest</span></tt></a> event to be sent at the
+beginning of request processing.</li>
+<li>causes a <a class="reference internal" href="../api/events.html#pyramid.events.ContextFound" title="pyramid.events.ContextFound"><tt class="xref py py-class docutils literal"><span class="pre">ContextFound</span></tt></a> event to be sent when a
+context resource is found.</li>
+<li>Ensures that the user implied by the request passed has the necessary
+authorization to invoke view callable before calling it.</li>
+<li>Calls any <a class="reference internal" href="../glossary.html#term-response-callback"><em class="xref std std-term">response callback</em></a> functions defined within the subrequest's
+lifetime if a response is obtained from the Pyramid application.</li>
+<li>causes a <a class="reference internal" href="../api/events.html#pyramid.events.NewResponse" title="pyramid.events.NewResponse"><tt class="xref py py-class docutils literal"><span class="pre">NewResponse</span></tt></a> event to be sent if a response
+is obtained.</li>
+<li>Calls any <a class="reference internal" href="../glossary.html#term-finished-callback"><em class="xref std std-term">finished callback</em></a> functions defined within the subrequest's
+lifetime.</li>
+</ul>
+<p>The invocation of a subrequest has more or less exactly the same effect as
+the invocation of a request received by the Pyramid router from a web client
+when <tt class="docutils literal"><span class="pre">use_tweens=True</span></tt>.  When <tt class="docutils literal"><span class="pre">use_tweens=False</span></tt>, the tweens are skipped
+but all the other steps take place.</p>
+<p>It's a poor idea to use the original <tt class="docutils literal"><span class="pre">request</span></tt> object as an argument to
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.invoke_subrequest" title="pyramid.request.Request.invoke_subrequest"><tt class="xref py py-meth docutils literal"><span class="pre">invoke_subrequest()</span></tt></a>.  You should construct a
+new request instead as demonstrated in the above example, using
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.blank" title="pyramid.request.Request.blank"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.blank()</span></tt></a>.  Once you've constructed a request
+object, you'll need to massage it to match the view callable you'd like
+to be executed during the subrequest.  This can be done by adjusting the
+subrequest's URL, its headers, its request method, and other attributes.  The
+documentation for <a class="reference internal" href="../api/request.html#pyramid.request.Request" title="pyramid.request.Request"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.request.Request</span></tt></a> exposes the methods you
+should call and attributes you should set on the request you create to
+massage it into something that will actually match the view you'd like to
+call via a subrequest.</p>
+<p>We've demonstrated use of a subrequest from within a view callable, but you
+can use the <a class="reference internal" href="../api/request.html#pyramid.request.Request.invoke_subrequest" title="pyramid.request.Request.invoke_subrequest"><tt class="xref py py-meth docutils literal"><span class="pre">invoke_subrequest()</span></tt></a> API from
+within a tween or an event handler as well.  It's usually a poor idea to
+invoke <a class="reference internal" href="../api/request.html#pyramid.request.Request.invoke_subrequest" title="pyramid.request.Request.invoke_subrequest"><tt class="xref py py-meth docutils literal"><span class="pre">invoke_subrequest()</span></tt></a> from within a
+tween, because tweens already by definition have access to a function that
+will cause a subrequest (they are passed a <tt class="docutils literal"><span class="pre">handle</span></tt> function), but you can
+do it.  It's fine to invoke
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.invoke_subrequest" title="pyramid.request.Request.invoke_subrequest"><tt class="xref py py-meth docutils literal"><span class="pre">invoke_subrequest()</span></tt></a> from within an event
+handler, however.</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="hybrid.html"
+                        title="previous chapter">Combining Traversal and URL Dispatch</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="hooks.html"
+                        title="next chapter">Using Hooks</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="hooks.html" title="Using Hooks"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="hybrid.html" title="Combining Traversal and URL Dispatch"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

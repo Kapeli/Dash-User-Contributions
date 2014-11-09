@@ -1,0 +1,329 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>10: Handling Web Requests and Responses &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="up" title="Quick Tutorial for Pyramid" href="index.html" />
+    <link rel="next" title="11: Dispatching URLs To Views With Routing" href="routing.html" />
+    <link rel="prev" title="09: Organizing Views With View Classes" href="view_classes.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="routing.html" title="11: Dispatching URLs To Views With Routing"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="view_classes.html" title="09: Organizing Views With View Classes"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Quick Tutorial for Pyramid</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="handling-web-requests-and-responses">
+<span id="qtut-request-response"></span><h1>10: Handling Web Requests and Responses<a class="headerlink" href="#handling-web-requests-and-responses" title="Permalink to this headline">¶</a></h1>
+<p>Web applications handle incoming requests and return outgoing responses.
+Pyramid makes working with requests and responses convenient and
+reliable.</p>
+<div class="section" id="objectives">
+<h2>Objectives<a class="headerlink" href="#objectives" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Learn the background on Pyramid's choices for requests and responses</li>
+<li>Grab data out of the request</li>
+<li>Change information in the response headers</li>
+</ul>
+</div>
+<div class="section" id="background">
+<h2>Background<a class="headerlink" href="#background" title="Permalink to this headline">¶</a></h2>
+<p>Developing for the web means processing web requests. As this is a
+critical part of a web application, web developers need a robust,
+mature set of software for web requests and returning web
+responses.</p>
+<p>Pyramid has always fit nicely into the existing world of Python web
+development (virtual environments, packaging, scaffolding,
+first to embrace Python 3, etc.) For request handling, Pyramid turned
+to the well-regarded <a class="reference internal" href="../glossary.html#term-webob"><em class="xref std std-term">WebOb</em></a> Python library for request and
+response handling. In our example
+above, Pyramid hands <tt class="docutils literal"><span class="pre">hello_world</span></tt> a <tt class="docutils literal"><span class="pre">request</span></tt> that is
+<a class="reference internal" href="../narr/webob.html#webob-chapter"><em>based on WebOb</em></a>.</p>
+</div>
+<div class="section" id="steps">
+<h2>Steps<a class="headerlink" href="#steps" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">First we copy the results of the <tt class="docutils literal"><span class="pre">view_classes</span></tt> step:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span><span class="nb">cd</span> ..; cp -r view_classes request_response; <span class="nb">cd </span>request_response
+<span class="nv">$ $VENV</span>/bin/python setup.py develop
+</pre></div>
+</div>
+</li>
+<li><p class="first">Simplify the routes in <tt class="docutils literal"><span class="pre">request_response/tutorial/__init__.py</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">global_config</span><span class="p">,</span> <span class="o">**</span><span class="n">settings</span><span class="p">):</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">(</span><span class="n">settings</span><span class="o">=</span><span class="n">settings</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;home&#39;</span><span class="p">,</span> <span class="s">&#39;/&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;plain&#39;</span><span class="p">,</span> <span class="s">&#39;/plain&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="s">&#39;.views&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">We only need one view in <tt class="docutils literal"><span class="pre">request_response/tutorial/views.py</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.httpexceptions</span> <span class="kn">import</span> <span class="n">HTTPFound</span>
+<span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+<span class="kn">from</span> <span class="nn">pyramid.view</span> <span class="kn">import</span> <span class="n">view_config</span>
+
+
+<span class="k">class</span> <span class="nc">TutorialViews</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">request</span> <span class="o">=</span> <span class="n">request</span>
+
+    <span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;home&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">home</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">HTTPFound</span><span class="p">(</span><span class="n">location</span><span class="o">=</span><span class="s">&#39;/plain&#39;</span><span class="p">)</span>
+
+    <span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;plain&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">plain</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;No Name Provided&#39;</span><span class="p">)</span>
+
+        <span class="n">body</span> <span class="o">=</span> <span class="s">&#39;URL </span><span class="si">%s</span><span class="s"> with name: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span>
+            <span class="n">content_type</span><span class="o">=</span><span class="s">&#39;text/plain&#39;</span><span class="p">,</span>
+            <span class="n">body</span><span class="o">=</span><span class="n">body</span>
+        <span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Update the tests in <tt class="docutils literal"><span class="pre">request_response/tutorial/tests.py</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">unittest</span>
+
+<span class="kn">from</span> <span class="nn">pyramid</span> <span class="kn">import</span> <span class="n">testing</span>
+
+
+<span class="k">class</span> <span class="nc">TutorialViewTests</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">testing</span><span class="o">.</span><span class="n">setUp</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">tearDown</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">testing</span><span class="o">.</span><span class="n">tearDown</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">test_home</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">.views</span> <span class="kn">import</span> <span class="n">TutorialViews</span>
+
+        <span class="n">request</span> <span class="o">=</span> <span class="n">testing</span><span class="o">.</span><span class="n">DummyRequest</span><span class="p">()</span>
+        <span class="n">inst</span> <span class="o">=</span> <span class="n">TutorialViews</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">inst</span><span class="o">.</span><span class="n">home</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">status</span><span class="p">,</span> <span class="s">&#39;302 Found&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">test_plain_without_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">.views</span> <span class="kn">import</span> <span class="n">TutorialViews</span>
+
+        <span class="n">request</span> <span class="o">=</span> <span class="n">testing</span><span class="o">.</span><span class="n">DummyRequest</span><span class="p">()</span>
+        <span class="n">inst</span> <span class="o">=</span> <span class="n">TutorialViews</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">inst</span><span class="o">.</span><span class="n">plain</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertIn</span><span class="p">(</span><span class="n">b</span><span class="s">&#39;No Name Provided&#39;</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">test_plain_with_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">.views</span> <span class="kn">import</span> <span class="n">TutorialViews</span>
+
+        <span class="n">request</span> <span class="o">=</span> <span class="n">testing</span><span class="o">.</span><span class="n">DummyRequest</span><span class="p">()</span>
+        <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;Jane Doe&#39;</span>
+        <span class="n">inst</span> <span class="o">=</span> <span class="n">TutorialViews</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">inst</span><span class="o">.</span><span class="n">plain</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertIn</span><span class="p">(</span><span class="n">b</span><span class="s">&#39;Jane Doe&#39;</span><span class="p">,</span> <span class="n">response</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">TutorialFunctionalTests</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">tutorial</span> <span class="kn">import</span> <span class="n">main</span>
+
+        <span class="n">app</span> <span class="o">=</span> <span class="n">main</span><span class="p">({})</span>
+        <span class="kn">from</span> <span class="nn">webtest</span> <span class="kn">import</span> <span class="n">TestApp</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">testapp</span> <span class="o">=</span> <span class="n">TestApp</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">test_plain_without_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">testapp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;/plain&#39;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertIn</span><span class="p">(</span><span class="n">b</span><span class="s">&#39;No Name Provided&#39;</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">test_plain_with_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">testapp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;/plain?name=Jane%20Doe&#39;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertIn</span><span class="p">(</span><span class="n">b</span><span class="s">&#39;Jane Doe&#39;</span><span class="p">,</span> <span class="n">res</span><span class="o">.</span><span class="n">body</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Now run the tests:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ $VENV</span>/bin/nosetests tutorial
+</pre></div>
+</div>
+</li>
+<li><p class="first">Run your Pyramid application with:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ $VENV</span>/bin/pserve development.ini --reload
+</pre></div>
+</div>
+</li>
+<li><p class="first">Open <a class="reference external" href="http://localhost:6543/">http://localhost:6543/</a> in your browser. You will be
+redirected to <a class="reference external" href="http://localhost:6543/plain">http://localhost:6543/plain</a></p>
+</li>
+<li><p class="first">Open <a class="reference external" href="http://localhost:6543/plain?name=alice">http://localhost:6543/plain?name=alice</a> in your browser.</p>
+</li>
+</ol>
+</div>
+<div class="section" id="analysis">
+<h2>Analysis<a class="headerlink" href="#analysis" title="Permalink to this headline">¶</a></h2>
+<p>In this view class we have two routes and two views, with the first
+leading to the second by an HTTP redirect. Pyramid can
+<a class="reference internal" href="../narr/views.html#http-redirect"><em>generate redirects</em></a> by returning a
+special object from a view or raising a special exception.</p>
+<p>In this Pyramid view, we get the URL being visited from <tt class="docutils literal"><span class="pre">request.url</span></tt>.
+Also, if you visited <a class="reference external" href="http://localhost:6543/plain?name=alice">http://localhost:6543/plain?name=alice</a>,
+the name is included in the body of the response:</p>
+<div class="highlight-python"><div class="highlight"><pre>URL http://localhost:6543/plain?name=alice with name: alice
+</pre></div>
+</div>
+<p>Finally, we set the response's content type and body, then return the
+Response.</p>
+<p>We updated the unit and functional tests to prove that our code
+does the redirection, but also handles sending and not sending
+<tt class="docutils literal"><span class="pre">/plain?name</span></tt>.</p>
+</div>
+<div class="section" id="extra-credit">
+<h2>Extra Credit<a class="headerlink" href="#extra-credit" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>Could we also <tt class="docutils literal"><span class="pre">raise</span> <span class="pre">HTTPFound(location='/plain')</span></tt> instead of
+returning it?  If so, what's the difference?</li>
+</ol>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../narr/webob.html#webob-chapter"><em>Request and Response Objects</em></a>,
+<a class="reference internal" href="../narr/views.html#http-redirect"><em>generate redirects</em></a></p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">10: Handling Web Requests and Responses</a><ul>
+<li><a class="reference internal" href="#objectives">Objectives</a></li>
+<li><a class="reference internal" href="#background">Background</a></li>
+<li><a class="reference internal" href="#steps">Steps</a></li>
+<li><a class="reference internal" href="#analysis">Analysis</a></li>
+<li><a class="reference internal" href="#extra-credit">Extra Credit</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="view_classes.html"
+                        title="previous chapter">09: Organizing Views With View Classes</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="routing.html"
+                        title="next chapter">11: Dispatching URLs To Views With Routing</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="routing.html" title="11: Dispatching URLs To Views With Routing"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="view_classes.html" title="09: Organizing Views With View Classes"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" >Quick Tutorial for Pyramid</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>
