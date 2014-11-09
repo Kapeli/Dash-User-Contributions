@@ -1,0 +1,171 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.tweens &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.tweens</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">IExceptionViewClassifier</span><span class="p">,</span>
+    <span class="n">IRequest</span><span class="p">,</span>
+    <span class="n">IView</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">zope.interface</span> <span class="kn">import</span> <span class="n">providedBy</span>
+
+<div class="viewcode-block" id="excview_tween_factory"><a class="viewcode-back" href="../../api/tweens.html#pyramid.tweens.excview_tween_factory">[docs]</a><span class="k">def</span> <span class="nf">excview_tween_factory</span><span class="p">(</span><span class="n">handler</span><span class="p">,</span> <span class="n">registry</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A :term:`tween` factory which produces a tween that catches an</span>
+<span class="sd">    exception raised by downstream tweens (or the main Pyramid request</span>
+<span class="sd">    handler) and, if possible, converts it into a Response using an</span>
+<span class="sd">    :term:`exception view`.&quot;&quot;&quot;</span>
+    <span class="n">adapters</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">adapters</span>
+
+    <span class="k">def</span> <span class="nf">excview_tween</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+        <span class="n">attrs</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">__dict__</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">handler</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="c"># WARNING: do not assign the result of sys.exc_info() to a local</span>
+            <span class="c"># var here, doing so will cause a leak.  We used to actually</span>
+            <span class="c"># explicitly delete both &quot;exception&quot; and &quot;exc_info&quot; from ``attrs``</span>
+            <span class="c"># in a ``finally:`` clause below, but now we do not because these</span>
+            <span class="c"># attributes are useful to upstream tweens.  This actually still</span>
+            <span class="c"># apparently causes a reference cycle, but it is broken</span>
+            <span class="c"># successfully by the garbage collector (see</span>
+            <span class="c"># https://github.com/Pylons/pyramid/issues/1223).</span>
+            <span class="n">attrs</span><span class="p">[</span><span class="s">&#39;exc_info&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
+            <span class="n">attrs</span><span class="p">[</span><span class="s">&#39;exception&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">exc</span>
+            <span class="c"># clear old generated request.response, if any; it may</span>
+            <span class="c"># have been mutated by the view, and its state is not</span>
+            <span class="c"># sane (e.g. caching headers)</span>
+            <span class="k">if</span> <span class="s">&#39;response&#39;</span> <span class="ow">in</span> <span class="n">attrs</span><span class="p">:</span>
+                <span class="k">del</span> <span class="n">attrs</span><span class="p">[</span><span class="s">&#39;response&#39;</span><span class="p">]</span>
+            <span class="c"># we use .get instead of .__getitem__ below due to</span>
+            <span class="c"># https://github.com/Pylons/pyramid/issues/700</span>
+            <span class="n">request_iface</span> <span class="o">=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;request_iface&#39;</span><span class="p">,</span> <span class="n">IRequest</span><span class="p">)</span>
+            <span class="n">provides</span> <span class="o">=</span> <span class="n">providedBy</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+            <span class="n">for_</span> <span class="o">=</span> <span class="p">(</span><span class="n">IExceptionViewClassifier</span><span class="p">,</span> <span class="n">request_iface</span><span class="o">.</span><span class="n">combined</span><span class="p">,</span> <span class="n">provides</span><span class="p">)</span>
+            <span class="n">view_callable</span> <span class="o">=</span> <span class="n">adapters</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="n">for_</span><span class="p">,</span> <span class="n">IView</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">view_callable</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">view_callable</span><span class="p">(</span><span class="n">exc</span><span class="p">,</span> <span class="n">request</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">response</span>
+
+    <span class="k">return</span> <span class="n">excview_tween</span>
+</div>
+<span class="n">MAIN</span> <span class="o">=</span> <span class="s">&#39;MAIN&#39;</span>
+<span class="n">INGRESS</span> <span class="o">=</span> <span class="s">&#39;INGRESS&#39;</span>
+<span class="n">EXCVIEW</span> <span class="o">=</span> <span class="s">&#39;pyramid.tweens.excview_tween_factory&#39;</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

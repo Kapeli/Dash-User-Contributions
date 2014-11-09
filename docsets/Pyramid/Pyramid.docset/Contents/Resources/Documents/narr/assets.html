@@ -1,0 +1,585 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Static Assets &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="next" title="Request and Response Objects" href="webob.html" />
+    <link rel="prev" title="View Configuration" href="viewconfig.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="webob.html" title="Request and Response Objects"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="viewconfig.html" title="View Configuration"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="static-assets">
+<span id="assets-chapter"></span><span id="index-0"></span><h1>Static Assets<a class="headerlink" href="#static-assets" title="Permalink to this headline">¶</a></h1>
+<p>An <a class="reference internal" href="../glossary.html#term-asset"><em class="xref std std-term">asset</em></a> is any file contained within a Python <a class="reference internal" href="../glossary.html#term-package"><em class="xref std std-term">package</em></a> which
+is <em>not</em> a Python source code file.  For example, each of the following is an
+asset:</p>
+<ul class="simple">
+<li>a GIF image file contained within a Python package or contained within any
+subdirectory of a Python package.</li>
+<li>a CSS file contained within a Python package or contained within any
+subdirectory of a Python package.</li>
+<li>a JavaScript source file contained within a Python package or contained
+within any subdirectory of a Python package.</li>
+<li>A directory within a package that does not have an <tt class="docutils literal"><span class="pre">__init__.py</span></tt>
+in it (if it possessed an <tt class="docutils literal"><span class="pre">__init__.py</span></tt> it would <em>be</em> a package).</li>
+<li>a <a class="reference internal" href="../glossary.html#term-chameleon"><em class="xref std std-term">Chameleon</em></a> or <a class="reference internal" href="../glossary.html#term-mako"><em class="xref std std-term">Mako</em></a> template file contained within a Python
+package.</li>
+</ul>
+<p>The use of assets is quite common in most web development projects.  For
+example, when you create a <span>Pyramid</span> application using one of the
+available scaffolds, as described in <a class="reference internal" href="project.html#creating-a-project"><em>Creating the Project</em></a>, the
+directory representing the application contains a Python <a class="reference internal" href="../glossary.html#term-package"><em class="xref std std-term">package</em></a>.
+Within that Python package, there are directories full of files which are
+static assets.  For example, there's a <tt class="docutils literal"><span class="pre">static</span></tt> directory which contains
+<tt class="docutils literal"><span class="pre">.css</span></tt>, <tt class="docutils literal"><span class="pre">.js</span></tt>, and <tt class="docutils literal"><span class="pre">.gif</span></tt> files.  These asset files are delivered when
+a user visits an application URL.</p>
+<div class="section" id="understanding-asset-specifications">
+<span id="asset-specifications"></span><span id="index-1"></span><h2>Understanding Asset Specifications<a class="headerlink" href="#understanding-asset-specifications" title="Permalink to this headline">¶</a></h2>
+<p>Let's imagine you've created a <span>Pyramid</span> application that uses a
+<a class="reference internal" href="../glossary.html#term-chameleon"><em class="xref std std-term">Chameleon</em></a> ZPT template via the
+<a class="reference internal" href="../api/renderers.html#pyramid.renderers.render_to_response" title="pyramid.renderers.render_to_response"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.renderers.render_to_response()</span></tt></a> API.  For example, the
+application might address the asset using the <a class="reference internal" href="../glossary.html#term-asset-specification"><em class="xref std std-term">asset specification</em></a>
+<tt class="docutils literal"><span class="pre">myapp:templates/some_template.pt</span></tt> using that API within a <tt class="docutils literal"><span class="pre">views.py</span></tt>
+file inside a <tt class="docutils literal"><span class="pre">myapp</span></tt> package:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.renderers</span> <span class="kn">import</span> <span class="n">render_to_response</span>
+<span class="n">render_to_response</span><span class="p">(</span><span class="s">&#39;myapp:templates/some_template.pt&#39;</span><span class="p">,</span> <span class="p">{},</span> <span class="n">request</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>&quot;Under the hood&quot;, when this API is called, <span>Pyramid</span> attempts to make
+sense out of the string <tt class="docutils literal"><span class="pre">myapp:templates/some_template.pt</span></tt> provided by the
+developer.  This string is an <a class="reference internal" href="../glossary.html#term-asset-specification"><em class="xref std std-term">asset specification</em></a>.  It is composed of
+two parts:</p>
+<ul class="simple">
+<li>The <em>package name</em> (<tt class="docutils literal"><span class="pre">myapp</span></tt>)</li>
+<li>The <em>asset name</em> (<tt class="docutils literal"><span class="pre">templates/some_template.pt</span></tt>), relative to the package
+directory.</li>
+</ul>
+<p>The two parts are separated by the colon character.</p>
+<p><span>Pyramid</span> uses the Python <a class="reference internal" href="../glossary.html#term-pkg-resources"><em class="xref std std-term">pkg_resources</em></a> API to resolve the
+package name and asset name to an absolute (operating-system-specific) file
+name.  It eventually passes this resolved absolute filesystem path to the
+Chameleon templating engine, which then uses it to load, parse, and execute
+the template file.</p>
+<p>There is a second form of asset specification: a <em>relative</em> asset
+specification.  Instead of using an &quot;absolute&quot; asset specification which
+includes the package name, in certain circumstances you can omit the package
+name from the specification.  For example, you might be able to use
+<tt class="docutils literal"><span class="pre">templates/mytemplate.pt</span></tt> instead of <tt class="docutils literal"><span class="pre">myapp:templates/some_template.pt</span></tt>.
+Such asset specifications are usually relative to a &quot;current package.&quot;  The
+&quot;current package&quot; is usually the package which contains the code that <em>uses</em>
+the asset specification.  <span>Pyramid</span> APIs which accept relative asset
+specifications typically describe what the asset is relative to in their
+individual documentation.</p>
+</div>
+<div class="section" id="serving-static-assets">
+<span id="static-assets-section"></span><span id="index-2"></span><h2>Serving Static Assets<a class="headerlink" href="#serving-static-assets" title="Permalink to this headline">¶</a></h2>
+<p><span>Pyramid</span> makes it possible to serve up static asset files from a
+directory on a filesystem to an application user's browser.  Use the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_static_view()</span></tt></a> to instruct
+<span>Pyramid</span> to serve static assets such as JavaScript and CSS files. This
+mechanism makes a directory of static files available at a name relative to
+the application root URL, e.g. <tt class="docutils literal"><span class="pre">/static</span></tt> or as an external URL.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last"><a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_static_view()</span></tt></a> cannot serve a
+single file, nor can it serve a directory of static files directly
+relative to the root URL of a <span>Pyramid</span> application.  For these
+features, see <a class="reference internal" href="#advanced-static"><em>Advanced: Serving Static Assets Using a View Callable</em></a>.</p>
+</div>
+<p>Here's an example of a use of
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_static_view()</span></tt></a> that will serve files up
+from the <tt class="docutils literal"><span class="pre">/var/www/static</span></tt> directory of the computer which runs the
+<span>Pyramid</span> application as URLs beneath the <tt class="docutils literal"><span class="pre">/static</span></tt> URL prefix.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="c"># config is an instance of pyramid.config.Configurator</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_static_view</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;static&#39;</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s">&#39;/var/www/static&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The <tt class="docutils literal"><span class="pre">name</span></tt> represents a URL <em>prefix</em>.  In order for files that live in the
+<tt class="docutils literal"><span class="pre">path</span></tt> directory to be served, a URL that requests one of them must begin
+with that prefix.  In the example above, <tt class="docutils literal"><span class="pre">name</span></tt> is <tt class="docutils literal"><span class="pre">static</span></tt>, and <tt class="docutils literal"><span class="pre">path</span></tt>
+is <tt class="docutils literal"><span class="pre">/var/www/static</span></tt>.  In English, this means that you wish to serve the
+files that live in <tt class="docutils literal"><span class="pre">/var/www/static</span></tt> as sub-URLs of the <tt class="docutils literal"><span class="pre">/static</span></tt> URL
+prefix.  Therefore, the file <tt class="docutils literal"><span class="pre">/var/www/static/foo.css</span></tt> will be returned
+when the user visits your application's URL <tt class="docutils literal"><span class="pre">/static/foo.css</span></tt>.</p>
+<p>A static directory named at <tt class="docutils literal"><span class="pre">path</span></tt> may contain subdirectories recursively,
+and any subdirectories may hold files; these will be resolved by the static
+view as you would expect.  The <tt class="docutils literal"><span class="pre">Content-Type</span></tt> header returned by the static
+view for each particular type of file is dependent upon its file extension.</p>
+<p>By default, all files made available via
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_static_view()</span></tt></a> are accessible by
+completely anonymous users.  Simple authorization can be required, however.
+To protect a set of static files using a permission, in addition to passing
+the required <tt class="docutils literal"><span class="pre">name</span></tt> and <tt class="docutils literal"><span class="pre">path</span></tt> arguments, also pass the <tt class="docutils literal"><span class="pre">permission</span></tt>
+keyword argument to <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_static_view()</span></tt></a>.
+The value of the <tt class="docutils literal"><span class="pre">permission</span></tt> argument represents the <a class="reference internal" href="../glossary.html#term-permission"><em class="xref std std-term">permission</em></a>
+that the user must have relative to the current <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> when the
+static view is invoked.  A user will be required to possess this permission
+to view any of the files represented by <tt class="docutils literal"><span class="pre">path</span></tt> of the static view.  If your
+static assets must be protected by a more complex authorization scheme,
+see <a class="reference internal" href="#advanced-static"><em>Advanced: Serving Static Assets Using a View Callable</em></a>.</p>
+<p>Here's another example that uses an <a class="reference internal" href="../glossary.html#term-asset-specification"><em class="xref std std-term">asset specification</em></a> instead of an
+absolute path as the <tt class="docutils literal"><span class="pre">path</span></tt> argument.  To convince
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_static_view()</span></tt></a> to serve files up under
+the <tt class="docutils literal"><span class="pre">/static</span></tt> URL from the <tt class="docutils literal"><span class="pre">a/b/c/static</span></tt> directory of the Python package
+named <tt class="docutils literal"><span class="pre">some_package</span></tt>, we can use a fully qualified <a class="reference internal" href="../glossary.html#term-asset-specification"><em class="xref std std-term">asset
+specification</em></a> as the <tt class="docutils literal"><span class="pre">path</span></tt>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="c"># config is an instance of pyramid.config.Configurator</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_static_view</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;static&#39;</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s">&#39;some_package:a/b/c/static&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The <tt class="docutils literal"><span class="pre">path</span></tt> provided to <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_static_view()</span></tt></a>
+may be a fully qualified <a class="reference internal" href="../glossary.html#term-asset-specification"><em class="xref std std-term">asset specification</em></a> or an <em>absolute path</em>.</p>
+<p>Instead of representing a URL prefix, the <tt class="docutils literal"><span class="pre">name</span></tt> argument of a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_static_view()</span></tt></a> can alternately be a
+<em>URL</em>.  Each of examples we've seen so far have shown usage of the <tt class="docutils literal"><span class="pre">name</span></tt>
+argument as a URL prefix.  However, when <tt class="docutils literal"><span class="pre">name</span></tt> is a <em>URL</em>, static assets
+can be served from an external webserver.  In this mode, the <tt class="docutils literal"><span class="pre">name</span></tt> is used
+as the URL prefix when generating a URL using
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.static_url" title="pyramid.request.Request.static_url"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.static_url()</span></tt></a>.</p>
+<p>For example, <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_static_view()</span></tt></a> may
+be fed a <tt class="docutils literal"><span class="pre">name</span></tt> argument which is <tt class="docutils literal"><span class="pre">http://example.com/images</span></tt>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="c"># config is an instance of pyramid.config.Configurator</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_static_view</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;http://example.com/images&#39;</span><span class="p">,</span>
+                       <span class="n">path</span><span class="o">=</span><span class="s">&#39;mypackage:images&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Because <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_static_view()</span></tt></a> is provided with
+a <tt class="docutils literal"><span class="pre">name</span></tt> argument that is the URL <tt class="docutils literal"><span class="pre">http://example.com/images</span></tt>, subsequent
+calls to <a class="reference internal" href="../api/request.html#pyramid.request.Request.static_url" title="pyramid.request.Request.static_url"><tt class="xref py py-meth docutils literal"><span class="pre">static_url()</span></tt></a> with paths that start
+with the <tt class="docutils literal"><span class="pre">path</span></tt> argument passed to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_static_view()</span></tt></a> will generate a URL
+something like <tt class="docutils literal"><span class="pre">http://example.com/images/logo.png</span></tt>.  The external
+webserver listening on <tt class="docutils literal"><span class="pre">example.com</span></tt> must be itself configured to respond
+properly to such a request.  The <a class="reference internal" href="../api/request.html#pyramid.request.Request.static_url" title="pyramid.request.Request.static_url"><tt class="xref py py-meth docutils literal"><span class="pre">static_url()</span></tt></a>
+API is discussed in more detail later in this chapter.</p>
+<div class="section" id="generating-static-asset-urls">
+<span id="index-3"></span><span id="id1"></span><h3>Generating Static Asset URLs<a class="headerlink" href="#generating-static-asset-urls" title="Permalink to this headline">¶</a></h3>
+<p>When a <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_static_view()</span></tt></a> method is used to
+register a static asset directory, a special helper API named
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.static_url" title="pyramid.request.Request.static_url"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.static_url()</span></tt></a> can be used to generate the
+appropriate URL for an asset that lives in one of the directories named by
+the static registration <tt class="docutils literal"><span class="pre">path</span></tt> attribute.</p>
+<p>For example, let's assume you create a set of static declarations like so:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_static_view</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;static1&#39;</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s">&#39;mypackage:assets/1&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_static_view</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;static2&#39;</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s">&#39;mypackage:assets/2&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>These declarations create URL-accessible directories which have URLs that
+begin with <tt class="docutils literal"><span class="pre">/static1</span></tt> and <tt class="docutils literal"><span class="pre">/static2</span></tt>, respectively.  The assets in the
+<tt class="docutils literal"><span class="pre">assets/1</span></tt> directory of the <tt class="docutils literal"><span class="pre">mypackage</span></tt> package are consulted when a user
+visits a URL which begins with <tt class="docutils literal"><span class="pre">/static1</span></tt>, and the assets in the
+<tt class="docutils literal"><span class="pre">assets/2</span></tt> directory of the <tt class="docutils literal"><span class="pre">mypackage</span></tt> package are consulted when a user
+visits a URL which begins with <tt class="docutils literal"><span class="pre">/static2</span></tt>.</p>
+<p>You needn't generate the URLs to static assets &quot;by hand&quot; in such a
+configuration.  Instead, use the <a class="reference internal" href="../api/request.html#pyramid.request.Request.static_url" title="pyramid.request.Request.static_url"><tt class="xref py py-meth docutils literal"><span class="pre">static_url()</span></tt></a>
+API to generate them for you.  For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.renderers</span> <span class="kn">import</span> <span class="n">render_to_response</span>
+
+<span class="k">def</span> <span class="nf">my_view</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">css_url</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">static_url</span><span class="p">(</span><span class="s">&#39;mypackage:assets/1/foo.css&#39;</span><span class="p">)</span>
+    <span class="n">js_url</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">static_url</span><span class="p">(</span><span class="s">&#39;mypackage:assets/2/foo.js&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">render_to_response</span><span class="p">(</span><span class="s">&#39;templates/my_template.pt&#39;</span><span class="p">,</span>
+                              <span class="nb">dict</span><span class="p">(</span><span class="n">css_url</span><span class="o">=</span><span class="n">css_url</span><span class="p">,</span> <span class="n">js_url</span><span class="o">=</span><span class="n">js_url</span><span class="p">),</span>
+                              <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>If the request &quot;application URL&quot; of the running system is
+<tt class="docutils literal"><span class="pre">http://example.com</span></tt>, the <tt class="docutils literal"><span class="pre">css_url</span></tt> generated above would be:
+<tt class="docutils literal"><span class="pre">http://example.com/static1/foo.css</span></tt>.  The <tt class="docutils literal"><span class="pre">js_url</span></tt> generated
+above would be <tt class="docutils literal"><span class="pre">http://example.com/static2/foo.js</span></tt>.</p>
+<p>One benefit of using the <a class="reference internal" href="../api/request.html#pyramid.request.Request.static_url" title="pyramid.request.Request.static_url"><tt class="xref py py-meth docutils literal"><span class="pre">static_url()</span></tt></a> function
+rather than constructing static URLs &quot;by hand&quot; is that if you need to change
+the <tt class="docutils literal"><span class="pre">name</span></tt> of a static URL declaration, the generated URLs will continue to
+resolve properly after the rename.</p>
+<p>URLs may also be generated by <a class="reference internal" href="../api/request.html#pyramid.request.Request.static_url" title="pyramid.request.Request.static_url"><tt class="xref py py-meth docutils literal"><span class="pre">static_url()</span></tt></a> to
+static assets that live <em>outside</em> the <span>Pyramid</span> application.  This will
+happen when the <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_static_view()</span></tt></a> API
+associated with the path fed to <a class="reference internal" href="../api/request.html#pyramid.request.Request.static_url" title="pyramid.request.Request.static_url"><tt class="xref py py-meth docutils literal"><span class="pre">static_url()</span></tt></a>
+is a <em>URL</em> instead of a view name.  For example, the <tt class="docutils literal"><span class="pre">name</span></tt> argument may be
+<tt class="docutils literal"><span class="pre">http://example.com</span></tt> while the <tt class="docutils literal"><span class="pre">path</span></tt> given may be
+<tt class="docutils literal"><span class="pre">mypackage:images</span></tt>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_static_view</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;http://example.com/images&#39;</span><span class="p">,</span>
+                       <span class="n">path</span><span class="o">=</span><span class="s">&#39;mypackage:images&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Under such a configuration, the URL generated by <tt class="docutils literal"><span class="pre">static_url</span></tt> for
+assets which begin with <tt class="docutils literal"><span class="pre">mypackage:images</span></tt> will be prefixed with
+<tt class="docutils literal"><span class="pre">http://example.com/images</span></tt>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">request</span><span class="o">.</span><span class="n">static_url</span><span class="p">(</span><span class="s">&#39;mypackage:images/logo.png&#39;</span><span class="p">)</span>
+<span class="c"># -&gt; http://example.com/images/logo.png</span>
+</pre></div>
+</td></tr></table></div>
+<p>Using <a class="reference internal" href="../api/request.html#pyramid.request.Request.static_url" title="pyramid.request.Request.static_url"><tt class="xref py py-meth docutils literal"><span class="pre">static_url()</span></tt></a> in conjunction with a
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_static_view()</span></tt></a> makes it possible
+to put static media on a separate webserver during production (if the
+<tt class="docutils literal"><span class="pre">name</span></tt> argument to <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_static_view()</span></tt></a> is
+a URL), while keeping static media package-internal and served by the
+development webserver during development (if the <tt class="docutils literal"><span class="pre">name</span></tt> argument to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_static_view()</span></tt></a> is a URL prefix).  To
+create such a circumstance, we suggest using the
+<a class="reference internal" href="../api/registry.html#pyramid.registry.Registry.settings" title="pyramid.registry.Registry.settings"><tt class="xref py py-attr docutils literal"><span class="pre">pyramid.registry.Registry.settings</span></tt></a> API in conjunction with a setting
+in the application <tt class="docutils literal"><span class="pre">.ini</span></tt> file named <tt class="docutils literal"><span class="pre">media_location</span></tt>.  Then set the
+value of <tt class="docutils literal"><span class="pre">media_location</span></tt> to either a prefix or a URL depending on whether
+the application is being run in development or in production (use a different
+<tt class="docutils literal"><span class="pre">.ini</span></tt> file for production than you do for development).  This is just a
+suggestion for a pattern; any setting name other than <tt class="docutils literal"><span class="pre">media_location</span></tt>
+could be used.</p>
+</div>
+</div>
+<div class="section" id="advanced-serving-static-assets-using-a-view-callable">
+<span id="advanced-static"></span><span id="index-4"></span><h2>Advanced: Serving Static Assets Using a View Callable<a class="headerlink" href="#advanced-serving-static-assets-using-a-view-callable" title="Permalink to this headline">¶</a></h2>
+<p>For more flexibility, static assets can be served by a <a class="reference internal" href="../glossary.html#term-view-callable"><em class="xref std std-term">view callable</em></a>
+which you register manually.  For example, if you're using <a class="reference internal" href="../glossary.html#term-url-dispatch"><em class="xref std std-term">URL
+dispatch</em></a>, you may want static assets to only be available as a fallback if
+no previous route matches.  Alternately, you might like to serve a particular
+static asset manually, because its download requires authentication.</p>
+<p>Note that you cannot use the <a class="reference internal" href="../api/request.html#pyramid.request.Request.static_url" title="pyramid.request.Request.static_url"><tt class="xref py py-meth docutils literal"><span class="pre">static_url()</span></tt></a> API
+to generate URLs against assets made accessible by registering a custom
+static view.</p>
+<div class="section" id="root-relative-custom-static-view-url-dispatch-only">
+<h3>Root-Relative Custom Static View (URL Dispatch Only)<a class="headerlink" href="#root-relative-custom-static-view-url-dispatch-only" title="Permalink to this headline">¶</a></h3>
+<p>The <a class="reference internal" href="../api/static.html#pyramid.static.static_view" title="pyramid.static.static_view"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.static.static_view</span></tt></a> helper class generates a Pyramid view
+callable.  This view callable can serve static assets from a directory.  An
+instance of this class is actually used by the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_static_view" title="pyramid.config.Configurator.add_static_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_static_view()</span></tt></a> configuration method, so
+its behavior is almost exactly the same once it's configured.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">The following example <em>will not work</em> for applications that use
+<a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a>, it will only work if you use <a class="reference internal" href="../glossary.html#term-url-dispatch"><em class="xref std std-term">URL dispatch</em></a>
+exclusively.  The root-relative route we'll be registering will always be
+matched before traversal takes place, subverting any views registered via
+<tt class="docutils literal"><span class="pre">add_view</span></tt> (at least those without a <tt class="docutils literal"><span class="pre">route_name</span></tt>).  A
+<a class="reference internal" href="../api/static.html#pyramid.static.static_view" title="pyramid.static.static_view"><tt class="xref py py-class docutils literal"><span class="pre">static_view</span></tt></a> static view cannot be made
+root-relative when you use traversal unless it's registered as a
+<a class="reference internal" href="../glossary.html#term-not-found-view"><em class="xref std std-term">Not Found View</em></a>.</p>
+</div>
+<p>To serve files within a directory located on your filesystem at
+<tt class="docutils literal"><span class="pre">/path/to/static/dir</span></tt> as the result of a &quot;catchall&quot; route hanging from the
+root that exists at the end of your routing table, create an instance of the
+<a class="reference internal" href="../api/static.html#pyramid.static.static_view" title="pyramid.static.static_view"><tt class="xref py py-class docutils literal"><span class="pre">static_view</span></tt></a> class inside a <tt class="docutils literal"><span class="pre">static.py</span></tt> file in
+your application root as below.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.static</span> <span class="kn">import</span> <span class="n">static_view</span>
+<span class="n">static_view</span> <span class="o">=</span> <span class="n">static_view</span><span class="p">(</span><span class="s">&#39;/path/to/static/dir&#39;</span><span class="p">,</span> <span class="n">use_subpath</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">For better cross-system flexibility, use an <a class="reference internal" href="../glossary.html#term-asset-specification"><em class="xref std std-term">asset
+specification</em></a> as the argument to <a class="reference internal" href="../api/static.html#pyramid.static.static_view" title="pyramid.static.static_view"><tt class="xref py py-class docutils literal"><span class="pre">static_view</span></tt></a>
+instead of a physical absolute filesystem path, e.g. <tt class="docutils literal"><span class="pre">mypackage:static</span></tt>
+instead of <tt class="docutils literal"><span class="pre">/path/to/mypackage/static</span></tt>.</p>
+</div>
+<p>Subsequently, you may wire the files that are served by this view up to be
+accessible as <tt class="docutils literal"><span class="pre">/&lt;filename&gt;</span></tt> using a configuration method in your
+application's startup code.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5</pre></div></td><td class="code"><div class="highlight"><pre><span class="c"># .. every other add_route declaration should come</span>
+<span class="c"># before this one, as it will, by default, catch all requests</span>
+
+<span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;catchall_static&#39;</span><span class="p">,</span> <span class="s">&#39;/*subpath&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;myapp.static.static_view&#39;</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;catchall_static&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The special name <tt class="docutils literal"><span class="pre">*subpath</span></tt> above is used by the
+<a class="reference internal" href="../api/static.html#pyramid.static.static_view" title="pyramid.static.static_view"><tt class="xref py py-class docutils literal"><span class="pre">static_view</span></tt></a> view callable to signify the path of the
+file relative to the directory you're serving.</p>
+</div>
+<div class="section" id="registering-a-view-callable-to-serve-a-static-asset">
+<h3>Registering A View Callable to Serve a &quot;Static&quot; Asset<a class="headerlink" href="#registering-a-view-callable-to-serve-a-static-asset" title="Permalink to this headline">¶</a></h3>
+<p>You can register a simple view callable to serve a single static asset.  To
+do so, do things &quot;by hand&quot;.  First define the view callable.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">FileResponse</span>
+
+<span class="k">def</span> <span class="nf">favicon_view</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">here</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">)</span>
+    <span class="n">icon</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">here</span><span class="p">,</span> <span class="s">&#39;static&#39;</span><span class="p">,</span> <span class="s">&#39;favicon.ico&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">FileResponse</span><span class="p">(</span><span class="n">icon</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The above bit of code within <tt class="docutils literal"><span class="pre">favicon_view</span></tt> computes &quot;here&quot;, which is a
+path relative to the Python file in which the function is defined.  It then
+creates a <a class="reference internal" href="../api/response.html#pyramid.response.FileResponse" title="pyramid.response.FileResponse"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.response.FileResponse</span></tt></a> using the file path as the
+response's <tt class="docutils literal"><span class="pre">path</span></tt> argument and the request as the response's <tt class="docutils literal"><span class="pre">request</span></tt>
+argument.  <a class="reference internal" href="../api/response.html#pyramid.response.FileResponse" title="pyramid.response.FileResponse"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.response.FileResponse</span></tt></a> will serve the file as
+quickly as possible when it's used this way.  It makes sure to set the right
+content length and content_type too based on the file extension of the file
+you pass.</p>
+<p>You might register such a view via configuration as a view callable that
+should be called as the result of a traversal:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;myapp.views.favicon_view&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;favicon.ico&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Or you might register it to be the view callable for a particular route:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;favicon&#39;</span><span class="p">,</span> <span class="s">&#39;/favicon.ico&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;myapp.views.favicon_view&#39;</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;favicon&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Because this is a simple view callable, it can be protected with a
+<a class="reference internal" href="../glossary.html#term-permission"><em class="xref std std-term">permission</em></a> or can be configured to respond under different
+circumstances using <a class="reference internal" href="../glossary.html#term-view-predicate"><em class="xref std std-term">view predicate</em></a> arguments.</p>
+</div>
+</div>
+<div class="section" id="overriding-assets">
+<span id="overriding-assets-section"></span><span id="index-5"></span><h2>Overriding Assets<a class="headerlink" href="#overriding-assets" title="Permalink to this headline">¶</a></h2>
+<p>It can often be useful to override specific assets from &quot;outside&quot; a given
+<span>Pyramid</span> application.  For example, you may wish to reuse an existing
+<span>Pyramid</span> application more or less unchanged.  However, some specific
+template file owned by the application might have inappropriate HTML, or some
+static asset (such as a logo file or some CSS file) might not be appropriate.
+You <em>could</em> just fork the application entirely, but it's often more
+convenient to just override the assets that are inappropriate and reuse the
+application &quot;as is&quot;.  This is particularly true when you reuse some &quot;core&quot;
+application over and over again for some set of customers (such as a CMS
+application, or some bug tracking application), and you want to make
+arbitrary visual modifications to a particular application deployment without
+forking the underlying code.</p>
+<p>To this end, <span>Pyramid</span> contains a feature that makes it possible to
+&quot;override&quot; one asset with one or more other assets.  In support of this
+feature, a <a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">Configurator</em></a> API exists named
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.override_asset" title="pyramid.config.Configurator.override_asset"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.override_asset()</span></tt></a>.  This API allows you to
+<em>override</em> the following kinds of assets defined in any Python package:</p>
+<ul class="simple">
+<li>Individual template files.</li>
+<li>A directory containing multiple template files.</li>
+<li>Individual static files served up by an instance of the
+<tt class="docutils literal"><span class="pre">pyramid.static.static_view</span></tt> helper class.</li>
+<li>A directory of static files served up by an instance of the
+<tt class="docutils literal"><span class="pre">pyramid.static.static_view</span></tt> helper class.</li>
+<li>Any other asset (or set of assets) addressed by code that uses the
+setuptools <a class="reference internal" href="../glossary.html#term-pkg-resources"><em class="xref std std-term">pkg_resources</em></a> API.</li>
+</ul>
+<div class="section" id="the-override-asset-api">
+<span id="override-asset"></span><span id="index-6"></span><h3>The <tt class="docutils literal"><span class="pre">override_asset</span></tt> API<a class="headerlink" href="#the-override-asset-api" title="Permalink to this headline">¶</a></h3>
+<p>An individual call to <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.override_asset" title="pyramid.config.Configurator.override_asset"><tt class="xref py py-meth docutils literal"><span class="pre">override_asset()</span></tt></a>
+can override a single asset.  For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">override_asset</span><span class="p">(</span>
+    <span class="n">to_override</span><span class="o">=</span><span class="s">&#39;some.package:templates/mytemplate.pt&#39;</span><span class="p">,</span>
+    <span class="n">override_with</span><span class="o">=</span><span class="s">&#39;another.package:othertemplates/anothertemplate.pt&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The string value passed to both <tt class="docutils literal"><span class="pre">to_override</span></tt> and <tt class="docutils literal"><span class="pre">override_with</span></tt> sent to
+the <tt class="docutils literal"><span class="pre">override_asset</span></tt> API is called an <a class="reference internal" href="../glossary.html#term-asset-specification"><em class="xref std std-term">asset specification</em></a>.  The
+colon separator in a specification separates the <em>package name</em> from the
+<em>asset name</em>.  The colon and the following asset name are optional.  If they
+are not specified, the override attempts to resolve every lookup into a
+package from the directory of another package.  For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">override_asset</span><span class="p">(</span><span class="n">to_override</span><span class="o">=</span><span class="s">&#39;some.package&#39;</span><span class="p">,</span>
+                      <span class="n">override_with</span><span class="o">=</span><span class="s">&#39;another.package&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Individual subdirectories within a package can also be overridden:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">override_asset</span><span class="p">(</span><span class="n">to_override</span><span class="o">=</span><span class="s">&#39;some.package:templates/&#39;</span><span class="p">,</span>
+                      <span class="n">override_with</span><span class="o">=</span><span class="s">&#39;another.package:othertemplates/&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>If you wish to override a directory with another directory, you <em>must</em>
+make sure to attach the slash to the end of both the <tt class="docutils literal"><span class="pre">to_override</span></tt>
+specification and the <tt class="docutils literal"><span class="pre">override_with</span></tt> specification.  If you fail to
+attach a slash to the end of a specification that points to a directory,
+you will get unexpected results.</p>
+<p>You cannot override a directory specification with a file specification, and
+vice versa: a startup error will occur if you try.  You cannot override an
+asset with itself: a startup error will occur if you try.</p>
+<p>Only individual <em>package</em> assets may be overridden.  Overrides will not
+traverse through subpackages within an overridden package.  This means that
+if you want to override assets for both <tt class="docutils literal"><span class="pre">some.package:templates</span></tt>, and
+<tt class="docutils literal"><span class="pre">some.package.views:templates</span></tt>, you will need to register two overrides.</p>
+<p>The package name in a specification may start with a dot, meaning that
+the package is relative to the package in which the configuration
+construction file resides (or the <tt class="docutils literal"><span class="pre">package</span></tt> argument to the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator" title="pyramid.config.Configurator"><tt class="xref py py-class docutils literal"><span class="pre">Configurator</span></tt></a> class construction).
+For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">override_asset</span><span class="p">(</span><span class="n">to_override</span><span class="o">=</span><span class="s">&#39;.subpackage:templates/&#39;</span><span class="p">,</span>
+                      <span class="n">override_with</span><span class="o">=</span><span class="s">&#39;another.package:templates/&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Multiple calls to <tt class="docutils literal"><span class="pre">override_asset</span></tt> which name a shared <tt class="docutils literal"><span class="pre">to_override</span></tt> but
+a different <tt class="docutils literal"><span class="pre">override_with</span></tt> specification can be &quot;stacked&quot; to form a search
+path.  The first asset that exists in the search path will be used; if no
+asset exists in the override path, the original asset is used.</p>
+<p>Asset overrides can actually override assets other than templates and static
+files.  Any software which uses the
+<tt class="xref py py-func docutils literal"><span class="pre">pkg_resources.get_resource_filename()</span></tt>,
+<tt class="xref py py-func docutils literal"><span class="pre">pkg_resources.get_resource_stream()</span></tt> or
+<tt class="xref py py-func docutils literal"><span class="pre">pkg_resources.get_resource_string()</span></tt> APIs will obtain an overridden file
+when an override is used.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Static Assets</a><ul>
+<li><a class="reference internal" href="#understanding-asset-specifications">Understanding Asset Specifications</a></li>
+<li><a class="reference internal" href="#serving-static-assets">Serving Static Assets</a><ul>
+<li><a class="reference internal" href="#generating-static-asset-urls">Generating Static Asset URLs</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#advanced-serving-static-assets-using-a-view-callable">Advanced: Serving Static Assets Using a View Callable</a><ul>
+<li><a class="reference internal" href="#root-relative-custom-static-view-url-dispatch-only">Root-Relative Custom Static View (URL Dispatch Only)</a></li>
+<li><a class="reference internal" href="#registering-a-view-callable-to-serve-a-static-asset">Registering A View Callable to Serve a &quot;Static&quot; Asset</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#overriding-assets">Overriding Assets</a><ul>
+<li><a class="reference internal" href="#the-override-asset-api">The <tt class="docutils literal"><span class="pre">override_asset</span></tt> API</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="viewconfig.html"
+                        title="previous chapter">View Configuration</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="webob.html"
+                        title="next chapter">Request and Response Objects</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="webob.html" title="Request and Response Objects"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="viewconfig.html" title="View Configuration"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

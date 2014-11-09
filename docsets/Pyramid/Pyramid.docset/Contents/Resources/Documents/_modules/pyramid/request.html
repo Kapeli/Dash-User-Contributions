@@ -1,0 +1,428 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.request &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.request</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">json</span>
+
+<span class="kn">from</span> <span class="nn">zope.interface</span> <span class="kn">import</span> <span class="n">implementer</span>
+<span class="kn">from</span> <span class="nn">zope.interface.interface</span> <span class="kn">import</span> <span class="n">InterfaceClass</span>
+
+<span class="kn">from</span> <span class="nn">webob</span> <span class="kn">import</span> <span class="n">BaseRequest</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">IRequest</span><span class="p">,</span>
+    <span class="n">IResponse</span><span class="p">,</span>
+    <span class="n">ISessionFactory</span><span class="p">,</span>
+    <span class="n">IResponseFactory</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.compat</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">text_</span><span class="p">,</span>
+    <span class="n">bytes_</span><span class="p">,</span>
+    <span class="n">native_</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.decorator</span> <span class="kn">import</span> <span class="n">reify</span>
+<span class="kn">from</span> <span class="nn">pyramid.i18n</span> <span class="kn">import</span> <span class="n">LocalizerRequestMixin</span>
+<span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+<span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">AuthenticationAPIMixin</span><span class="p">,</span>
+    <span class="n">AuthorizationAPIMixin</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="kn">from</span> <span class="nn">pyramid.url</span> <span class="kn">import</span> <span class="n">URLMethodsMixin</span>
+<span class="kn">from</span> <span class="nn">pyramid.util</span> <span class="kn">import</span> <span class="n">InstancePropertyMixin</span>
+
+<span class="k">class</span> <span class="nc">TemplateContext</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+<span class="k">class</span> <span class="nc">CallbackMethodsMixin</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="n">response_callbacks</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="n">finished_callbacks</span> <span class="o">=</span> <span class="p">()</span>
+    <span class="k">def</span> <span class="nf">add_response_callback</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">callback</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a callback to the set of callbacks to be called by the</span>
+<span class="sd">        :term:`router` at a point after a :term:`response` object is</span>
+<span class="sd">        successfully created.  :app:`Pyramid` does not have a</span>
+<span class="sd">        global response object: this functionality allows an</span>
+<span class="sd">        application to register an action to be performed against the</span>
+<span class="sd">        response once one is created.</span>
+
+<span class="sd">        A &#39;callback&#39; is a callable which accepts two positional</span>
+<span class="sd">        parameters: ``request`` and ``response``.  For example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">           :linenos:</span>
+
+<span class="sd">           def cache_callback(request, response):</span>
+<span class="sd">               &#39;Set the cache_control max_age for the response&#39;</span>
+<span class="sd">               response.cache_control.max_age = 360</span>
+<span class="sd">           request.add_response_callback(cache_callback)</span>
+
+<span class="sd">        Response callbacks are called in the order they&#39;re added</span>
+<span class="sd">        (first-to-most-recently-added).  No response callback is</span>
+<span class="sd">        called if an exception happens in application code, or if the</span>
+<span class="sd">        response object returned by :term:`view` code is invalid.</span>
+
+<span class="sd">        All response callbacks are called *after* the tweens and </span>
+<span class="sd">        *before* the :class:`pyramid.events.NewResponse` event is sent.</span>
+
+<span class="sd">        Errors raised by callbacks are not handled specially.  They</span>
+<span class="sd">        will be propagated to the caller of the :app:`Pyramid`</span>
+<span class="sd">        router application.</span>
+
+<span class="sd">        .. seealso::</span>
+
+<span class="sd">            See also :ref:`using_response_callbacks`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">callbacks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">response_callbacks</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">callbacks</span><span class="p">:</span>
+            <span class="n">callbacks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">callback</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">response_callbacks</span> <span class="o">=</span> <span class="n">callbacks</span>
+
+    <span class="k">def</span> <span class="nf">_process_response_callbacks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">response</span><span class="p">):</span>
+        <span class="n">callbacks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">response_callbacks</span>
+        <span class="k">while</span> <span class="n">callbacks</span><span class="p">:</span>
+            <span class="n">callback</span> <span class="o">=</span> <span class="n">callbacks</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">callback</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">response</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">add_finished_callback</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">callback</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a callback to the set of callbacks to be called</span>
+<span class="sd">        unconditionally by the :term:`router` at the very end of</span>
+<span class="sd">        request processing.</span>
+
+<span class="sd">        ``callback`` is a callable which accepts a single positional</span>
+<span class="sd">        parameter: ``request``.  For example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">           :linenos:</span>
+
+<span class="sd">           import transaction</span>
+
+<span class="sd">           def commit_callback(request):</span>
+<span class="sd">               &#39;&#39;&#39;commit or abort the transaction associated with request&#39;&#39;&#39;</span>
+<span class="sd">               if request.exception is not None:</span>
+<span class="sd">                   transaction.abort()</span>
+<span class="sd">               else:</span>
+<span class="sd">                   transaction.commit()</span>
+<span class="sd">           request.add_finished_callback(commit_callback)</span>
+
+<span class="sd">        Finished callbacks are called in the order they&#39;re added (</span>
+<span class="sd">        first- to most-recently- added).  Finished callbacks (unlike</span>
+<span class="sd">        response callbacks) are *always* called, even if an exception</span>
+<span class="sd">        happens in application code that prevents a response from</span>
+<span class="sd">        being generated.</span>
+
+<span class="sd">        The set of finished callbacks associated with a request are</span>
+<span class="sd">        called *very late* in the processing of that request; they are</span>
+<span class="sd">        essentially the last thing called by the :term:`router`. They</span>
+<span class="sd">        are called after response processing has already occurred in a</span>
+<span class="sd">        top-level ``finally:`` block within the router request</span>
+<span class="sd">        processing code.  As a result, mutations performed to the</span>
+<span class="sd">        ``request`` provided to a finished callback will have no</span>
+<span class="sd">        meaningful effect, because response processing will have</span>
+<span class="sd">        already occurred, and the request&#39;s scope will expire almost</span>
+<span class="sd">        immediately after all finished callbacks have been processed.</span>
+
+<span class="sd">        Errors raised by finished callbacks are not handled specially.</span>
+<span class="sd">        They will be propagated to the caller of the :app:`Pyramid`</span>
+<span class="sd">        router application.</span>
+
+<span class="sd">        .. seealso::</span>
+
+<span class="sd">            See also :ref:`using_finished_callbacks`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">callbacks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">finished_callbacks</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">callbacks</span><span class="p">:</span>
+            <span class="n">callbacks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">callback</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">finished_callbacks</span> <span class="o">=</span> <span class="n">callbacks</span>
+
+    <span class="k">def</span> <span class="nf">_process_finished_callbacks</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">callbacks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">finished_callbacks</span>
+        <span class="k">while</span> <span class="n">callbacks</span><span class="p">:</span>
+            <span class="n">callback</span> <span class="o">=</span> <span class="n">callbacks</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">callback</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">IRequest</span><span class="p">)</span>
+<div class="viewcode-block" id="Request"><a class="viewcode-back" href="../../api/request.html#pyramid.request.Request">[docs]</a><span class="k">class</span> <span class="nc">Request</span><span class="p">(</span>
+    <span class="n">BaseRequest</span><span class="p">,</span>
+    <span class="n">URLMethodsMixin</span><span class="p">,</span>
+    <span class="n">CallbackMethodsMixin</span><span class="p">,</span>
+    <span class="n">InstancePropertyMixin</span><span class="p">,</span>
+    <span class="n">LocalizerRequestMixin</span><span class="p">,</span>
+    <span class="n">AuthenticationAPIMixin</span><span class="p">,</span>
+    <span class="n">AuthorizationAPIMixin</span><span class="p">,</span>
+    <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A subclass of the :term:`WebOb` Request class.  An instance of</span>
+<span class="sd">    this class is created by the :term:`router` and is provided to a</span>
+<span class="sd">    view callable (and to other subsystems) as the ``request``</span>
+<span class="sd">    argument.</span>
+
+<span class="sd">    The documentation below (save for the ``add_response_callback`` and</span>
+<span class="sd">    ``add_finished_callback`` methods, which are defined in this subclass</span>
+<span class="sd">    itself, and the attributes ``context``, ``registry``, ``root``,</span>
+<span class="sd">    ``subpath``, ``traversed``, ``view_name``, ``virtual_root`` , and</span>
+<span class="sd">    ``virtual_root_path``, each of which is added to the request by the</span>
+<span class="sd">    :term:`router` at request ingress time) are autogenerated from the WebOb</span>
+<span class="sd">    source code used when this documentation was generated.</span>
+
+<span class="sd">    Due to technical constraints, we can&#39;t yet display the WebOb</span>
+<span class="sd">    version number from which this documentation is autogenerated, but</span>
+<span class="sd">    it will be the &#39;prevailing WebOb version&#39; at the time of the</span>
+<span class="sd">    release of this :app:`Pyramid` version.  See</span>
+<span class="sd">    http://webob.org/ for further information.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">exception</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">exc_info</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">matchdict</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">matched_route</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="n">ResponseClass</span> <span class="o">=</span> <span class="n">Response</span>
+
+    <span class="nd">@reify</span>
+    <span class="k">def</span> <span class="nf">tmpl_context</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># docs-deprecated template context for Pylons-like apps; do not</span>
+        <span class="c"># remove.</span>
+        <span class="k">return</span> <span class="n">TemplateContext</span><span class="p">()</span>
+
+    <span class="nd">@reify</span>
+<div class="viewcode-block" id="Request.session"><a class="viewcode-back" href="../../api/request.html#pyramid.request.Request.session">[docs]</a>    <span class="k">def</span> <span class="nf">session</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Obtain the :term:`session` object associated with this</span>
+<span class="sd">        request.  If a :term:`session factory` has not been registered</span>
+<span class="sd">        during application configuration, a</span>
+<span class="sd">        :class:`pyramid.exceptions.ConfigurationError` will be raised&quot;&quot;&quot;</span>
+        <span class="n">factory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">ISessionFactory</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">factory</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span>
+                <span class="s">&#39;No session factory registered &#39;</span>
+                <span class="s">&#39;(see the Sessions chapter of the Pyramid documentation)&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">factory</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</div>
+    <span class="nd">@reify</span>
+<div class="viewcode-block" id="Request.response"><a class="viewcode-back" href="../../api/request.html#pyramid.request.Request.response">[docs]</a>    <span class="k">def</span> <span class="nf">response</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This attribute is actually a &quot;reified&quot; property which returns an</span>
+<span class="sd">        instance of the :class:`pyramid.response.Response`. class.  The</span>
+<span class="sd">        response object returned does not exist until this attribute is</span>
+<span class="sd">        accessed.  Subsequent accesses will return the same Response object.</span>
+
+<span class="sd">        The ``request.response`` API is used by renderers.  A render obtains</span>
+<span class="sd">        the response object it will return from a view that uses that renderer</span>
+<span class="sd">        by accessing ``request.response``.  Therefore, it&#39;s possible to use the</span>
+<span class="sd">        ``request.response`` API to set up a response object with &quot;the</span>
+<span class="sd">        right&quot; attributes (e.g. by calling ``request.response.set_cookie()``)</span>
+<span class="sd">        within a view that uses a renderer.  Mutations to this response object</span>
+<span class="sd">        will be preserved in the response sent to the client.&quot;&quot;&quot;</span>
+        <span class="n">registry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span>
+        <span class="n">response_factory</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">queryUtility</span><span class="p">(</span><span class="n">IResponseFactory</span><span class="p">,</span>
+                                                 <span class="n">default</span><span class="o">=</span><span class="n">Response</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">response_factory</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="Request.is_response"><a class="viewcode-back" href="../../api/request.html#pyramid.request.Request.is_response">[docs]</a>    <span class="k">def</span> <span class="nf">is_response</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ob</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return ``True`` if the object passed as ``ob`` is a valid</span>
+<span class="sd">        response object, ``False`` otherwise.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">ob</span><span class="o">.</span><span class="n">__class__</span> <span class="ow">is</span> <span class="n">Response</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="n">registry</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">registry</span>
+        <span class="n">adapted</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">queryAdapterOrSelf</span><span class="p">(</span><span class="n">ob</span><span class="p">,</span> <span class="n">IResponse</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">adapted</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">return</span> <span class="n">adapted</span> <span class="ow">is</span> <span class="n">ob</span>
+</div>
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="Request.json_body"><a class="viewcode-back" href="../../api/request.html#pyramid.request.Request.json_body">[docs]</a>    <span class="k">def</span> <span class="nf">json_body</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">text_</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">charset</span><span class="p">))</span>
+
+    </div></div>
+<span class="k">def</span> <span class="nf">route_request_iface</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="o">=</span><span class="p">()):</span>
+    <span class="c"># zope.interface treats the __name__ as the __doc__ and changes __name__</span>
+    <span class="c"># to None for interfaces that contain spaces if you do not pass a</span>
+    <span class="c"># nonempty __doc__ (insane); see</span>
+    <span class="c"># zope.interface.interface.Element.__init__ and</span>
+    <span class="c"># https://github.com/Pylons/pyramid/issues/232; as a result, always pass</span>
+    <span class="c"># __doc__ to the InterfaceClass constructor.</span>
+    <span class="n">iface</span> <span class="o">=</span> <span class="n">InterfaceClass</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">_IRequest&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">,</span> <span class="n">bases</span><span class="o">=</span><span class="n">bases</span><span class="p">,</span>
+                           <span class="n">__doc__</span><span class="o">=</span><span class="s">&quot;route_request_iface-generated interface&quot;</span><span class="p">)</span>
+    <span class="c"># for exception view lookups</span>
+    <span class="n">iface</span><span class="o">.</span><span class="n">combined</span> <span class="o">=</span> <span class="n">InterfaceClass</span><span class="p">(</span>
+        <span class="s">&#39;</span><span class="si">%s</span><span class="s">_combined_IRequest&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">,</span>
+        <span class="n">bases</span><span class="o">=</span><span class="p">(</span><span class="n">iface</span><span class="p">,</span> <span class="n">IRequest</span><span class="p">),</span>
+        <span class="n">__doc__</span> <span class="o">=</span> <span class="s">&#39;route_request_iface-generated combined interface&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">iface</span>
+
+<span class="k">def</span> <span class="nf">add_global_response_headers</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">headerlist</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">add_headers</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">response</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">headerlist</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">headerlist</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">))</span>
+    <span class="n">request</span><span class="o">.</span><span class="n">add_response_callback</span><span class="p">(</span><span class="n">add_headers</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">call_app_with_subpath_as_path_info</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">app</span><span class="p">):</span>
+    <span class="c"># Copy the request.  Use the source request&#39;s subpath (if it exists) as</span>
+    <span class="c"># the new request&#39;s PATH_INFO.  Set the request copy&#39;s SCRIPT_NAME to the</span>
+    <span class="c"># prefix before the subpath.  Call the application with the new request</span>
+    <span class="c"># and return a response.</span>
+    <span class="c">#</span>
+    <span class="c"># Postconditions:</span>
+    <span class="c"># - SCRIPT_NAME and PATH_INFO are empty or start with /</span>
+    <span class="c"># - At least one of SCRIPT_NAME or PATH_INFO are set.</span>
+    <span class="c"># - SCRIPT_NAME is not &#39;/&#39; (it should be &#39;&#39;, and PATH_INFO should</span>
+    <span class="c">#   be &#39;/&#39;).</span>
+
+    <span class="n">environ</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">environ</span>
+    <span class="n">script_name</span> <span class="o">=</span> <span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;SCRIPT_NAME&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">path_info</span> <span class="o">=</span> <span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;PATH_INFO&#39;</span><span class="p">,</span> <span class="s">&#39;/&#39;</span><span class="p">)</span>
+    <span class="n">subpath</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="s">&#39;subpath&#39;</span><span class="p">,</span> <span class="p">()))</span>
+
+    <span class="n">new_script_name</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+
+    <span class="c"># compute new_path_info</span>
+    <span class="n">new_path_info</span> <span class="o">=</span> <span class="s">&#39;/&#39;</span> <span class="o">+</span> <span class="s">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">native_</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&#39;utf-8&#39;</span><span class="p">),</span> <span class="s">&#39;latin-1&#39;</span><span class="p">)</span>
+                                    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">subpath</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="n">new_path_info</span> <span class="o">!=</span> <span class="s">&#39;/&#39;</span><span class="p">:</span> <span class="c"># don&#39;t want a sole double-slash</span>
+        <span class="k">if</span> <span class="n">path_info</span> <span class="o">!=</span> <span class="s">&#39;/&#39;</span><span class="p">:</span> <span class="c"># if orig path_info is &#39;/&#39;, we&#39;re already done</span>
+            <span class="k">if</span> <span class="n">path_info</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">):</span>
+                <span class="c"># readd trailing slash stripped by subpath (traversal)</span>
+                <span class="c"># conversion</span>
+                <span class="n">new_path_info</span> <span class="o">+=</span> <span class="s">&#39;/&#39;</span>
+
+    <span class="c"># compute new_script_name</span>
+    <span class="n">workback</span> <span class="o">=</span> <span class="p">(</span><span class="n">script_name</span> <span class="o">+</span> <span class="n">path_info</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span>
+
+    <span class="n">tmp</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">while</span> <span class="n">workback</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">tmp</span> <span class="o">==</span> <span class="n">subpath</span><span class="p">:</span>
+            <span class="k">break</span>
+        <span class="n">el</span> <span class="o">=</span> <span class="n">workback</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">el</span><span class="p">:</span>
+            <span class="n">tmp</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">text_</span><span class="p">(</span><span class="n">bytes_</span><span class="p">(</span><span class="n">el</span><span class="p">,</span> <span class="s">&#39;latin-1&#39;</span><span class="p">),</span> <span class="s">&#39;utf-8&#39;</span><span class="p">))</span>
+
+    <span class="c"># strip all trailing slashes from workback to avoid appending undue slashes</span>
+    <span class="c"># to end of script_name</span>
+    <span class="k">while</span> <span class="n">workback</span> <span class="ow">and</span> <span class="p">(</span><span class="n">workback</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;&#39;</span><span class="p">):</span>
+        <span class="n">workback</span> <span class="o">=</span> <span class="n">workback</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">new_script_name</span> <span class="o">=</span> <span class="s">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">workback</span><span class="p">)</span>
+
+    <span class="n">new_request</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">new_request</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s">&#39;SCRIPT_NAME&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_script_name</span>
+    <span class="n">new_request</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s">&#39;PATH_INFO&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_path_info</span>
+
+    <span class="k">return</span> <span class="n">new_request</span><span class="o">.</span><span class="n">get_response</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

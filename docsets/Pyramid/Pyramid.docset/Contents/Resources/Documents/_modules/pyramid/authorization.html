@@ -1,0 +1,263 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.authorization &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.authorization</h1><div class="highlight"><pre>
+<span class="kn">from</span> <span class="nn">zope.interface</span> <span class="kn">import</span> <span class="n">implementer</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="n">IAuthorizationPolicy</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.location</span> <span class="kn">import</span> <span class="n">lineage</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.compat</span> <span class="kn">import</span> <span class="n">is_nonstr_iter</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.security</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ACLAllowed</span><span class="p">,</span>
+    <span class="n">ACLDenied</span><span class="p">,</span>
+    <span class="n">Allow</span><span class="p">,</span>
+    <span class="n">Deny</span><span class="p">,</span>
+    <span class="n">Everyone</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">IAuthorizationPolicy</span><span class="p">)</span>
+<div class="viewcode-block" id="ACLAuthorizationPolicy"><a class="viewcode-back" href="../../api/authorization.html#pyramid.authorization.ACLAuthorizationPolicy">[docs]</a><span class="k">class</span> <span class="nc">ACLAuthorizationPolicy</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; An :term:`authorization policy` which consults an :term:`ACL`</span>
+<span class="sd">    object attached to a :term:`context` to determine authorization</span>
+<span class="sd">    information about a :term:`principal` or multiple principals.</span>
+<span class="sd">    If the context is part of a :term:`lineage`, the context&#39;s parents</span>
+<span class="sd">    are consulted for ACL information too.  The following is true</span>
+<span class="sd">    about this security policy.</span>
+
+<span class="sd">    - When checking whether the &#39;current&#39; user is permitted (via the</span>
+<span class="sd">      ``permits`` method), the security policy consults the</span>
+<span class="sd">      ``context`` for an ACL first.  If no ACL exists on the context,</span>
+<span class="sd">      or one does exist but the ACL does not explicitly allow or deny</span>
+<span class="sd">      access for any of the effective principals, consult the</span>
+<span class="sd">      context&#39;s parent ACL, and so on, until the lineage is exhausted</span>
+<span class="sd">      or we determine that the policy permits or denies.</span>
+
+<span class="sd">      During this processing, if any :data:`pyramid.security.Deny`</span>
+<span class="sd">      ACE is found matching any principal in ``principals``, stop</span>
+<span class="sd">      processing by returning an</span>
+<span class="sd">      :class:`pyramid.security.ACLDenied` instance (equals</span>
+<span class="sd">      ``False``) immediately.  If any</span>
+<span class="sd">      :data:`pyramid.security.Allow` ACE is found matching any</span>
+<span class="sd">      principal, stop processing by returning an</span>
+<span class="sd">      :class:`pyramid.security.ACLAllowed` instance (equals</span>
+<span class="sd">      ``True``) immediately.  If we exhaust the context&#39;s</span>
+<span class="sd">      :term:`lineage`, and no ACE has explicitly permitted or denied</span>
+<span class="sd">      access, return an instance of</span>
+<span class="sd">      :class:`pyramid.security.ACLDenied` (equals ``False``).</span>
+
+<span class="sd">    - When computing principals allowed by a permission via the</span>
+<span class="sd">      :func:`pyramid.security.principals_allowed_by_permission`</span>
+<span class="sd">      method, we compute the set of principals that are explicitly</span>
+<span class="sd">      granted the ``permission`` in the provided ``context``.  We do</span>
+<span class="sd">      this by walking &#39;up&#39; the object graph *from the root* to the</span>
+<span class="sd">      context.  During this walking process, if we find an explicit</span>
+<span class="sd">      :data:`pyramid.security.Allow` ACE for a principal that</span>
+<span class="sd">      matches the ``permission``, the principal is included in the</span>
+<span class="sd">      allow list.  However, if later in the walking process that</span>
+<span class="sd">      principal is mentioned in any :data:`pyramid.security.Deny`</span>
+<span class="sd">      ACE for the permission, the principal is removed from the allow</span>
+<span class="sd">      list.  If a :data:`pyramid.security.Deny` to the principal</span>
+<span class="sd">      :data:`pyramid.security.Everyone` is encountered during the</span>
+<span class="sd">      walking process that matches the ``permission``, the allow list</span>
+<span class="sd">      is cleared for all principals encountered in previous ACLs.  The</span>
+<span class="sd">      walking process ends after we&#39;ve processed the any ACL directly</span>
+<span class="sd">      attached to ``context``; a set of principals is returned.</span>
+
+<span class="sd">    Objects of this class implement the</span>
+<span class="sd">    :class:`pyramid.interfaces.IAuthorizationPolicy` interface.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">permits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">principals</span><span class="p">,</span> <span class="n">permission</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return an instance of</span>
+<span class="sd">        :class:`pyramid.security.ACLAllowed` instance if the policy</span>
+<span class="sd">        permits access, return an instance of</span>
+<span class="sd">        :class:`pyramid.security.ACLDenied` if not.&quot;&quot;&quot;</span>
+
+        <span class="n">acl</span> <span class="o">=</span> <span class="s">&#39;&lt;No ACL found on any object in resource lineage&gt;&#39;</span>
+        
+        <span class="k">for</span> <span class="n">location</span> <span class="ow">in</span> <span class="n">lineage</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">acl</span> <span class="o">=</span> <span class="n">location</span><span class="o">.</span><span class="n">__acl__</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">acl</span> <span class="ow">and</span> <span class="nb">callable</span><span class="p">(</span><span class="n">acl</span><span class="p">):</span>
+                <span class="n">acl</span> <span class="o">=</span> <span class="n">acl</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">ace</span> <span class="ow">in</span> <span class="n">acl</span><span class="p">:</span>
+                <span class="n">ace_action</span><span class="p">,</span> <span class="n">ace_principal</span><span class="p">,</span> <span class="n">ace_permissions</span> <span class="o">=</span> <span class="n">ace</span>
+                <span class="k">if</span> <span class="n">ace_principal</span> <span class="ow">in</span> <span class="n">principals</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">is_nonstr_iter</span><span class="p">(</span><span class="n">ace_permissions</span><span class="p">):</span>
+                        <span class="n">ace_permissions</span> <span class="o">=</span> <span class="p">[</span><span class="n">ace_permissions</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">permission</span> <span class="ow">in</span> <span class="n">ace_permissions</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">ace_action</span> <span class="o">==</span> <span class="n">Allow</span><span class="p">:</span>
+                            <span class="k">return</span> <span class="n">ACLAllowed</span><span class="p">(</span><span class="n">ace</span><span class="p">,</span> <span class="n">acl</span><span class="p">,</span> <span class="n">permission</span><span class="p">,</span>
+                                              <span class="n">principals</span><span class="p">,</span> <span class="n">location</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">return</span> <span class="n">ACLDenied</span><span class="p">(</span><span class="n">ace</span><span class="p">,</span> <span class="n">acl</span><span class="p">,</span> <span class="n">permission</span><span class="p">,</span>
+                                             <span class="n">principals</span><span class="p">,</span> <span class="n">location</span><span class="p">)</span>
+
+        <span class="c"># default deny (if no ACL in lineage at all, or if none of the</span>
+        <span class="c"># principals were mentioned in any ACE we found)</span>
+        <span class="k">return</span> <span class="n">ACLDenied</span><span class="p">(</span>
+            <span class="s">&#39;&lt;default deny&gt;&#39;</span><span class="p">,</span>
+            <span class="n">acl</span><span class="p">,</span>
+            <span class="n">permission</span><span class="p">,</span>
+            <span class="n">principals</span><span class="p">,</span>
+            <span class="n">context</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">principals_allowed_by_permission</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">permission</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the set of principals explicitly granted the</span>
+<span class="sd">        permission named ``permission`` according to the ACL directly</span>
+<span class="sd">        attached to the ``context`` as well as inherited ACLs based on</span>
+<span class="sd">        the :term:`lineage`.&quot;&quot;&quot;</span>
+        <span class="n">allowed</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">location</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">lineage</span><span class="p">(</span><span class="n">context</span><span class="p">))):</span>
+            <span class="c"># NB: we&#39;re walking *up* the object graph from the root</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">acl</span> <span class="o">=</span> <span class="n">location</span><span class="o">.</span><span class="n">__acl__</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">allowed_here</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="n">denied_here</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            
+            <span class="k">if</span> <span class="n">acl</span> <span class="ow">and</span> <span class="nb">callable</span><span class="p">(</span><span class="n">acl</span><span class="p">):</span>
+                <span class="n">acl</span> <span class="o">=</span> <span class="n">acl</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">ace_action</span><span class="p">,</span> <span class="n">ace_principal</span><span class="p">,</span> <span class="n">ace_permissions</span> <span class="ow">in</span> <span class="n">acl</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">is_nonstr_iter</span><span class="p">(</span><span class="n">ace_permissions</span><span class="p">):</span>
+                    <span class="n">ace_permissions</span> <span class="o">=</span> <span class="p">[</span><span class="n">ace_permissions</span><span class="p">]</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">ace_action</span> <span class="o">==</span> <span class="n">Allow</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">permission</span> <span class="ow">in</span> <span class="n">ace_permissions</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">ace_principal</span> <span class="ow">in</span> <span class="n">denied_here</span><span class="p">:</span>
+                        <span class="n">allowed_here</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ace_principal</span><span class="p">)</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">ace_action</span> <span class="o">==</span> <span class="n">Deny</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">permission</span> <span class="ow">in</span> <span class="n">ace_permissions</span><span class="p">):</span>
+                        <span class="n">denied_here</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ace_principal</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">ace_principal</span> <span class="o">==</span> <span class="n">Everyone</span><span class="p">:</span>
+                            <span class="c"># clear the entire allowed set, as we&#39;ve hit a</span>
+                            <span class="c"># deny of Everyone ala (Deny, Everyone, ALL)</span>
+                            <span class="n">allowed</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+                            <span class="k">break</span>
+                        <span class="k">elif</span> <span class="n">ace_principal</span> <span class="ow">in</span> <span class="n">allowed</span><span class="p">:</span>
+                            <span class="n">allowed</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">ace_principal</span><span class="p">)</span>
+
+            <span class="n">allowed</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">allowed_here</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">allowed</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

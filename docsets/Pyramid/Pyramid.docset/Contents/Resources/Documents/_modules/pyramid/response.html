@@ -1,0 +1,280 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyramid.response &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pyramid.response</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">mimetypes</span>
+<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">getmtime</span><span class="p">,</span>
+    <span class="n">getsize</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">venusian</span>
+
+<span class="kn">from</span> <span class="nn">webob</span> <span class="kn">import</span> <span class="n">Response</span> <span class="k">as</span> <span class="n">_Response</span>
+<span class="kn">from</span> <span class="nn">zope.interface</span> <span class="kn">import</span> <span class="n">implementer</span>
+<span class="kn">from</span> <span class="nn">pyramid.interfaces</span> <span class="kn">import</span> <span class="n">IResponse</span>
+
+<span class="k">def</span> <span class="nf">init_mimetypes</span><span class="p">(</span><span class="n">mimetypes</span><span class="p">):</span>
+    <span class="c"># this is a function so it can be unittested</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">mimetypes</span><span class="p">,</span> <span class="s">&#39;init&#39;</span><span class="p">):</span>
+        <span class="n">mimetypes</span><span class="o">.</span><span class="n">init</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">return</span> <span class="bp">False</span>
+
+<span class="c"># See http://bugs.python.org/issue5853 which is a recursion bug</span>
+<span class="c"># that seems to effect Python 2.6, Python 2.6.1, and 2.6.2 (a fix</span>
+<span class="c"># has been applied on the Python 2 trunk).</span>
+<span class="n">init_mimetypes</span><span class="p">(</span><span class="n">mimetypes</span><span class="p">)</span>
+
+<span class="n">_BLOCK_SIZE</span> <span class="o">=</span> <span class="mi">4096</span> <span class="o">*</span> <span class="mi">64</span> <span class="c"># 256K</span>
+
+<span class="nd">@implementer</span><span class="p">(</span><span class="n">IResponse</span><span class="p">)</span>
+<div class="viewcode-block" id="Response"><a class="viewcode-back" href="../../api/response.html#pyramid.response.Response">[docs]</a><span class="k">class</span> <span class="nc">Response</span><span class="p">(</span><span class="n">_Response</span><span class="p">):</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="FileResponse"><a class="viewcode-back" href="../../api/response.html#pyramid.response.FileResponse">[docs]</a><span class="k">class</span> <span class="nc">FileResponse</span><span class="p">(</span><span class="n">Response</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A Response object that can be used to serve a static file from disk</span>
+<span class="sd">    simply.</span>
+
+<span class="sd">    ``path`` is a file path on disk.</span>
+
+<span class="sd">    ``request`` must be a Pyramid :term:`request` object.  Note</span>
+<span class="sd">    that a request *must* be passed if the response is meant to attempt to</span>
+<span class="sd">    use the ``wsgi.file_wrapper`` feature of the web server that you&#39;re using</span>
+<span class="sd">    to serve your Pyramid application.</span>
+
+<span class="sd">    ``cache_max_age`` is the number of seconds that should be used</span>
+<span class="sd">    to HTTP cache this response.</span>
+
+<span class="sd">    ``content_type`` is the content_type of the response.</span>
+
+<span class="sd">    ``content_encoding`` is the content_encoding of the response.</span>
+<span class="sd">    It&#39;s generally safe to leave this set to ``None`` if you&#39;re serving a</span>
+<span class="sd">    binary file.  This argument will be ignored if you also leave</span>
+<span class="sd">    ``content-type`` as ``None``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">cache_max_age</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">content_type</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">content_encoding</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">content_type</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">content_type</span><span class="p">,</span> <span class="n">content_encoding</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">mimetypes</span><span class="o">.</span><span class="n">guess_type</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="bp">False</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">content_type</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">content_type</span> <span class="o">=</span> <span class="s">&#39;application/octet-stream&#39;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FileResponse</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span>
+            <span class="n">conditional_response</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+            <span class="n">content_type</span><span class="o">=</span><span class="n">content_type</span><span class="p">,</span>
+            <span class="n">content_encoding</span><span class="o">=</span><span class="n">content_encoding</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">last_modified</span> <span class="o">=</span> <span class="n">getmtime</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">content_length</span> <span class="o">=</span> <span class="n">getsize</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s">&#39;rb&#39;</span><span class="p">)</span>
+        <span class="n">app_iter</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">request</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">environ</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">environ</span>
+            <span class="k">if</span> <span class="s">&#39;wsgi.file_wrapper&#39;</span> <span class="ow">in</span> <span class="n">environ</span><span class="p">:</span>
+                <span class="n">app_iter</span> <span class="o">=</span> <span class="n">environ</span><span class="p">[</span><span class="s">&#39;wsgi.file_wrapper&#39;</span><span class="p">](</span><span class="n">f</span><span class="p">,</span> <span class="n">_BLOCK_SIZE</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">app_iter</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">app_iter</span> <span class="o">=</span> <span class="n">FileIter</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">_BLOCK_SIZE</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">app_iter</span> <span class="o">=</span> <span class="n">app_iter</span>
+        <span class="c"># assignment of content_length must come after assignment of app_iter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">content_length</span> <span class="o">=</span> <span class="n">content_length</span>
+        <span class="k">if</span> <span class="n">cache_max_age</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cache_expires</span> <span class="o">=</span> <span class="n">cache_max_age</span>
+</div>
+<div class="viewcode-block" id="FileIter"><a class="viewcode-back" href="../../api/response.html#pyramid.response.FileIter">[docs]</a><span class="k">class</span> <span class="nc">FileIter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A fixed-block-size iterator for use as a WSGI app_iter.</span>
+
+<span class="sd">    ``file`` is a Python file pointer (or at least an object with a ``read``</span>
+<span class="sd">    method that takes a size hint).</span>
+
+<span class="sd">    ``block_size`` is an optional block size for iteration.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">block_size</span><span class="o">=</span><span class="n">_BLOCK_SIZE</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="nb">file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_size</span> <span class="o">=</span> <span class="n">block_size</span>
+
+    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">next</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">block_size</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">val</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">StopIteration</span>
+        <span class="k">return</span> <span class="n">val</span>
+
+    <span class="n">__next__</span> <span class="o">=</span> <span class="nb">next</span> <span class="c"># py3</span>
+
+    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+</div>
+<div class="viewcode-block" id="response_adapter"><a class="viewcode-back" href="../../api/response.html#pyramid.response.response_adapter">[docs]</a><span class="k">class</span> <span class="nc">response_adapter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Decorator activated via a :term:`scan` which treats the function</span>
+<span class="sd">    being decorated as a :term:`response adapter` for the set of types or</span>
+<span class="sd">    interfaces passed as ``*types_or_ifaces`` to the decorator constructor.</span>
+
+<span class="sd">    For example, if you scan the following response adapter:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        from pyramid.response import Response</span>
+<span class="sd">        from pyramid.response import response_adapter</span>
+
+<span class="sd">        @response_adapter(int)</span>
+<span class="sd">        def myadapter(i):</span>
+<span class="sd">            return Response(status=i)</span>
+
+<span class="sd">    You can then return an integer from your view callables, and it will be</span>
+<span class="sd">    converted into a response with the integer as the status code.</span>
+
+<span class="sd">    More than one type or interface can be passed as a constructor argument.</span>
+<span class="sd">    The decorated response adapter will be called for each type or interface.</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import json</span>
+
+<span class="sd">        from pyramid.response import Response</span>
+<span class="sd">        from pyramid.response import response_adapter</span>
+
+<span class="sd">        @response_adapter(dict, list)</span>
+<span class="sd">        def myadapter(ob):</span>
+<span class="sd">            return Response(json.dumps(ob))</span>
+<span class="sd">        </span>
+<span class="sd">    This method will have no effect until a :term:`scan` is performed</span>
+<span class="sd">    agains the package or module which contains it, ala:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        from pyramid.config import Configurator</span>
+<span class="sd">        config = Configurator()</span>
+<span class="sd">        config.scan(&#39;somepackage_containing_adapters&#39;)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">venusian</span> <span class="o">=</span> <span class="n">venusian</span> <span class="c"># for unit testing</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">types_or_ifaces</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">types_or_ifaces</span> <span class="o">=</span> <span class="n">types_or_ifaces</span>
+
+    <span class="k">def</span> <span class="nf">register</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scanner</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">wrapped</span><span class="p">):</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">scanner</span><span class="o">.</span><span class="n">config</span>
+        <span class="k">for</span> <span class="n">type_or_iface</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">types_or_ifaces</span><span class="p">:</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">add_response_adapter</span><span class="p">(</span><span class="n">wrapped</span><span class="p">,</span> <span class="n">type_or_iface</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wrapped</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">venusian</span><span class="o">.</span><span class="n">attach</span><span class="p">(</span><span class="n">wrapped</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">register</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="s">&#39;pyramid&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">wrapped</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

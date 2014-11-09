@@ -1,0 +1,694 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Views &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="next" title="Renderers" href="renderers.html" />
+    <link rel="prev" title="URL Dispatch" href="urldispatch.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="renderers.html" title="Renderers"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="urldispatch.html" title="URL Dispatch"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="views">
+<span id="views-chapter"></span><h1>Views<a class="headerlink" href="#views" title="Permalink to this headline">¶</a></h1>
+<p>One of the primary jobs of <span>Pyramid</span> is to find and invoke a <a class="reference internal" href="../glossary.html#term-view-callable"><em class="xref std std-term">view
+callable</em></a> when a <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> reaches your application.  View callables
+are bits of code which do something interesting in response to a request made
+to your application.  They are the &quot;meat&quot; of any interesting web application.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">A <span>Pyramid</span> <a class="reference internal" href="../glossary.html#term-view-callable"><em class="xref std std-term">view callable</em></a> is often referred to in
+conversational shorthand as a <a class="reference internal" href="../glossary.html#term-view"><em class="xref std std-term">view</em></a>.  In this documentation,
+however, we need to use less ambiguous terminology because there
+are significant differences between view <em>configuration</em>, the code
+that implements a view <em>callable</em>, and the process of view
+<em>lookup</em>.</p>
+</div>
+<p>This chapter describes how view callables should be defined. We'll have to
+wait until a following chapter (entitled <a class="reference internal" href="viewconfig.html#view-config-chapter"><em>View Configuration</em></a>) to find
+out how we actually tell <span>Pyramid</span> to wire up view callables to
+particular URL patterns and other request circumstances.</p>
+<div class="section" id="view-callables">
+<span id="index-0"></span><h2>View Callables<a class="headerlink" href="#view-callables" title="Permalink to this headline">¶</a></h2>
+<p>View callables are, at the risk of sounding obvious, callable Python
+objects. Specifically, view callables can be functions, classes, or instances
+that implement a <tt class="docutils literal"><span class="pre">__call__</span></tt> method (making the instance callable).</p>
+<p>View callables must, at a minimum, accept a single argument named
+<tt class="docutils literal"><span class="pre">request</span></tt>.  This argument represents a <span>Pyramid</span> <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">Request</em></a>
+object.  A request object represents a <a class="reference internal" href="../glossary.html#term-wsgi"><em class="xref std std-term">WSGI</em></a> environment provided to
+<span>Pyramid</span> by the upstream WSGI server. As you might expect, the request
+object contains everything your application needs to know about the specific
+HTTP request being made.</p>
+<p>A view callable's ultimate responsibility is to create a <span>Pyramid</span>
+<a class="reference internal" href="../glossary.html#term-response"><em class="xref std std-term">Response</em></a> object. This can be done by creating a <a class="reference internal" href="../glossary.html#term-response"><em class="xref std std-term">Response</em></a>
+object in the view callable code and returning it directly or by raising
+special kinds of exceptions from within the body of a view callable.</p>
+</div>
+<div class="section" id="defining-a-view-callable-as-a-function">
+<span id="function-as-view"></span><span id="index-1"></span><h2>Defining a View Callable as a Function<a class="headerlink" href="#defining-a-view-callable-as-a-function" title="Permalink to this headline">¶</a></h2>
+<p>One of the easiest way to define a view callable is to create a function that
+accepts a single argument named <tt class="docutils literal"><span class="pre">request</span></tt>, and which returns a
+<a class="reference internal" href="../glossary.html#term-response"><em class="xref std std-term">Response</em></a> object.  For example, this is a &quot;hello world&quot; view callable
+implemented as a function:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+
+<span class="k">def</span> <span class="nf">hello_world</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;Hello world!&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+<div class="section" id="defining-a-view-callable-as-a-class">
+<span id="class-as-view"></span><span id="index-2"></span><h2>Defining a View Callable as a Class<a class="headerlink" href="#defining-a-view-callable-as-a-class" title="Permalink to this headline">¶</a></h2>
+<p>A view callable may also be represented by a Python class instead of a
+function.  When a view callable is a class, the calling semantics are
+slightly different than when it is a function or another non-class callable.
+When a view callable is a class, the class' <tt class="docutils literal"><span class="pre">__init__</span></tt> method is called with a
+<tt class="docutils literal"><span class="pre">request</span></tt> parameter.  As a result, an instance of the class is created.
+Subsequently, that instance's <tt class="docutils literal"><span class="pre">__call__</span></tt> method is invoked with no
+parameters.  Views defined as classes must have the following traits:</p>
+<ul class="simple">
+<li>an <tt class="docutils literal"><span class="pre">__init__</span></tt> method that accepts a <tt class="docutils literal"><span class="pre">request</span></tt> argument.</li>
+<li>a <tt class="docutils literal"><span class="pre">__call__</span></tt> (or other) method that accepts no parameters and which
+returns a response.</li>
+</ul>
+<p>For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+
+<span class="k">class</span> <span class="nc">MyView</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">request</span> <span class="o">=</span> <span class="n">request</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;hello&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The request object passed to <tt class="docutils literal"><span class="pre">__init__</span></tt> is the same type of request object
+described in <a class="reference internal" href="#function-as-view"><em>Defining a View Callable as a Function</em></a>.</p>
+<p>If you'd like to use a different attribute than <tt class="docutils literal"><span class="pre">__call__</span></tt> to represent the
+method expected to return a response, you can use an <tt class="docutils literal"><span class="pre">attr</span></tt> value as part
+of the configuration for the view.  See <a class="reference internal" href="viewconfig.html#view-configuration-parameters"><em>View Configuration Parameters</em></a>.
+The same view callable class can be used in different view configuration
+statements with different <tt class="docutils literal"><span class="pre">attr</span></tt> values, each pointing at a different
+method of the class if you'd like the class to represent a collection of
+related view callables.</p>
+</div>
+<div class="section" id="view-callable-responses">
+<span id="the-response"></span><span id="index-3"></span><h2>View Callable Responses<a class="headerlink" href="#view-callable-responses" title="Permalink to this headline">¶</a></h2>
+<p>A view callable may return an object that implements the <span>Pyramid</span>
+<a class="reference internal" href="../glossary.html#term-response"><em class="xref std std-term">Response</em></a> interface.  The easiest way to return something that
+implements the <a class="reference internal" href="../glossary.html#term-response"><em class="xref std std-term">Response</em></a> interface is to return a
+<a class="reference internal" href="../api/response.html#pyramid.response.Response" title="pyramid.response.Response"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.response.Response</span></tt></a> object instance directly.  For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+
+<span class="k">def</span> <span class="nf">view</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;OK&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p><span>Pyramid</span> provides a range of different &quot;exception&quot; classes which
+inherit from <a class="reference internal" href="../api/response.html#pyramid.response.Response" title="pyramid.response.Response"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.response.Response</span></tt></a>.  For example, an instance of
+the class <a class="reference internal" href="../api/httpexceptions.html#pyramid.httpexceptions.HTTPFound" title="pyramid.httpexceptions.HTTPFound"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.httpexceptions.HTTPFound</span></tt></a> is also a valid response
+object because it inherits from <a class="reference internal" href="../api/response.html#pyramid.response.Response" title="pyramid.response.Response"><tt class="xref py py-class docutils literal"><span class="pre">Response</span></tt></a>.  For
+examples, see <a class="reference internal" href="#http-exceptions"><em>HTTP Exceptions</em></a> and <a class="reference internal" href="#http-redirect"><em>Using a View Callable to do an HTTP Redirect</em></a>.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">You can also return objects from view callables that aren't instances of
+<a class="reference internal" href="../api/response.html#pyramid.response.Response" title="pyramid.response.Response"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.response.Response</span></tt></a> in various circumstances.  This can be
+helpful when writing tests and when attempting to share code between view
+callables.  See <a class="reference internal" href="renderers.html#renderers-chapter"><em>Renderers</em></a> for the common way to allow for
+this.  A much less common way to allow for view callables to return
+non-Response objects is documented in <a class="reference internal" href="hooks.html#using-iresponse"><em>Changing How Pyramid Treats View Responses</em></a>.</p>
+</div>
+</div>
+<div class="section" id="using-special-exceptions-in-view-callables">
+<span id="special-exceptions-in-callables"></span><span id="index-4"></span><h2>Using Special Exceptions In View Callables<a class="headerlink" href="#using-special-exceptions-in-view-callables" title="Permalink to this headline">¶</a></h2>
+<p>Usually when a Python exception is raised within a view callable,
+<span>Pyramid</span> allows the exception to propagate all the way out to the
+<a class="reference internal" href="../glossary.html#term-wsgi"><em class="xref std std-term">WSGI</em></a> server which invoked the application.  It is usually caught and
+logged there.</p>
+<p>However, for convenience, a special set of exceptions exists.  When one of
+these exceptions is raised within a view callable, it will always cause
+<span>Pyramid</span> to generate a response.  These are known as <a class="reference internal" href="../glossary.html#term-http-exception"><em class="xref std std-term">HTTP
+exception</em></a> objects.</p>
+<div class="section" id="http-exceptions">
+<span id="index-5"></span><span id="id1"></span><h3>HTTP Exceptions<a class="headerlink" href="#http-exceptions" title="Permalink to this headline">¶</a></h3>
+<p>All <a class="reference internal" href="../api/httpexceptions.html#module-pyramid.httpexceptions" title="pyramid.httpexceptions"><tt class="xref py py-mod docutils literal"><span class="pre">pyramid.httpexceptions</span></tt></a> classes which are documented
+as inheriting from the <a class="reference internal" href="../api/httpexceptions.html#pyramid.httpexceptions.HTTPException" title="pyramid.httpexceptions.HTTPException"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.httpexceptions.HTTPException</span></tt></a> are
+<a class="reference internal" href="../glossary.html#term-http-exception"><em class="xref std std-term">http exception</em></a> objects.  Instances of an HTTP exception object may
+either be <em>returned</em> or <em>raised</em> from within view code.  In either case
+(return or raise) the instance will be used as the view's response.</p>
+<p>For example, the <a class="reference internal" href="../api/httpexceptions.html#pyramid.httpexceptions.HTTPUnauthorized" title="pyramid.httpexceptions.HTTPUnauthorized"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.httpexceptions.HTTPUnauthorized</span></tt></a> exception
+can be raised.  This will cause a response to be generated with a <tt class="docutils literal"><span class="pre">401</span>
+<span class="pre">Unauthorized</span></tt> status:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.httpexceptions</span> <span class="kn">import</span> <span class="n">HTTPUnauthorized</span>
+
+<span class="k">def</span> <span class="nf">aview</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="n">HTTPUnauthorized</span><span class="p">()</span>
+</pre></div>
+</td></tr></table></div>
+<p>An HTTP exception, instead of being raised, can alternately be <em>returned</em>
+(HTTP exceptions are also valid response objects):</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.httpexceptions</span> <span class="kn">import</span> <span class="n">HTTPUnauthorized</span>
+
+<span class="k">def</span> <span class="nf">aview</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">HTTPUnauthorized</span><span class="p">()</span>
+</pre></div>
+</td></tr></table></div>
+<p>A shortcut for creating an HTTP exception is the
+<a class="reference internal" href="../api/httpexceptions.html#pyramid.httpexceptions.exception_response" title="pyramid.httpexceptions.exception_response"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.httpexceptions.exception_response()</span></tt></a> function.  This function
+accepts an HTTP status code and returns the corresponding HTTP exception.
+For example, instead of importing and constructing a
+<a class="reference internal" href="../api/httpexceptions.html#pyramid.httpexceptions.HTTPUnauthorized" title="pyramid.httpexceptions.HTTPUnauthorized"><tt class="xref py py-class docutils literal"><span class="pre">HTTPUnauthorized</span></tt></a> response object, you can
+use the <a class="reference internal" href="../api/httpexceptions.html#pyramid.httpexceptions.exception_response" title="pyramid.httpexceptions.exception_response"><tt class="xref py py-func docutils literal"><span class="pre">exception_response()</span></tt></a> function to
+construct and return the same object.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.httpexceptions</span> <span class="kn">import</span> <span class="n">exception_response</span>
+
+<span class="k">def</span> <span class="nf">aview</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="n">exception_response</span><span class="p">(</span><span class="mi">401</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>This is the case because <tt class="docutils literal"><span class="pre">401</span></tt> is the HTTP status code for &quot;HTTP
+Unauthorized&quot;.  Therefore, <tt class="docutils literal"><span class="pre">raise</span> <span class="pre">exception_response(401)</span></tt> is functionally
+equivalent to <tt class="docutils literal"><span class="pre">raise</span> <span class="pre">HTTPUnauthorized()</span></tt>.  Documentation which maps each
+HTTP response code to its purpose and its associated HTTP exception object is
+provided within <a class="reference internal" href="../api/httpexceptions.html#module-pyramid.httpexceptions" title="pyramid.httpexceptions"><tt class="xref py py-mod docutils literal"><span class="pre">pyramid.httpexceptions</span></tt></a>.</p>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 1.1: </span>The <a class="reference internal" href="../api/httpexceptions.html#pyramid.httpexceptions.exception_response" title="pyramid.httpexceptions.exception_response"><tt class="xref py py-func docutils literal"><span class="pre">exception_response()</span></tt></a> function.</p>
+</div>
+</div>
+<div class="section" id="how-pyramid-uses-http-exceptions">
+<h3>How Pyramid Uses HTTP Exceptions<a class="headerlink" href="#how-pyramid-uses-http-exceptions" title="Permalink to this headline">¶</a></h3>
+<p>HTTP exceptions are meant to be used directly by application
+developers.  However, Pyramid itself will raise two HTTP exceptions at
+various points during normal operations:</p>
+<ul class="simple">
+<li><a class="reference internal" href="../api/httpexceptions.html#pyramid.httpexceptions.HTTPNotFound" title="pyramid.httpexceptions.HTTPNotFound"><tt class="xref py py-exc docutils literal"><span class="pre">HTTPNotFound</span></tt></a>
+gets raised when a view to service a request is not found.</li>
+<li><a class="reference internal" href="../api/httpexceptions.html#pyramid.httpexceptions.HTTPForbidden" title="pyramid.httpexceptions.HTTPForbidden"><tt class="xref py py-exc docutils literal"><span class="pre">HTTPForbidden</span></tt></a>
+gets raised when authorization was forbidden by a security policy.</li>
+</ul>
+<p>If <a class="reference internal" href="../api/httpexceptions.html#pyramid.httpexceptions.HTTPNotFound" title="pyramid.httpexceptions.HTTPNotFound"><tt class="xref py py-exc docutils literal"><span class="pre">HTTPNotFound</span></tt></a> is raised by Pyramid itself or
+within view code, the result of the <a class="reference internal" href="../glossary.html#term-not-found-view"><em class="xref std std-term">Not Found View</em></a> will be returned
+to the user agent which performed the request.</p>
+<p>If <a class="reference internal" href="../api/httpexceptions.html#pyramid.httpexceptions.HTTPForbidden" title="pyramid.httpexceptions.HTTPForbidden"><tt class="xref py py-exc docutils literal"><span class="pre">HTTPForbidden</span></tt></a> is raised by Pyramid itself
+within view code, the result of the <a class="reference internal" href="../glossary.html#term-forbidden-view"><em class="xref std std-term">Forbidden View</em></a> will be returned
+to the user agent which performed the request.</p>
+</div>
+</div>
+<div class="section" id="custom-exception-views">
+<span id="exception-views"></span><span id="index-6"></span><h2>Custom Exception Views<a class="headerlink" href="#custom-exception-views" title="Permalink to this headline">¶</a></h2>
+<p>The machinery which allows HTTP exceptions to be raised and caught by
+specialized views as described in <a class="reference internal" href="#special-exceptions-in-callables"><em>Using Special Exceptions In View Callables</em></a> can
+also be used by application developers to convert arbitrary exceptions to
+responses.</p>
+<p>To register a view that should be called whenever a particular exception is
+raised from within <span>Pyramid</span> view code, use the exception class (or one of
+its superclasses) as the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> of a view configuration which points
+at a view callable you'd like to generate a response for.</p>
+<p>For example, given the following exception class in a module named
+<tt class="docutils literal"><span class="pre">helloworld.exceptions</span></tt>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">class</span> <span class="nc">ValidationFailure</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">msg</span> <span class="o">=</span> <span class="n">msg</span>
+</pre></div>
+</td></tr></table></div>
+<p>You can wire a view callable to be called whenever any of your <em>other</em> code
+raises a <tt class="docutils literal"><span class="pre">helloworld.exceptions.ValidationFailure</span></tt> exception:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.view</span> <span class="kn">import</span> <span class="n">view_config</span>
+<span class="kn">from</span> <span class="nn">helloworld.exceptions</span> <span class="kn">import</span> <span class="n">ValidationFailure</span>
+
+<span class="nd">@view_config</span><span class="p">(</span><span class="n">context</span><span class="o">=</span><span class="n">ValidationFailure</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">failed_validation</span><span class="p">(</span><span class="n">exc</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+    <span class="n">response</span> <span class="o">=</span>  <span class="n">Response</span><span class="p">(</span><span class="s">&#39;Failed validation: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">exc</span><span class="o">.</span><span class="n">msg</span><span class="p">)</span>
+    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">500</span>
+    <span class="k">return</span> <span class="n">response</span>
+</pre></div>
+</td></tr></table></div>
+<p>Assuming that a <a class="reference internal" href="../glossary.html#term-scan"><em class="xref std std-term">scan</em></a> was run to pick up this view registration, this
+view callable will be invoked whenever a
+<tt class="docutils literal"><span class="pre">helloworld.exceptions.ValidationFailure</span></tt> is raised by your application's
+view code.  The same exception raised by a custom root factory, a custom
+traverser, or a custom view or route predicate is also caught and hooked.</p>
+<p>Other normal view predicates can also be used in combination with an
+exception view registration:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.view</span> <span class="kn">import</span> <span class="n">view_config</span>
+<span class="kn">from</span> <span class="nn">helloworld.exceptions</span> <span class="kn">import</span> <span class="n">ValidationFailure</span>
+
+<span class="nd">@view_config</span><span class="p">(</span><span class="n">context</span><span class="o">=</span><span class="n">ValidationFailure</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;home&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">failed_validation</span><span class="p">(</span><span class="n">exc</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+    <span class="n">response</span> <span class="o">=</span>  <span class="n">Response</span><span class="p">(</span><span class="s">&#39;Failed validation: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">exc</span><span class="o">.</span><span class="n">msg</span><span class="p">)</span>
+    <span class="n">response</span><span class="o">.</span><span class="n">status_int</span> <span class="o">=</span> <span class="mi">500</span>
+    <span class="k">return</span> <span class="n">response</span>
+</pre></div>
+</td></tr></table></div>
+<p>The above exception view names the <tt class="docutils literal"><span class="pre">route_name</span></tt> of <tt class="docutils literal"><span class="pre">home</span></tt>, meaning that
+it will only be called when the route matched has a name of <tt class="docutils literal"><span class="pre">home</span></tt>.  You
+can therefore have more than one exception view for any given exception in
+the system: the &quot;most specific&quot; one will be called when the set of request
+circumstances match the view registration.</p>
+<p>The only view predicate that cannot be used successfully when creating
+an exception view configuration is <tt class="docutils literal"><span class="pre">name</span></tt>.  The name used to look up
+an exception view is always the empty string.  Views registered as
+exception views which have a name will be ignored.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Normal (i.e., non-exception) views registered against a context resource
+type which inherits from <a class="reference external" href="http://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.4)"><tt class="xref py py-exc docutils literal"><span class="pre">Exception</span></tt></a> will work normally.  When an
+exception view configuration is processed, <em>two</em> views are registered.  One
+as a &quot;normal&quot; view, the other as an &quot;exception&quot; view.  This means that you
+can use an exception as <tt class="docutils literal"><span class="pre">context</span></tt> for a normal view.</p>
+</div>
+<p>Exception views can be configured with any view registration mechanism:
+<tt class="docutils literal"><span class="pre">&#64;view_config</span></tt> decorator or imperative <tt class="docutils literal"><span class="pre">add_view</span></tt> styles.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Pyramid's <a class="reference internal" href="../glossary.html#term-exception-view"><em class="xref std std-term">exception view</em></a> handling logic is implemented as a tween
+factory function: <a class="reference internal" href="../api/tweens.html#pyramid.tweens.excview_tween_factory" title="pyramid.tweens.excview_tween_factory"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.tweens.excview_tween_factory()</span></tt></a>.  If
+Pyramid exception view handling is desired, and tween factories are
+specified via the <tt class="docutils literal"><span class="pre">pyramid.tweens</span></tt> configuration setting, the
+<a class="reference internal" href="../api/tweens.html#pyramid.tweens.excview_tween_factory" title="pyramid.tweens.excview_tween_factory"><tt class="xref py py-func docutils literal"><span class="pre">pyramid.tweens.excview_tween_factory()</span></tt></a> function must be added to the
+<tt class="docutils literal"><span class="pre">pyramid.tweens</span></tt> configuration setting list explicitly.  If it is not
+present, Pyramid will not perform exception view handling.</p>
+</div>
+</div>
+<div class="section" id="using-a-view-callable-to-do-an-http-redirect">
+<span id="http-redirect"></span><span id="index-7"></span><h2>Using a View Callable to do an HTTP Redirect<a class="headerlink" href="#using-a-view-callable-to-do-an-http-redirect" title="Permalink to this headline">¶</a></h2>
+<p>You can issue an HTTP redirect by using the
+<a class="reference internal" href="../api/httpexceptions.html#pyramid.httpexceptions.HTTPFound" title="pyramid.httpexceptions.HTTPFound"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.httpexceptions.HTTPFound</span></tt></a> class.  Raising or returning an
+instance of this class will cause the client to receive a &quot;302 Found&quot;
+response.</p>
+<p>To do so, you can <em>return</em> a <a class="reference internal" href="../api/httpexceptions.html#pyramid.httpexceptions.HTTPFound" title="pyramid.httpexceptions.HTTPFound"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.httpexceptions.HTTPFound</span></tt></a>
+instance.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.httpexceptions</span> <span class="kn">import</span> <span class="n">HTTPFound</span>
+
+<span class="k">def</span> <span class="nf">myview</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">HTTPFound</span><span class="p">(</span><span class="n">location</span><span class="o">=</span><span class="s">&#39;http://example.com&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Alternately, you can <em>raise</em> an HTTPFound exception instead of returning one.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.httpexceptions</span> <span class="kn">import</span> <span class="n">HTTPFound</span>
+
+<span class="k">def</span> <span class="nf">myview</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="n">HTTPFound</span><span class="p">(</span><span class="n">location</span><span class="o">=</span><span class="s">&#39;http://example.com&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>When the instance is raised, it is caught by the default <a class="reference internal" href="../glossary.html#term-exception-response"><em class="xref std std-term">exception
+response</em></a> handler and turned into a response.</p>
+</div>
+<div class="section" id="handling-form-submissions-in-view-callables-unicode-and-character-set-issues">
+<span id="index-8"></span><h2>Handling Form Submissions in View Callables (Unicode and Character Set Issues)<a class="headerlink" href="#handling-form-submissions-in-view-callables-unicode-and-character-set-issues" title="Permalink to this headline">¶</a></h2>
+<p>Most web applications need to accept form submissions from web browsers and
+various other clients.  In <span>Pyramid</span>, form submission handling logic is
+always part of a <a class="reference internal" href="../glossary.html#term-view"><em class="xref std std-term">view</em></a>.  For a general overview of how to handle form
+submission data using the <a class="reference internal" href="../glossary.html#term-webob"><em class="xref std std-term">WebOb</em></a> API, see <a class="reference internal" href="webob.html#webob-chapter"><em>Request and Response Objects</em></a> and
+<a class="reference external" href="http://docs.webob.org/en/latest/reference.html#query-post-variables">&quot;Query and POST variables&quot; within the WebOb documentation</a>.
+<span>Pyramid</span> defers to WebOb for its request and response implementations,
+and handling form submission data is a property of the request
+implementation.  Understanding WebOb's request API is the key to
+understanding how to process form submission data.</p>
+<p>There are some defaults that you need to be aware of when trying to handle
+form submission data in a <span>Pyramid</span> view.  Having high-order (i.e.,
+non-ASCII) characters in data contained within form submissions is
+exceedingly common, and the UTF-8 encoding is the most common encoding used
+on the web for character data. Since Unicode values are much saner than
+working with and storing bytestrings, <span>Pyramid</span> configures the
+<a class="reference internal" href="../glossary.html#term-webob"><em class="xref std std-term">WebOb</em></a> request machinery to attempt to decode form submission values
+into Unicode from UTF-8 implicitly.  This implicit decoding happens when view
+code obtains form field values via the <tt class="docutils literal"><span class="pre">request.params</span></tt>, <tt class="docutils literal"><span class="pre">request.GET</span></tt>,
+or <tt class="docutils literal"><span class="pre">request.POST</span></tt> APIs (see <a class="reference internal" href="../api/request.html#request-module"><em>pyramid.request</em></a> for details about these
+APIs).</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Many people find the difference between Unicode and UTF-8 confusing.
+Unicode is a standard for representing text that supports most of the
+world's writing systems. However, there are many ways that Unicode data
+can be encoded into bytes for transit and storage. UTF-8 is a specific
+encoding for Unicode, that is backwards-compatible with ASCII. This makes
+UTF-8 very convenient for encoding data where a large subset of that data
+is ASCII characters, which is largely true on the web. UTF-8 is also the
+standard character encoding for URLs.</p>
+</div>
+<p>As an example, let's assume that the following form page is served up to a
+browser client, and its <tt class="docutils literal"><span class="pre">action</span></tt> points at some <span>Pyramid</span> view code:</p>
+<div class="highlight-xml"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14</pre></div></td><td class="code"><div class="highlight"><pre><span class="nt">&lt;html</span> <span class="na">xmlns=</span><span class="s">&quot;http://www.w3.org/1999/xhtml&quot;</span><span class="nt">&gt;</span>
+  <span class="nt">&lt;head&gt;</span>
+    <span class="nt">&lt;meta</span> <span class="na">http-equiv=</span><span class="s">&quot;Content-Type&quot;</span> <span class="na">content=</span><span class="s">&quot;text/html; charset=UTF-8&quot;</span><span class="nt">/&gt;</span>
+  <span class="nt">&lt;/head&gt;</span>
+  <span class="nt">&lt;form</span> <span class="na">method=</span><span class="s">&quot;POST&quot;</span> <span class="na">action=</span><span class="s">&quot;myview&quot;</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;div&gt;</span>
+      <span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">&quot;text&quot;</span> <span class="na">name=</span><span class="s">&quot;firstname&quot;</span><span class="nt">/&gt;</span>
+    <span class="nt">&lt;/div&gt;</span>
+    <span class="nt">&lt;div&gt;</span>
+      <span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">&quot;text&quot;</span> <span class="na">name=</span><span class="s">&quot;lastname&quot;</span><span class="nt">/&gt;</span>
+    <span class="nt">&lt;/div&gt;</span>
+    <span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">&quot;submit&quot;</span> <span class="na">value=</span><span class="s">&quot;Submit&quot;</span><span class="nt">/&gt;</span>
+  <span class="nt">&lt;/form&gt;</span>
+<span class="nt">&lt;/html&gt;</span>
+</pre></div>
+</td></tr></table></div>
+<p>The <tt class="docutils literal"><span class="pre">myview</span></tt> view code in the <span>Pyramid</span> application <em>must</em> expect that
+the values returned by <tt class="docutils literal"><span class="pre">request.params</span></tt> will be of type <tt class="docutils literal"><span class="pre">unicode</span></tt>, as
+opposed to type <tt class="docutils literal"><span class="pre">str</span></tt>. The following will work to accept a form post from
+the above form:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">myview</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">firstname</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;firstname&#39;</span><span class="p">]</span>
+    <span class="n">lastname</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;lastname&#39;</span><span class="p">]</span>
+</pre></div>
+</td></tr></table></div>
+<p>But the following <tt class="docutils literal"><span class="pre">myview</span></tt> view code <em>may not</em> work, as it tries to decode
+already-decoded (<tt class="docutils literal"><span class="pre">unicode</span></tt>) values obtained from <tt class="docutils literal"><span class="pre">request.params</span></tt>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">myview</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="c"># the .decode(&#39;utf-8&#39;) will break below if there are any high-order</span>
+    <span class="c"># characters in the firstname or lastname</span>
+    <span class="n">firstname</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;firstname&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;utf-8&#39;</span><span class="p">)</span>
+    <span class="n">lastname</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;lastname&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;utf-8&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>For implicit decoding to work reliably, you should ensure that every form you
+render that posts to a <span>Pyramid</span> view explicitly defines a charset
+encoding of UTF-8. This can be done via a response that has a
+<tt class="docutils literal"><span class="pre">;charset=UTF-8</span></tt> in its <tt class="docutils literal"><span class="pre">Content-Type</span></tt> header; or, as in the form above,
+with a <tt class="docutils literal"><span class="pre">meta</span> <span class="pre">http-equiv</span></tt> tag that implies that the charset is UTF-8 within
+the HTML <tt class="docutils literal"><span class="pre">head</span></tt> of the page containing the form.  This must be done
+explicitly because all known browser clients assume that they should encode
+form data in the same character set implied by <tt class="docutils literal"><span class="pre">Content-Type</span></tt> value of the
+response containing the form when subsequently submitting that form. There is
+no other generally accepted way to tell browser clients which charset to use
+to encode form data.  If you do not specify an encoding explicitly, the
+browser client will choose to encode form data in its default character set
+before submitting it, which may not be UTF-8 as the server expects.  If a
+request containing form data encoded in a non-UTF8 charset is handled by your
+view code, eventually the request code accessed within your view will throw
+an error when it can't decode some high-order character encoded in another
+character set within form data, e.g., when <tt class="docutils literal"><span class="pre">request.params['somename']</span></tt> is
+accessed.</p>
+<p>If you are using the <a class="reference internal" href="../api/response.html#pyramid.response.Response" title="pyramid.response.Response"><tt class="xref py py-class docutils literal"><span class="pre">Response</span></tt></a> class to generate a
+response, or if you use the <tt class="docutils literal"><span class="pre">render_template_*</span></tt> templating APIs, the UTF-8
+charset is set automatically as the default via the <tt class="docutils literal"><span class="pre">Content-Type</span></tt> header.
+If you return a <tt class="docutils literal"><span class="pre">Content-Type</span></tt> header without an explicit charset, a
+request will add a <tt class="docutils literal"><span class="pre">;charset=utf-8</span></tt> trailer to the <tt class="docutils literal"><span class="pre">Content-Type</span></tt> header
+value for you, for response content types that are textual
+(e.g. <tt class="docutils literal"><span class="pre">text/html</span></tt>, <tt class="docutils literal"><span class="pre">application/xml</span></tt>, etc) as it is rendered.  If you are
+using your own response object, you will need to ensure you do this yourself.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Only the <em>values</em> of request params obtained via
+<tt class="docutils literal"><span class="pre">request.params</span></tt>, <tt class="docutils literal"><span class="pre">request.GET</span></tt> or <tt class="docutils literal"><span class="pre">request.POST</span></tt> are decoded
+to Unicode objects implicitly in the <span>Pyramid</span> default
+configuration.  The keys are still (byte) strings.</p>
+</div>
+</div>
+<div class="section" id="alternate-view-callable-argument-calling-conventions">
+<span id="request-and-context-view-definitions"></span><span id="index-9"></span><h2>Alternate View Callable Argument/Calling Conventions<a class="headerlink" href="#alternate-view-callable-argument-calling-conventions" title="Permalink to this headline">¶</a></h2>
+<p>Usually, view callables are defined to accept only a single argument:
+<tt class="docutils literal"><span class="pre">request</span></tt>.  However, view callables may alternately be defined as classes,
+functions, or any callable that accept <em>two</em> positional arguments: a
+<a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource as the first argument and a <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> as the
+second argument.</p>
+<p>The <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> and <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> arguments passed to a view function
+defined in this style can be defined as follows:</p>
+<dl class="docutils">
+<dt>context</dt>
+<dd>The <a class="reference internal" href="../glossary.html#term-resource"><em class="xref std std-term">resource</em></a> object found via tree <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> or <a class="reference internal" href="../glossary.html#term-url-dispatch"><em class="xref std std-term">URL
+dispatch</em></a>.</dd>
+<dt>request</dt>
+<dd>A <span>Pyramid</span> Request object representing the current WSGI request.</dd>
+</dl>
+<p>The following types work as view callables in this style:</p>
+<ol class="arabic">
+<li><p class="first">Functions that accept two arguments: <tt class="docutils literal"><span class="pre">context</span></tt>, and <tt class="docutils literal"><span class="pre">request</span></tt>,
+e.g.:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+
+<span class="k">def</span> <span class="nf">view</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;OK&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Classes that have an <tt class="docutils literal"><span class="pre">__init__</span></tt> method that accepts <tt class="docutils literal"><span class="pre">context,</span>
+<span class="pre">request</span></tt> and a <tt class="docutils literal"><span class="pre">__call__</span></tt> method which accepts no arguments, e.g.:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+
+<span class="k">class</span> <span class="nc">view</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+   <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+       <span class="bp">self</span><span class="o">.</span><span class="n">context</span> <span class="o">=</span> <span class="n">context</span>
+       <span class="bp">self</span><span class="o">.</span><span class="n">request</span> <span class="o">=</span> <span class="n">request</span>
+
+   <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+       <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;OK&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Arbitrary callables that have a <tt class="docutils literal"><span class="pre">__call__</span></tt> method that accepts
+<tt class="docutils literal"><span class="pre">context,</span> <span class="pre">request</span></tt>, e.g.:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+
+<span class="k">class</span> <span class="nc">View</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;OK&#39;</span><span class="p">)</span>
+<span class="n">view</span> <span class="o">=</span> <span class="n">View</span><span class="p">()</span> <span class="c"># this is the view callable</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+</ol>
+<p>This style of calling convention is most useful for <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> based
+applications, where the context object is frequently used within the view
+callable code itself.</p>
+<p>No matter which view calling convention is used, the view code always has
+access to the context via <tt class="docutils literal"><span class="pre">request.context</span></tt>.</p>
+</div>
+<div class="section" id="passing-configuration-variables-to-a-view">
+<span id="passing-in-config-variables"></span><span id="index-10"></span><h2>Passing Configuration Variables to a View<a class="headerlink" href="#passing-configuration-variables-to-a-view" title="Permalink to this headline">¶</a></h2>
+<p>For information on passing a variable from the configuration .ini files to a
+view, see <a class="reference internal" href="startup.html#deployment-settings"><em>Deployment Settings</em></a>.</p>
+</div>
+<div class="section" id="pylons-1-0-style-controller-dispatch">
+<span id="index-11"></span><h2>Pylons-1.0-Style &quot;Controller&quot; Dispatch<a class="headerlink" href="#pylons-1-0-style-controller-dispatch" title="Permalink to this headline">¶</a></h2>
+<p>A package named <a class="reference internal" href="../glossary.html#term-pyramid-handlers"><em class="xref std std-term">pyramid_handlers</em></a> (available from PyPI) provides an
+analogue of <a class="reference internal" href="../glossary.html#term-pylons"><em class="xref std std-term">Pylons</em></a> -style &quot;controllers&quot;, which are a special kind of
+view class which provides more automation when your application uses
+<a class="reference internal" href="../glossary.html#term-url-dispatch"><em class="xref std std-term">URL dispatch</em></a> solely.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Views</a><ul>
+<li><a class="reference internal" href="#view-callables">View Callables</a></li>
+<li><a class="reference internal" href="#defining-a-view-callable-as-a-function">Defining a View Callable as a Function</a></li>
+<li><a class="reference internal" href="#defining-a-view-callable-as-a-class">Defining a View Callable as a Class</a></li>
+<li><a class="reference internal" href="#view-callable-responses">View Callable Responses</a></li>
+<li><a class="reference internal" href="#using-special-exceptions-in-view-callables">Using Special Exceptions In View Callables</a><ul>
+<li><a class="reference internal" href="#http-exceptions">HTTP Exceptions</a></li>
+<li><a class="reference internal" href="#how-pyramid-uses-http-exceptions">How Pyramid Uses HTTP Exceptions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#custom-exception-views">Custom Exception Views</a></li>
+<li><a class="reference internal" href="#using-a-view-callable-to-do-an-http-redirect">Using a View Callable to do an HTTP Redirect</a></li>
+<li><a class="reference internal" href="#handling-form-submissions-in-view-callables-unicode-and-character-set-issues">Handling Form Submissions in View Callables (Unicode and Character Set Issues)</a></li>
+<li><a class="reference internal" href="#alternate-view-callable-argument-calling-conventions">Alternate View Callable Argument/Calling Conventions</a></li>
+<li><a class="reference internal" href="#passing-configuration-variables-to-a-view">Passing Configuration Variables to a View</a></li>
+<li><a class="reference internal" href="#pylons-1-0-style-controller-dispatch">Pylons-1.0-Style &quot;Controller&quot; Dispatch</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="urldispatch.html"
+                        title="previous chapter">URL Dispatch</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="renderers.html"
+                        title="next chapter">Renderers</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="renderers.html" title="Renderers"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="urldispatch.html" title="URL Dispatch"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

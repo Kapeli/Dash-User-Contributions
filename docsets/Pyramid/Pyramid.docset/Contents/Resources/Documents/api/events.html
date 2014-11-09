@@ -1,0 +1,361 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta content="text/html; charset=utf-8" http-equiv="Content-Type"/><title>pyramid.events — The Pyramid Web Framework v1.5</title><link href="../_static/pylons.css" rel="stylesheet" type="text/css"/><link href="../_static/pygments.css" rel="stylesheet" type="text/css"/><script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script><script src="../_static/jquery.js" type="text/javascript"></script><script src="../_static/underscore.js" type="text/javascript"></script><script src="../_static/doctools.js" type="text/javascript"></script><link href="../copyright.html" rel="copyright" title="Copyright"/><link href="../index.html" rel="top" title="The Pyramid Web Framework v1.5"/><link href="exceptions.html" rel="next" title="pyramid.exceptions"/><link href="decorator.html" rel="prev" title="pyramid.decorator"/><link charset="utf-8" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" media="screen" rel="stylesheet" type="text/css"/><link charset="utf-8" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" media="screen" rel="stylesheet" type="text/css"/><!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]--><link href="../_static/pyramid.ico" rel="shortcut icon"/></head><body>
+<div class="header-small">
+<div class="logo-small">
+<a href="../index.html">
+<img alt="Logo" class="logo" src="../_static/pyramid-small.png"/>
+</a>
+</div>
+</div>
+<div class="related">
+<h3>Navigation</h3>
+<ul>
+<li class="right" style="margin-right: 10px">
+<a accesskey="I" href="../genindex.html" title="General Index">index</a></li>
+<li class="right">
+<a href="../py-modindex.html" title="Python Module Index">modules</a> |</li>
+<li class="right">
+<a accesskey="N" href="exceptions.html" title="pyramid.exceptions">next</a> |</li>
+<li class="right">
+<a accesskey="P" href="decorator.html" title="pyramid.decorator">previous</a> |</li>
+<li><a href="../index.html">The Pyramid Web Framework v1.5</a> »</li>
+</ul>
+</div>
+<div class="document">
+<div class="documentwrapper">
+<div class="bodywrapper">
+<div class="body">
+<div class="section" id="module-pyramid.events">
+<span id="pyramid-events"></span><span id="events-module"></span><h1><a name="//apple_ref/cpp/Module/pyramid.events"></a><a class="reference internal" href="#module-pyramid.events" title="pyramid.events"><tt class="xref py py-mod docutils literal"><span class="pre">pyramid.events</span></tt></a><a class="headerlink" href="#module-pyramid.events" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pyramid.events.subscriber"><a name="//apple_ref/cpp/func/pyramid.events.subscriber"></a>
+<tt class="descname">subscriber</tt><big>(</big><em>*ifaces</em>, <em>**predicates</em><big>)</big><a class="reference internal" href="../_modules/pyramid/events.html#subscriber"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyramid.events.subscriber" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decorator activated via a <a class="reference internal" href="../glossary.html#term-scan"><em class="xref std std-term">scan</em></a> which treats the function
+being decorated as an event subscriber for the set of interfaces passed
+as <tt class="docutils literal"><span class="pre">*ifaces</span></tt> and the set of predicate terms passed as <tt class="docutils literal"><span class="pre">**predicates</span></tt>
+to the decorator constructor.</p>
+<p>For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.events</span> <span class="kn">import</span> <span class="n">NewRequest</span>
+<span class="kn">from</span> <span class="nn">pyramid.events</span> <span class="kn">import</span> <span class="n">subscriber</span>
+
+<span class="nd">@subscriber</span><span class="p">(</span><span class="n">NewRequest</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">mysubscriber</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="n">event</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">foo</span> <span class="o">=</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p>More than one event type can be passed as a constructor argument.  The
+decorated subscriber will be called for each event type.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.events</span> <span class="kn">import</span> <span class="n">NewRequest</span><span class="p">,</span> <span class="n">NewResponse</span>
+<span class="kn">from</span> <span class="nn">pyramid.events</span> <span class="kn">import</span> <span class="n">subscriber</span>
+
+<span class="nd">@subscriber</span><span class="p">(</span><span class="n">NewRequest</span><span class="p">,</span> <span class="n">NewResponse</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">mysubscriber</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>When the <tt class="docutils literal"><span class="pre">subscriber</span></tt> decorator is used without passing an arguments,
+the function it decorates is called for every event sent:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.events</span> <span class="kn">import</span> <span class="n">subscriber</span>
+
+<span class="nd">@subscriber</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">mysubscriber</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This method will have no effect until a <a class="reference internal" href="../glossary.html#term-scan"><em class="xref std std-term">scan</em></a> is performed
+against the package or module which contains it, ala:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+<span class="n">config</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="s">'somepackage_containing_subscribers'</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Any <tt class="docutils literal"><span class="pre">**predicate</span></tt> arguments will be passed along to
+<a class="reference internal" href="config.html#pyramid.config.Configurator.add_subscriber" title="pyramid.config.Configurator.add_subscriber"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_subscriber()</span></tt></a>.  See
+<a class="reference internal" href="../narr/hooks.html#subscriber-predicates"><em>Subscriber Predicates</em></a> for a description of how predicates can
+narrow the set of circumstances in which a subscriber will be called.</p>
+</dd></dl>
+</div>
+<div class="section" id="event-types">
+<span id="id1"></span><h2>Event Types<a class="headerlink" href="#event-types" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pyramid.events.ApplicationCreated"><a name="//apple_ref/cpp/cl/pyramid.events.ApplicationCreated"></a>
+<em class="property">class </em><tt class="descname">ApplicationCreated</tt><big>(</big><em>app</em><big>)</big><a class="reference internal" href="../_modules/pyramid/events.html#ApplicationCreated"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyramid.events.ApplicationCreated" title="Permalink to this definition">¶</a></dt>
+<dd><p>An instance of this class is emitted as an <a class="reference internal" href="../glossary.html#term-event"><em class="xref std std-term">event</em></a> when
+the <a class="reference internal" href="config.html#pyramid.config.Configurator.make_wsgi_app" title="pyramid.config.Configurator.make_wsgi_app"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.make_wsgi_app()</span></tt></a> is
+called.  The instance has an attribute, <tt class="docutils literal"><span class="pre">app</span></tt>, which is an
+instance of the <a class="reference internal" href="../glossary.html#term-router"><em class="xref std std-term">router</em></a> that will handle WSGI requests.
+This class implements the
+<a class="reference internal" href="interfaces.html#pyramid.interfaces.IApplicationCreated" title="pyramid.interfaces.IApplicationCreated"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.IApplicationCreated</span></tt></a> interface.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">For backwards compatibility purposes, this class can also be imported as
+<tt class="xref py py-class docutils literal"><span class="pre">pyramid.events.WSGIApplicationCreatedEvent</span></tt>.  This was the name
+of the event class before <span>Pyramid</span> 1.0.</p>
+</div>
+</dd></dl>
+<dl class="class">
+<dt id="pyramid.events.NewRequest"><a name="//apple_ref/cpp/cl/pyramid.events.NewRequest"></a>
+<em class="property">class </em><tt class="descname">NewRequest</tt><big>(</big><em>request</em><big>)</big><a class="reference internal" href="../_modules/pyramid/events.html#NewRequest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyramid.events.NewRequest" title="Permalink to this definition">¶</a></dt>
+<dd><p>An instance of this class is emitted as an <a class="reference internal" href="../glossary.html#term-event"><em class="xref std std-term">event</em></a>
+whenever <span>Pyramid</span> begins to process a new request.  The
+event instance has an attribute, <tt class="docutils literal"><span class="pre">request</span></tt>, which is a
+<a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> object.  This event class implements the
+<a class="reference internal" href="interfaces.html#pyramid.interfaces.INewRequest" title="pyramid.interfaces.INewRequest"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.INewRequest</span></tt></a> interface.</p>
+</dd></dl>
+<dl class="class">
+<dt id="pyramid.events.ContextFound"><a name="//apple_ref/cpp/cl/pyramid.events.ContextFound"></a>
+<em class="property">class </em><tt class="descname">ContextFound</tt><big>(</big><em>request</em><big>)</big><a class="reference internal" href="../_modules/pyramid/events.html#ContextFound"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyramid.events.ContextFound" title="Permalink to this definition">¶</a></dt>
+<dd><p>An instance of this class is emitted as an <a class="reference internal" href="../glossary.html#term-event"><em class="xref std std-term">event</em></a> after
+the <span>Pyramid</span> <a class="reference internal" href="../glossary.html#term-router"><em class="xref std std-term">router</em></a> finds a <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a>
+object (after it performs traversal) but before any view code is
+executed.  The instance has an attribute, <tt class="docutils literal"><span class="pre">request</span></tt>, which is
+the request object generated by <span>Pyramid</span>.</p>
+<p>Notably, the request object will have an attribute named
+<tt class="docutils literal"><span class="pre">context</span></tt>, which is the context that will be provided to the
+view which will eventually be called, as well as other attributes
+attached by context-finding code.</p>
+<p>This class implements the
+<a class="reference internal" href="interfaces.html#pyramid.interfaces.IContextFound" title="pyramid.interfaces.IContextFound"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.IContextFound</span></tt></a> interface.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">As of <span>Pyramid</span> 1.0, for backwards compatibility purposes, this
+event may also be imported as <tt class="xref py py-class docutils literal"><span class="pre">pyramid.events.AfterTraversal</span></tt>.</p>
+</div>
+</dd></dl>
+<dl class="class">
+<dt id="pyramid.events.NewResponse"><a name="//apple_ref/cpp/cl/pyramid.events.NewResponse"></a>
+<em class="property">class </em><tt class="descname">NewResponse</tt><big>(</big><em>request</em>, <em>response</em><big>)</big><a class="reference internal" href="../_modules/pyramid/events.html#NewResponse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyramid.events.NewResponse" title="Permalink to this definition">¶</a></dt>
+<dd><p>An instance of this class is emitted as an <a class="reference internal" href="../glossary.html#term-event"><em class="xref std std-term">event</em></a>
+whenever any <span>Pyramid</span> <a class="reference internal" href="../glossary.html#term-view"><em class="xref std std-term">view</em></a> or <a class="reference internal" href="../glossary.html#term-exception-view"><em class="xref std std-term">exception
+view</em></a> returns a <a class="reference internal" href="../glossary.html#term-response"><em class="xref std std-term">response</em></a>.</p>
+<p>The instance has two attributes:<tt class="docutils literal"><span class="pre">request</span></tt>, which is the request
+which caused the response, and <tt class="docutils literal"><span class="pre">response</span></tt>, which is the response
+object returned by a view or renderer.</p>
+<p>If the <tt class="docutils literal"><span class="pre">response</span></tt> was generated by an <a class="reference internal" href="../glossary.html#term-exception-view"><em class="xref std std-term">exception view</em></a>, the
+request will have an attribute named <tt class="docutils literal"><span class="pre">exception</span></tt>, which is the
+exception object which caused the exception view to be executed.  If the
+response was generated by a 'normal' view, this attribute of the request
+will be <tt class="docutils literal"><span class="pre">None</span></tt>.</p>
+<p>This event will not be generated if a response cannot be created due to
+an exception that is not caught by an exception view (no response is
+created under this circumstace).</p>
+<p>This class implements the
+<a class="reference internal" href="interfaces.html#pyramid.interfaces.INewResponse" title="pyramid.interfaces.INewResponse"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.INewResponse</span></tt></a> interface.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Postprocessing a response is usually better handled in a WSGI
+<a class="reference internal" href="../glossary.html#term-middleware"><em class="xref std std-term">middleware</em></a> component than in subscriber code that is
+called by a <a class="reference internal" href="interfaces.html#pyramid.interfaces.INewResponse" title="pyramid.interfaces.INewResponse"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.INewResponse</span></tt></a> event.
+The <a class="reference internal" href="interfaces.html#pyramid.interfaces.INewResponse" title="pyramid.interfaces.INewResponse"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.INewResponse</span></tt></a> event exists
+almost purely for symmetry with the
+<a class="reference internal" href="interfaces.html#pyramid.interfaces.INewRequest" title="pyramid.interfaces.INewRequest"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.INewRequest</span></tt></a> event.</p>
+</div>
+</dd></dl>
+<dl class="class">
+<dt id="pyramid.events.BeforeRender"><a name="//apple_ref/cpp/cl/pyramid.events.BeforeRender"></a>
+<em class="property">class </em><tt class="descname">BeforeRender</tt><big>(</big><em>system</em>, <em>rendering_val=None</em><big>)</big><a class="reference internal" href="../_modules/pyramid/events.html#BeforeRender"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyramid.events.BeforeRender" title="Permalink to this definition">¶</a></dt>
+<dd><p>Subscribers to this event may introspect and modify the set of
+<a class="reference internal" href="../glossary.html#term-renderer-globals"><em class="xref std std-term">renderer globals</em></a> before they are passed to a <a class="reference internal" href="../glossary.html#term-renderer"><em class="xref std std-term">renderer</em></a>.
+This event object iself has a dictionary-like interface that can be used
+for this purpose.  For example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.events</span> <span class="kn">import</span> <span class="n">subscriber</span>
+<span class="kn">from</span> <span class="nn">pyramid.events</span> <span class="kn">import</span> <span class="n">BeforeRender</span>
+
+<span class="nd">@subscriber</span><span class="p">(</span><span class="n">BeforeRender</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">add_global</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="n">event</span><span class="p">[</span><span class="s">'mykey'</span><span class="p">]</span> <span class="o">=</span> <span class="s">'foo'</span>
+</pre></div>
+</div>
+<p>An object of this type is sent as an event just before a <a class="reference internal" href="../glossary.html#term-renderer"><em class="xref std std-term">renderer</em></a>
+is invoked.</p>
+<p>If a subscriber adds a key via <tt class="docutils literal"><span class="pre">__setitem__</span></tt> that already exists in
+the renderer globals dictionary, it will overwrite the older value there.
+This can be problematic because event subscribers to the BeforeRender
+event do not possess any relative ordering.  For maximum interoperability
+with other third-party subscribers, if you write an event subscriber meant
+to be used as a BeforeRender subscriber, your subscriber code will need to
+ensure no value already exists in the renderer globals dictionary before
+setting an overriding value (which can be done using <tt class="docutils literal"><span class="pre">.get</span></tt> or
+<tt class="docutils literal"><span class="pre">__contains__</span></tt> of the event object).</p>
+<p>The dictionary returned from the view is accessible through the
+<tt class="xref py py-attr docutils literal"><span class="pre">rendering_val</span></tt> attribute of a <a class="reference internal" href="#pyramid.events.BeforeRender" title="pyramid.events.BeforeRender"><tt class="xref py py-class docutils literal"><span class="pre">BeforeRender</span></tt></a>
+event.</p>
+<p>Suppose you return <tt class="docutils literal"><span class="pre">{'mykey':</span> <span class="pre">'somevalue',</span> <span class="pre">'mykey2':</span> <span class="pre">'somevalue2'}</span></tt> from
+your view callable, like so:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.view</span> <span class="kn">import</span> <span class="n">view_config</span>
+
+<span class="nd">@view_config</span><span class="p">(</span><span class="n">renderer</span><span class="o">=</span><span class="s">'some_renderer'</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">myview</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s">'mykey'</span><span class="p">:</span> <span class="s">'somevalue'</span><span class="p">,</span> <span class="s">'mykey2'</span><span class="p">:</span> <span class="s">'somevalue2'</span><span class="p">}</span>
+</pre></div>
+</div>
+<p><tt class="xref py py-attr docutils literal"><span class="pre">rendering_val</span></tt> can be used to access these values from the
+<a class="reference internal" href="#pyramid.events.BeforeRender" title="pyramid.events.BeforeRender"><tt class="xref py py-class docutils literal"><span class="pre">BeforeRender</span></tt></a> object:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.events</span> <span class="kn">import</span> <span class="n">subscriber</span>
+<span class="kn">from</span> <span class="nn">pyramid.events</span> <span class="kn">import</span> <span class="n">BeforeRender</span>
+
+<span class="nd">@subscriber</span><span class="p">(</span><span class="n">BeforeRender</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">read_return</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+    <span class="c"># {'mykey': 'somevalue'} is returned from the view</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">rendering_val</span><span class="p">[</span><span class="s">'mykey'</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>In other words, <tt class="xref py py-attr docutils literal"><span class="pre">rendering_val</span></tt> is the (non-system) value returned
+by a view or passed to <tt class="docutils literal"><span class="pre">render*</span></tt> as <tt class="docutils literal"><span class="pre">value</span></tt>.  This feature is new in
+Pyramid 1.2.</p>
+<p>For a description of the values present in the renderer globals dictionary,
+see <a class="reference internal" href="../narr/templates.html#renderer-system-values"><em>System Values Used During Rendering</em></a>.</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last">See also <a class="reference internal" href="interfaces.html#pyramid.interfaces.IBeforeRender" title="pyramid.interfaces.IBeforeRender"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.IBeforeRender</span></tt></a>.</p>
+</div>
+<dl class="method">
+<dt id="pyramid.events.BeforeRender.update"><a name="//apple_ref/cpp/clm/pyramid.events.BeforeRender.update"></a>
+<tt class="descname">update</tt><big>(</big><em>E</em>, <em>**F</em><big>)</big><a class="headerlink" href="#pyramid.events.BeforeRender.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update D from dict/iterable E and F. If E has a .keys() method, does:
+for k in E: D[k] = E[k] If E lacks .keys() method, does: for (k, v) in
+E: D[k] = v.  In either case, this is followed by: for k in F: D[k] =
+F[k].</p>
+</dd></dl>
+<dl class="method">
+<dt id="pyramid.events.BeforeRender.clear"><a name="//apple_ref/cpp/clm/pyramid.events.BeforeRender.clear"></a>
+<tt class="descname">clear</tt><big>(</big><big>)</big> → None.  Remove all items from D.<a class="headerlink" href="#pyramid.events.BeforeRender.clear" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="method">
+<dt id="pyramid.events.BeforeRender.copy"><a name="//apple_ref/cpp/clm/pyramid.events.BeforeRender.copy"></a>
+<tt class="descname">copy</tt><big>(</big><big>)</big> → a shallow copy of D<a class="headerlink" href="#pyramid.events.BeforeRender.copy" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="staticmethod">
+<dt id="pyramid.events.BeforeRender.fromkeys">
+<em class="property">static </em><tt class="descname">fromkeys</tt><big>(</big><em>S</em><span class="optional">[</span>, <em>v</em><span class="optional">]</span><big>)</big> → New dict with keys from S and values equal to v.<a class="headerlink" href="#pyramid.events.BeforeRender.fromkeys" title="Permalink to this definition">¶</a></dt>
+<dd><p>v defaults to None.</p>
+</dd></dl>
+<dl class="method">
+<dt id="pyramid.events.BeforeRender.get"><a name="//apple_ref/cpp/clm/pyramid.events.BeforeRender.get"></a>
+<tt class="descname">get</tt><big>(</big><em>k</em><span class="optional">[</span>, <em>d</em><span class="optional">]</span><big>)</big> → D[k] if k in D, else d.  d defaults to None.<a class="headerlink" href="#pyramid.events.BeforeRender.get" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="method">
+<dt id="pyramid.events.BeforeRender.has_key"><a name="//apple_ref/cpp/clm/pyramid.events.BeforeRender.has_key"></a>
+<tt class="descname">has_key</tt><big>(</big><em>k</em><big>)</big> → True if D has a key k, else False<a class="headerlink" href="#pyramid.events.BeforeRender.has_key" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="method">
+<dt id="pyramid.events.BeforeRender.items"><a name="//apple_ref/cpp/clm/pyramid.events.BeforeRender.items"></a>
+<tt class="descname">items</tt><big>(</big><big>)</big> → list of D's (key, value) pairs, as 2-tuples<a class="headerlink" href="#pyramid.events.BeforeRender.items" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="method">
+<dt id="pyramid.events.BeforeRender.iteritems"><a name="//apple_ref/cpp/clm/pyramid.events.BeforeRender.iteritems"></a>
+<tt class="descname">iteritems</tt><big>(</big><big>)</big> → an iterator over the (key, value) items of D<a class="headerlink" href="#pyramid.events.BeforeRender.iteritems" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="method">
+<dt id="pyramid.events.BeforeRender.iterkeys"><a name="//apple_ref/cpp/clm/pyramid.events.BeforeRender.iterkeys"></a>
+<tt class="descname">iterkeys</tt><big>(</big><big>)</big> → an iterator over the keys of D<a class="headerlink" href="#pyramid.events.BeforeRender.iterkeys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="method">
+<dt id="pyramid.events.BeforeRender.itervalues"><a name="//apple_ref/cpp/clm/pyramid.events.BeforeRender.itervalues"></a>
+<tt class="descname">itervalues</tt><big>(</big><big>)</big> → an iterator over the values of D<a class="headerlink" href="#pyramid.events.BeforeRender.itervalues" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="method">
+<dt id="pyramid.events.BeforeRender.keys"><a name="//apple_ref/cpp/clm/pyramid.events.BeforeRender.keys"></a>
+<tt class="descname">keys</tt><big>(</big><big>)</big> → list of D's keys<a class="headerlink" href="#pyramid.events.BeforeRender.keys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="method">
+<dt id="pyramid.events.BeforeRender.pop"><a name="//apple_ref/cpp/clm/pyramid.events.BeforeRender.pop"></a>
+<tt class="descname">pop</tt><big>(</big><em>k</em><span class="optional">[</span>, <em>d</em><span class="optional">]</span><big>)</big> → v, remove specified key and return the corresponding value.<a class="headerlink" href="#pyramid.events.BeforeRender.pop" title="Permalink to this definition">¶</a></dt>
+<dd><p>If key is not found, d is returned if given, otherwise KeyError is raised</p>
+</dd></dl>
+<dl class="method">
+<dt id="pyramid.events.BeforeRender.popitem"><a name="//apple_ref/cpp/clm/pyramid.events.BeforeRender.popitem"></a>
+<tt class="descname">popitem</tt><big>(</big><big>)</big> → (k, v), remove and return some (key, value) pair as a<a class="headerlink" href="#pyramid.events.BeforeRender.popitem" title="Permalink to this definition">¶</a></dt>
+<dd><p>2-tuple; but raise KeyError if D is empty.</p>
+</dd></dl>
+<dl class="method">
+<dt id="pyramid.events.BeforeRender.setdefault"><a name="//apple_ref/cpp/clm/pyramid.events.BeforeRender.setdefault"></a>
+<tt class="descname">setdefault</tt><big>(</big><em>k</em><span class="optional">[</span>, <em>d</em><span class="optional">]</span><big>)</big> → D.get(k,d), also set D[k]=d if k not in D<a class="headerlink" href="#pyramid.events.BeforeRender.setdefault" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="method">
+<dt id="pyramid.events.BeforeRender.values"><a name="//apple_ref/cpp/clm/pyramid.events.BeforeRender.values"></a>
+<tt class="descname">values</tt><big>(</big><big>)</big> → list of D's values<a class="headerlink" href="#pyramid.events.BeforeRender.values" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="method">
+<dt id="pyramid.events.BeforeRender.viewitems"><a name="//apple_ref/cpp/clm/pyramid.events.BeforeRender.viewitems"></a>
+<tt class="descname">viewitems</tt><big>(</big><big>)</big> → a set-like object providing a view on D's items<a class="headerlink" href="#pyramid.events.BeforeRender.viewitems" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="method">
+<dt id="pyramid.events.BeforeRender.viewkeys"><a name="//apple_ref/cpp/clm/pyramid.events.BeforeRender.viewkeys"></a>
+<tt class="descname">viewkeys</tt><big>(</big><big>)</big> → a set-like object providing a view on D's keys<a class="headerlink" href="#pyramid.events.BeforeRender.viewkeys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+<dl class="method">
+<dt id="pyramid.events.BeforeRender.viewvalues"><a name="//apple_ref/cpp/clm/pyramid.events.BeforeRender.viewvalues"></a>
+<tt class="descname">viewvalues</tt><big>(</big><big>)</big> → an object providing a view on D's values<a class="headerlink" href="#pyramid.events.BeforeRender.viewvalues" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+</dd></dl>
+<p>See <a class="reference internal" href="../narr/events.html#events-chapter"><em>Using Events</em></a> for more information about how to register
+code which subscribes to these events.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sphinxsidebar">
+<div class="sphinxsidebarwrapper">
+<h3><a href="../index.html">Table Of Contents</a></h3>
+<ul>
+<li><a class="reference internal" href="#"><tt class="docutils literal"><span class="pre">pyramid.events</span></tt></a><ul>
+<li><a class="reference internal" href="#functions">Functions</a></li>
+<li><a class="reference internal" href="#event-types">Event Types</a></li>
+</ul>
+</li>
+</ul>
+<h4>Previous topic</h4>
+<p class="topless"><a href="decorator.html" title="previous chapter"><tt class="docutils literal"><span class="pre">pyramid.decorator</span></tt></a></p>
+<h4>Next topic</h4>
+<p class="topless"><a href="exceptions.html" title="next chapter"><tt class="docutils literal"><span class="pre">pyramid.exceptions</span></tt></a></p>
+<div id="searchbox" style="display: none">
+<h3>Quick search</h3>
+<form action="../search.html" class="search" method="get">
+<input name="q" type="text"/>
+<input type="submit" value="Go"/>
+<input name="check_keywords" type="hidden" value="yes"/>
+<input name="area" type="hidden" value="default"/>
+</form>
+<p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+</div>
+</div>
+<div class="clearer"></div>
+</div>
+<div class="related">
+<h3>Navigation</h3>
+<ul>
+<li class="right" style="margin-right: 10px">
+<a href="../genindex.html" title="General Index">index</a></li>
+<li class="right">
+<a href="../py-modindex.html" title="Python Module Index">modules</a> |</li>
+<li class="right">
+<a href="exceptions.html" title="pyramid.exceptions">next</a> |</li>
+<li class="right">
+<a href="decorator.html" title="pyramid.decorator">previous</a> |</li>
+<li><a href="../index.html">The Pyramid Web Framework v1.5</a> »</li>
+</ul>
+</div>
+<div class="footer">
+        © <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+</body></html>

@@ -1,0 +1,447 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>15: More With View Classes &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="up" title="Quick Tutorial for Pyramid" href="index.html" />
+    <link rel="next" title="16: Collecting Application Info With Logging" href="logging.html" />
+    <link rel="prev" title="14: Ajax Development With JSON Renderers" href="json.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="logging.html" title="16: Collecting Application Info With Logging"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="json.html" title="14: Ajax Development With JSON Renderers"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Quick Tutorial for Pyramid</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="more-with-view-classes">
+<span id="qtut-more-view-classes"></span><h1>15: More With View Classes<a class="headerlink" href="#more-with-view-classes" title="Permalink to this headline">¶</a></h1>
+<p>Group views into a class, sharing configuration, state, and logic.</p>
+<div class="section" id="background">
+<h2>Background<a class="headerlink" href="#background" title="Permalink to this headline">¶</a></h2>
+<p>As part of its mission to help build more ambitious web applications,
+Pyramid provides many more features for views and view classes.</p>
+<p>The Pyramid documentation discusses views as a Python &quot;callable&quot;. This
+callable can be a function, an object with an <tt class="docutils literal"><span class="pre">__call__</span></tt>,
+or a Python class. In this last case, methods on the class can be
+decorated with <tt class="docutils literal"><span class="pre">&#64;view_config</span></tt> to register the class methods with the
+<a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">configurator</em></a> as a view.</p>
+<p>At first, our views were simple, free-standing functions. Many times
+your views are related: different ways to look at or work on the same
+data or a REST API that handles multiple operations. Grouping these
+together as a <a class="reference internal" href="../narr/views.html#class-as-view"><em>view class</em></a> makes sense:</p>
+<ul class="simple">
+<li>Group views</li>
+<li>Centralize some repetitive defaults</li>
+<li>Share some state and helpers</li>
+</ul>
+<p>Pyramid views have <a class="reference internal" href="../narr/viewconfig.html#view-configuration-parameters"><em>view predicates</em></a>
+that determine which view is matched to a request, based on factors
+such as the request method, the form parameters, etc. These predicates
+provide many axes of flexibility.</p>
+<p>The following shows a simple example with four operations:
+view a home page which leads to a form, save a change,
+and press the delete button.</p>
+</div>
+<div class="section" id="objectives">
+<h2>Objectives<a class="headerlink" href="#objectives" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Group related views into a view class</li>
+<li>Centralize configuration with class-level <tt class="docutils literal"><span class="pre">&#64;view_defaults</span></tt></li>
+<li>Dispatch one route/URL to multiple views based on request data</li>
+<li>Share stated and logic between views and templates via the view class</li>
+</ul>
+</div>
+<div class="section" id="steps">
+<h2>Steps<a class="headerlink" href="#steps" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">First we copy the results of the previous step:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span><span class="nb">cd</span> ..; cp -r templating more_view_classes; <span class="nb">cd </span>more_view_classes
+<span class="nv">$ $VENV</span>/bin/python setup.py develop
+</pre></div>
+</div>
+</li>
+<li><p class="first">Our route in <tt class="docutils literal"><span class="pre">more_view_classes/tutorial/__init__.py</span></tt> needs some
+replacement patterns:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">global_config</span><span class="p">,</span> <span class="o">**</span><span class="n">settings</span><span class="p">):</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">(</span><span class="n">settings</span><span class="o">=</span><span class="n">settings</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="s">&#39;pyramid_chameleon&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;home&#39;</span><span class="p">,</span> <span class="s">&#39;/&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;hello&#39;</span><span class="p">,</span> <span class="s">&#39;/howdy/{first}/{last}&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="s">&#39;.views&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span><span class="o">.</span><span class="n">make_wsgi_app</span><span class="p">()</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Our <tt class="docutils literal"><span class="pre">more_view_classes/tutorial/views.py</span></tt> now has a view class with
+several views:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.view</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">view_config</span><span class="p">,</span>
+    <span class="n">view_defaults</span>
+    <span class="p">)</span>
+
+
+<span class="nd">@view_defaults</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;hello&#39;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">TutorialViews</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">request</span> <span class="o">=</span> <span class="n">request</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">view_name</span> <span class="o">=</span> <span class="s">&#39;TutorialViews&#39;</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">full_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">first</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">matchdict</span><span class="p">[</span><span class="s">&#39;first&#39;</span><span class="p">]</span>
+        <span class="n">last</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">matchdict</span><span class="p">[</span><span class="s">&#39;last&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">first</span> <span class="o">+</span> <span class="s">&#39; &#39;</span> <span class="o">+</span> <span class="n">last</span>
+
+    <span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;home&#39;</span><span class="p">,</span> <span class="n">renderer</span><span class="o">=</span><span class="s">&#39;home.pt&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">home</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;page_title&#39;</span><span class="p">:</span> <span class="s">&#39;Home View&#39;</span><span class="p">}</span>
+
+    <span class="c"># Retrieving /howdy/first/last the first time</span>
+    <span class="nd">@view_config</span><span class="p">(</span><span class="n">renderer</span><span class="o">=</span><span class="s">&#39;hello.pt&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;page_title&#39;</span><span class="p">:</span> <span class="s">&#39;Hello View&#39;</span><span class="p">}</span>
+
+    <span class="c"># Posting to /home via the &quot;Edit&quot; submit button</span>
+    <span class="nd">@view_config</span><span class="p">(</span><span class="n">request_method</span><span class="o">=</span><span class="s">&#39;POST&#39;</span><span class="p">,</span> <span class="n">renderer</span><span class="o">=</span><span class="s">&#39;edit.pt&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">edit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">new_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&#39;new_name&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;page_title&#39;</span><span class="p">:</span> <span class="s">&#39;Edit View&#39;</span><span class="p">,</span> <span class="s">&#39;new_name&#39;</span><span class="p">:</span> <span class="n">new_name</span><span class="p">}</span>
+
+    <span class="c"># Posting to /home via the &quot;Delete&quot; submit button</span>
+    <span class="nd">@view_config</span><span class="p">(</span><span class="n">request_method</span><span class="o">=</span><span class="s">&#39;POST&#39;</span><span class="p">,</span> <span class="n">request_param</span><span class="o">=</span><span class="s">&#39;form.delete&#39;</span><span class="p">,</span>
+                 <span class="n">renderer</span><span class="o">=</span><span class="s">&#39;delete.pt&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span> <span class="p">(</span><span class="s">&#39;Deleted&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;page_title&#39;</span><span class="p">:</span> <span class="s">&#39;Delete View&#39;</span><span class="p">}</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Our primary view needs a template at
+<tt class="docutils literal"><span class="pre">more_view_classes/tutorial/home.pt</span></tt>:</p>
+<div class="highlight-html"><div class="highlight"><pre><span class="cp">&lt;!DOCTYPE html&gt;</span>
+<span class="nt">&lt;html</span> <span class="na">lang=</span><span class="s">&quot;en&quot;</span><span class="nt">&gt;</span>
+<span class="nt">&lt;head&gt;</span>
+    <span class="nt">&lt;title&gt;</span>Quick Tour: ${view.view_name} - ${page_title}<span class="nt">&lt;/title&gt;</span>
+<span class="nt">&lt;/head&gt;</span>
+<span class="nt">&lt;body&gt;</span>
+<span class="nt">&lt;h1&gt;</span>${view.view_name} - ${page_title}<span class="nt">&lt;/h1&gt;</span>
+
+<span class="nt">&lt;p&gt;</span>Go to the <span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">&quot;${request.route_url(&#39;hello&#39;, first=&#39;jane&#39;,</span>
+<span class="s">        last=&#39;doe&#39;)}&quot;</span><span class="nt">&gt;</span>form<span class="nt">&lt;/a&gt;</span>.<span class="nt">&lt;/p&gt;</span>
+<span class="nt">&lt;/body&gt;</span>
+<span class="nt">&lt;/html&gt;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Ditto for our other view from the previous section at
+<tt class="docutils literal"><span class="pre">more_view_classes/tutorial/hello.pt</span></tt>:</p>
+<div class="highlight-html"><div class="highlight"><pre><span class="cp">&lt;!DOCTYPE html&gt;</span>
+<span class="nt">&lt;html</span> <span class="na">lang=</span><span class="s">&quot;en&quot;</span><span class="nt">&gt;</span>
+<span class="nt">&lt;head&gt;</span>
+    <span class="nt">&lt;title&gt;</span>Quick Tour: ${view.view_name} - ${page_title}<span class="nt">&lt;/title&gt;</span>
+<span class="nt">&lt;/head&gt;</span>
+<span class="nt">&lt;body&gt;</span>
+<span class="nt">&lt;h1&gt;</span>${view.view_name} - ${page_title}<span class="nt">&lt;/h1&gt;</span>
+<span class="nt">&lt;p&gt;</span>Welcome, ${view.full_name}<span class="nt">&lt;/p&gt;</span>
+<span class="nt">&lt;form</span> <span class="na">method=</span><span class="s">&quot;POST&quot;</span>
+      <span class="na">action=</span><span class="s">&quot;${request.current_route_url()}&quot;</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;input</span> <span class="na">name=</span><span class="s">&quot;new_name&quot;</span><span class="nt">/&gt;</span>
+    <span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">&quot;submit&quot;</span> <span class="na">name=</span><span class="s">&quot;form.edit&quot;</span> <span class="na">value=</span><span class="s">&quot;Save&quot;</span><span class="nt">/&gt;</span>
+    <span class="nt">&lt;input</span> <span class="na">type=</span><span class="s">&quot;submit&quot;</span> <span class="na">name=</span><span class="s">&quot;form.delete&quot;</span> <span class="na">value=</span><span class="s">&quot;Delete&quot;</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;/form&gt;</span>
+<span class="nt">&lt;/body&gt;</span>
+<span class="nt">&lt;/html&gt;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">We have an edit view that also needs a template at
+<tt class="docutils literal"><span class="pre">more_view_classes/tutorial/edit.pt</span></tt>:</p>
+<div class="highlight-html"><div class="highlight"><pre><span class="cp">&lt;!DOCTYPE html&gt;</span>
+<span class="nt">&lt;html</span> <span class="na">lang=</span><span class="s">&quot;en&quot;</span><span class="nt">&gt;</span>
+<span class="nt">&lt;head&gt;</span>
+    <span class="nt">&lt;title&gt;</span>Quick Tour: ${view.view_name} - ${page_title}<span class="nt">&lt;/title&gt;</span>
+<span class="nt">&lt;/head&gt;</span>
+<span class="nt">&lt;body&gt;</span>
+<span class="nt">&lt;h1&gt;</span>${view.view_name} - ${page_title}<span class="nt">&lt;/h1&gt;</span>
+<span class="nt">&lt;p&gt;</span>You submitted <span class="nt">&lt;code&gt;</span>${new_name}<span class="nt">&lt;/code&gt;&lt;/p&gt;</span>
+<span class="nt">&lt;/body&gt;</span>
+<span class="nt">&lt;/html&gt;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">And finally the delete view's template at
+<tt class="docutils literal"><span class="pre">more_view_classes/tutorial/delete.pt</span></tt>:</p>
+<div class="highlight-html"><div class="highlight"><pre><span class="cp">&lt;!DOCTYPE html&gt;</span>
+<span class="nt">&lt;html</span> <span class="na">lang=</span><span class="s">&quot;en&quot;</span><span class="nt">&gt;</span>
+<span class="nt">&lt;head&gt;</span>
+    <span class="nt">&lt;title&gt;</span>Quick Tour: ${page_title}<span class="nt">&lt;/title&gt;</span>
+<span class="nt">&lt;/head&gt;</span>
+<span class="nt">&lt;body&gt;</span>
+<span class="nt">&lt;h1&gt;</span>${view.view_name} - ${page_title}<span class="nt">&lt;/h1&gt;</span>
+<span class="nt">&lt;/body&gt;</span>
+<span class="nt">&lt;/html&gt;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Run your Pyramid application with:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ $VENV</span>/bin/pserve development.ini --reload
+</pre></div>
+</div>
+</li>
+<li><p class="first">Open <a class="reference external" href="http://localhost:6543/howdy/jane/doe">http://localhost:6543/howdy/jane/doe</a> in your browser. Click
+the <tt class="docutils literal"><span class="pre">Save</span></tt> and <tt class="docutils literal"><span class="pre">Delete</span></tt> buttons and watch the output in the
+console window.</p>
+</li>
+</ol>
+</div>
+<div class="section" id="analysis">
+<h2>Analysis<a class="headerlink" href="#analysis" title="Permalink to this headline">¶</a></h2>
+<p>As you can see, the four views are logically grouped together.
+Specifically:</p>
+<ul class="simple">
+<li>We have a <tt class="docutils literal"><span class="pre">home</span></tt> view available at <a class="reference external" href="http://localhost:6543/">http://localhost:6543/</a> with
+a clickable link to the <tt class="docutils literal"><span class="pre">hello</span></tt> view.</li>
+<li>The second view is returned when you go to <tt class="docutils literal"><span class="pre">/howdy/jane/doe</span></tt>. This
+URL is
+mapped to the <tt class="docutils literal"><span class="pre">hello</span></tt> route that we centrally set using the optional
+<tt class="docutils literal"><span class="pre">&#64;view_defaults</span></tt>.</li>
+<li>The third view is returned when the form is submitted with a <tt class="docutils literal"><span class="pre">POST</span></tt>
+method. This rule is specified in the <tt class="docutils literal"><span class="pre">&#64;view_config</span></tt> for that view.</li>
+<li>The fourth view is returned when clicking on a button such
+as <tt class="docutils literal"><span class="pre">&lt;input</span> <span class="pre">type=&quot;submit&quot;</span> <span class="pre">name=&quot;form.delete&quot;</span> <span class="pre">value=&quot;Delete&quot;/&gt;</span></tt>.</li>
+</ul>
+<p>In this step we show using the following information as criteria to
+decide which view to use:</p>
+<ul class="simple">
+<li>Method of the HTTP request (<tt class="docutils literal"><span class="pre">GET</span></tt>, <tt class="docutils literal"><span class="pre">POST</span></tt>, etc.)</li>
+<li>Parameter information in the request (submitted form field names)</li>
+</ul>
+<p>We also centralize part of the view configuration to the class level
+with <tt class="docutils literal"><span class="pre">&#64;view_defaults</span></tt>, then in one view, override that default just
+for that one view. Finally, we put this commonality between views to
+work in the view class by sharing:</p>
+<ul class="simple">
+<li>State assigned in <tt class="docutils literal"><span class="pre">TutorialViews.__init__</span></tt></li>
+<li>A computed value</li>
+</ul>
+<p>These are then available both in the view methods but also in the
+templates (e.g. <tt class="docutils literal"><span class="pre">${view.view_name}</span></tt> and <tt class="docutils literal"><span class="pre">${view.full_name}</span></tt>.</p>
+<p>As a note, we made a switch in our templates on how we generate URLs.
+We previously hardcode the URLs, such as:</p>
+<div class="highlight-python"><div class="highlight"><pre>&lt;a href=&quot;/howdy/jane/doe&quot;&gt;Howdy&lt;/a&gt;
+</pre></div>
+</div>
+<p>In <tt class="docutils literal"><span class="pre">home.pt</span></tt> we switched to:</p>
+<div class="highlight-python"><div class="highlight"><pre>&lt;a href=&quot;${request.route_url(&#39;hello&#39;, first=&#39;jane&#39;,
+      last=&#39;doe&#39;)}&quot;&gt;form&lt;/a&gt;
+</pre></div>
+</div>
+<p>Pyramid has rich facilities to help generate URLs in a flexible,
+non-error-prone fashion.</p>
+</div>
+<div class="section" id="extra-credit">
+<h2>Extra Credit<a class="headerlink" href="#extra-credit" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>Why could our template do <tt class="docutils literal"><span class="pre">${view.full_name}</span></tt> and not have to do
+<tt class="docutils literal"><span class="pre">${view.full_name()}</span></tt>?</li>
+<li>The <tt class="docutils literal"><span class="pre">edit</span></tt> and <tt class="docutils literal"><span class="pre">delete</span></tt> views are both submitted to with
+<tt class="docutils literal"><span class="pre">POST</span></tt>. Why does the <tt class="docutils literal"><span class="pre">edit</span></tt> view configuration not catch the
+<tt class="docutils literal"><span class="pre">POST</span></tt> used by <tt class="docutils literal"><span class="pre">delete</span></tt>?</li>
+<li>We used Python <tt class="docutils literal"><span class="pre">&#64;property</span></tt> on <tt class="docutils literal"><span class="pre">full_name</span></tt>. If we reference this
+many times in a template or view code, it would re-compute this
+every time. Does Pyramid provide something that will cache the initial
+computation on a property?</li>
+<li>Can you associate more than one route with the same view?</li>
+<li>There is also a <tt class="docutils literal"><span class="pre">request.route_path</span></tt> API.  How does this differ from
+<tt class="docutils literal"><span class="pre">request.route_url</span></tt>?</li>
+</ol>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="../narr/views.html#class-as-view"><em>Defining a View Callable as a Class</em></a>, <a class="reference external" href="http://www.plope.com/weird_pyramid_urldispatch">Weird Stuff You Can Do With
+URL Dispatch</a></p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">15: More With View Classes</a><ul>
+<li><a class="reference internal" href="#background">Background</a></li>
+<li><a class="reference internal" href="#objectives">Objectives</a></li>
+<li><a class="reference internal" href="#steps">Steps</a></li>
+<li><a class="reference internal" href="#analysis">Analysis</a></li>
+<li><a class="reference internal" href="#extra-credit">Extra Credit</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="json.html"
+                        title="previous chapter">14: Ajax Development With JSON Renderers</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="logging.html"
+                        title="next chapter">16: Collecting Application Info With Logging</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="logging.html" title="16: Collecting Application Info With Logging"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="json.html" title="14: Ajax Development With JSON Renderers"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" >Quick Tutorial for Pyramid</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

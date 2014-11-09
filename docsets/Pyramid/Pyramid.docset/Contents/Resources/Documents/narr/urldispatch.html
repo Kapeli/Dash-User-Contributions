@@ -1,0 +1,1342 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>URL Dispatch &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="next" title="Views" href="views.html" />
+    <link rel="prev" title="Request Processing" href="router.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="views.html" title="Views"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="router.html" title="Request Processing"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="url-dispatch">
+<span id="urldispatch-chapter"></span><span id="index-0"></span><h1>URL Dispatch<a class="headerlink" href="#url-dispatch" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference internal" href="../glossary.html#term-url-dispatch"><em class="xref std std-term">URL dispatch</em></a> provides a simple way to map URLs to <a class="reference internal" href="../glossary.html#term-view"><em class="xref std std-term">view</em></a> code
+using a simple pattern matching language.  An ordered set of patterns is
+checked one-by-one.  If one of the patterns matches the path information
+associated with a request, a particular <a class="reference internal" href="../glossary.html#term-view-callable"><em class="xref std std-term">view callable</em></a> is invoked.  A
+view callable is a specific bit of code, defined in your application, that
+receives the <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> and returns a <a class="reference internal" href="../glossary.html#term-response"><em class="xref std std-term">response</em></a> object.</p>
+<div class="section" id="high-level-operational-overview">
+<h2>High-Level Operational Overview<a class="headerlink" href="#high-level-operational-overview" title="Permalink to this headline">¶</a></h2>
+<p>If any route configuration is present in an application, the <span>Pyramid</span>
+<a class="reference internal" href="../glossary.html#term-router"><em class="xref std std-term">Router</em></a> checks every incoming request against an ordered set of URL
+matching patterns present in a <em>route map</em>.</p>
+<p>If any route pattern matches the information in the <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a>,
+<span>Pyramid</span> will invoke the <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a> process to find a
+matching view.</p>
+<p>If no route pattern in the route map matches the information in the
+<a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> provided in your application, <span>Pyramid</span> will fail over
+to using <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> to perform resource location and view lookup.</p>
+</div>
+<div class="section" id="route-configuration">
+<span id="index-1"></span><h2>Route Configuration<a class="headerlink" href="#route-configuration" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference internal" href="../glossary.html#term-route-configuration"><em class="xref std std-term">Route configuration</em></a> is the act of adding a new <a class="reference internal" href="../glossary.html#term-route"><em class="xref std std-term">route</em></a> to an
+application.  A route has a <em>name</em>, which acts as an identifier to be used
+for URL generation.  The name also allows developers to associate a view
+configuration with the route.  A route also has a <em>pattern</em>, meant to match
+against the <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> portion of a URL (the portion following the scheme
+and port, e.g. <tt class="docutils literal"><span class="pre">/foo/bar</span></tt> in the URL <a class="reference external" href="http://localhost:8080/foo/bar">http://localhost:8080/foo/bar</a>). It
+also optionally has a <tt class="docutils literal"><span class="pre">factory</span></tt> and a set of <a class="reference internal" href="../glossary.html#term-route-predicate"><em class="xref std std-term">route predicate</em></a>
+attributes.</p>
+<div class="section" id="configuring-a-route-to-match-a-view">
+<span id="config-add-route"></span><span id="index-2"></span><h3>Configuring a Route to Match a View<a class="headerlink" href="#configuring-a-route-to-match-a-view" title="Permalink to this headline">¶</a></h3>
+<p>The <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_route()</span></tt></a> method adds a single
+<a class="reference internal" href="../glossary.html#term-route-configuration"><em class="xref std std-term">route configuration</em></a> to the <a class="reference internal" href="../glossary.html#term-application-registry"><em class="xref std std-term">application registry</em></a>.  Here's an
+example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># &quot;config&quot; below is presumed to be an instance of the</span>
+<span class="c"># pyramid.config.Configurator class; &quot;myview&quot; is assumed</span>
+<span class="c"># to be a &quot;view callable&quot; function</span>
+<span class="kn">from</span> <span class="nn">views</span> <span class="kn">import</span> <span class="n">myview</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;myroute&#39;</span><span class="p">,</span> <span class="s">&#39;/prefix/{one}/{two}&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">myview</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;myroute&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>When a <a class="reference internal" href="../glossary.html#term-view-callable"><em class="xref std std-term">view callable</em></a> added to the configuration by way of
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_view" title="pyramid.config.Configurator.add_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_view()</span></tt></a> becomes associated with a route
+via its <tt class="docutils literal"><span class="pre">route_name</span></tt> predicate, that view callable will always be found and
+invoked when the associated route pattern matches during a request.</p>
+<p>More commonly, you will not use any <tt class="docutils literal"><span class="pre">add_view</span></tt> statements in your project's
+&quot;setup&quot; code. You will instead use <tt class="docutils literal"><span class="pre">add_route</span></tt> statements, and use a
+<a class="reference internal" href="../glossary.html#term-scan"><em class="xref std std-term">scan</em></a> to associate view callables with routes.  For example, if
+this is a portion of your project's <tt class="docutils literal"><span class="pre">__init__.py</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;myroute&#39;</span><span class="p">,</span> <span class="s">&#39;/prefix/{one}/{two}&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">scan</span><span class="p">(</span><span class="s">&#39;mypackage&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that we don't call <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_view" title="pyramid.config.Configurator.add_view"><tt class="xref py py-meth docutils literal"><span class="pre">add_view()</span></tt></a> in this
+setup code.  However, the above <a class="reference internal" href="../glossary.html#term-scan"><em class="xref std std-term">scan</em></a> execution
+<tt class="docutils literal"><span class="pre">config.scan('mypackage')</span></tt> will pick up each <a class="reference internal" href="../glossary.html#term-configuration-decoration"><em class="xref std std-term">configuration
+decoration</em></a>, including any objects decorated with the
+<a class="reference internal" href="../api/view.html#pyramid.view.view_config" title="pyramid.view.view_config"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.view.view_config</span></tt></a> decorator in the <tt class="docutils literal"><span class="pre">mypackage</span></tt> Python
+package.  For example, if you have a <tt class="docutils literal"><span class="pre">views.py</span></tt> in your package, a scan will
+pick up any of its configuration decorators, so we can add one there
+that references <tt class="docutils literal"><span class="pre">myroute</span></tt> as a <tt class="docutils literal"><span class="pre">route_name</span></tt> parameter:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.view</span> <span class="kn">import</span> <span class="n">view_config</span>
+<span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+
+<span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;myroute&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">myview</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;OK&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The above combination of <tt class="docutils literal"><span class="pre">add_route</span></tt> and <tt class="docutils literal"><span class="pre">scan</span></tt> is completely equivalent
+to using the previous combination of <tt class="docutils literal"><span class="pre">add_route</span></tt> and <tt class="docutils literal"><span class="pre">add_view</span></tt>.</p>
+</div>
+<div class="section" id="route-pattern-syntax">
+<span id="index-3"></span><span id="id1"></span><h3>Route Pattern Syntax<a class="headerlink" href="#route-pattern-syntax" title="Permalink to this headline">¶</a></h3>
+<p>The syntax of the pattern matching language used by <span>Pyramid</span> URL
+dispatch in the <em>pattern</em> argument is straightforward; it is close to that of
+the <a class="reference internal" href="../glossary.html#term-routes"><em class="xref std std-term">Routes</em></a> system used by <a class="reference internal" href="../glossary.html#term-pylons"><em class="xref std std-term">Pylons</em></a>.</p>
+<p>The <em>pattern</em> used in route configuration may start with a slash character.
+If the pattern does not start with a slash character, an implicit slash will
+be prepended to it at matching time.  For example, the following patterns are
+equivalent:</p>
+<div class="highlight-text"><div class="highlight"><pre>{foo}/bar/baz
+</pre></div>
+</div>
+<p>and:</p>
+<div class="highlight-text"><div class="highlight"><pre>/{foo}/bar/baz
+</pre></div>
+</div>
+<p>If a pattern is a valid URL it won't be ever matched against an incoming
+request. Instead it can be useful for generating external URLs. See
+<a class="reference internal" href="#external-route-narr"><em>External routes</em></a> for details.</p>
+<p>A pattern segment (an individual item between <tt class="docutils literal"><span class="pre">/</span></tt> characters in the
+pattern) may either be a literal string (e.g. <tt class="docutils literal"><span class="pre">foo</span></tt>) <em>or</em> it may be a
+replacement marker (e.g. <tt class="docutils literal"><span class="pre">{foo}</span></tt>) or a certain combination of both. A
+replacement marker does not need to be preceded by a <tt class="docutils literal"><span class="pre">/</span></tt> character.</p>
+<p>A replacement marker is in the format <tt class="docutils literal"><span class="pre">{name}</span></tt>, where this means &quot;accept
+any characters up to the next slash character and use this as the <tt class="docutils literal"><span class="pre">name</span></tt>
+<a class="reference internal" href="../glossary.html#term-matchdict"><em class="xref std std-term">matchdict</em></a> value.&quot;</p>
+<p>A replacement marker in a pattern must begin with an uppercase or lowercase
+ASCII letter or an underscore, and can be composed only of uppercase or
+lowercase ASCII letters, underscores, and numbers.  For example: <tt class="docutils literal"><span class="pre">a</span></tt>,
+<tt class="docutils literal"><span class="pre">a_b</span></tt>, <tt class="docutils literal"><span class="pre">_b</span></tt>, and <tt class="docutils literal"><span class="pre">b9</span></tt> are all valid replacement marker names, but
+<tt class="docutils literal"><span class="pre">0a</span></tt> is not.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">A replacement marker could not start with an underscore until
+Pyramid 1.2.  Previous versions required that the replacement marker start
+with an uppercase or lowercase letter.</p>
+</div>
+<p>A matchdict is the dictionary representing the dynamic parts extracted from a
+URL based on the routing pattern.  It is available as <tt class="docutils literal"><span class="pre">request.matchdict</span></tt>.
+For example, the following pattern defines one literal segment (<tt class="docutils literal"><span class="pre">foo</span></tt>) and
+two replacement markers (<tt class="docutils literal"><span class="pre">baz</span></tt>, and <tt class="docutils literal"><span class="pre">bar</span></tt>):</p>
+<div class="highlight-text"><div class="highlight"><pre>foo/{baz}/{bar}
+</pre></div>
+</div>
+<p>The above pattern will match these URLs, generating the following matchdicts:</p>
+<div class="highlight-text"><div class="highlight"><pre>foo/1/2        -&gt; {&#39;baz&#39;:u&#39;1&#39;, &#39;bar&#39;:u&#39;2&#39;}
+foo/abc/def    -&gt; {&#39;baz&#39;:u&#39;abc&#39;, &#39;bar&#39;:u&#39;def&#39;}
+</pre></div>
+</div>
+<p>It will not match the following patterns however:</p>
+<div class="highlight-text"><div class="highlight"><pre>foo/1/2/        -&gt; No match (trailing slash)
+bar/abc/def     -&gt; First segment literal mismatch
+</pre></div>
+</div>
+<p>The match for a segment replacement marker in a segment will be done only up
+to the first non-alphanumeric character in the segment in the pattern.  So,
+for instance, if this route pattern was used:</p>
+<div class="highlight-text"><div class="highlight"><pre>foo/{name}.html
+</pre></div>
+</div>
+<p>The literal path <tt class="docutils literal"><span class="pre">/foo/biz.html</span></tt> will match the above route pattern, and
+the match result will be <tt class="docutils literal"><span class="pre">{'name':u'biz'}</span></tt>.  However, the literal path
+<tt class="docutils literal"><span class="pre">/foo/biz</span></tt> will not match, because it does not contain a literal <tt class="docutils literal"><span class="pre">.html</span></tt>
+at the end of the segment represented by <tt class="docutils literal"><span class="pre">{name}.html</span></tt> (it only contains
+<tt class="docutils literal"><span class="pre">biz</span></tt>, not <tt class="docutils literal"><span class="pre">biz.html</span></tt>).</p>
+<p>To capture both segments, two replacement markers can be used:</p>
+<div class="highlight-text"><div class="highlight"><pre>foo/{name}.{ext}
+</pre></div>
+</div>
+<p>The literal path <tt class="docutils literal"><span class="pre">/foo/biz.html</span></tt> will match the above route pattern, and
+the match result will be <tt class="docutils literal"><span class="pre">{'name':</span> <span class="pre">'biz',</span> <span class="pre">'ext':</span> <span class="pre">'html'}</span></tt>. This occurs
+because there is a literal part of <tt class="docutils literal"><span class="pre">.</span></tt> (period) between the two replacement
+markers <tt class="docutils literal"><span class="pre">{name}</span></tt> and <tt class="docutils literal"><span class="pre">{ext}</span></tt>.</p>
+<p>Replacement markers can optionally specify a regular expression which will be
+used to decide whether a path segment should match the marker.  To specify
+that a replacement marker should match only a specific set of characters as
+defined by a regular expression, you must use a slightly extended form of
+replacement marker syntax.  Within braces, the replacement marker name must
+be followed by a colon, then directly thereafter, the regular expression.
+The <em>default</em> regular expression associated with a replacement marker
+<tt class="docutils literal"><span class="pre">[^/]+</span></tt> matches one or more characters which are not a slash.  For example,
+under the hood, the replacement marker <tt class="docutils literal"><span class="pre">{foo}</span></tt> can more verbosely be
+spelled as <tt class="docutils literal"><span class="pre">{foo:[^/]+}</span></tt>.  You can change this to be an arbitrary regular
+expression to match an arbitrary sequence of characters, such as
+<tt class="docutils literal"><span class="pre">{foo:\d+}</span></tt> to match only digits.</p>
+<p>It is possible to use two replacement markers without any literal characters
+between them, for instance <tt class="docutils literal"><span class="pre">/{foo}{bar}</span></tt>. However, this would be a
+nonsensical pattern without specifying a custom regular expression to
+restrict what each marker captures.</p>
+<p>Segments must contain at least one character in order to match a segment
+replacement marker.  For example, for the URL <tt class="docutils literal"><span class="pre">/abc/</span></tt>:</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">/abc/{foo}</span></tt> will not match.</li>
+<li><tt class="docutils literal"><span class="pre">/{foo}/</span></tt> will match.</li>
+</ul>
+<p>Note that values representing matched path segments will be url-unquoted and
+decoded from UTF-8 into Unicode within the matchdict.  So for instance, the
+following pattern:</p>
+<div class="highlight-text"><div class="highlight"><pre>foo/{bar}
+</pre></div>
+</div>
+<p>When matching the following URL:</p>
+<div class="highlight-text"><div class="highlight"><pre>http://example.com/foo/La%20Pe%C3%B1a
+</pre></div>
+</div>
+<p>The matchdict will look like so (the value is URL-decoded / UTF-8 decoded):</p>
+<div class="highlight-text"><div class="highlight"><pre>{&#39;bar&#39;:u&#39;La Pe\xf1a&#39;}
+</pre></div>
+</div>
+<p>Literal strings in the path segment should represent the <em>decoded</em> value of
+the <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> provided to Pyramid.  You don't want to use a URL-encoded
+value or a bytestring representing the literal's UTF-8 in the pattern.  For
+example, rather than this:</p>
+<div class="highlight-text"><div class="highlight"><pre>/Foo%20Bar/{baz}
+</pre></div>
+</div>
+<p>You'll want to use something like this:</p>
+<div class="highlight-text"><div class="highlight"><pre>/Foo Bar/{baz}
+</pre></div>
+</div>
+<p>For patterns that contain &quot;high-order&quot; characters in its literals, you'll
+want to use a Unicode value as the pattern as opposed to any URL-encoded or
+UTF-8-encoded value.  For example, you might be tempted to use a bytestring
+pattern like this:</p>
+<div class="highlight-text"><div class="highlight"><pre>/La Pe\xc3\xb1a/{x}
+</pre></div>
+</div>
+<p>But this will either cause an error at startup time or it won't match
+properly.  You'll want to use a Unicode value as the pattern instead rather
+than raw bytestring escapes.  You can use a high-order Unicode value as the
+pattern by using <a class="reference external" href="http://www.python.org/dev/peps/pep-0263/">Python source file encoding</a> plus the &quot;real&quot; character in the
+Unicode pattern in the source, like so:</p>
+<div class="highlight-text"><div class="highlight"><pre>/La Peña/{x}
+</pre></div>
+</div>
+<p>Or you can ignore source file encoding and use equivalent Unicode escape
+characters in the pattern.</p>
+<div class="highlight-text"><div class="highlight"><pre>/La Pe\xf1a/{x}
+</pre></div>
+</div>
+<p>Dynamic segment names cannot contain high-order characters, so this applies
+only to literals in the pattern.</p>
+<p>If the pattern has a <tt class="docutils literal"><span class="pre">*</span></tt> in it, the name which follows it is considered a
+&quot;remainder match&quot;.  A remainder match <em>must</em> come at the end of the pattern.
+Unlike segment replacement markers, it does not need to be preceded by a
+slash.  For example:</p>
+<div class="highlight-text"><div class="highlight"><pre>foo/{baz}/{bar}*fizzle
+</pre></div>
+</div>
+<p>The above pattern will match these URLs, generating the following matchdicts:</p>
+<div class="highlight-text"><div class="highlight"><pre>foo/1/2/           -&gt;
+         {&#39;baz&#39;:u&#39;1&#39;, &#39;bar&#39;:u&#39;2&#39;, &#39;fizzle&#39;:()}
+
+foo/abc/def/a/b/c  -&gt;
+         {&#39;baz&#39;:u&#39;abc&#39;, &#39;bar&#39;:u&#39;def&#39;, &#39;fizzle&#39;:(u&#39;a&#39;, u&#39;b&#39;, u&#39;c&#39;)}
+</pre></div>
+</div>
+<p>Note that when a <tt class="docutils literal"><span class="pre">*stararg</span></tt> remainder match is matched, the value put into
+the matchdict is turned into a tuple of path segments representing the
+remainder of the path.  These path segments are url-unquoted and decoded from
+UTF-8 into Unicode.  For example, for the following pattern:</p>
+<div class="highlight-text"><div class="highlight"><pre>foo/*fizzle
+</pre></div>
+</div>
+<p>When matching the following path:</p>
+<div class="highlight-text"><div class="highlight"><pre>/foo/La%20Pe%C3%B1a/a/b/c
+</pre></div>
+</div>
+<p>Will generate the following matchdict:</p>
+<div class="highlight-text"><div class="highlight"><pre>{&#39;fizzle&#39;:(u&#39;La Pe\xf1a&#39;, u&#39;a&#39;, u&#39;b&#39;, u&#39;c&#39;)}
+</pre></div>
+</div>
+<p>By default, the <tt class="docutils literal"><span class="pre">*stararg</span></tt> will parse the remainder sections into a tuple
+split by segment. Changing the regular expression used to match a marker can
+also capture the remainder of the URL, for example:</p>
+<div class="highlight-text"><div class="highlight"><pre>foo/{baz}/{bar}{fizzle:.*}
+</pre></div>
+</div>
+<p>The above pattern will match these URLs, generating the following matchdicts:</p>
+<div class="highlight-text"><div class="highlight"><pre>foo/1/2/           -&gt; {&#39;baz&#39;:u&#39;1&#39;, &#39;bar&#39;:u&#39;2&#39;, &#39;fizzle&#39;:u&#39;&#39;}
+foo/abc/def/a/b/c  -&gt; {&#39;baz&#39;:u&#39;abc&#39;, &#39;bar&#39;:u&#39;def&#39;, &#39;fizzle&#39;: u&#39;a/b/c&#39;}
+</pre></div>
+</div>
+<p>This occurs because the default regular expression for a marker is <tt class="docutils literal"><span class="pre">[^/]+</span></tt>
+which will match everything up to the first <tt class="docutils literal"><span class="pre">/</span></tt>, while <tt class="docutils literal"><span class="pre">{fizzle:.*}</span></tt> will
+result in a regular expression match of <tt class="docutils literal"><span class="pre">.*</span></tt> capturing the remainder into a
+single value.</p>
+</div>
+<div class="section" id="route-declaration-ordering">
+<span id="index-4"></span><h3>Route Declaration Ordering<a class="headerlink" href="#route-declaration-ordering" title="Permalink to this headline">¶</a></h3>
+<p>Route configuration declarations are evaluated in a specific order when a
+request enters the system. As a result, the order of route configuration
+declarations is very important.  The order that routes declarations are
+evaluated is the order in which they are added to the application at startup
+time.  (This is unlike a different way of mapping URLs to code that
+<span>Pyramid</span> provides, named <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a>, which does not depend on
+pattern ordering).</p>
+<p>For routes added via the <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-mod docutils literal"><span class="pre">add_route</span></tt></a> method,
+the order that routes are evaluated is the order in which they are added to
+the configuration imperatively.</p>
+<p>For example, route configuration statements with the following patterns might
+be added in the following order:</p>
+<div class="highlight-text"><div class="highlight"><pre>members/{def}
+members/abc
+</pre></div>
+</div>
+<p>In such a configuration, the <tt class="docutils literal"><span class="pre">members/abc</span></tt> pattern would <em>never</em> be
+matched. This is because the match ordering will always match
+<tt class="docutils literal"><span class="pre">members/{def}</span></tt> first; the route configuration with <tt class="docutils literal"><span class="pre">members/abc</span></tt> will
+never be evaluated.</p>
+</div>
+<div class="section" id="route-configuration-arguments">
+<span id="index-5"></span><h3>Route Configuration Arguments<a class="headerlink" href="#route-configuration-arguments" title="Permalink to this headline">¶</a></h3>
+<p>Route configuration <tt class="docutils literal"><span class="pre">add_route</span></tt> statements may specify a large number of
+arguments.  They are documented as part of the API documentation at
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_route()</span></tt></a>.</p>
+<p>Many of these arguments are <a class="reference internal" href="../glossary.html#term-route-predicate"><em class="xref std std-term">route predicate</em></a> arguments.  A route
+predicate argument specifies that some aspect of the request must be true for
+the associated route to be considered a match during the route matching
+process.  Examples of route predicate arguments are <tt class="docutils literal"><span class="pre">pattern</span></tt>, <tt class="docutils literal"><span class="pre">xhr</span></tt>, and
+<tt class="docutils literal"><span class="pre">request_method</span></tt>.</p>
+<p>Other arguments are <tt class="docutils literal"><span class="pre">name</span></tt> and <tt class="docutils literal"><span class="pre">factory</span></tt>.  These arguments represent
+neither predicates nor view configuration information.</p>
+</div>
+</div>
+<div class="section" id="route-matching">
+<span id="index-6"></span><h2>Route Matching<a class="headerlink" href="#route-matching" title="Permalink to this headline">¶</a></h2>
+<p>The main purpose of route configuration is to match (or not match) the
+<tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> present in the WSGI environment provided during a request
+against a URL path pattern.  <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> represents the path portion of the
+URL that was requested.</p>
+<p>The way that <span>Pyramid</span> does this is very simple.  When a request enters
+the system, for each route configuration declaration present in the system,
+<span>Pyramid</span> checks the request's <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> against the pattern
+declared.  This checking happens in the order that the routes were declared
+via <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_route()</span></tt></a>.</p>
+<p>When a route configuration is declared, it may contain <a class="reference internal" href="../glossary.html#term-route-predicate"><em class="xref std std-term">route
+predicate</em></a> arguments.  All route predicates associated with a route
+declaration must be <tt class="docutils literal"><span class="pre">True</span></tt> for the route configuration to be used for a
+given request during a check.  If any predicate in the set of <a class="reference internal" href="../glossary.html#term-route-predicate"><em class="xref std std-term">route
+predicate</em></a> arguments provided to a route configuration returns <tt class="docutils literal"><span class="pre">False</span></tt>
+during a check, that route is skipped and route matching continues through
+the ordered set of routes.</p>
+<p>If any route matches, the route matching process stops and the <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view
+lookup</em></a> subsystem takes over to find the most reasonable view callable for
+the matched route.  Most often, there's only one view that will match (a view
+configured with a <tt class="docutils literal"><span class="pre">route_name</span></tt> argument matching the matched route).  To
+gain a better understanding of how routes and views are associated in a real
+application, you can use the <tt class="docutils literal"><span class="pre">pviews</span></tt> command, as documented in
+<a class="reference internal" href="commandline.html#displaying-matching-views"><em>Displaying Matching Views for a Given URL</em></a>.</p>
+<p>If no route matches after all route patterns are exhausted, <span>Pyramid</span>
+falls back to <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> to do <a class="reference internal" href="../glossary.html#term-resource-location"><em class="xref std std-term">resource location</em></a> and
+<a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a>.</p>
+<div class="section" id="the-matchdict">
+<span id="matchdict"></span><span id="index-7"></span><h3>The Matchdict<a class="headerlink" href="#the-matchdict" title="Permalink to this headline">¶</a></h3>
+<p>When the URL pattern associated with a particular route configuration is
+matched by a request, a dictionary named <tt class="docutils literal"><span class="pre">matchdict</span></tt> is added as an
+attribute of the <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> object.  Thus, <tt class="docutils literal"><span class="pre">request.matchdict</span></tt> will
+contain the values that match replacement patterns in the <tt class="docutils literal"><span class="pre">pattern</span></tt>
+element.  The keys in a matchdict will be strings.  The values will be
+Unicode objects.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If no route URL pattern matches, the <tt class="docutils literal"><span class="pre">matchdict</span></tt> object attached to the
+request will be <tt class="docutils literal"><span class="pre">None</span></tt>.</p>
+</div>
+</div>
+<div class="section" id="the-matched-route">
+<span id="matched-route"></span><span id="index-8"></span><h3>The Matched Route<a class="headerlink" href="#the-matched-route" title="Permalink to this headline">¶</a></h3>
+<p>When the URL pattern associated with a particular route configuration is
+matched by a request, an object named <tt class="docutils literal"><span class="pre">matched_route</span></tt> is added as an
+attribute of the <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> object.  Thus, <tt class="docutils literal"><span class="pre">request.matched_route</span></tt>
+will be an object implementing the <a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.IRoute" title="pyramid.interfaces.IRoute"><tt class="xref py py-class docutils literal"><span class="pre">IRoute</span></tt></a>
+interface which matched the request.  The most useful attribute of the route
+object is <tt class="docutils literal"><span class="pre">name</span></tt>, which is the name of the route that matched.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">If no route URL pattern matches, the <tt class="docutils literal"><span class="pre">matched_route</span></tt> object attached to
+the request will be <tt class="docutils literal"><span class="pre">None</span></tt>.</p>
+</div>
+</div>
+</div>
+<div class="section" id="routing-examples">
+<h2>Routing Examples<a class="headerlink" href="#routing-examples" title="Permalink to this headline">¶</a></h2>
+<p>Let's check out some examples of how route configuration statements might be
+commonly declared, and what will happen if they are matched by the
+information present in a request.</p>
+<div class="section" id="example-1">
+<span id="urldispatch-example1"></span><h3>Example 1<a class="headerlink" href="#example-1" title="Permalink to this headline">¶</a></h3>
+<p>The simplest route declaration which configures a route match to <em>directly</em>
+result in a particular view callable being invoked:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;idea&#39;</span><span class="p">,</span> <span class="s">&#39;site/{id}&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;mypackage.views.site_view&#39;</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;idea&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>When a route configuration with a <tt class="docutils literal"><span class="pre">view</span></tt> attribute is added to the system,
+and an incoming request matches the <em>pattern</em> of the route configuration, the
+<a class="reference internal" href="../glossary.html#term-view-callable"><em class="xref std std-term">view callable</em></a> named as the <tt class="docutils literal"><span class="pre">view</span></tt> attribute of the route
+configuration will be invoked.</p>
+<p>In the case of the above example, when the URL of a request matches
+<tt class="docutils literal"><span class="pre">/site/{id}</span></tt>, the view callable at the Python dotted path name
+<tt class="docutils literal"><span class="pre">mypackage.views.site_view</span></tt> will be called with the request.  In other
+words, we've associated a view callable directly with a route pattern.</p>
+<p>When the <tt class="docutils literal"><span class="pre">/site/{id}</span></tt> route pattern matches during a request, the
+<tt class="docutils literal"><span class="pre">site_view</span></tt> view callable is invoked with that request as its sole
+argument.  When this route matches, a <tt class="docutils literal"><span class="pre">matchdict</span></tt> will be generated and
+attached to the request as <tt class="docutils literal"><span class="pre">request.matchdict</span></tt>.  If the specific URL
+matched is <tt class="docutils literal"><span class="pre">/site/1</span></tt>, the <tt class="docutils literal"><span class="pre">matchdict</span></tt> will be a dictionary with a single
+key, <tt class="docutils literal"><span class="pre">id</span></tt>; the value will be the string <tt class="docutils literal"><span class="pre">'1'</span></tt>, ex.: <tt class="docutils literal"><span class="pre">{'id':'1'}</span></tt>.</p>
+<p>The <tt class="docutils literal"><span class="pre">mypackage.views</span></tt> module referred to above might look like so:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.response</span> <span class="kn">import</span> <span class="n">Response</span>
+
+<span class="k">def</span> <span class="nf">site_view</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">matchdict</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">])</span>
+</pre></div>
+</td></tr></table></div>
+<p>The view has access to the matchdict directly via the request, and can access
+variables within it that match keys present as a result of the route pattern.</p>
+<p>See <a class="reference internal" href="views.html#views-chapter"><em>Views</em></a>, and <a class="reference internal" href="viewconfig.html#view-config-chapter"><em>View Configuration</em></a> for more
+information about views.</p>
+</div>
+<div class="section" id="example-2">
+<h3>Example 2<a class="headerlink" href="#example-2" title="Permalink to this headline">¶</a></h3>
+<p>Below is an example of a more complicated set of route statements you might
+add to your application:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;idea&#39;</span><span class="p">,</span> <span class="s">&#39;ideas/{idea}&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;user&#39;</span><span class="p">,</span> <span class="s">&#39;users/{user}&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;tag&#39;</span><span class="p">,</span> <span class="s">&#39;tags/{tag}&#39;</span><span class="p">)</span>
+
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;mypackage.views.idea_view&#39;</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;idea&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;mypackage.views.user_view&#39;</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;user&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;mypackage.views.tag_view&#39;</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;tag&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The above configuration will allow <span>Pyramid</span> to service URLs in these
+forms:</p>
+<div class="highlight-text"><div class="highlight"><pre>/ideas/{idea}
+/users/{user}
+/tags/{tag}
+</pre></div>
+</div>
+<ul class="simple">
+<li>When a URL matches the pattern <tt class="docutils literal"><span class="pre">/ideas/{idea}</span></tt>, the view callable
+available at the dotted Python pathname <tt class="docutils literal"><span class="pre">mypackage.views.idea_view</span></tt> will
+be called.  For the specific URL <tt class="docutils literal"><span class="pre">/ideas/1</span></tt>, the <tt class="docutils literal"><span class="pre">matchdict</span></tt> generated
+and attached to the <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> will consist of <tt class="docutils literal"><span class="pre">{'idea':'1'}</span></tt>.</li>
+<li>When a URL matches the pattern <tt class="docutils literal"><span class="pre">/users/{user}</span></tt>, the view callable
+available at the dotted Python pathname <tt class="docutils literal"><span class="pre">mypackage.views.user_view</span></tt> will
+be called.  For the specific URL <tt class="docutils literal"><span class="pre">/users/1</span></tt>, the <tt class="docutils literal"><span class="pre">matchdict</span></tt> generated
+and attached to the <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> will consist of <tt class="docutils literal"><span class="pre">{'user':'1'}</span></tt>.</li>
+<li>When a URL matches the pattern <tt class="docutils literal"><span class="pre">/tags/{tag}</span></tt>, the view callable available
+at the dotted Python pathname <tt class="docutils literal"><span class="pre">mypackage.views.tag_view</span></tt> will be called.
+For the specific URL <tt class="docutils literal"><span class="pre">/tags/1</span></tt>, the <tt class="docutils literal"><span class="pre">matchdict</span></tt> generated and attached
+to the <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> will consist of <tt class="docutils literal"><span class="pre">{'tag':'1'}</span></tt>.</li>
+</ul>
+<p>In this example we've again associated each of our routes with a <a class="reference internal" href="../glossary.html#term-view-callable"><em class="xref std std-term">view
+callable</em></a> directly.  In all cases, the request, which will have a
+<tt class="docutils literal"><span class="pre">matchdict</span></tt> attribute detailing the information found in the URL by the
+process will be passed to the view callable.</p>
+</div>
+<div class="section" id="example-3">
+<h3>Example 3<a class="headerlink" href="#example-3" title="Permalink to this headline">¶</a></h3>
+<p>The <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource object passed in to a view found as the result
+of URL dispatch will, by default, be an instance of the object returned by
+the <a class="reference internal" href="../glossary.html#term-root-factory"><em class="xref std std-term">root factory</em></a> configured at startup time (the <tt class="docutils literal"><span class="pre">root_factory</span></tt>
+argument to the <a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">Configurator</em></a> used to configure the application).</p>
+<p>You can override this behavior by passing in a <tt class="docutils literal"><span class="pre">factory</span></tt> argument to the
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">add_route()</span></tt></a> method for a particular route.
+The <tt class="docutils literal"><span class="pre">factory</span></tt> should be a callable that accepts a <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> and
+returns an instance of a class that will be the context resource used by the
+view.</p>
+<p>An example of using a route with a factory:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;idea&#39;</span><span class="p">,</span> <span class="s">&#39;ideas/{idea}&#39;</span><span class="p">,</span> <span class="n">factory</span><span class="o">=</span><span class="s">&#39;myproject.resources.Idea&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;myproject.views.idea_view&#39;</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;idea&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The above route will manufacture an <tt class="docutils literal"><span class="pre">Idea</span></tt> resource as a <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a>,
+assuming that <tt class="docutils literal"><span class="pre">mypackage.resources.Idea</span></tt> resolves to a class that accepts a
+request in its <tt class="docutils literal"><span class="pre">__init__</span></tt>.  For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">class</span> <span class="nc">Idea</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="k">pass</span>
+</pre></div>
+</td></tr></table></div>
+<p>In a more complicated application, this root factory might be a class
+representing a <a class="reference internal" href="../glossary.html#term-sqlalchemy"><em class="xref std std-term">SQLAlchemy</em></a> model.</p>
+<p>See <a class="reference internal" href="#route-factories"><em>Route Factories</em></a> for more details about how to use route factories.</p>
+</div>
+</div>
+<div class="section" id="matching-the-root-url">
+<span id="index-9"></span><h2>Matching the Root URL<a class="headerlink" href="#matching-the-root-url" title="Permalink to this headline">¶</a></h2>
+<p>It's not entirely obvious how to use a route pattern to match the root URL
+(&quot;/&quot;).  To do so, give the empty string as a pattern in a call to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">add_route()</span></tt></a>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;root&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Or provide the literal string <tt class="docutils literal"><span class="pre">/</span></tt> as the pattern:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;root&#39;</span><span class="p">,</span> <span class="s">&#39;/&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+<div class="section" id="generating-route-urls">
+<span id="index-10"></span><span id="id2"></span><h2>Generating Route URLs<a class="headerlink" href="#generating-route-urls" title="Permalink to this headline">¶</a></h2>
+<p>Use the <a class="reference internal" href="../api/request.html#pyramid.request.Request.route_url" title="pyramid.request.Request.route_url"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.route_url()</span></tt></a> method to generate URLs
+based on route patterns.  For example, if you've configured a route with the
+<tt class="docutils literal"><span class="pre">name</span></tt> &quot;foo&quot; and the <tt class="docutils literal"><span class="pre">pattern</span></tt> &quot;{a}/{b}/{c}&quot;, you might do this.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">url</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">route_url</span><span class="p">(</span><span class="s">&#39;foo&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="s">&#39;1&#39;</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="s">&#39;2&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s">&#39;3&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>This would return something like the string <tt class="docutils literal"><span class="pre">http://example.com/1/2/3</span></tt> (at
+least if the current protocol and hostname implied <tt class="docutils literal"><span class="pre">http://example.com</span></tt>).</p>
+<p>To generate only the <em>path</em> portion of a URL from a route, use the
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.route_path" title="pyramid.request.Request.route_path"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.route_path()</span></tt></a> API instead of
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.route_url" title="pyramid.request.Request.route_url"><tt class="xref py py-meth docutils literal"><span class="pre">route_url()</span></tt></a>.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">url</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">route_path</span><span class="p">(</span><span class="s">&#39;foo&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="s">&#39;1&#39;</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="s">&#39;2&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s">&#39;3&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This will return the string <tt class="docutils literal"><span class="pre">/1/2/3</span></tt> rather than a full URL.</p>
+<p>Replacement values passed to <tt class="docutils literal"><span class="pre">route_url</span></tt> or <tt class="docutils literal"><span class="pre">route_path</span></tt> must be Unicode
+or bytestrings encoded in UTF-8.  One exception to this rule exists: if
+you're trying to replace a &quot;remainder&quot; match value (a <tt class="docutils literal"><span class="pre">*stararg</span></tt>
+replacement value), the value may be a tuple containing Unicode strings or
+UTF-8 strings.</p>
+<p>Note that URLs and paths generated by <tt class="docutils literal"><span class="pre">route_path</span></tt> and <tt class="docutils literal"><span class="pre">route_url</span></tt> are
+always URL-quoted string types (they contain no non-ASCII characters).
+Therefore, if you've added a route like so:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;la&#39;</span><span class="p">,</span> <span class="s">u&#39;/La Peña/{city}&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>And you later generate a URL using <tt class="docutils literal"><span class="pre">route_path</span></tt> or <tt class="docutils literal"><span class="pre">route_url</span></tt> like so:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">url</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">route_path</span><span class="p">(</span><span class="s">&#39;la&#39;</span><span class="p">,</span> <span class="n">city</span><span class="o">=</span><span class="s">u&#39;Québec&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You will wind up with the path encoded to UTF-8 and URL quoted like so:</p>
+<div class="highlight-text"><div class="highlight"><pre>/La%20Pe%C3%B1a/Qu%C3%A9bec
+</pre></div>
+</div>
+<p>If you have a <tt class="docutils literal"><span class="pre">*stararg</span></tt> remainder dynamic part of your route pattern:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;abc&#39;</span><span class="p">,</span> <span class="s">&#39;a/b/c/*foo&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>And you later generate a URL using <tt class="docutils literal"><span class="pre">route_path</span></tt> or <tt class="docutils literal"><span class="pre">route_url</span></tt> using a
+<em>string</em> as the replacement value:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">url</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">route_path</span><span class="p">(</span><span class="s">&#39;abc&#39;</span><span class="p">,</span> <span class="n">foo</span><span class="o">=</span><span class="s">u&#39;Québec/biz&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The value you pass will be URL-quoted except for embedded slashes in the
+result:</p>
+<div class="highlight-text"><div class="highlight"><pre>/a/b/c/Qu%C3%A9bec/biz
+</pre></div>
+</div>
+<p>You can get a similar result by passing a tuple composed of path elements:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">url</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">route_path</span><span class="p">(</span><span class="s">&#39;abc&#39;</span><span class="p">,</span> <span class="n">foo</span><span class="o">=</span><span class="p">(</span><span class="s">u&#39;Québec&#39;</span><span class="p">,</span> <span class="s">u&#39;biz&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Each value in the tuple will be url-quoted and joined by slashes in this case:</p>
+<div class="highlight-text"><div class="highlight"><pre>/a/b/c/Qu%C3%A9bec/biz
+</pre></div>
+</div>
+</div>
+<div class="section" id="static-routes">
+<span id="static-route-narr"></span><span id="index-11"></span><h2>Static Routes<a class="headerlink" href="#static-routes" title="Permalink to this headline">¶</a></h2>
+<p>Routes may be added with a <tt class="docutils literal"><span class="pre">static</span></tt> keyword argument.  For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;page&#39;</span><span class="p">,</span> <span class="s">&#39;/page/{action}&#39;</span><span class="p">,</span> <span class="n">static</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Routes added with a <tt class="docutils literal"><span class="pre">True</span></tt> <tt class="docutils literal"><span class="pre">static</span></tt> keyword argument will never be
+considered for matching at request time.  Static routes are useful for URL
+generation purposes only.  As a result, it is usually nonsensical to provide
+other non-<tt class="docutils literal"><span class="pre">name</span></tt> and non-<tt class="docutils literal"><span class="pre">pattern</span></tt> arguments to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">add_route()</span></tt></a> when <tt class="docutils literal"><span class="pre">static</span></tt> is passed as
+<tt class="docutils literal"><span class="pre">True</span></tt>, as none of the other arguments will ever be employed.  A single
+exception to this rule is use of the <tt class="docutils literal"><span class="pre">pregenerator</span></tt> argument, which is not
+ignored when <tt class="docutils literal"><span class="pre">static</span></tt> is <tt class="docutils literal"><span class="pre">True</span></tt>.</p>
+<p><a class="reference internal" href="#external-route-narr"><em>External routes</em></a> are implicitly static.</p>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 1.1: </span>the <tt class="docutils literal"><span class="pre">static</span></tt> argument to <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">add_route()</span></tt></a></p>
+</div>
+</div>
+<div class="section" id="external-routes">
+<span id="external-route-narr"></span><h2>External Routes<a class="headerlink" href="#external-routes" title="Permalink to this headline">¶</a></h2>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 1.5.</span></p>
+</div>
+<p>Route patterns that are valid URLs, are treated as external routes. Like
+<a class="reference internal" href="#static-route-narr"><em>static routes</em></a> they are useful for URL generation
+purposes only and are never considered for matching at request time.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5</pre></div></td><td class="code"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;youtube&#39;</span><span class="p">,</span> <span class="s">&#39;https://youtube.com/watch/{video_id}&#39;</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">request</span><span class="o">.</span><span class="n">route_url</span><span class="p">(</span><span class="s">&#39;youtube&#39;</span><span class="p">,</span> <span class="n">video_id</span><span class="o">=</span><span class="s">&#39;oHg5SJYRHA0&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="s">&quot;https://youtube.com/watch/oHg5SJYRHA0&quot;</span>
+</pre></div>
+</td></tr></table></div>
+<p>Most pattern replacements and calls to
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.route_url" title="pyramid.request.Request.route_url"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.route_url()</span></tt></a> will work as expected. However, calls
+to <a class="reference internal" href="../api/request.html#pyramid.request.Request.route_path" title="pyramid.request.Request.route_path"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.route_path()</span></tt></a> against external patterns will
+raise an exception, and passing <tt class="docutils literal"><span class="pre">_app_url</span></tt> to
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.route_url" title="pyramid.request.Request.route_url"><tt class="xref py py-meth docutils literal"><span class="pre">route_url()</span></tt></a> to generate a URL against a route
+that has an external pattern will also raise an exception.</p>
+</div>
+<div class="section" id="redirecting-to-slash-appended-routes">
+<span id="index-12"></span><span id="id3"></span><h2>Redirecting to Slash-Appended Routes<a class="headerlink" href="#redirecting-to-slash-appended-routes" title="Permalink to this headline">¶</a></h2>
+<p>For behavior like Django's <tt class="docutils literal"><span class="pre">APPEND_SLASH=True</span></tt>, use the <tt class="docutils literal"><span class="pre">append_slash</span></tt>
+argument to <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_notfound_view" title="pyramid.config.Configurator.add_notfound_view"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_notfound_view()</span></tt></a> or the
+equivalent <tt class="docutils literal"><span class="pre">append_slash</span></tt> argument to the
+<a class="reference internal" href="../api/view.html#pyramid.view.notfound_view_config" title="pyramid.view.notfound_view_config"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.view.notfound_view_config</span></tt></a> decorator.</p>
+<p>Adding <tt class="docutils literal"><span class="pre">append_slash=True</span></tt> is a way to automatically redirect requests
+where the URL lacks a trailing slash, but requires one to match the proper
+route.  When configured, along with at least one other route in your
+application, this view will be invoked if the value of <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> does not
+already end in a slash, and if the value of <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> <em>plus</em> a slash
+matches any route's pattern.  In this case it does an HTTP redirect to the
+slash-appended <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt>.</p>
+<p>Let's use an example.  If the following routes are configured in your
+application:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.httpexceptions</span> <span class="kn">import</span> <span class="n">HTTPNotFound</span>
+
+<span class="k">def</span> <span class="nf">notfound</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">HTTPNotFound</span><span class="p">(</span><span class="s">&#39;Not found, bro.&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">no_slash</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;No slash&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">has_slash</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;Has slash&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="o">**</span><span class="n">settings</span><span class="p">):</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;noslash&#39;</span><span class="p">,</span> <span class="s">&#39;no_slash&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;hasslash&#39;</span><span class="p">,</span> <span class="s">&#39;has_slash/&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">no_slash</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;noslash&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="n">has_slash</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;hasslash&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_notfound_view</span><span class="p">(</span><span class="n">notfound</span><span class="p">,</span> <span class="n">append_slash</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>If a request enters the application with the <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> value of
+<tt class="docutils literal"><span class="pre">/no_slash</span></tt>, the first route will match and the browser will show &quot;No
+slash&quot;.  However, if a request enters the application with the <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt>
+value of <tt class="docutils literal"><span class="pre">/no_slash/</span></tt>, <em>no</em> route will match, and the slash-appending not
+found view will not find a matching route with an appended slash.  As a
+result, the <tt class="docutils literal"><span class="pre">notfound</span></tt> view will be called and it will return a &quot;Not found,
+bro.&quot; body.</p>
+<p>If a request enters the application with the <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> value of
+<tt class="docutils literal"><span class="pre">/has_slash/</span></tt>, the second route will match.  If a request enters the
+application with the <tt class="docutils literal"><span class="pre">PATH_INFO</span></tt> value of <tt class="docutils literal"><span class="pre">/has_slash</span></tt>, a route <em>will</em> be
+found by the slash-appending <a class="reference internal" href="../glossary.html#term-not-found-view"><em class="xref std std-term">Not Found View</em></a>.  An HTTP redirect to
+<tt class="docutils literal"><span class="pre">/has_slash/</span></tt> will be returned to the user's browser.  As a result, the
+<tt class="docutils literal"><span class="pre">notfound</span></tt> view will never actually be called.</p>
+<p>The following application uses the <a class="reference internal" href="../api/view.html#pyramid.view.notfound_view_config" title="pyramid.view.notfound_view_config"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.view.notfound_view_config</span></tt></a>
+and <a class="reference internal" href="../api/view.html#pyramid.view.view_config" title="pyramid.view.view_config"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.view.view_config</span></tt></a> decorators and a <a class="reference internal" href="../glossary.html#term-scan"><em class="xref std std-term">scan</em></a> to do
+exactly the same job:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.httpexceptions</span> <span class="kn">import</span> <span class="n">HTTPNotFound</span>
+<span class="kn">from</span> <span class="nn">pyramid.view</span> <span class="kn">import</span> <span class="n">notfound_view_config</span><span class="p">,</span> <span class="n">view_config</span>
+
+<span class="nd">@notfound_view_config</span><span class="p">(</span><span class="n">append_slash</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">notfound</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">HTTPNotFound</span><span class="p">(</span><span class="s">&#39;Not found, bro.&#39;</span><span class="p">)</span>
+
+<span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;noslash&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">no_slash</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;No slash&#39;</span><span class="p">)</span>
+
+<span class="nd">@view_config</span><span class="p">(</span><span class="n">route_name</span><span class="o">=</span><span class="s">&#39;hasslash&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">has_slash</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="s">&#39;Has slash&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="o">**</span><span class="n">settings</span><span class="p">):</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;noslash&#39;</span><span class="p">,</span> <span class="s">&#39;no_slash&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;hasslash&#39;</span><span class="p">,</span> <span class="s">&#39;has_slash/&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">scan</span><span class="p">()</span>
+</pre></div>
+</td></tr></table></div>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">You <strong>should not</strong> rely on this mechanism to redirect <tt class="docutils literal"><span class="pre">POST</span></tt> requests.
+The redirect  of the slash-appending <a class="reference internal" href="../glossary.html#term-not-found-view"><em class="xref std std-term">Not Found View</em></a> will turn a
+<tt class="docutils literal"><span class="pre">POST</span></tt> request into a <tt class="docutils literal"><span class="pre">GET</span></tt>, losing any <tt class="docutils literal"><span class="pre">POST</span></tt> data in the original
+request.</p>
+</div>
+<p>See <a class="reference internal" href="../api/view.html#view-module"><em>pyramid.view</em></a> and <a class="reference internal" href="hooks.html#changing-the-notfound-view"><em>Changing the Not Found View</em></a> for a more
+general description of how to configure a view and/or a <a class="reference internal" href="../glossary.html#term-not-found-view"><em class="xref std std-term">Not Found View</em></a>.</p>
+</div>
+<div class="section" id="debugging-route-matching">
+<span id="debug-routematch-section"></span><span id="index-13"></span><h2>Debugging Route Matching<a class="headerlink" href="#debugging-route-matching" title="Permalink to this headline">¶</a></h2>
+<p>It's useful to be able to take a peek under the hood when requests that enter
+your application aren't matching your routes as you expect them to.  To debug
+route matching, use the <tt class="docutils literal"><span class="pre">PYRAMID_DEBUG_ROUTEMATCH</span></tt> environment variable or the
+<tt class="docutils literal"><span class="pre">pyramid.debug_routematch</span></tt> configuration file setting (set either to <tt class="docutils literal"><span class="pre">true</span></tt>).
+Details of the route matching decision for a particular request to the
+<span>Pyramid</span> application will be printed to the <tt class="docutils literal"><span class="pre">stderr</span></tt> of the console
+which you started the application from.  For example:</p>
+<div class="highlight-text"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10</pre></div></td><td class="code"><div class="highlight"><pre>$ PYRAMID_DEBUG_ROUTEMATCH=true $VENV/bin/pserve development.ini
+Starting server in PID 13586.
+serving on 0.0.0.0:6543 view at http://127.0.0.1:6543
+2010-12-16 14:45:19,956 no route matched for url \
+                                    http://localhost:6543/wontmatch
+2010-12-16 14:45:20,010 no route matched for url \
+                            http://localhost:6543/favicon.ico
+2010-12-16 14:41:52,084 route matched for url \
+                            http://localhost:6543/static/logo.png; \
+                            route_name: &#39;static/&#39;, ....
+</pre></div>
+</td></tr></table></div>
+<p>See <a class="reference internal" href="environment.html#environment-chapter"><em>Environment Variables and .ini File Settings</em></a> for more information about how, and where to
+set these values.</p>
+<p>You can also use the <tt class="docutils literal"><span class="pre">proutes</span></tt> command to see a display of all the
+routes configured in your application; for more information, see
+<a class="reference internal" href="commandline.html#displaying-application-routes"><em>Displaying All Application Routes</em></a>.</p>
+</div>
+<div class="section" id="using-a-route-prefix-to-compose-applications">
+<span id="route-prefix"></span><h2>Using a Route Prefix to Compose Applications<a class="headerlink" href="#using-a-route-prefix-to-compose-applications" title="Permalink to this headline">¶</a></h2>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 1.2.</span></p>
+</div>
+<p>The <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.include" title="pyramid.config.Configurator.include"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.include()</span></tt></a> method allows configuration
+statements to be included from separate files.  See
+<a class="reference internal" href="extending.html#building-an-extensible-app"><em>Rules for Building An Extensible Application</em></a> for information about this method.  Using
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.include" title="pyramid.config.Configurator.include"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.include()</span></tt></a> allows you to build your
+application from small and potentially reusable components.</p>
+<p>The <a class="reference internal" href="../api/config.html#pyramid.config.Configurator.include" title="pyramid.config.Configurator.include"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.include()</span></tt></a> method accepts an argument
+named <tt class="docutils literal"><span class="pre">route_prefix</span></tt> which can be useful to authors of URL-dispatch-based
+applications.  If <tt class="docutils literal"><span class="pre">route_prefix</span></tt> is supplied to the include method, it must
+be a string.  This string represents a route prefix that will be prepended to
+all route patterns added by the <em>included</em> configuration.  Any calls to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.add_route()</span></tt></a> within the included callable
+will have their pattern prefixed with the value of <tt class="docutils literal"><span class="pre">route_prefix</span></tt>. This can
+be used to help mount a set of routes at a different location than the
+included callable's author intended while still maintaining the same route
+names.  For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+
+<span class="k">def</span> <span class="nf">users_include</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;show_users&#39;</span><span class="p">,</span> <span class="s">&#39;/show&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">global_config</span><span class="p">,</span> <span class="o">**</span><span class="n">settings</span><span class="p">):</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="n">users_include</span><span class="p">,</span> <span class="n">route_prefix</span><span class="o">=</span><span class="s">&#39;/users&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>In the above configuration, the <tt class="docutils literal"><span class="pre">show_users</span></tt> route will have an effective
+route pattern of <tt class="docutils literal"><span class="pre">/users/show</span></tt>, instead of <tt class="docutils literal"><span class="pre">/show</span></tt> because the
+<tt class="docutils literal"><span class="pre">route_prefix</span></tt> argument will be prepended to the pattern.  The route will
+then only match if the URL path is <tt class="docutils literal"><span class="pre">/users/show</span></tt>, and when the
+<a class="reference internal" href="../api/request.html#pyramid.request.Request.route_url" title="pyramid.request.Request.route_url"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.request.Request.route_url()</span></tt></a> function is called with the route
+name <tt class="docutils literal"><span class="pre">show_users</span></tt>, it will generate a URL with that same path.</p>
+<p>Route prefixes are recursive, so if a callable executed via an include itself
+turns around and includes another callable, the second-level route prefix
+will be prepended with the first:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+
+<span class="k">def</span> <span class="nf">timing_include</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;show_times&#39;</span><span class="p">,</span> <span class="s">&#39;/times&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">users_include</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;show_users&#39;</span><span class="p">,</span> <span class="s">&#39;/show&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="n">timing_include</span><span class="p">,</span> <span class="n">route_prefix</span><span class="o">=</span><span class="s">&#39;/timing&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">global_config</span><span class="p">,</span> <span class="o">**</span><span class="n">settings</span><span class="p">):</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="n">users_include</span><span class="p">,</span> <span class="n">route_prefix</span><span class="o">=</span><span class="s">&#39;/users&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>In the above configuration, the <tt class="docutils literal"><span class="pre">show_users</span></tt> route will still have an
+effective route pattern of <tt class="docutils literal"><span class="pre">/users/show</span></tt>.  The <tt class="docutils literal"><span class="pre">show_times</span></tt> route
+however, will have an effective pattern of <tt class="docutils literal"><span class="pre">/users/timing/times</span></tt>.</p>
+<p>Route prefixes have no impact on the requirement that the set of route
+<em>names</em> in any given Pyramid configuration must be entirely unique.  If you
+compose your URL dispatch application out of many small subapplications using
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.include" title="pyramid.config.Configurator.include"><tt class="xref py py-meth docutils literal"><span class="pre">pyramid.config.Configurator.include()</span></tt></a>, it's wise to use a dotted name
+for your route names, so they'll be unlikely to conflict with other packages
+that may be added in the future.  For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyramid.config</span> <span class="kn">import</span> <span class="n">Configurator</span>
+
+<span class="k">def</span> <span class="nf">timing_include</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;timing.show_times&#39;</span><span class="p">,</span> <span class="s">&#39;/times&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">users_include</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;users.show_users&#39;</span><span class="p">,</span> <span class="s">&#39;/show&#39;</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="n">timing_include</span><span class="p">,</span> <span class="n">route_prefix</span><span class="o">=</span><span class="s">&#39;/timing&#39;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">global_config</span><span class="p">,</span> <span class="o">**</span><span class="n">settings</span><span class="p">):</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">Configurator</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">include</span><span class="p">(</span><span class="n">users_include</span><span class="p">,</span> <span class="n">route_prefix</span><span class="o">=</span><span class="s">&#39;/users&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+<div class="section" id="custom-route-predicates">
+<span id="index-14"></span><span id="id4"></span><h2>Custom Route Predicates<a class="headerlink" href="#custom-route-predicates" title="Permalink to this headline">¶</a></h2>
+<p>Each of the predicate callables fed to the <tt class="docutils literal"><span class="pre">custom_predicates</span></tt> argument of
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">add_route()</span></tt></a> must be a callable accepting
+two arguments.  The first argument passed to a custom predicate is a
+dictionary conventionally named <tt class="docutils literal"><span class="pre">info</span></tt>.  The second argument is the current
+<a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> object.</p>
+<p>The <tt class="docutils literal"><span class="pre">info</span></tt> dictionary has a number of contained values: <tt class="docutils literal"><span class="pre">match</span></tt> is a
+dictionary: it represents the arguments matched in the URL by the route.
+<tt class="docutils literal"><span class="pre">route</span></tt> is an object representing the route which was matched (see
+<a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.IRoute" title="pyramid.interfaces.IRoute"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.IRoute</span></tt></a> for the API of such a route object).</p>
+<p><tt class="docutils literal"><span class="pre">info['match']</span></tt> is useful when predicates need access to the route match.
+For example:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">any_of</span><span class="p">(</span><span class="n">segment_name</span><span class="p">,</span> <span class="o">*</span><span class="n">allowed</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">predicate</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">info</span><span class="p">[</span><span class="s">&#39;match&#39;</span><span class="p">][</span><span class="n">segment_name</span><span class="p">]</span> <span class="ow">in</span> <span class="n">allowed</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">return</span> <span class="n">predicate</span>
+
+<span class="n">num_one_two_or_three</span> <span class="o">=</span> <span class="n">any_of</span><span class="p">(</span><span class="s">&#39;num&#39;</span><span class="p">,</span> <span class="s">&#39;one&#39;</span><span class="p">,</span> <span class="s">&#39;two&#39;</span><span class="p">,</span> <span class="s">&#39;three&#39;</span><span class="p">)</span>
+
+<span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;route_to_num&#39;</span><span class="p">,</span> <span class="s">&#39;/{num}&#39;</span><span class="p">,</span>
+                 <span class="n">custom_predicates</span><span class="o">=</span><span class="p">(</span><span class="n">num_one_two_or_three</span><span class="p">,))</span>
+</pre></div>
+</td></tr></table></div>
+<p>The above <tt class="docutils literal"><span class="pre">any_of</span></tt> function generates a predicate which ensures that the
+match value named <tt class="docutils literal"><span class="pre">segment_name</span></tt> is in the set of allowable values
+represented by <tt class="docutils literal"><span class="pre">allowed</span></tt>.  We use this <tt class="docutils literal"><span class="pre">any_of</span></tt> function to generate a
+predicate function named <tt class="docutils literal"><span class="pre">num_one_two_or_three</span></tt>, which ensures that the
+<tt class="docutils literal"><span class="pre">num</span></tt> segment is one of the values <tt class="docutils literal"><span class="pre">one</span></tt>, <tt class="docutils literal"><span class="pre">two</span></tt>, or <tt class="docutils literal"><span class="pre">three</span></tt> , and use
+the result as a custom predicate by feeding it inside a tuple to the
+<tt class="docutils literal"><span class="pre">custom_predicates</span></tt> argument to
+<a class="reference internal" href="../api/config.html#pyramid.config.Configurator.add_route" title="pyramid.config.Configurator.add_route"><tt class="xref py py-meth docutils literal"><span class="pre">add_route()</span></tt></a>.</p>
+<p>A custom route predicate may also <em>modify</em> the <tt class="docutils literal"><span class="pre">match</span></tt> dictionary.  For
+instance, a predicate might do some type conversion of values:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">integers</span><span class="p">(</span><span class="o">*</span><span class="n">segment_names</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">predicate</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="n">match</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s">&#39;match&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">segment_name</span> <span class="ow">in</span> <span class="n">segment_names</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">match</span><span class="p">[</span><span class="n">segment_name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="p">[</span><span class="n">segment_name</span><span class="p">])</span>
+            <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+                <span class="k">pass</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">return</span> <span class="n">predicate</span>
+
+<span class="n">ymd_to_int</span> <span class="o">=</span> <span class="n">integers</span><span class="p">(</span><span class="s">&#39;year&#39;</span><span class="p">,</span> <span class="s">&#39;month&#39;</span><span class="p">,</span> <span class="s">&#39;day&#39;</span><span class="p">)</span>
+
+<span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;ymd&#39;</span><span class="p">,</span> <span class="s">&#39;/{year}/{month}/{day}&#39;</span><span class="p">,</span>
+                 <span class="n">custom_predicates</span><span class="o">=</span><span class="p">(</span><span class="n">ymd_to_int</span><span class="p">,))</span>
+</pre></div>
+</td></tr></table></div>
+<p>Note that a conversion predicate is still a predicate so it must return
+<tt class="docutils literal"><span class="pre">True</span></tt> or <tt class="docutils literal"><span class="pre">False</span></tt>; a predicate that does <em>only</em> conversion, such as the
+one we demonstrate above should unconditionally return <tt class="docutils literal"><span class="pre">True</span></tt>.</p>
+<p>To avoid the try/except uncertainty, the route pattern can contain regular
+expressions specifying requirements for that marker. For instance:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">integers</span><span class="p">(</span><span class="o">*</span><span class="n">segment_names</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">predicate</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="n">match</span> <span class="o">=</span> <span class="n">info</span><span class="p">[</span><span class="s">&#39;match&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">segment_name</span> <span class="ow">in</span> <span class="n">segment_names</span><span class="p">:</span>
+            <span class="n">match</span><span class="p">[</span><span class="n">segment_name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="p">[</span><span class="n">segment_name</span><span class="p">])</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">return</span> <span class="n">predicate</span>
+
+<span class="n">ymd_to_int</span> <span class="o">=</span> <span class="n">integers</span><span class="p">(</span><span class="s">&#39;year&#39;</span><span class="p">,</span> <span class="s">&#39;month&#39;</span><span class="p">,</span> <span class="s">&#39;day&#39;</span><span class="p">)</span>
+
+<span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;ymd&#39;</span><span class="p">,</span> <span class="s">&#39;/{year:\d+}/{month:\d+}/{day:\d+}&#39;</span><span class="p">,</span>
+                 <span class="n">custom_predicates</span><span class="o">=</span><span class="p">(</span><span class="n">ymd_to_int</span><span class="p">,))</span>
+</pre></div>
+</td></tr></table></div>
+<p>Now the try/except is no longer needed because the route will not match at
+all unless these markers match <tt class="docutils literal"><span class="pre">\d+</span></tt> which requires them to be valid digits
+for an <tt class="docutils literal"><span class="pre">int</span></tt> type conversion.</p>
+<p>The <tt class="docutils literal"><span class="pre">match</span></tt> dictionary passed within <tt class="docutils literal"><span class="pre">info</span></tt> to each predicate attached to
+a route will be the same dictionary.  Therefore, when registering a custom
+predicate which modifies the <tt class="docutils literal"><span class="pre">match</span></tt> dict, the code registering the
+predicate should usually arrange for the predicate to be the <em>last</em> custom
+predicate in the custom predicate list.  Otherwise, custom predicates which
+fire subsequent to the predicate which performs the <tt class="docutils literal"><span class="pre">match</span></tt> modification
+will receive the <em>modified</em> match dictionary.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">It is a poor idea to rely on ordering of custom predicates to build a
+conversion pipeline, where one predicate depends on the side effect of
+another.  For instance, it's a poor idea to register two custom
+predicates, one which handles conversion of a value to an int, the next
+which handles conversion of that integer to some custom object.  Just do
+all that in a single custom predicate.</p>
+</div>
+<p>The <tt class="docutils literal"><span class="pre">route</span></tt> object in the <tt class="docutils literal"><span class="pre">info</span></tt> dict is an object that has two useful
+attributes: <tt class="docutils literal"><span class="pre">name</span></tt> and <tt class="docutils literal"><span class="pre">pattern</span></tt>.  The <tt class="docutils literal"><span class="pre">name</span></tt> attribute is the route
+name.  The <tt class="docutils literal"><span class="pre">pattern</span></tt> attribute is the route pattern.  An example of using
+the route in a set of route predicates:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6
+7
+8</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">twenty_ten</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">info</span><span class="p">[</span><span class="s">&#39;route&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;ymd&#39;</span><span class="p">,</span> <span class="s">&#39;ym&#39;</span><span class="p">,</span> <span class="s">&#39;y&#39;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">info</span><span class="p">[</span><span class="s">&#39;match&#39;</span><span class="p">][</span><span class="s">&#39;year&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;2010&#39;</span>
+
+<span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;y&#39;</span><span class="p">,</span> <span class="s">&#39;/{year}&#39;</span><span class="p">,</span> <span class="n">custom_predicates</span><span class="o">=</span><span class="p">(</span><span class="n">twenty_ten</span><span class="p">,))</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;ym&#39;</span><span class="p">,</span> <span class="s">&#39;/{year}/{month}&#39;</span><span class="p">,</span> <span class="n">custom_predicates</span><span class="o">=</span><span class="p">(</span><span class="n">twenty_ten</span><span class="p">,))</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;ymd&#39;</span><span class="p">,</span> <span class="s">&#39;/{year}/{month}/{day}&#39;</span><span class="p">,</span>
+                 <span class="n">custom_predicates</span><span class="o">=</span><span class="p">(</span><span class="n">twenty_ten</span><span class="p">,))</span>
+</pre></div>
+</td></tr></table></div>
+<p>The above predicate, when added to a number of route configurations ensures
+that the year match argument is '2010' if and only if the route name is
+'ymd', 'ym', or 'y'.</p>
+<p>You can also caption the predicates by setting the <tt class="docutils literal"><span class="pre">__text__</span></tt>
+attribute. This will help you with the <tt class="docutils literal"><span class="pre">pviews</span></tt> command (see
+<a class="reference internal" href="commandline.html#displaying-application-routes"><em>Displaying All Application Routes</em></a>) and the <tt class="docutils literal"><span class="pre">pyramid_debugtoolbar</span></tt>.</p>
+<p>If a predicate is a class just add __text__ property in a standard manner.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">class</span> <span class="nc">DummyCustomPredicate1</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__text__</span> <span class="o">=</span> <span class="s">&#39;my custom class predicate&#39;</span>
+
+<span class="k">class</span> <span class="nc">DummyCustomPredicate2</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="n">__text__</span> <span class="o">=</span> <span class="s">&#39;my custom class predicate&#39;</span>
+</pre></div>
+</td></tr></table></div>
+<p>If a predicate is a method you'll need to assign it after method declaration
+(see <a class="reference external" href="http://www.python.org/dev/peps/pep-0232/">PEP 232</a>)</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">custom_predicate</span><span class="p">():</span>
+    <span class="k">pass</span>
+<span class="n">custom_predicate</span><span class="o">.</span><span class="n">__text__</span> <span class="o">=</span> <span class="s">&#39;my custom method predicate&#39;</span>
+</pre></div>
+</td></tr></table></div>
+<p>If a predicate is a classmethod using &#64;classmethod will not work, but you can
+still easily do it by wrapping it in classmethod call.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">def</span> <span class="nf">classmethod_predicate</span><span class="p">():</span>
+    <span class="k">pass</span>
+<span class="n">classmethod_predicate</span><span class="o">.</span><span class="n">__text__</span> <span class="o">=</span> <span class="s">&#39;my classmethod predicate&#39;</span>
+<span class="n">classmethod_predicate</span> <span class="o">=</span> <span class="nb">classmethod</span><span class="p">(</span><span class="n">classmethod_predicate</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>Same will work with staticmethod, just use <tt class="docutils literal"><span class="pre">staticmethod</span></tt> instead of
+<tt class="docutils literal"><span class="pre">classmethod</span></tt>.</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last">See also <a class="reference internal" href="../api/interfaces.html#pyramid.interfaces.IRoute" title="pyramid.interfaces.IRoute"><tt class="xref py py-class docutils literal"><span class="pre">pyramid.interfaces.IRoute</span></tt></a> for more API documentation
+about route objects.</p>
+</div>
+</div>
+<div class="section" id="route-factories">
+<span id="index-15"></span><span id="id5"></span><h2>Route Factories<a class="headerlink" href="#route-factories" title="Permalink to this headline">¶</a></h2>
+<p>Although it is not a particular common need in basic applications, a &quot;route&quot;
+configuration declaration can mention a &quot;factory&quot;.  When that route matches a
+request, and a factory is attached to a route, the <a class="reference internal" href="../glossary.html#term-root-factory"><em class="xref std std-term">root factory</em></a>
+passed at startup time to the <a class="reference internal" href="../glossary.html#term-configurator"><em class="xref std std-term">Configurator</em></a> is ignored; instead the
+factory associated with the route is used to generate a <a class="reference internal" href="../glossary.html#term-root"><em class="xref std std-term">root</em></a> object.
+This object will usually be used as the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource of the view
+callable ultimately found via <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a>.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="n">config</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s">&#39;abc&#39;</span><span class="p">,</span> <span class="s">&#39;/abc&#39;</span><span class="p">,</span>
+                 <span class="n">factory</span><span class="o">=</span><span class="s">&#39;myproject.resources.root_factory&#39;</span><span class="p">)</span>
+<span class="n">config</span><span class="o">.</span><span class="n">add_view</span><span class="p">(</span><span class="s">&#39;myproject.views.theview&#39;</span><span class="p">,</span> <span class="n">route_name</span><span class="o">=</span><span class="s">&#39;abc&#39;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>The factory can either be a Python object or a <a class="reference internal" href="../glossary.html#term-dotted-python-name"><em class="xref std std-term">dotted Python name</em></a> (a
+string) which points to such a Python object, as it is above.</p>
+<p>In this way, each route can use a different factory, making it possible to
+supply a different <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource object to the view related to
+each particular route.</p>
+<p>A factory must be a callable which accepts a request and returns an arbitrary
+Python object.  For example, the below class can be used as a factory:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">class</span> <span class="nc">Mine</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="k">pass</span>
+</pre></div>
+</td></tr></table></div>
+<p>A route factory is actually conceptually identical to the <a class="reference internal" href="../glossary.html#term-root-factory"><em class="xref std std-term">root
+factory</em></a> described at <a class="reference internal" href="traversal.html#the-resource-tree"><em>The Resource Tree</em></a>.</p>
+<p>Supplying a different resource factory for each route is useful when you're
+trying to use a <span>Pyramid</span> <a class="reference internal" href="../glossary.html#term-authorization-policy"><em class="xref std std-term">authorization policy</em></a> to provide
+declarative, &quot;context sensitive&quot; security checks; each resource can maintain
+a separate <a class="reference internal" href="../glossary.html#term-acl"><em class="xref std std-term">ACL</em></a>, as documented in
+<a class="reference internal" href="#using-security-with-urldispatch"><em>Using Pyramid Security With URL Dispatch</em></a>.  It is also useful when you wish to
+combine URL dispatch with <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> as documented within
+<a class="reference internal" href="hybrid.html#hybrid-chapter"><em>Combining Traversal and URL Dispatch</em></a>.</p>
+</div>
+<div class="section" id="using-pyramid-security-with-url-dispatch">
+<span id="using-security-with-urldispatch"></span><span id="index-16"></span><h2>Using <span>Pyramid</span> Security With URL Dispatch<a class="headerlink" href="#using-pyramid-security-with-url-dispatch" title="Permalink to this headline">¶</a></h2>
+<p><span>Pyramid</span> provides its own security framework which consults an
+<a class="reference internal" href="../glossary.html#term-authorization-policy"><em class="xref std std-term">authorization policy</em></a> before allowing any application code to be
+called.  This framework operates in terms of an access control list, which is
+stored as an <tt class="docutils literal"><span class="pre">__acl__</span></tt> attribute of a resource object.  A common thing to
+want to do is to attach an <tt class="docutils literal"><span class="pre">__acl__</span></tt> to the resource object dynamically for
+declarative security purposes.  You can use the <tt class="docutils literal"><span class="pre">factory</span></tt> argument that
+points at a factory which attaches a custom <tt class="docutils literal"><span class="pre">__acl__</span></tt> to an object at its
+creation time.</p>
+<p>Such a <tt class="docutils literal"><span class="pre">factory</span></tt> might look like so:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">class</span> <span class="nc">Article</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+       <span class="n">matchdict</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">matchdict</span>
+       <span class="n">article</span> <span class="o">=</span> <span class="n">matchdict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;article&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+       <span class="k">if</span> <span class="n">article</span> <span class="o">==</span> <span class="s">&#39;1&#39;</span><span class="p">:</span>
+           <span class="bp">self</span><span class="o">.</span><span class="n">__acl__</span> <span class="o">=</span> <span class="p">[</span> <span class="p">(</span><span class="n">Allow</span><span class="p">,</span> <span class="s">&#39;editor&#39;</span><span class="p">,</span> <span class="s">&#39;view&#39;</span><span class="p">)</span> <span class="p">]</span>
+</pre></div>
+</td></tr></table></div>
+<p>If the route <tt class="docutils literal"><span class="pre">archives/{article}</span></tt> is matched, and the article number is
+<tt class="docutils literal"><span class="pre">1</span></tt>, <span>Pyramid</span> will generate an <tt class="docutils literal"><span class="pre">Article</span></tt> <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> resource
+with an ACL on it that allows the <tt class="docutils literal"><span class="pre">editor</span></tt> principal the <tt class="docutils literal"><span class="pre">view</span></tt>
+permission.  Obviously you can do more generic things than inspect the routes
+match dict to see if the <tt class="docutils literal"><span class="pre">article</span></tt> argument matches a particular string;
+our sample <tt class="docutils literal"><span class="pre">Article</span></tt> factory class is not very ambitious.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">See <a class="reference internal" href="security.html#security-chapter"><em>Security</em></a> for more information about
+<span>Pyramid</span> security and ACLs.</p>
+</div>
+</div>
+<div class="section" id="route-view-callable-registration-and-lookup-details">
+<span id="index-17"></span><h2>Route View Callable Registration and Lookup Details<a class="headerlink" href="#route-view-callable-registration-and-lookup-details" title="Permalink to this headline">¶</a></h2>
+<p>When a request enters the system which matches the pattern of the route, the
+usual result is simple: the view callable associated with the route is
+invoked with the request that caused the invocation.</p>
+<p>For most usage, you needn't understand more than this; how it works is an
+implementation detail.  In the interest of completeness, however, we'll
+explain how it <em>does</em> work in this section.  You can skip it if you're
+uninterested.</p>
+<p>When a view is associated with a route configuration, <span>Pyramid</span> ensures
+that a <a class="reference internal" href="../glossary.html#term-view-configuration"><em class="xref std std-term">view configuration</em></a> is registered that will always be found
+when the route pattern is matched during a request.  To do so:</p>
+<ul class="simple">
+<li>A special route-specific <a class="reference internal" href="../glossary.html#term-interface"><em class="xref std std-term">interface</em></a> is created at startup time for
+each route configuration declaration.</li>
+<li>When an <tt class="docutils literal"><span class="pre">add_view</span></tt> statement mentions a <tt class="docutils literal"><span class="pre">route</span> <span class="pre">name</span></tt> attribute, a
+<a class="reference internal" href="../glossary.html#term-view-configuration"><em class="xref std std-term">view configuration</em></a> is registered at startup time.  This view
+configuration uses a route-specific interface as a <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a> type.</li>
+<li>At runtime, when a request causes any route to match, the <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a>
+object is decorated with the route-specific interface.</li>
+<li>The fact that the request is decorated with a route-specific interface
+causes the <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a> machinery to always use the view callable
+registered using that interface by the route configuration to service
+requests that match the route pattern.</li>
+</ul>
+<p>As we can see from the above description, technically, URL dispatch doesn't
+actually map a URL pattern directly to a view callable.  Instead, URL
+dispatch is a <a class="reference internal" href="../glossary.html#term-resource-location"><em class="xref std std-term">resource location</em></a> mechanism.  A <span>Pyramid</span>
+<a class="reference internal" href="../glossary.html#term-resource-location"><em class="xref std std-term">resource location</em></a> subsystem (i.e., <a class="reference internal" href="../glossary.html#term-url-dispatch"><em class="xref std std-term">URL dispatch</em></a> or
+<a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a>) finds a <a class="reference internal" href="../glossary.html#term-resource"><em class="xref std std-term">resource</em></a> object that is the
+<a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> of a <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a>. Once the <a class="reference internal" href="../glossary.html#term-context"><em class="xref std std-term">context</em></a> is determined,
+a separate subsystem named <a class="reference internal" href="../glossary.html#term-view-lookup"><em class="xref std std-term">view lookup</em></a> is then responsible for
+finding and invoking a <a class="reference internal" href="../glossary.html#term-view-callable"><em class="xref std std-term">view callable</em></a> based on information available
+in the context and the request.  When URL dispatch is used, the resource
+location and view lookup subsystems provided by <span>Pyramid</span> are still
+being utilized, but in a way which does not require a developer to understand
+either of them in detail.</p>
+<p>If no route is matched using <a class="reference internal" href="../glossary.html#term-url-dispatch"><em class="xref std std-term">URL dispatch</em></a>, <span>Pyramid</span> falls back
+to <a class="reference internal" href="../glossary.html#term-traversal"><em class="xref std std-term">traversal</em></a> to handle the <a class="reference internal" href="../glossary.html#term-request"><em class="xref std std-term">request</em></a>.</p>
+</div>
+<div class="section" id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h2>
+<p>A tutorial showing how <a class="reference internal" href="../glossary.html#term-url-dispatch"><em class="xref std std-term">URL dispatch</em></a> can be used to create a
+<span>Pyramid</span> application exists in <a class="reference internal" href="../tutorials/wiki2/index.html#bfg-sql-wiki-tutorial"><em>SQLAlchemy + URL Dispatch Wiki Tutorial</em></a>.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">URL Dispatch</a><ul>
+<li><a class="reference internal" href="#high-level-operational-overview">High-Level Operational Overview</a></li>
+<li><a class="reference internal" href="#route-configuration">Route Configuration</a><ul>
+<li><a class="reference internal" href="#configuring-a-route-to-match-a-view">Configuring a Route to Match a View</a></li>
+<li><a class="reference internal" href="#route-pattern-syntax">Route Pattern Syntax</a></li>
+<li><a class="reference internal" href="#route-declaration-ordering">Route Declaration Ordering</a></li>
+<li><a class="reference internal" href="#route-configuration-arguments">Route Configuration Arguments</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#route-matching">Route Matching</a><ul>
+<li><a class="reference internal" href="#the-matchdict">The Matchdict</a></li>
+<li><a class="reference internal" href="#the-matched-route">The Matched Route</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#routing-examples">Routing Examples</a><ul>
+<li><a class="reference internal" href="#example-1">Example 1</a></li>
+<li><a class="reference internal" href="#example-2">Example 2</a></li>
+<li><a class="reference internal" href="#example-3">Example 3</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#matching-the-root-url">Matching the Root URL</a></li>
+<li><a class="reference internal" href="#generating-route-urls">Generating Route URLs</a></li>
+<li><a class="reference internal" href="#static-routes">Static Routes</a></li>
+<li><a class="reference internal" href="#external-routes">External Routes</a></li>
+<li><a class="reference internal" href="#redirecting-to-slash-appended-routes">Redirecting to Slash-Appended Routes</a></li>
+<li><a class="reference internal" href="#debugging-route-matching">Debugging Route Matching</a></li>
+<li><a class="reference internal" href="#using-a-route-prefix-to-compose-applications">Using a Route Prefix to Compose Applications</a></li>
+<li><a class="reference internal" href="#custom-route-predicates">Custom Route Predicates</a></li>
+<li><a class="reference internal" href="#route-factories">Route Factories</a></li>
+<li><a class="reference internal" href="#using-pyramid-security-with-url-dispatch">Using <span>Pyramid</span> Security With URL Dispatch</a></li>
+<li><a class="reference internal" href="#route-view-callable-registration-and-lookup-details">Route View Callable Registration and Lookup Details</a></li>
+<li><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="router.html"
+                        title="previous chapter">Request Processing</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="views.html"
+                        title="next chapter">Views</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="views.html" title="Views"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="router.html" title="Request Processing"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

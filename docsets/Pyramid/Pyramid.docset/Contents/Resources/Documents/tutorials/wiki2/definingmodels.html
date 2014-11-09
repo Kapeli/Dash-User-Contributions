@@ -1,0 +1,382 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Defining the Domain Model &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../../index.html" />
+    <link rel="up" title="SQLAlchemy + URL Dispatch Wiki Tutorial" href="index.html" />
+    <link rel="next" title="Defining Views" href="definingviews.html" />
+    <link rel="prev" title="Basic Layout" href="basiclayout.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../../index.html">
+      		<img class="logo" src="../../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="definingviews.html" title="Defining Views"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="basiclayout.html" title="Basic Layout"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">SQLAlchemy + URL Dispatch Wiki Tutorial</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="defining-the-domain-model">
+<h1>Defining the Domain Model<a class="headerlink" href="#defining-the-domain-model" title="Permalink to this headline">¶</a></h1>
+<p>The first change we'll make to our stock <tt class="docutils literal"><span class="pre">pcreate</span></tt>-generated application will
+be to define a <a class="reference internal" href="../../glossary.html#term-domain-model"><em class="xref std std-term">domain model</em></a> constructor representing a wiki page.
+We'll do this inside our <tt class="docutils literal"><span class="pre">models.py</span></tt> file.</p>
+<div class="section" id="making-edits-to-models-py">
+<h2>Making Edits to <tt class="docutils literal"><span class="pre">models.py</span></tt><a class="headerlink" href="#making-edits-to-models-py" title="Permalink to this headline">¶</a></h2>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">There is nothing special about the filename <tt class="docutils literal"><span class="pre">models.py</span></tt>.  A
+project may have many models throughout its codebase in arbitrarily-named
+files.  Files implementing models often have <tt class="docutils literal"><span class="pre">model</span></tt> in their filenames
+(or they may live in a Python subpackage of your application package named
+<tt class="docutils literal"><span class="pre">models</span></tt>) , but this is only by convention.</p>
+</div>
+<p>Open <tt class="docutils literal"><span class="pre">tutorial/tutorial/models.py</span></tt> file and edit it to look like the
+following:</p>
+<div class="highlight-py"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Column</span><span class="p">,</span>
+    <span class="n">Integer</span><span class="p">,</span>
+    <span class="n">Text</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy.ext.declarative</span> <span class="kn">import</span> <span class="n">declarative_base</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy.orm</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">scoped_session</span><span class="p">,</span>
+    <span class="n">sessionmaker</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">zope.sqlalchemy</span> <span class="kn">import</span> <span class="n">ZopeTransactionExtension</span>
+
+<span class="n">DBSession</span> <span class="o">=</span> <span class="n">scoped_session</span><span class="p">(</span><span class="n">sessionmaker</span><span class="p">(</span><span class="n">extension</span><span class="o">=</span><span class="n">ZopeTransactionExtension</span><span class="p">()))</span>
+<span class="n">Base</span> <span class="o">=</span> <span class="n">declarative_base</span><span class="p">()</span>
+
+
+<span class="hll"><span class="k">class</span> <span class="nc">Page</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+</span><span class="hll">    <span class="sd">&quot;&quot;&quot; The SQLAlchemy declarative model class for a Page object. &quot;&quot;&quot;</span>
+</span><span class="hll">    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s">&#39;pages&#39;</span>
+</span>    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="hll">    <span class="n">data</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">)</span>
+</span></pre></div>
+</td></tr></table></div>
+<p>(The highlighted lines are the ones that need to be changed.)</p>
+<p>The first thing we've done is remove the stock <tt class="docutils literal"><span class="pre">MyModel</span></tt> class
+from the generated <tt class="docutils literal"><span class="pre">models.py</span></tt> file.  The <tt class="docutils literal"><span class="pre">MyModel</span></tt> class is only a
+sample and we're not going to use it.</p>
+<p>Then, we added a <tt class="docutils literal"><span class="pre">Page</span></tt> class.  Because this is a SQLAlchemy application,
+this class inherits from an instance of
+<a class="reference external" href="http://docs.sqlalchemy.org/en/latest/orm/extensions/declarative.html#sqlalchemy.ext.declarative.declarative_base" title="(in SQLAlchemy v1.0)"><tt class="xref py py-func docutils literal"><span class="pre">sqlalchemy.ext.declarative.declarative_base()</span></tt></a>.</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>1
+2
+3
+4
+5
+6</pre></div></td><td class="code"><div class="highlight"><pre><span class="k">class</span> <span class="nc">Page</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; The SQLAlchemy declarative model class for a Page object. &quot;&quot;&quot;</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s">&#39;pages&#39;</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">,</span> <span class="n">unique</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>As you can see, our <tt class="docutils literal"><span class="pre">Page</span></tt> class has a class level attribute
+<tt class="docutils literal"><span class="pre">__tablename__</span></tt> which equals the string <tt class="docutils literal"><span class="pre">'pages'</span></tt>.  This means that
+SQLAlchemy will store our wiki data in a SQL table named <tt class="docutils literal"><span class="pre">pages</span></tt>.  Our
+<tt class="docutils literal"><span class="pre">Page</span></tt> class will also have class-level attributes named <tt class="docutils literal"><span class="pre">id</span></tt>, <tt class="docutils literal"><span class="pre">name</span></tt> and
+<tt class="docutils literal"><span class="pre">data</span></tt> (all instances of <a class="reference external" href="http://docs.sqlalchemy.org/en/latest/core/metadata.html#sqlalchemy.schema.Column" title="(in SQLAlchemy v1.0)"><tt class="xref py py-class docutils literal"><span class="pre">sqlalchemy.schema.Column</span></tt></a>).
+These will map to columns in the <tt class="docutils literal"><span class="pre">pages</span></tt> table.
+The <tt class="docutils literal"><span class="pre">id</span></tt> attribute will be the primary key in the table.
+The <tt class="docutils literal"><span class="pre">name</span></tt> attribute will be a text attribute, each value of
+which needs to be unique within the column.  The <tt class="docutils literal"><span class="pre">data</span></tt> attribute is a text
+attribute that will hold the body of each page.</p>
+</div>
+<div class="section" id="changing-scripts-initializedb-py">
+<h2>Changing <tt class="docutils literal"><span class="pre">scripts/initializedb.py</span></tt><a class="headerlink" href="#changing-scripts-initializedb-py" title="Permalink to this headline">¶</a></h2>
+<p>We haven't looked at the details of this file yet, but within the <tt class="docutils literal"><span class="pre">scripts</span></tt>
+directory of your <tt class="docutils literal"><span class="pre">tutorial</span></tt> package is a file named <tt class="docutils literal"><span class="pre">initializedb.py</span></tt>.  Code
+in this file is executed whenever we run the <tt class="docutils literal"><span class="pre">initialize_tutorial_db</span></tt> command
+(as we did in the installation step of this tutorial).</p>
+<p>Since we've changed our model, we need to make changes to our <tt class="docutils literal"><span class="pre">initializedb.py</span></tt>
+script.  In particular, we'll replace our import of <tt class="docutils literal"><span class="pre">MyModel</span></tt> with one of
+<tt class="docutils literal"><span class="pre">Page</span></tt> and we'll change the very end of the script to create a <tt class="docutils literal"><span class="pre">Page</span></tt>
+rather than a <tt class="docutils literal"><span class="pre">MyModel</span></tt> and add it to our <tt class="docutils literal"><span class="pre">DBSession</span></tt>.</p>
+<p>Open <tt class="docutils literal"><span class="pre">tutorial/tutorial/scripts/initializedb.py</span></tt> and edit it to look like the
+following:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">transaction</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">engine_from_config</span>
+
+<span class="kn">from</span> <span class="nn">pyramid.paster</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">get_appsettings</span><span class="p">,</span>
+    <span class="n">setup_logging</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">..models</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DBSession</span><span class="p">,</span>
+<span class="hll">    <span class="n">Page</span><span class="p">,</span>
+</span>    <span class="n">Base</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">usage</span><span class="p">(</span><span class="n">argv</span><span class="p">):</span>
+    <span class="n">cmd</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">&#39;usage: </span><span class="si">%s</span><span class="s"> &lt;config_uri&gt;</span><span class="se">\n</span><span class="s">&#39;</span>
+          <span class="s">&#39;(example: &quot;</span><span class="si">%s</span><span class="s"> development.ini&quot;)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">cmd</span><span class="p">,</span> <span class="n">cmd</span><span class="p">))</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">argv</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">usage</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+    <span class="n">config_uri</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">setup_logging</span><span class="p">(</span><span class="n">config_uri</span><span class="p">)</span>
+    <span class="n">settings</span> <span class="o">=</span> <span class="n">get_appsettings</span><span class="p">(</span><span class="n">config_uri</span><span class="p">)</span>
+    <span class="n">engine</span> <span class="o">=</span> <span class="n">engine_from_config</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s">&#39;sqlalchemy.&#39;</span><span class="p">)</span>
+    <span class="n">DBSession</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>
+    <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">create_all</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">transaction</span><span class="o">.</span><span class="n">manager</span><span class="p">:</span>
+<span class="hll">        <span class="n">model</span> <span class="o">=</span> <span class="n">Page</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&#39;FrontPage&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="s">&#39;This is the front page&#39;</span><span class="p">)</span>
+</span>        <span class="n">DBSession</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p>(Only the highlighted lines need to be changed.)</p>
+</div>
+<div class="section" id="installing-the-project-and-re-initializing-the-database">
+<h2>Installing the Project and re-initializing the Database<a class="headerlink" href="#installing-the-project-and-re-initializing-the-database" title="Permalink to this headline">¶</a></h2>
+<p>Because our model has changed, in order to reinitialize the database, we need
+to rerun the <tt class="docutils literal"><span class="pre">initialize_tutorial_db</span></tt> command to pick up the changes you've made
+to both the models.py file and to the initializedb.py file.
+See <a class="reference internal" href="installation.html#initialize-db-wiki2"><em>Initializing the Database</em></a> for instructions.</p>
+<p>Success will look something like this:</p>
+<div class="highlight-python"><div class="highlight"><pre>2011-11-27 01:22:45,277 INFO  [sqlalchemy.engine.base.Engine][MainThread]
+                              PRAGMA table_info(&quot;pages&quot;)
+2011-11-27 01:22:45,277 INFO  [sqlalchemy.engine.base.Engine][MainThread] ()
+2011-11-27 01:22:45,277 INFO  [sqlalchemy.engine.base.Engine][MainThread]
+CREATE TABLE pages (
+      id INTEGER NOT NULL,
+      name TEXT,
+      data TEXT,
+      PRIMARY KEY (id),
+      UNIQUE (name)
+)
+
+
+2011-11-27 01:22:45,278 INFO  [sqlalchemy.engine.base.Engine][MainThread] ()
+2011-11-27 01:22:45,397 INFO  [sqlalchemy.engine.base.Engine][MainThread]
+                              COMMIT
+2011-11-27 01:22:45,400 INFO  [sqlalchemy.engine.base.Engine][MainThread]
+                              BEGIN (implicit)
+2011-11-27 01:22:45,401 INFO  [sqlalchemy.engine.base.Engine][MainThread]
+                              INSERT INTO pages (name, data) VALUES (?, ?)
+2011-11-27 01:22:45,401 INFO  [sqlalchemy.engine.base.Engine][MainThread]
+                              (&#39;FrontPage&#39;, &#39;This is the front page&#39;)
+2011-11-27 01:22:45,402 INFO  [sqlalchemy.engine.base.Engine][MainThread]
+                              COMMIT
+</pre></div>
+</div>
+</div>
+<div class="section" id="viewing-the-application-in-a-browser">
+<h2>Viewing the Application in a Browser<a class="headerlink" href="#viewing-the-application-in-a-browser" title="Permalink to this headline">¶</a></h2>
+<p>We can't.  At this point, our system is in a &quot;non-runnable&quot; state; we'll need
+to change view-related files in the next chapter to be able to start the
+application successfully.  If you try to start the application (See
+<a class="reference internal" href="installation.html#wiki2-start-the-application"><em>Starting the Application</em></a>), you'll wind
+up with a Python traceback on your console that ends with this exception:</p>
+<div class="highlight-text"><div class="highlight"><pre>ImportError: cannot import name MyModel
+</pre></div>
+</div>
+<p>This will also happen if you attempt to run the tests.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Defining the Domain Model</a><ul>
+<li><a class="reference internal" href="#making-edits-to-models-py">Making Edits to <tt class="docutils literal"><span class="pre">models.py</span></tt></a></li>
+<li><a class="reference internal" href="#changing-scripts-initializedb-py">Changing <tt class="docutils literal"><span class="pre">scripts/initializedb.py</span></tt></a></li>
+<li><a class="reference internal" href="#installing-the-project-and-re-initializing-the-database">Installing the Project and re-initializing the Database</a></li>
+<li><a class="reference internal" href="#viewing-the-application-in-a-browser">Viewing the Application in a Browser</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="basiclayout.html"
+                        title="previous chapter">Basic Layout</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="definingviews.html"
+                        title="next chapter">Defining Views</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="definingviews.html" title="Defining Views"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="basiclayout.html" title="Basic Layout"
+             >previous</a> |</li>
+    	<li><a href="../../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" >SQLAlchemy + URL Dispatch Wiki Tutorial</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

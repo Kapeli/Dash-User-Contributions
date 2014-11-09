@@ -1,0 +1,288 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>05: Unit Tests and nose &mdash; The Pyramid Web Framework v1.5</title>
+    
+    <link rel="stylesheet" href="../_static/pylons.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="The Pyramid Web Framework v1.5" href="../index.html" />
+    <link rel="up" title="Quick Tutorial for Pyramid" href="index.html" />
+    <link rel="next" title="06: Functional Testing with WebTest" href="functional_testing.html" />
+    <link rel="prev" title="04: Easier Development with debugtoolbar" href="debugtoolbar.html" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/nobile/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://static.pylonsproject.org/fonts/neuton/stylesheet.css" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="../_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+<link rel="shortcut icon" href="../_static/pyramid.ico"/>
+
+  </head>
+  <body>
+
+
+
+
+
+
+
+<div class="header-small">
+	
+	<div class="logo-small">
+		<a href="../index.html">
+      		<img class="logo" src="../_static/pyramid-small.png" alt="Logo"/>
+		</a>
+  	</div>
+</div>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="functional_testing.html" title="06: Functional Testing with WebTest"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="debugtoolbar.html" title="04: Easier Development with debugtoolbar"
+             accesskey="P">previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Quick Tutorial for Pyramid</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="unit-tests-and-nose">
+<span id="qtut-unit-testing"></span><h1>05: Unit Tests and <tt class="docutils literal"><span class="pre">nose</span></tt><a class="headerlink" href="#unit-tests-and-nose" title="Permalink to this headline">¶</a></h1>
+<p>Provide unit testing for our project's Python code.</p>
+<div class="section" id="background">
+<h2>Background<a class="headerlink" href="#background" title="Permalink to this headline">¶</a></h2>
+<p>As the mantra says, &quot;Untested code is broken code.&quot; The Python
+community has had a long culture of writing test scripts which ensure
+that your code works correctly as you write it and maintain it in the
+future. Pyramid has always had a deep commitment to testing,
+with 100% test coverage from the earliest pre-releases.</p>
+<p>Python includes a
+<a class="reference external" href="http://docs.python.org/library/unittest.html#unittest-minimal-example" title="(in Python v2.7)"><em class="xref std std-ref">unit testing framework</em></a> in its
+standard library. Over the years a number of Python projects, such as
+<a class="reference external" href="https://pypi.python.org/pypi/nose/">nose</a>, have extended this
+framework with alternative test runners that provide more convenience
+and functionality. The Pyramid developers use <tt class="docutils literal"><span class="pre">nose</span></tt>, which we'll thus
+use in this tutorial.</p>
+<p>Don't worry, this tutorial won't be pedantic about &quot;test-driven
+development&quot; (TDD.) We'll do just enough to ensure that, in each step,
+we haven't majorly broken the code. As you're writing your code you
+might find this more convenient than changing to your browser
+constantly and clicking reload.</p>
+<p>We'll also leave discussion of
+<a class="reference external" href="https://pypi.python.org/pypi/coverage">coverage</a> for another section.</p>
+</div>
+<div class="section" id="objectives">
+<h2>Objectives<a class="headerlink" href="#objectives" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Write unit tests that ensure the quality of our code</li>
+<li>Install a Python package (<tt class="docutils literal"><span class="pre">nose</span></tt>) which helps in our testing</li>
+</ul>
+</div>
+<div class="section" id="steps">
+<h2>Steps<a class="headerlink" href="#steps" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">First we copy the results of the previous step, as well as install
+the <tt class="docutils literal"><span class="pre">nose</span></tt> package:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span><span class="nb">cd</span> ..; cp -r debugtoolbar unit_testing; <span class="nb">cd </span>unit_testing
+<span class="nv">$ $VENV</span>/bin/python setup.py develop
+<span class="nv">$ $VENV</span>/bin/easy_install nose
+</pre></div>
+</div>
+</li>
+<li><p class="first">Now we write a simple unit test in <tt class="docutils literal"><span class="pre">unit_testing/tutorial/tests.py</span></tt>:</p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">unittest</span>
+
+<span class="kn">from</span> <span class="nn">pyramid</span> <span class="kn">import</span> <span class="n">testing</span>
+
+
+<span class="k">class</span> <span class="nc">TutorialViewTests</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">testing</span><span class="o">.</span><span class="n">setUp</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">tearDown</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">testing</span><span class="o">.</span><span class="n">tearDown</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">test_hello_world</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">tutorial</span> <span class="kn">import</span> <span class="n">hello_world</span>
+
+        <span class="n">request</span> <span class="o">=</span> <span class="n">testing</span><span class="o">.</span><span class="n">DummyRequest</span><span class="p">()</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">hello_world</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+</li>
+<li><p class="first">Now run the tests:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ $VENV</span>/bin/nosetests tutorial
+.
+----------------------------------------------------------------------
+Ran 1 <span class="nb">test </span>in 0.141s
+
+OK
+</pre></div>
+</div>
+</li>
+</ol>
+</div>
+<div class="section" id="analysis">
+<h2>Analysis<a class="headerlink" href="#analysis" title="Permalink to this headline">¶</a></h2>
+<p>Our <tt class="docutils literal"><span class="pre">tests.py</span></tt> imports the Python standard unit testing framework. To
+make writing Pyramid-oriented tests more convenient, Pyramid supplies
+some <tt class="docutils literal"><span class="pre">pyramid.testing</span></tt> helpers which we use in the test setup and
+teardown. Our one test imports the view, makes a dummy request, and sees
+if the view returns what we expected.</p>
+<p>The <tt class="docutils literal"><span class="pre">tests.TutorialViewTests.test_hello_world</span></tt> test is a small
+example of a unit test. First, we import the view inside each test. Why
+not import at the top, like in normal Python code? Because imports can
+cause effects that break a test. We'd like our tests to be in <em>units</em>,
+hence the name <em>unit</em> testing. Each test should isolate itself to the
+correct degree.</p>
+<p>Our test then makes a fake incoming web request, then calls our Pyramid
+view. We test the HTTP status code on the response to make sure it
+matches our expectations.</p>
+<p>Note that our use of <tt class="docutils literal"><span class="pre">pyramid.testing.setUp()</span></tt> and
+<tt class="docutils literal"><span class="pre">pyramid.testing.tearDown()</span></tt> aren't actually necessary here; they are only
+necessary when your test needs to make use of the <tt class="docutils literal"><span class="pre">config</span></tt> object (it's a
+Configurator) to add stuff to the configuration state before calling the view.</p>
+</div>
+<div class="section" id="extra-credit">
+<h2>Extra Credit<a class="headerlink" href="#extra-credit" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>Change the test to assert that the response status code should be
+<tt class="docutils literal"><span class="pre">404</span></tt> (meaning, not found.) Run <tt class="docutils literal"><span class="pre">nosetests</span></tt> again. Read the
+error report and see if you can decipher what it is telling you.</li>
+<li>As a more realistic example, put the <tt class="docutils literal"><span class="pre">tests.py</span></tt> back as you found
+it and put an error in your view, such as a reference to a
+non-existing variable. Run the tests and see how this is more
+convenient than reloading your browser and going back to your code.</li>
+<li>Finally, for the most realistic test, read about Pyramid <tt class="docutils literal"><span class="pre">Response</span></tt>
+objects and see how to change the response code. Run the tests and
+see how testing confirms the &quot;contract&quot; that your code claims to
+support.</li>
+<li>How could we add a unit test assertion to test the HTML value of the
+response body?</li>
+<li>Why do we import the <tt class="docutils literal"><span class="pre">hello_world</span></tt> view function <em>inside</em> the
+<tt class="docutils literal"><span class="pre">test_hello_world</span></tt> method instead of at the top of the module?</li>
+</ol>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last">See also <a class="reference internal" href="../narr/testing.html#testing-chapter"><em>Unit, Integration, and Functional Testing</em></a></p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">05: Unit Tests and <tt class="docutils literal"><span class="pre">nose</span></tt></a><ul>
+<li><a class="reference internal" href="#background">Background</a></li>
+<li><a class="reference internal" href="#objectives">Objectives</a></li>
+<li><a class="reference internal" href="#steps">Steps</a></li>
+<li><a class="reference internal" href="#analysis">Analysis</a></li>
+<li><a class="reference internal" href="#extra-credit">Extra Credit</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="debugtoolbar.html"
+                        title="previous chapter">04: Easier Development with <tt class="docutils literal"><span class="pre">debugtoolbar</span></tt></a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="functional_testing.html"
+                        title="next chapter">06: Functional Testing with WebTest</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="functional_testing.html" title="06: Functional Testing with WebTest"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="debugtoolbar.html" title="04: Easier Development with debugtoolbar"
+             >previous</a> |</li>
+    	<li><a href="../index.html">The Pyramid Web Framework v1.5</a> &raquo;</li>
+          <li><a href="index.html" >Quick Tutorial for Pyramid</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; <a href="../copyright.html">Copyright</a> 2008-2014, Agendaless Consulting.
+      Last updated on Nov 09, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>
