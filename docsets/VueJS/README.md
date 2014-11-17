@@ -16,7 +16,7 @@ Twitter: [@Chase_the_Dev](https://twitter.com/Chase_the_Dev)
 
 ### Updating
 1. `cd vue-dash-generator`
-2. `git pull --recurse-submodules && git submodule update && npm install`
+2. `git pull --recurse-submodules && git submodule foreach 'git checkout master; git pull' && npm install`
 
 ### Generating
 1. `cd vue-dash-generator`
