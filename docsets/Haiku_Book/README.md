@@ -3,7 +3,7 @@ Haiku Book Docset
 
 ### Information
 
-This is the docset version of the [Haiku Book](http://api.haiku-os.org) which was generated from the Haiku [source](https://github.com/haiku/haiku) under (hrev47946).
+This is the docset version of the [Haiku Book](http://api.haiku-os.org) which was generated from the Haiku [source](https://github.com/haiku/haiku) under (hrev48455).
 
 **Author:** [Joseph Hill](http://github.com/return)
 
@@ -11,20 +11,22 @@ This is the docset version of the [Haiku Book](http://api.haiku-os.org) which wa
 ### Prerequisites
 * Doxygen - To generate docsets from source.
 
+*  A Mac with Xcode 3 or Higher (docsetutil)
 
 ### Building the docset
 
 1. Clone the main Haiku repository that contains the documentation:
 
 	```bash
-	$ git clone https://git.haiku-os.org/haiku
+	$ git clone https://git.haiku-os.org/haiku	
 	```
-2. Create a new folder called "***generated***"
+	
+2. Create a new folder inside **haiku** called "***generated***"
 
-3. Navigate to the documentation directory:
+3. Once inside the haiku directory, navigate to the documentation directory:
 
 	```bash
-	$ cd haiku/docs/user/
+	$ cd /docs/user/
 	```
 	
 4. Edit the ```Doxyfile``` to enable docset generation: 
@@ -36,13 +38,13 @@ This is the docset version of the [Haiku Book](http://api.haiku-os.org) which wa
 5. Run ```doxygen``` 
 
 
-6. Navigate to the root of the Haiku repository:
+6. Navigate back to the root of the Haiku repository:
 
 	```bash 
-	$ cd ../../generated/
+	$ cd ../../generated/doxygen/html/
 	```
 	
-7. Run ```make```
+7. Run ```make``` to generate the docset.
 
 ### Credits
 [Original maintainers](https://api.haiku-os.org/credits.html)
