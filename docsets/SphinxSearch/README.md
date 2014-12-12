@@ -1,4 +1,4 @@
-Sphinx Dash Docset
+SphinxSearch Dash Docset
 =======================
 
 Sphinx search engine documentation for Dash application with support
