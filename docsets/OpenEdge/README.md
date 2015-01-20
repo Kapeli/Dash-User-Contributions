@@ -1,4 +1,4 @@
-Ampersand.js Docset
+OpenEdge Docset
 ===================
 
 ## Author
@@ -17,7 +17,7 @@ Follow the instructions at <https://github.com/chris4gl/openedge-dash-generator>
 ## Notes
 
 Documentation for OpenEdge available here:
-<https://community.progress.com/community_groups/openedge_general/w/openedgegeneral/1329.openedge-product-documentation-overview.aspx></https://community.progress.com/community_groups/openedge_general/w/openedgegeneral/1329.openedge-product-documentation-overview.aspx>
+<https://community.progress.com/community_groups/openedge_general/w/openedgegeneral/1329.openedge-product-documentation-overview.aspx>
 
 About Progress OpenEdge:
 
