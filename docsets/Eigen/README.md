@@ -28,7 +28,7 @@ Pre-requisites: doxygen, cmake
 2. Make a new directory called ``build/`` in extracted directory
 3. Go to the newly created directory and run ``cmake ../.``
 4. Go to the ``doc/`` directory
-5. Update ``doxygen`` :
+5. Update ``Doxyfile`` :
 
 ``
       GENERATE_DOCSET   = YES
@@ -40,6 +40,6 @@ Pre-requisites: doxygen, cmake
       GENERATE_TREEVIEW = NO
 ``
 
-6. Run ``doxygen``
+6. Run ``make``
 7. Goto generated ``html`` directory
 8. Run ``make``
