@@ -31,6 +31,8 @@ Pre-requisites: doxygen, cmake
 5. Update ``Doxyfile`` :
 
 ``
+      DOCSET_BUNDLE_ID  = eigen
+      /*...*/
       GENERATE_DOCSET   = YES
       /*...*/
       DISABLE_INDEX     = YES
