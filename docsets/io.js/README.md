@@ -1,6 +1,7 @@
 # io.js
 
-Author: Fangdun Cai([@fundon][https://twitter.com/_fundon])
+Author: Fangdun Cai   
+Twitter: [@_fundon](https://twitter.com/_fundon)   
 GitHub: https://github.com/fundon
 
 ## Generation Steps:
