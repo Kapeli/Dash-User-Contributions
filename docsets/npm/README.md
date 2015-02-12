@@ -2,7 +2,7 @@
 
 ## Author
 
-(note: I'm not the author of the Docker documentation, I just generated the npm docset.)
+(note: I'm not the author of the npm documentation, I just generated the npm docset.)
 
 #### François Massart
 
