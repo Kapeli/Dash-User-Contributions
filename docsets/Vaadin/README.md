@@ -18,6 +18,7 @@ This is a compilation of the Javadoc API documentation available for download fr
 This Dash docset was compiled by [Eric W. Wallace](https://twitter.com/ewall) and is available on [Github](https://github.com/ewall/Dash-User-Contributions/tree/master/docsets/Vaadin).
 
 ### Availabe Versions
+* 7.4.2
 * 7.4.1
 * 7.4.0
 * 7.3.10
