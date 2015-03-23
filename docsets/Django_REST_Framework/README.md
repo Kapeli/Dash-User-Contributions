@@ -3,7 +3,7 @@ Django REST Framework Docset
 
 Django REST framework is a powerful and flexible toolkit that makes it easy to build Web APIs.
 
-Note: This is the documentation for the version 3.0 of REST framework.
+Note: This is the documentation for the version 3.1.0 of REST framework.
 
 - Author:
     - [Yong Guo](https://github.com/wolfg1969)
