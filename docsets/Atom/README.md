@@ -1,6 +1,8 @@
 Atom
 =======================
 
+### This docset is outdated and needs a new maintainer. See [issue #407](https://github.com/Kapeli/Dash-User-Contributions/issues/407).
+
 Author: Ben Booth ([@bkbooth11][1])
 
 #### Generation Steps:
