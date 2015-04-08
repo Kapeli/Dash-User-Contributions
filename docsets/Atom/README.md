@@ -1,32 +1,25 @@
-Atom
-=======================
+[Atom][3] Docset
+===========
 
-### This docset is outdated and needs a new maintainer. See [issue #407](https://github.com/Kapeli/Dash-User-Contributions/issues/407).
 
-Author: Ben Booth ([@bkbooth11][1])
+#### Author:
 
-#### Generation Steps:
-* Download the original documentation from [atom.io/docs/api][2] using
-[httrack][3] or similar
-* Clone [github.com/bkbooth/dash-atom-docs][4] and copy the downloaded
-documentation into `Atom.docset/Contents/Resources/Documents/`
-* Make sure you have [node.js][8] installed then inside the cloned repository
-run `npm install` then `node index` to populate the sqlite3 database
+Ben Booth ([@bkbooth11][1])
 
-#### Known Bugs:
-* None, submit any you find [here][5]
+GyuYong Jung([@Obliviscence][2])
 
-#### Planned Improvements:
-* Find and unlink broken links (currently shows a 'Not Found' message)
-* Improve the page titles
-* (Maybe) add Table of Contents support
-* (Maybe) automate building or scraping the docs using [grunt][6] or [gulp][7]
+
+#### Generation script:
+
+[github.com/Ephemera/atom-docset-generator][4]
+
+
+#### TODO:
+
+Add table of contents support
+
 
 [1]: https://twitter.com/bkbooth11
-[2]: https://atom.io/docs/api
-[3]: http://www.httrack.com
-[4]: https://github.com/bkbooth/dash-atom-docs
-[5]: https://github.com/bkbooth/dash-atom-docs/issues
-[6]: http://gruntjs.com/
-[7]: http://gulpjs.com/
-[8]: http://nodejs.org/
+[2]: https://twitter.com/Obliviscence
+[3]: https://atom.io/
+[4]: https://github.com/Ephemera/atom-docset-generator
