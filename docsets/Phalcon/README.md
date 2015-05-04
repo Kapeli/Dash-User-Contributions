@@ -1,4 +1,4 @@
-[Phalcon PHP](http://foundation.zurb.com) Dash docset
+[Phalcon PHP 1.3.0](http://phalconphp.com) Dash docset
 ======================================================
 
 - __Docset Description:__
@@ -9,26 +9,18 @@
     - [Saimus Dev](https://github.com/saimusdev)
 
 - __Docset repo__:
-    - [https://github.com/saimusdev/dash-phalcon](https://github.com/saimusdev/dash-phalcon)
+    - [https://github.com/saimusdev/dash-phalcon/tree/phalcon-1.3.0](https://github.com/saimusdev/dash-phalcon/tree/phalcon-1.3.0)
 
 - Instructions to generate the docset:
     - Execute the following commands:
+    
+    
    ```
    git clone https://github.com/saimusdev/dash-phalcon.git
-   cd dash-foundation
-   ./create_docset.sh
+   cd dash-phalcon
+   git co phalcon-1.3.0
+   ./build.sh
    cd ..
-   rm -rf dash-foundation
+   rm -rf dash-phalcon
    ```
-- The PHP documentation can be downloaded here, with **wget** (although it is downloaded
-  by the docset generation script automatically):
-    - [http://docs.phalconphp.com/en/latest/](http://docs.phalconphp.com/en/latest/)
-
-- Notes:
-    - Because the script provided downloads the full documentation recursively from the 
-	  [Phalcon PHP](http://phalconphp.com/en/)  website, it takes some time to download all 
-	  the files. At least 5-15 minutes will be necessary. It depends on the connection speed.
-	  
-- Known Issues:
-    - The guides aren't encoded/decoded properly. See also [#2](https://github.com/saimusdev/dash-phalcon/issues/2)
-    - A "¶" symbol appears on every class, method, constant or guide. It appears to be concatenated when the documentation is parsed. See also [#3](https://github.com/saimusdev/dash-phalcon/issues/3)
+   
