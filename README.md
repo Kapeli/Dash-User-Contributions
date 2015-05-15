@@ -18,7 +18,7 @@ To contribute a docset, follow the steps below. If you get stuck at any point or
     * Note: you can ignore the instructions regarding docset feeds. You won't need them if you plan to contribute to this repo
 * Make sure your docset fulfils all the required criteria on the [Docset Contribution Checklist](https://github.com/Kapeli/Dash-User-Contributions/wiki/Docset-Contribution-Checklist) and as many of the optional ones as possible
 * Check out the [Versioning Guidelines](https://github.com/Kapeli/Dash-User-Contributions/wiki/Docset-Versioning-Guidelines) to understand how docset versioning works in Dash
-* Fork and clone this repo
+* Fork and clone this repo but make sure to squash before pulling!
 * Set up your directory structure:
   * Copy the `Sample_Docset` folder into the `docsets` folder and rename it. Use the same name as your docset, but replace whitespaces with underscores. Note: don't add `_Docset` at the end of the name, just use the docset name (e.g. `ExtJS`) and nothing else.
   * Archive your docset using:
@@ -30,4 +30,4 @@ To contribute a docset, follow the steps below. If you get stuck at any point or
   * Include a `icon.png` and `icon@2x.png` with sizes `16x16` and `32x32` or simply delete the sample icon if you don't want an icon at all
   * Edit the docset.json file. Make sure to follow the same naming rules as the sample (i.e. your docset name should be the same as the archive name, but replace whitespaces with underscores)
   * Edit the README.md
-* Submit a pull request
+* Submit a **squashed** pull request
