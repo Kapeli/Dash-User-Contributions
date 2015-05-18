@@ -1,7 +1,7 @@
 DokuWiki Docset
 =======================
 
-This is an inofficial build of the [DokuWiki][dw] documentation, created using PHPXRef.
+This is not an official build of the [DokuWiki][dw] documentation, created using PHPXRef.
 
 ## Author
 
