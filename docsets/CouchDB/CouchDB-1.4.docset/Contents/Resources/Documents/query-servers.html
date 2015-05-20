@@ -1,0 +1,803 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta content="text/html; charset=utf-8" http-equiv="Content-Type"/><title>7. Query Servers — Apache CouchDB 1.4 Manual</title><!-- RTD <head> --><script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js" type="text/javascript"></script><script src="//media.readthedocs.org/javascript/underscore.js" type="text/javascript"></script><script src="//media.readthedocs.org/javascript/doctools.js" type="text/javascript"></script><script type="text/javascript">
+  // This is included here for Javascript that doesn't have access to the templates.
+  var doc_version = "1.4.x";
+  var doc_slug = "couchdb";
+  var page_name = "query-servers";
+</script><script src="//media.readthedocs.org/javascript/rtd.js" type="text/javascript"></script><!-- end RTD <head> --><link href="_static/rtd.css" rel="stylesheet" type="text/css"/><link href="_static/pygments.css" rel="stylesheet" type="text/css"/><script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.4.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script><link href="_static/favicon.ico" rel="shortcut icon"/><link href="index.html" rel="top" title="Apache CouchDB 1.4 Manual"/><link href="changes.html" rel="next" title="8. Changes Feed"/><link href="ddocs.html" rel="prev" title="6. Design Docs"/></head><body>
+<div class="related">
+<h3>Navigation</h3>
+<ul>
+<li class="right" style="margin-right: 10px">
+<a accesskey="I" href="genindex.html" title="General Index">index</a></li>
+<li class="right">
+<a accesskey="N" href="changes.html" title="8. Changes Feed">next</a> |</li>
+<li class="right">
+<a accesskey="P" href="ddocs.html" title="6. Design Docs">previous</a> |</li>
+<li><a href="index.html">Apache CouchDB 1.4 Manual</a> »</li>
+</ul>
+</div>
+<div class="document">
+<div class="documentwrapper">
+<div class="bodywrapper">
+<div class="body">
+<div class="section" id="query-servers">
+<h1>7. Query Servers<a class="headerlink" href="#query-servers" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="javascript">
+<span id="queryserver-js"></span><h2>7.1. JavaScript<a class="headerlink" href="#javascript" title="Permalink to this headline">¶</a></h2>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">While every design function has access to all JavaScript objects,
+the table below describes appropriate usage cases. For example,
+you may use <a class="reference internal" href="#emit" title="emit"><tt class="xref js js-func docutils literal"><span class="pre">emit()</span></tt></a> in <a class="reference internal" href="ddocs.html#listfun"><em>List functions</em></a>, but <a class="reference internal" href="#getRow" title="getRow"><tt class="xref js js-func docutils literal"><span class="pre">getRow()</span></tt></a> is not permitted during <a class="reference internal" href="ddocs.html#mapfun"><em>Map functions</em></a>.</p>
+</div>
+<table border="1" class="docutils">
+<colgroup>
+<col width="42%"></col>
+<col width="58%"></col>
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">JS Function</th>
+<th class="head">Reasonable to use in design doc functions</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><a class="reference internal" href="#emit" title="emit"><tt class="xref js js-func docutils literal"><span class="pre">emit()</span></tt></a></td>
+<td><a class="reference internal" href="ddocs.html#mapfun"><em>Map functions</em></a></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#getRow" title="getRow"><tt class="xref js js-func docutils literal"><span class="pre">getRow()</span></tt></a></td>
+<td><a class="reference internal" href="ddocs.html#listfun"><em>List functions</em></a></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#JSON" title="JSON"><tt class="xref js js-data docutils literal"><span class="pre">JSON</span></tt></a></td>
+<td>any</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#isArray" title="isArray"><tt class="xref js js-func docutils literal"><span class="pre">isArray()</span></tt></a></td>
+<td>any</td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#log" title="log"><tt class="xref js js-func docutils literal"><span class="pre">log()</span></tt></a></td>
+<td>any</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#provides" title="provides"><tt class="xref js js-func docutils literal"><span class="pre">provides()</span></tt></a></td>
+<td><a class="reference internal" href="ddocs.html#showfun"><em>Show functions</em></a>, <a class="reference internal" href="ddocs.html#listfun"><em>List functions</em></a></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#registerType" title="registerType"><tt class="xref js js-func docutils literal"><span class="pre">registerType()</span></tt></a></td>
+<td><a class="reference internal" href="ddocs.html#showfun"><em>Show functions</em></a>, <a class="reference internal" href="ddocs.html#listfun"><em>List functions</em></a></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#require" title="require"><tt class="xref js js-func docutils literal"><span class="pre">require()</span></tt></a></td>
+<td>any, except <a class="reference internal" href="ddocs.html#reducefun"><em>Reduce and rereduce functions</em></a></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#send" title="send"><tt class="xref js js-func docutils literal"><span class="pre">send()</span></tt></a></td>
+<td><a class="reference internal" href="ddocs.html#listfun"><em>List functions</em></a></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#start" title="start"><tt class="xref js js-func docutils literal"><span class="pre">start()</span></tt></a></td>
+<td><a class="reference internal" href="ddocs.html#listfun"><em>List functions</em></a></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="#sum" title="sum"><tt class="xref js js-func docutils literal"><span class="pre">sum()</span></tt></a></td>
+<td>any</td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="#toJSON" title="toJSON"><tt class="xref js js-func docutils literal"><span class="pre">toJSON()</span></tt></a></td>
+<td>any</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="design-functions-context">
+<h3>7.1.1. Design functions context<a class="headerlink" href="#design-functions-context" title="Permalink to this headline">¶</a></h3>
+<p>Each design function executes in a special context of predefined objects,
+modules and functions:</p>
+<dl class="function">
+<dt id="emit"><a name="//apple_ref/cpp/func/emit"></a>
+<tt class="descname">emit</tt><big>(</big><em>key</em>, <em>value</em><big>)</big><a class="headerlink" href="#emit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Emits a <cite>key</cite>-<cite>value</cite> pair for further processing by CouchDB after the map
+function is done.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first last simple">
+<li><strong>key</strong> – The view key</li>
+<li><strong>value</strong> – The <cite>key</cite>‘s associated value</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">function</span><span class="p">(</span><span class="nx">doc</span><span class="p">){</span>
+  <span class="nx">emit</span><span class="p">(</span><span class="nx">doc</span><span class="p">.</span><span class="nx">_id</span><span class="p">,</span> <span class="nx">doc</span><span class="p">.</span><span class="nx">_rev</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="getRow"><a name="//apple_ref/cpp/func/getRow"></a>
+<tt class="descname">getRow</tt><big>(</big><big>)</big><a class="headerlink" href="#getRow" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extracts the next row from a related view result.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">View result row</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">object</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">function</span><span class="p">(</span><span class="nx">head</span><span class="p">,</span> <span class="nx">req</span><span class="p">){</span>
+  <span class="nx">send</span><span class="p">(</span><span class="s1">'['</span><span class="p">);</span>
+  <span class="nx">row</span> <span class="o">=</span> <span class="nx">getRow</span><span class="p">();</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">row</span><span class="p">){</span>
+    <span class="nx">send</span><span class="p">(</span><span class="nx">toJSON</span><span class="p">(</span><span class="nx">row</span><span class="p">));</span>
+    <span class="k">while</span><span class="p">(</span><span class="nx">row</span> <span class="o">=</span> <span class="nx">getRow</span><span class="p">()){</span>
+      <span class="nx">send</span><span class="p">(</span><span class="s1">','</span><span class="p">);</span>
+      <span class="nx">send</span><span class="p">(</span><span class="nx">toJSON</span><span class="p">(</span><span class="nx">row</span><span class="p">));</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="s1">']'</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="data">
+<dt id="JSON">
+<tt class="descname">JSON</tt><a class="headerlink" href="#JSON" title="Permalink to this definition">¶</a></dt>
+<dd><p><a class="reference external" href="https://git-wip-us.apache.org/repos/asf?p=couchdb.git;a=blob;f=share/server/json2.js">JSON2</a>
+object.</p>
+</dd></dl>
+<dl class="function">
+<dt id="isArray"><a name="//apple_ref/cpp/func/isArray"></a>
+<tt class="descname">isArray</tt><big>(</big><em>obj</em><big>)</big><a class="headerlink" href="#isArray" title="Permalink to this definition">¶</a></dt>
+<dd><p>A helper function to check if the provided value is an <cite>Array</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>obj</strong> – Any Javascript value</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><tt class="docutils literal"><span class="pre">true</span></tt> if <cite>obj</cite> is <cite>Array</cite>-typed, <tt class="docutils literal"><span class="pre">false</span></tt> otherwise</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">boolean</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<dl class="function">
+<dt id="log"><a name="//apple_ref/cpp/func/log"></a>
+<tt class="descname">log</tt><big>(</big><em>message</em><big>)</big><a class="headerlink" href="#log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Log a message to the CouchDB log (at the <cite>INFO</cite> level).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first last simple">
+<li><strong>message</strong> – Message to be logged</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">function</span><span class="p">(</span><span class="nx">doc</span><span class="p">){</span>
+  <span class="nx">log</span><span class="p">(</span><span class="s1">'Procesing doc '</span> <span class="o">+</span> <span class="nx">doc</span><span class="p">[</span><span class="s1">'_id'</span><span class="p">]);</span>
+  <span class="nx">emit</span><span class="p">(</span><span class="nx">doc</span><span class="p">[</span><span class="s1">'_id'</span><span class="p">],</span> <span class="kc">null</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>After the map function has run, the following line can be found in CouchDB
+logs (e.g. at <cite>/var/log/couchdb/couch.log</cite>):</p>
+<div class="highlight-text"><div class="highlight"><pre>[Sat, 03 Nov 2012 17:38:02 GMT] [info] [&lt;0.7543.0&gt;] OS Process #Port&lt;0.3289&gt; Log :: Processing doc 8d300b86622d67953d102165dbe99467
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="provides"><a name="//apple_ref/cpp/func/provides"></a>
+<tt class="descname">provides</tt><big>(</big><em>key</em>, <em>func</em><big>)</big><a class="headerlink" href="#provides" title="Permalink to this definition">¶</a></dt>
+<dd><p>Registers callable handler for specified MIME key.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first last simple">
+<li><strong>key</strong> – MIME key previously defined by <a class="reference internal" href="#registerType" title="registerType"><tt class="xref js js-func docutils literal"><span class="pre">registerType()</span></tt></a></li>
+<li><strong>func</strong> – MIME type handler</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<dl class="function">
+<dt id="registerType"><a name="//apple_ref/cpp/func/registerType"></a>
+<tt class="descname">registerType</tt><big>(</big><em>key</em>, <em>*mimes</em><big>)</big><a class="headerlink" href="#registerType" title="Permalink to this definition">¶</a></dt>
+<dd><p>Registers list of MIME types by associated <cite>key</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first last simple">
+<li><strong>key</strong> – MIME types</li>
+<li><strong>mimes</strong> – MIME types enumeration</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Predefined mappings (<cite>key</cite>-<cite>array</cite>):</p>
+<ul class="simple">
+<li><strong>all</strong>: <tt class="docutils literal"><span class="pre">*/*</span></tt></li>
+<li><strong>text</strong>: <tt class="docutils literal"><span class="pre">text/plain;</span> <span class="pre">charset=utf-8</span></tt>, <tt class="docutils literal"><span class="pre">txt</span></tt></li>
+<li><strong>html</strong>: <tt class="docutils literal"><span class="pre">text/html;</span> <span class="pre">charset=utf-8</span></tt></li>
+<li><strong>xhtml</strong>: <tt class="docutils literal"><span class="pre">application/xhtml+xml</span></tt>, <tt class="docutils literal"><span class="pre">xhtml</span></tt></li>
+<li><strong>xml</strong>: <tt class="docutils literal"><span class="pre">application/xml</span></tt>, <tt class="docutils literal"><span class="pre">text/xml</span></tt>, <tt class="docutils literal"><span class="pre">application/x-xml</span></tt></li>
+<li><strong>js</strong>: <tt class="docutils literal"><span class="pre">text/javascript</span></tt>, <tt class="docutils literal"><span class="pre">application/javascript</span></tt>,
+<tt class="docutils literal"><span class="pre">application/x-javascript</span></tt></li>
+<li><strong>css</strong>: <tt class="docutils literal"><span class="pre">text/css</span></tt></li>
+<li><strong>ics</strong>: <tt class="docutils literal"><span class="pre">text/calendar</span></tt></li>
+<li><strong>csv</strong>: <tt class="docutils literal"><span class="pre">text/csv</span></tt></li>
+<li><strong>rss</strong>: <tt class="docutils literal"><span class="pre">application/rss+xml</span></tt></li>
+<li><strong>atom</strong>: <tt class="docutils literal"><span class="pre">application/atom+xml</span></tt></li>
+<li><strong>yaml</strong>: <tt class="docutils literal"><span class="pre">application/x-yaml</span></tt>, <tt class="docutils literal"><span class="pre">text/yaml</span></tt></li>
+<li><strong>multipart_form</strong>: <tt class="docutils literal"><span class="pre">multipart/form-data</span></tt></li>
+<li><strong>url_encoded_form</strong>: <tt class="docutils literal"><span class="pre">application/x-www-form-urlencoded</span></tt></li>
+<li><strong>json</strong>: <tt class="docutils literal"><span class="pre">application/json</span></tt>, <tt class="docutils literal"><span class="pre">text/x-json</span></tt></li>
+</ul>
+</dd></dl>
+<dl class="function">
+<dt id="require"><a name="//apple_ref/cpp/func/require"></a>
+<tt class="descname">require</tt><big>(</big><em>path</em><big>)</big><a class="headerlink" href="#require" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads CommonJS module by a specified <cite>path</cite>. The path should not start with
+a slash.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> – A CommonJS module path started from design document root</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Exported statements</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<dl class="function">
+<dt id="send"><a name="//apple_ref/cpp/func/send"></a>
+<tt class="descname">send</tt><big>(</big><em>chunk</em><big>)</big><a class="headerlink" href="#send" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sends a single string <cite>chunk</cite> in response.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first last simple">
+<li><strong>chunk</strong> – Text chunk</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">function</span><span class="p">(</span><span class="nx">head</span><span class="p">,</span> <span class="nx">req</span><span class="p">){</span>
+  <span class="nx">send</span><span class="p">(</span><span class="s1">'Hello,'</span><span class="p">);</span>
+  <span class="nx">send</span><span class="p">(</span><span class="s1">' '</span><span class="p">);</span>
+  <span class="nx">send</span><span class="p">(</span><span class="s1">'Couch'</span><span class="p">);</span>
+  <span class="k">return</span> <span class="o">!</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="start"><a name="//apple_ref/cpp/func/start"></a>
+<tt class="descname">start</tt><big>(</big><em>init_resp</em><big>)</big><a class="headerlink" href="#start" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initiates chunked response. As an option, a custom
+<a class="reference internal" href="json-structure.html#response-object"><em>response</em></a> object may be sent at this point.
+For <cite>list</cite>-functions only!</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">list functions may set the <cite>HTTP response code</cite> and <cite>headers</cite> by calling
+this function. This function must be called before <a class="reference internal" href="#send" title="send"><tt class="xref js js-func docutils literal"><span class="pre">send()</span></tt></a>,
+<a class="reference internal" href="#getRow" title="getRow"><tt class="xref js js-func docutils literal"><span class="pre">getRow()</span></tt></a> or a <cite>return</cite> statement; otherwise, the query server will
+implicitly call this function with the empty object (<tt class="docutils literal"><span class="pre">{}</span></tt>).</p>
+</div>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">function</span><span class="p">(</span><span class="nx">head</span><span class="p">,</span> <span class="nx">req</span><span class="p">){</span>
+  <span class="nx">start</span><span class="p">({</span>
+    <span class="s2">"code"</span><span class="o">:</span> <span class="mi">302</span><span class="p">,</span>
+    <span class="s2">"headers"</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s2">"Location"</span><span class="o">:</span> <span class="s2">"http://couchdb.apache.org"</span>
+    <span class="p">}</span>
+  <span class="p">});</span>
+  <span class="k">return</span> <span class="s2">"Relax!"</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="sum"><a name="//apple_ref/cpp/func/sum"></a>
+<tt class="descname">sum</tt><big>(</big><em>arr</em><big>)</big><a class="headerlink" href="#sum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sum <cite>arr</cite>‘s items.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>arr</strong> – Array of numbers</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">number</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<dl class="function">
+<dt id="toJSON"><a name="//apple_ref/cpp/func/toJSON"></a>
+<tt class="descname">toJSON</tt><big>(</big><em>obj</em><big>)</big><a class="headerlink" href="#toJSON" title="Permalink to this definition">¶</a></dt>
+<dd><p>Encodes <cite>obj</cite> to JSON string. This is an alias for the <tt class="docutils literal"><span class="pre">JSON.stringify</span></tt>
+method.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>obj</strong> – JSON encodable object</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">JSON string</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+</div>
+<div class="section" id="commonjs-modules">
+<span id="commonjs"></span><h3>7.1.2. CommonJS Modules<a class="headerlink" href="#commonjs-modules" title="Permalink to this headline">¶</a></h3>
+<p>Support for <a class="reference external" href="http://wiki.commonjs.org/wiki/Modules/1.1.1">CommonJS Modules</a>
+(introduced in CouchDB 0.11.0) allows you to create modular design functions
+without the need for duplication of functionality.</p>
+<p>Here’s a CommonJS module that checks user permissions:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">function</span> <span class="nx">user_context</span><span class="p">(</span><span class="nx">userctx</span><span class="p">,</span> <span class="nx">secobj</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">is_admin</span> <span class="o">=</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">userctx</span><span class="p">.</span><span class="nx">indexOf</span><span class="p">(</span><span class="s1">'_admin'</span><span class="p">)</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="p">{</span><span class="s1">'is_admin'</span><span class="o">:</span> <span class="nx">is_admin</span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="nx">exports</span><span class="p">[</span><span class="s1">'user'</span><span class="p">]</span> <span class="o">=</span> <span class="nx">user_context</span>
+</pre></div>
+</div>
+<p>Each module has access to additional global variables:</p>
+<ul class="simple">
+<li><strong>module</strong> (<cite>object</cite>): Contains information about the stored module<ul>
+<li><strong>id</strong> (<cite>string</cite>): The module id; a JSON path in ddoc context</li>
+<li><strong>current</strong> (<cite>code</cite>): Compiled module code object</li>
+<li><strong>parent</strong> (<cite>object</cite>): Parent frame</li>
+<li><strong>exports</strong> (<cite>object</cite>): Export statements</li>
+</ul>
+</li>
+<li><strong>exports</strong> (<cite>object</cite>): Shortcut to the <tt class="docutils literal"><span class="pre">module.exports</span></tt> object</li>
+</ul>
+<p>The CommonJS module can be added to a design document, like so:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span>
+   <span class="s2">"views"</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s2">"lib"</span><span class="o">:</span> <span class="p">{</span>
+         <span class="s2">"security"</span><span class="o">:</span> <span class="s2">"function user_context(userctx, secobj) { ... }"</span>
+      <span class="p">},</span>
+      <span class="s2">"validate_doc_update"</span><span class="o">:</span> <span class="s2">"function(newdoc, olddoc, userctx, secobj) {</span>
+<span class="s2">        user = require('lib/security').user(userctx, secobj);</span>
+<span class="s2">        return user.is_admin();</span>
+<span class="s2">      }"</span>
+   <span class="p">},</span>
+   <span class="s2">"_id"</span><span class="o">:</span> <span class="s2">"_design/test"</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Modules paths are relative to the design document’s <tt class="docutils literal"><span class="pre">views</span></tt> object, but
+modules can only be loaded from the object referenced via <tt class="docutils literal"><span class="pre">lib</span></tt>. The
+<tt class="docutils literal"><span class="pre">lib</span></tt> structure can still be used for view functions as well, by simply
+storing view functions at e.g. <tt class="docutils literal"><span class="pre">views.lib.map</span></tt>, <tt class="docutils literal"><span class="pre">views.lib.reduce</span></tt>, etc.</p>
+</div>
+</div>
+<div class="section" id="erlang">
+<span id="queryserver-erlang"></span><h2>7.2. Erlang<a class="headerlink" href="#erlang" title="Permalink to this headline">¶</a></h2>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Unlike the JavaScript query server, the Erlang query server does not
+run in a sandbox. This means Erlang code has full access to your OS,
+filesystem and network, which may lead to security issues. While Erlang
+functions are faster than JavaScript ones, you need to be careful
+about running them, especially if they were written by someone else.</p>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Due to security restrictions, the Erlang query server is disabled by
+default. To enable it, you need to edit your <cite>local.ini</cite> to include a
+<tt class="docutils literal"><span class="pre">native_query_servers</span></tt> section:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span class="k">[native_query_servers]</span>
+<span class="na">erlang</span> <span class="o">=</span> <span class="s">{couch_native_process, start_link, []}</span>
+</pre></div>
+</div>
+<p class="last">Don’t forget to restart CouchDB after updating the configuration, and
+use the <tt class="docutils literal"><span class="pre">language:</span> <span class="pre">"erlang"</span></tt> property in your Erlang design documents.</p>
+</div>
+<dl class="function">
+<dt id="Emit"><a name="//apple_ref/cpp/func/Emit"></a>
+<tt class="descname">Emit</tt><big>(</big><em>Id</em>, <em>Value</em><big>)</big><a class="headerlink" href="#Emit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Emits <cite>key</cite>-<cite>value</cite> pairs to view indexer process.</p>
+<div class="highlight-erlang"><div class="highlight"><pre><span class="k">fun</span><span class="p">({</span><span class="nv">Doc</span><span class="p">})</span> <span class="o">-&gt;</span>
+  <span class="o">&lt;&lt;</span><span class="nv">K</span><span class="p">,_</span><span class="o">/</span><span class="n">binary</span><span class="o">&gt;&gt;</span> <span class="o">=</span> <span class="nn">proplists</span><span class="p">:</span><span class="nf">get_value</span><span class="p">(</span><span class="o">&lt;&lt;</span><span class="s">"_rev"</span><span class="o">&gt;&gt;</span><span class="p">,</span> <span class="nv">Doc</span><span class="p">,</span> <span class="n">null</span><span class="p">),</span>
+  <span class="nv">V</span> <span class="o">=</span> <span class="nn">proplists</span><span class="p">:</span><span class="nf">get_value</span><span class="p">(</span><span class="o">&lt;&lt;</span><span class="s">"_id"</span><span class="o">&gt;&gt;</span><span class="p">,</span> <span class="nv">Doc</span><span class="p">,</span> <span class="n">null</span><span class="p">),</span>
+  <span class="nv">Emit</span><span class="p">(</span><span class="o">&lt;&lt;</span><span class="nv">K</span><span class="o">&gt;&gt;</span><span class="p">,</span> <span class="nv">V</span><span class="p">)</span>
+<span class="k">end</span><span class="p">.</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="FoldRows"><a name="//apple_ref/cpp/func/FoldRows"></a>
+<tt class="descname">FoldRows</tt><big>(</big><em>Fun</em>, <em>Acc</em><big>)</big><a class="headerlink" href="#FoldRows" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper to iterate over all rows in a list function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first last simple">
+<li><strong>Fun</strong> – Function object.</li>
+<li><strong>Acc</strong> – The value previously returned by <cite>Fun</cite>.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-erlang"><div class="highlight"><pre><span class="k">fun</span><span class="p">(</span><span class="nv">Head</span><span class="p">,</span> <span class="p">{</span><span class="nv">Req</span><span class="p">})</span> <span class="o">-&gt;</span>
+  <span class="nv">Fun</span> <span class="o">=</span> <span class="k">fun</span><span class="p">({</span><span class="nv">Row</span><span class="p">},</span> <span class="nv">Acc</span><span class="p">)</span> <span class="o">-&gt;</span>
+    <span class="nv">Id</span> <span class="o">=</span> <span class="nn">couch_util</span><span class="p">:</span><span class="nf">get_value</span><span class="p">(</span><span class="o">&lt;&lt;</span><span class="s">"id"</span><span class="o">&gt;&gt;</span><span class="p">,</span> <span class="nv">Row</span><span class="p">),</span>
+    <span class="nv">Send</span><span class="p">(</span><span class="nb">list_to_binary</span><span class="p">(</span><span class="nn">io_lib</span><span class="p">:</span><span class="nf">format</span><span class="p">(</span><span class="s">"Previous doc id: </span><span class="si">~p~n</span><span class="s">"</span><span class="p">,</span> <span class="p">[</span><span class="nv">Acc</span><span class="p">]))),</span>
+    <span class="nv">Send</span><span class="p">(</span><span class="nb">list_to_binary</span><span class="p">(</span><span class="nn">io_lib</span><span class="p">:</span><span class="nf">format</span><span class="p">(</span><span class="s">"Current  doc id: </span><span class="si">~p~n</span><span class="s">"</span><span class="p">,</span> <span class="p">[</span><span class="nv">Id</span><span class="p">]))),</span>
+    <span class="p">{</span><span class="n">ok</span><span class="p">,</span> <span class="nv">Id</span><span class="p">}</span>
+  <span class="k">end</span><span class="p">,</span>
+  <span class="nv">FoldRows</span><span class="p">(</span><span class="nv">Fun</span><span class="p">,</span> <span class="n">nil</span><span class="p">),</span>
+  <span class="s">""</span>
+<span class="k">end</span><span class="p">.</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="GetRow"><a name="//apple_ref/cpp/func/GetRow"></a>
+<tt class="descname">GetRow</tt><big>(</big><big>)</big><a class="headerlink" href="#GetRow" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves the next row from a related view result.</p>
+<div class="highlight-erlang"><div class="highlight"><pre><span class="c">%% FoldRows background implementation.</span>
+<span class="c">%% https://git-wip-us.apache.org/repos/asf?p=couchdb.git;a=blob;f=src/couchdb/couch_native_process.erl;hb=HEAD#l368</span>
+<span class="c">%%</span>
+<span class="nf">foldrows</span><span class="p">(</span><span class="nv">GetRow</span><span class="p">,</span> <span class="nv">ProcRow</span><span class="p">,</span> <span class="nv">Acc</span><span class="p">)</span> <span class="o">-&gt;</span>
+  <span class="k">case</span> <span class="nv">GetRow</span><span class="p">()</span> <span class="k">of</span>
+    <span class="n">nil</span> <span class="o">-&gt;</span>
+      <span class="p">{</span><span class="n">ok</span><span class="p">,</span> <span class="nv">Acc</span><span class="p">};</span>
+    <span class="nv">Row</span> <span class="o">-&gt;</span>
+      <span class="k">case</span> <span class="p">(</span><span class="k">catch</span> <span class="nv">ProcRow</span><span class="p">(</span><span class="nv">Row</span><span class="p">,</span> <span class="nv">Acc</span><span class="p">))</span> <span class="k">of</span>
+        <span class="p">{</span><span class="n">ok</span><span class="p">,</span> <span class="nv">Acc2</span><span class="p">}</span> <span class="o">-&gt;</span>
+          <span class="n">foldrows</span><span class="p">(</span><span class="nv">GetRow</span><span class="p">,</span> <span class="nv">ProcRow</span><span class="p">,</span> <span class="nv">Acc2</span><span class="p">);</span>
+        <span class="p">{</span><span class="n">stop</span><span class="p">,</span> <span class="nv">Acc2</span><span class="p">}</span> <span class="o">-&gt;</span>
+          <span class="p">{</span><span class="n">ok</span><span class="p">,</span> <span class="nv">Acc2</span><span class="p">}</span>
+      <span class="k">end</span>
+<span class="k">end</span><span class="p">.</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="Log"><a name="//apple_ref/cpp/func/Log"></a>
+<tt class="descname">Log</tt><big>(</big><em>Msg</em><big>)</big><a class="headerlink" href="#Log" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first last simple">
+<li><strong>Msg</strong> – Log a message at the <cite>INFO</cite> level.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-erlang"><div class="highlight"><pre><span class="k">fun</span><span class="p">({</span><span class="nv">Doc</span><span class="p">})</span> <span class="o">-&gt;</span>
+  <span class="o">&lt;&lt;</span><span class="nv">K</span><span class="p">,_</span><span class="o">/</span><span class="n">binary</span><span class="o">&gt;&gt;</span> <span class="o">=</span> <span class="nn">proplists</span><span class="p">:</span><span class="nf">get_value</span><span class="p">(</span><span class="o">&lt;&lt;</span><span class="s">"_rev"</span><span class="o">&gt;&gt;</span><span class="p">,</span> <span class="nv">Doc</span><span class="p">,</span> <span class="n">null</span><span class="p">),</span>
+  <span class="nv">V</span> <span class="o">=</span> <span class="nn">proplists</span><span class="p">:</span><span class="nf">get_value</span><span class="p">(</span><span class="o">&lt;&lt;</span><span class="s">"_id"</span><span class="o">&gt;&gt;</span><span class="p">,</span> <span class="nv">Doc</span><span class="p">,</span> <span class="n">null</span><span class="p">),</span>
+  <span class="nv">Log</span><span class="p">(</span><span class="nn">lists</span><span class="p">:</span><span class="nf">flatten</span><span class="p">(</span><span class="nn">io_lib</span><span class="p">:</span><span class="nf">format</span><span class="p">(</span><span class="s">"Hello from </span><span class="si">~s</span><span class="s"> doc!"</span><span class="p">,</span> <span class="p">[</span><span class="nv">V</span><span class="p">]))),</span>
+  <span class="nv">Emit</span><span class="p">(</span><span class="o">&lt;&lt;</span><span class="nv">K</span><span class="o">&gt;&gt;</span><span class="p">,</span> <span class="nv">V</span><span class="p">)</span>
+<span class="k">end</span><span class="p">.</span>
+</pre></div>
+</div>
+<p>After the map function has run, the following line can be found in
+CouchDB logs (e.g. at <cite>/var/log/couchdb/couch.log</cite>):</p>
+<div class="highlight-text"><div class="highlight"><pre>[Sun, 04 Nov 2012 11:33:58 GMT] [info] [&lt;0.9144.2&gt;] Hello from 8d300b86622d67953d102165dbe99467 doc!
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="Send"><a name="//apple_ref/cpp/func/Send"></a>
+<tt class="descname">Send</tt><big>(</big><em>Chunk</em><big>)</big><a class="headerlink" href="#Send" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sends a single string <cite>Chunk</cite> in response.</p>
+<div class="highlight-erlang"><div class="highlight"><pre><span class="k">fun</span><span class="p">(</span><span class="nv">Head</span><span class="p">,</span> <span class="p">{</span><span class="nv">Req</span><span class="p">})</span> <span class="o">-&gt;</span>
+  <span class="nv">Send</span><span class="p">(</span><span class="s">"Hello,"</span><span class="p">),</span>
+  <span class="nv">Send</span><span class="p">(</span><span class="s">" "</span><span class="p">),</span>
+  <span class="nv">Send</span><span class="p">(</span><span class="s">"Couch"</span><span class="p">),</span>
+  <span class="s">"!"</span>
+<span class="k">end</span><span class="p">.</span>
+</pre></div>
+</div>
+<p>The function above produces the following response:</p>
+<div class="highlight-text"><div class="highlight"><pre>Hello, Couch!
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="Start"><a name="//apple_ref/cpp/func/Start"></a>
+<tt class="descname">Start</tt><big>(</big><em>Headers</em><big>)</big><a class="headerlink" href="#Start" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first last simple">
+<li><strong>Headers</strong> – Proplist of <a class="reference internal" href="json-structure.html#response-object"><em>response object</em></a>.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Initialize <a class="reference internal" href="ddocs.html#listfun"><em>List functions</em></a> response. At this point, response code and headers
+may be defined. For example, this function redirects to the CouchDB web site:</p>
+<div class="highlight-erlang"><div class="highlight"><pre><span class="k">fun</span><span class="p">(</span><span class="nv">Head</span><span class="p">,</span> <span class="p">{</span><span class="nv">Req</span><span class="p">})</span> <span class="o">-&gt;</span>
+  <span class="nv">Start</span><span class="p">({[{</span><span class="o">&lt;&lt;</span><span class="s">"code"</span><span class="o">&gt;&gt;</span><span class="p">,</span> <span class="mi">302</span><span class="p">},</span>
+          <span class="p">{</span><span class="o">&lt;&lt;</span><span class="s">"headers"</span><span class="o">&gt;&gt;</span><span class="p">,</span> <span class="p">{[</span>
+            <span class="p">{</span><span class="o">&lt;&lt;</span><span class="s">"Location"</span><span class="o">&gt;&gt;</span><span class="p">,</span> <span class="o">&lt;&lt;</span><span class="s">"http://couchdb.apache.org"</span><span class="o">&gt;&gt;</span><span class="p">}]</span>
+          <span class="p">}}</span>
+        <span class="p">]}),</span>
+  <span class="s">"Relax!"</span>
+<span class="k">end</span><span class="p">.</span>
+</pre></div>
+</div>
+</dd></dl>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sphinxsidebar">
+<div class="sphinxsidebarwrapper">
+<p class="logo"><a href="index.html">
+<img alt="Logo" class="logo" src="_static/logo.png"/>
+</a></p>
+<!--
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the License for the
+specific language governing permissions and limitations under the License.
+
+-->
+<div id="searchbox" style="display: none">
+<h3>Quick Search</h3>
+<form action="search.html" class="search" method="get">
+<input name="q" type="text"/>
+<input type="submit" value="Go"/>
+<input name="check_keywords" type="hidden" value="yes"/>
+<input name="area" type="hidden" value="default"/>
+</form>
+<br/>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+<h3><a href="index.html">Table Of Contents</a></h3>
+<ul>
+<li><a class="reference internal" href="#">7. Query Servers</a><ul>
+<li><a class="reference internal" href="#javascript">7.1. JavaScript</a><ul>
+<li><a class="reference internal" href="#design-functions-context">7.1.1. Design functions context</a></li>
+<li><a class="reference internal" href="#commonjs-modules">7.1.2. CommonJS Modules</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#erlang">7.2. Erlang</a></li>
+</ul>
+</li>
+</ul>
+<h4>Previous topic</h4>
+<p class="topless"><a href="ddocs.html" title="previous chapter">6. Design Docs</a></p>
+<h4>Next topic</h4>
+<p class="topless"><a href="changes.html" title="next chapter">8. Changes Feed</a></p><!--
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the License for the
+specific language governing permissions and limitations under the License.
+
+-->
+<!--
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the License for the
+specific language governing permissions and limitations under the License.
+
+-->
+<h3>More Help</h3>
+<ul>
+<li><a href="https://couchdb.apache.org/">Homepage</a></li>
+<li><a href="http://wiki.apache.org/couchdb/">Wiki</a></li>
+<li><a href="https://couchdb.apache.org/#mailing-list">Mailing Lists</a></li>
+<li><a href="http://webchat.freenode.net/?channels=couchdb">IRC</a></li>
+<li><a href="https://issues.apache.org/jira/browse/CouchDB">Issues</a></li>
+</ul>
+</div>
+</div>
+<div class="clearer"></div>
+</div>
+<div class="related">
+<h3>Navigation</h3>
+<ul>
+<li class="right" style="margin-right: 10px">
+<a href="genindex.html" title="General Index">index</a></li>
+<li class="right">
+<a href="changes.html" title="8. Changes Feed">next</a> |</li>
+<li class="right">
+<a href="ddocs.html" title="6. Design Docs">previous</a> |</li>
+<li><a href="index.html">Apache CouchDB 1.4 Manual</a> »</li>
+</ul>
+</div>
+<div class="footer">
+        © Copyright 2013, The Apache Software Foundation.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+<!-- End original user content -->
+<br/>
+<br/>
+<br/>
+<style type="text/css">
+  #version_menu, .rtd-badge.rtd {
+    -webkit-transition: all 0.25s 0.75s;
+    transition: all 0.25s 0.75s;
+  }
+  .footer_popout:hover #version_menu, .footer_popout:hover .rtd-badge.rtd {
+    -webkit-transition: all 0.25s 0s;
+    transition: all 0.25s 0s;
+  }
+  .rtd-badge {
+    position: fixed;
+    display: block;
+    bottom: 5px;
+    height: 40px;
+    text-indent: -9999em;
+    border-radius: 3px;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2), 0 1px 0 rgba(255, 255, 255, 0.2) inset;
+    -moz-box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2), 0 1px 0 rgba(255, 255, 255, 0.2) inset;
+    -webkit-box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2), 0 1px 0 rgba(255, 255, 255, 0.2) inset;
+  }
+  #version_menu {
+    position: fixed;
+    visibility: hidden;
+    opacity: 0;
+    bottom: 11px;
+    right: 47px;
+    list-style-type: none;
+    margin: 0;
+  }
+  .footer_popout:hover #version_menu {
+    visibility: visible;
+    opacity: 1;
+    right: 166px;
+  }
+  #version_menu li {
+    display: block;
+    float: right;
+  }
+  #version_menu li a {
+    display: block;
+    padding: 6px 10px 4px 10px;
+    margin: 7px 7px 0 0;
+    font-weight: bold;
+    font-size: 14px;
+    height: 20px;
+    line-height: 17px;
+    text-decoration: none;
+    color: #fff;
+    background: #8ca1af url(//media.readthedocs.org//images/gradient-light.png) bottom left repeat-x;
+    border-radius: 3px;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+    box-shadow: 0 1px 1px #465158;
+    -moz-box-shadow: 0 1px 1px #465158;
+    -webkit-box-shadow: 0 1px 1px #465158;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+  }
+  #version_menu li a:hover {
+    text-decoration: none;
+    background-color: #697983;
+    box-shadow: 0 1px 0px #465158;
+    -moz-box-shadow: 0 1px 0px #465158;
+    -webkit-box-shadow: 0 1px 0px #465158;
+  }
+  .rtd-badge.rtd {
+    background: #3b4449 url(//media.readthedocs.org//images/badge-rtd.png) scroll top left no-repeat;
+    border: 1px solid #282E32;
+    width: 41px;
+    right: 5px;
+  }
+  .footer_popout:hover .rtd-badge.rtd {
+    width: 160px;
+  }
+  .rtd-badge.revsys { background: #465158 url(//media.readthedocs.org//images/badge-revsys.png) top left no-repeat;
+    border: 1px solid #1C5871;
+    width: 290px;
+    right: 173px;
+  }
+  .rtd-badge.revsys-inline-sponsored {
+    position: inherit;
+    margin-left: auto;
+    margin-right: 175px;
+    margin-bottom: 5px;
+    background: #465158 url(//media.readthedocs.org//images/badge-revsys.png) top left no-repeat;
+    border: 1px solid #1C5871;
+    width: 290px;
+    right: 173px;
+  }
+  .rtd-badge.revsys-inline {
+    position: inherit;
+    margin-left: auto;
+    margin-right: 175px;
+    margin-bottom: 5px;
+    background: #465158 url(//media.readthedocs.org//images/badge-revsys-sm.png) top left no-repeat;
+    border: 1px solid #1C5871;
+    width: 205px;
+    right: 173px;
+  }
+
+</style>
+<div class="rtd_doc_footer">
+<div class="footer_popout">
+<a class="rtd-badge rtd" href="//readthedocs.org/projects/couchdb/?fromdocs=couchdb"> Brought to you by Read the Docs</a>
+<ul id="version_menu">
+<li><a href="/en/latest/">latest</a></li>
+<li><a href="/en/1.4.x/">1.4.x</a></li>
+<li><a href="/en/1.3.x/">1.3.x</a></li>
+</ul>
+</div>
+</div>
+<!-- RTD Analytics Code -->
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-17997319-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+</script>
+</body></html>
