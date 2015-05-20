@@ -1,0 +1,1051 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta content="text/html; charset=utf-8" http-equiv="Content-Type"/><title>6. Design Docs — Apache CouchDB 1.4 Manual</title><!-- RTD <head> --><script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js" type="text/javascript"></script><script src="//media.readthedocs.org/javascript/underscore.js" type="text/javascript"></script><script src="//media.readthedocs.org/javascript/doctools.js" type="text/javascript"></script><script type="text/javascript">
+  // This is included here for Javascript that doesn't have access to the templates.
+  var doc_version = "1.4.x";
+  var doc_slug = "couchdb";
+  var page_name = "ddocs";
+</script><script src="//media.readthedocs.org/javascript/rtd.js" type="text/javascript"></script><!-- end RTD <head> --><link href="_static/rtd.css" rel="stylesheet" type="text/css"/><link href="_static/pygments.css" rel="stylesheet" type="text/css"/><script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.4.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script><link href="_static/favicon.ico" rel="shortcut icon"/><link href="index.html" rel="top" title="Apache CouchDB 1.4 Manual"/><link href="query-servers.html" rel="next" title="7. Query Servers"/><link href="replicator.html" rel="prev" title="5. Replicator Database"/></head><body>
+<div class="related">
+<h3>Navigation</h3>
+<ul>
+<li class="right" style="margin-right: 10px">
+<a accesskey="I" href="genindex.html" title="General Index">index</a></li>
+<li class="right">
+<a accesskey="N" href="query-servers.html" title="7. Query Servers">next</a> |</li>
+<li class="right">
+<a accesskey="P" href="replicator.html" title="5. Replicator Database">previous</a> |</li>
+<li><a href="index.html">Apache CouchDB 1.4 Manual</a> »</li>
+</ul>
+</div>
+<div class="document">
+<div class="documentwrapper">
+<div class="bodywrapper">
+<div class="body">
+<div class="section" id="design-docs">
+<span id="ddocs"></span><h1>6. Design Docs<a class="headerlink" href="#design-docs" title="Permalink to this headline">¶</a></h1>
+<p>In this section we’ll show how to write design documents, using the built-in
+<a class="reference internal" href="query-servers.html#queryserver-js"><em>JavaScript Query Server</em></a>.</p>
+<p>But before we start to write our first function, let’s take a look at the list
+of common objects that will be used during our code journey - we’ll be using
+them extensively within each function:</p>
+<ul class="simple">
+<li><a class="reference internal" href="json-structure.html#dbinfo-object"><em>Database information object</em></a></li>
+<li><a class="reference internal" href="json-structure.html#request-object"><em>Request object</em></a></li>
+<li><a class="reference internal" href="json-structure.html#response-object"><em>Response object</em></a></li>
+<li><a class="reference internal" href="json-structure.html#userctx-object"><em>UserCtx object</em></a></li>
+<li><a class="reference internal" href="json-structure.html#security-object"><em>Database Security object</em></a></li>
+<li><a class="reference internal" href="query-servers.html#queryserver-js"><em>Guide to JavaScript Query Server</em></a></li>
+</ul>
+<div class="section" id="view-functions">
+<span id="viewfun"></span><h2>6.1. View functions<a class="headerlink" href="#view-functions" title="Permalink to this headline">¶</a></h2>
+<p>Views are the primary tool used for querying and reporting on CouchDB databases.</p>
+<div class="section" id="map-functions">
+<span id="mapfun"></span><h3>6.1.1. Map functions<a class="headerlink" href="#map-functions" title="Permalink to this headline">¶</a></h3>
+<dl class="function">
+<dt>
+<tt class="descname">mapfun</tt><big>(</big><em>doc</em><big>)</big></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first last simple">
+<li><strong>doc</strong> – Processed document object.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<p>Map functions accept a single document as the argument and (optionally) <a class="reference internal" href="query-servers.html#emit" title="emit"><tt class="xref js js-func docutils literal"><span class="pre">emit()</span></tt></a>
+key/value pairs that are stored in a view.</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">function</span> <span class="p">(</span><span class="nx">doc</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">doc</span><span class="p">.</span><span class="nx">type</span> <span class="o">===</span> <span class="s1">'post'</span> <span class="o">&amp;&amp;</span> <span class="nx">doc</span><span class="p">.</span><span class="nx">tags</span> <span class="o">&amp;&amp;</span> <span class="nb">Array</span><span class="p">.</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">doc</span><span class="p">.</span><span class="nx">tags</span><span class="p">))</span> <span class="p">{</span>
+    <span class="nx">doc</span><span class="p">.</span><span class="nx">tags</span><span class="p">.</span><span class="nx">forEach</span><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">tag</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">emit</span><span class="p">(</span><span class="nx">tag</span><span class="p">.</span><span class="nx">toLowerCase</span><span class="p">(),</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="p">});</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>In this example a key/value pair is emitted for each value in the <cite>tags</cite> array
+of a document with a <cite>type</cite> of “post”. Note that <a class="reference internal" href="query-servers.html#emit" title="emit"><tt class="xref js js-func docutils literal"><span class="pre">emit()</span></tt></a> may be called many
+times for a single document, so the same document may be available by several
+different keys.</p>
+<p>Also keep in mind that each document is <em>sealed</em> to prevent situation when one
+map function changes document state and the other one received a modified
+version.</p>
+<p>For efficiency reasons, documents are passed to a group of map functions -
+each document is processed by group of map functions from all views of
+related design document. This means that if you trigger index update for one
+view in ddoc, all others will get updated too.</p>
+<p>Since <cite>1.1.0</cite> release <cite>map</cite> function supports
+<a class="reference internal" href="query-servers.html#commonjs"><em>CommonJS</em></a> modules and access to <a class="reference internal" href="query-servers.html#require" title="require"><tt class="xref js js-func docutils literal"><span class="pre">require()</span></tt></a> function.</p>
+</div>
+<div class="section" id="reduce-and-rereduce-functions">
+<span id="reducefun"></span><h3>6.1.2. Reduce and rereduce functions<a class="headerlink" href="#reduce-and-rereduce-functions" title="Permalink to this headline">¶</a></h3>
+<dl class="function">
+<dt id="redfun"><a name="//apple_ref/cpp/func/redfun"></a>
+<tt class="descname">redfun</tt><big>(</big><em>keys</em>, <em>values</em><span class="optional">[</span>, <em>rereduce</em><span class="optional">]</span><big>)</big><a class="headerlink" href="#redfun" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>keys</strong> – Array of pairs docid-key for related map function result.
+Always <tt class="docutils literal"><span class="pre">null</span></tt> if rereduce is running (has <tt class="docutils literal"><span class="pre">true</span></tt> value).</li>
+<li><strong>values</strong> – Array of map function result values.</li>
+<li><strong>rereduce</strong> – Boolean sign of rereduce run.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Reduces <cite>values</cite></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<p>Reduce functions takes two required arguments of keys and values lists - the
+result of the related map function - and optional third one which indicates if
+<cite>rereduce</cite> mode is active or not. <cite>Rereduce</cite> is using for additional reduce
+values list, so when it is <tt class="docutils literal"><span class="pre">true</span></tt> there is no information about related <cite>keys</cite>
+(first argument is <tt class="docutils literal"><span class="pre">null</span></tt>).</p>
+<p>Note, that if produced result by <cite>reduce</cite> function is longer than initial
+values list then a Query Server error will be raised. However, this behavior
+could be disabled by setting <tt class="docutils literal"><span class="pre">reduce_limit</span></tt> config option to <tt class="docutils literal"><span class="pre">false</span></tt>:</p>
+<div class="highlight-ini"><div class="highlight"><pre><span class="k">[query_server_config]</span>
+<span class="na">reduce_limit</span> <span class="o">=</span> <span class="s">false</span>
+</pre></div>
+</div>
+<p>While disabling <tt class="docutils literal"><span class="pre">reduce_limit</span></tt> might be useful for debug proposes, remember,
+that main task of reduce functions is to <em>reduce</em> mapped result, not to make it
+even bigger. Generally, your reduce function should converge rapidly to a single
+value - which could be an array or similar object.</p>
+<p>Also CouchDB has three built-in reduce functions. These are implemented in
+Erlang and run right inside CouchDB, so they are much faster than the equivalent
+JavaScript functions: <tt class="docutils literal"><span class="pre">_sum</span></tt>, <tt class="docutils literal"><span class="pre">_count</span></tt> and <tt class="docutils literal"><span class="pre">_stats</span></tt>. Their equivalents in
+JavaScript below:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="c1">// could be replaced by _sum</span>
+<span class="kd">function</span><span class="p">(</span><span class="nx">keys</span><span class="p">,</span> <span class="nx">values</span><span class="p">){</span>
+  <span class="nx">sum</span><span class="p">(</span><span class="nx">values</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="c1">// could be replaced by _count</span>
+<span class="kd">function</span><span class="p">(</span><span class="nx">keys</span><span class="p">,</span> <span class="nx">values</span><span class="p">,</span> <span class="nx">rereduce</span><span class="p">){</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">rereduce</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">sum</span><span class="p">(</span><span class="nx">values</span><span class="p">);</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">values</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="c1">// could be replaced by _stats</span>
+<span class="kd">function</span><span class="p">(</span><span class="nx">keys</span><span class="p">,</span> <span class="nx">values</span><span class="p">,</span> <span class="nx">rereduce</span><span class="p">){</span>
+  <span class="k">return</span> <span class="p">{</span>
+    <span class="s1">'sum'</span><span class="o">:</span> <span class="nx">sum</span><span class="p">(</span><span class="nx">values</span><span class="p">),</span>
+    <span class="s1">'min'</span><span class="o">:</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">min</span><span class="p">.</span><span class="nx">apply</span><span class="p">(</span><span class="kc">null</span><span class="p">,</span> <span class="nx">values</span><span class="p">),</span>
+    <span class="s1">'max'</span><span class="o">:</span> <span class="nb">Math</span><span class="p">.</span><span class="nx">max</span><span class="p">.</span><span class="nx">apply</span><span class="p">(</span><span class="kc">null</span><span class="p">,</span> <span class="nx">values</span><span class="p">),</span>
+    <span class="s1">'count'</span><span class="o">:</span> <span class="nx">values</span><span class="p">.</span><span class="nx">length</span><span class="p">,</span>
+    <span class="s1">'sumsqr'</span><span class="o">:</span> <span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+      <span class="kd">var</span> <span class="nx">sumsqr</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+      <span class="nx">values</span><span class="p">.</span><span class="nx">forEach</span><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">value</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">sumsqr</span> <span class="o">+=</span> <span class="nx">value</span> <span class="o">*</span> <span class="nx">value</span><span class="p">;</span>
+      <span class="p">});</span>
+
+      <span class="k">return</span> <span class="nx">sumsqr</span><span class="p">;</span>
+    <span class="p">})(),</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p><strong>Why don’t reduce functions support CommonJS modules?</strong></p>
+<p>While <cite>map</cite> functions have limited access to stored modules through
+<a class="reference internal" href="query-servers.html#require" title="require"><tt class="xref js js-func docutils literal"><span class="pre">require()</span></tt></a> function there is no such feature for <cite>reduce</cite> functions.
+The reason lies deep inside in mechanism how <cite>map</cite> and <cite>reduce</cite> functions
+are processed by Query Server. Let’s take a look on <cite>map</cite> functions first:</p>
+<ol class="arabic simple">
+<li>CouchDB sends all <cite>map</cite> functions for processed design document to
+Query Server.</li>
+<li>Query Server handles them one by one, compiles and puts them onto an
+internal stack.</li>
+<li>After all <cite>map</cite> functions had been processed, CouchDB will send the
+remaining documents to index one by one.</li>
+<li>The Query Server receives the document object and applies it to every function
+from the stack. The emitted results are then joined into a single array and sent
+back to CouchDB.</li>
+</ol>
+<p>Now let’s see how <cite>reduce</cite> functions are handled:</p>
+<ol class="arabic simple">
+<li>CouchDB sends <em>as single command</em> list of available <cite>reduce</cite> functions
+with result list of key-value pairs that was previously received as
+result of <cite>map</cite> functions work.</li>
+<li>Query Server compiles reduce functions and applies them to key-value
+lists. Reduced result sends back to CouchDB.</li>
+</ol>
+<p class="last">As you may note, <cite>reduce</cite> functions been applied in single shot while
+<cite>map</cite> ones are applied in an iterative way per each document. This means that
+it’s possible for <cite>map</cite> functions to precompile CommonJS libraries and use them
+during the entire view processing, but for <cite>reduce</cite> functions it will be
+compiled again and again for each view result reduction, which will lead to
+performance degradation (<cite>reduce</cite> function are already does hard work to make
+large result smaller).</p>
+</div>
+</div>
+</div>
+<div class="section" id="show-functions">
+<span id="showfun"></span><h2>6.2. Show functions<a class="headerlink" href="#show-functions" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">showfun</tt><big>(</big><em>doc</em>, <em>req</em><big>)</big></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>doc</strong> – Processed document, may be omitted.</li>
+<li><strong>req</strong> – <a class="reference internal" href="json-structure.html#request-object"><em>Request object</em></a>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><a class="reference internal" href="json-structure.html#response-object"><em>Response object</em></a></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">object or string</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<p>Show functions are used to represent documents in various formats, commonly as
+HTML page with nicer formatting. They can also be used to run server-side functions
+without requiring a pre-existing document.</p>
+<p>Basic example of show function could be:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">function</span><span class="p">(</span><span class="nx">doc</span><span class="p">,</span> <span class="nx">req</span><span class="p">){</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">doc</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="s2">"Hello from "</span> <span class="o">+</span> <span class="nx">doc</span><span class="p">.</span><span class="nx">_id</span> <span class="o">+</span> <span class="s2">"!"</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="s2">"Hello, world!"</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Also, there is more simple way to return json encoded data:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">function</span><span class="p">(</span><span class="nx">doc</span><span class="p">,</span> <span class="nx">req</span><span class="p">){</span>
+  <span class="k">return</span> <span class="p">{</span>
+    <span class="s1">'json'</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s1">'id'</span><span class="o">:</span> <span class="nx">doc</span><span class="p">[</span><span class="s1">'_id'</span><span class="p">],</span>
+      <span class="s1">'rev'</span><span class="o">:</span> <span class="nx">doc</span><span class="p">[</span><span class="s1">'_rev'</span><span class="p">]</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>and even files (this one is CouchDB logo):</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">function</span><span class="p">(</span><span class="nx">doc</span><span class="p">,</span> <span class="nx">req</span><span class="p">){</span>
+  <span class="k">return</span> <span class="p">{</span>
+    <span class="s1">'headers'</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s1">'Content-Type'</span> <span class="o">:</span> <span class="s1">'image/png'</span><span class="p">,</span>
+    <span class="p">},</span>
+    <span class="s1">'base64'</span><span class="o">:</span> <span class="s1">''</span><span class="p">.</span><span class="nx">concat</span><span class="p">(</span>
+      <span class="s1">'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAsV'</span><span class="p">,</span>
+      <span class="s1">'BMVEUAAAD////////////////////////5ur3rEBn////////////////wDBL/'</span><span class="p">,</span>
+      <span class="s1">'AADuBAe9EB3IEBz/7+//X1/qBQn2AgP/f3/ilpzsDxfpChDtDhXeCA76AQH/v7'</span><span class="p">,</span>
+      <span class="s1">'/84eLyWV/uc3bJPEf/Dw/uw8bRWmP1h4zxSlD6YGHuQ0f6g4XyQkXvCA36MDH6'</span><span class="p">,</span>
+      <span class="s1">'wMH/z8/yAwX64ODeh47BHiv/Ly/20dLQLTj98PDXWmP/Pz//39/wGyJ7Iy9JAA'</span><span class="p">,</span>
+      <span class="s1">'AADHRSTlMAbw8vf08/bz+Pv19jK/W3AAAAg0lEQVR4Xp3LRQ4DQRBD0QqTm4Y5'</span><span class="p">,</span>
+      <span class="s1">'zMxw/4OleiJlHeUtv2X6RbNO1Uqj9g0RMCuQO0vBIg4vMFeOpCWIWmDOw82fZx'</span><span class="p">,</span>
+      <span class="s1">'vaND1c8OG4vrdOqD8YwgpDYDxRgkSm5rwu0nQVBJuMg++pLXZyr5jnc1BaH4GT'</span><span class="p">,</span>
+      <span class="s1">'LvEliY253nA3pVhQqdPt0f/erJkMGMB8xucAAAAASUVORK5CYII='</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>But what if you need to represent data in different formats via a single function?
+Functions <a class="reference internal" href="query-servers.html#registerType" title="registerType"><tt class="xref js js-func docutils literal"><span class="pre">registerType()</span></tt></a> and <a class="reference internal" href="query-servers.html#provides" title="provides"><tt class="xref js js-func docutils literal"><span class="pre">provides()</span></tt></a> are your the best friends in
+that question:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">function</span><span class="p">(</span><span class="nx">doc</span><span class="p">,</span> <span class="nx">req</span><span class="p">){</span>
+  <span class="nx">provides</span><span class="p">(</span><span class="s1">'json'</span><span class="p">,</span> <span class="kd">function</span><span class="p">(){</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">'json'</span><span class="o">:</span> <span class="nx">doc</span><span class="p">}</span>
+  <span class="p">});</span>
+  <span class="nx">provides</span><span class="p">(</span><span class="s1">'html'</span><span class="p">,</span> <span class="kd">function</span><span class="p">(){</span>
+    <span class="k">return</span> <span class="s1">'&lt;pre&gt;'</span> <span class="o">+</span> <span class="nx">toJSON</span><span class="p">(</span><span class="nx">doc</span><span class="p">)</span> <span class="o">+</span> <span class="s1">'&lt;/pre&gt;'</span>
+  <span class="p">})</span>
+  <span class="nx">provides</span><span class="p">(</span><span class="s1">'xml'</span><span class="p">,</span> <span class="kd">function</span><span class="p">(){</span>
+    <span class="k">return</span> <span class="p">{</span>
+      <span class="s1">'headers'</span><span class="o">:</span> <span class="p">{</span><span class="s1">'Content-Type'</span><span class="o">:</span> <span class="s1">'application/xml'</span><span class="p">},</span>
+      <span class="s1">'body'</span> <span class="o">:</span> <span class="s1">''</span><span class="p">.</span><span class="nx">concat</span><span class="p">(</span>
+        <span class="s1">'&lt;?xml version="1.0" encoding="utf-8"?&gt;\n'</span><span class="p">,</span>
+        <span class="s1">'&lt;doc&gt;'</span><span class="p">,</span>
+        <span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+          <span class="nx">escape</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">s</span><span class="p">){</span>
+            <span class="k">return</span> <span class="nx">s</span><span class="p">.</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/&quot;/g</span><span class="p">,</span> <span class="s1">'"'</span><span class="p">)</span>
+                    <span class="p">.</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/&gt;/g</span><span class="p">,</span> <span class="s1">'&gt;'</span><span class="p">)</span>
+                    <span class="p">.</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/&lt;/g</span><span class="p">,</span> <span class="s1">'&lt;'</span><span class="p">)</span>
+                    <span class="p">.</span><span class="nx">replace</span><span class="p">(</span><span class="sr">/&amp;/g</span><span class="p">,</span> <span class="s1">'&amp;'</span><span class="p">);</span>
+          <span class="p">};</span>
+          <span class="kd">var</span> <span class="nx">content</span> <span class="o">=</span> <span class="s1">''</span><span class="p">;</span>
+          <span class="k">for</span><span class="p">(</span><span class="kd">var</span> <span class="nx">key</span> <span class="k">in</span> <span class="nx">doc</span><span class="p">){</span>
+            <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="nx">doc</span><span class="p">.</span><span class="nx">hasOwnProperty</span><span class="p">(</span><span class="nx">key</span><span class="p">))</span> <span class="k">continue</span><span class="p">;</span>
+            <span class="kd">var</span> <span class="nx">value</span> <span class="o">=</span> <span class="nx">escape</span><span class="p">(</span><span class="nx">toJSON</span><span class="p">(</span><span class="nx">doc</span><span class="p">[</span><span class="nx">key</span><span class="p">]));</span>
+            <span class="kd">var</span> <span class="nx">key</span> <span class="o">=</span> <span class="nx">escape</span><span class="p">(</span><span class="nx">key</span><span class="p">);</span>
+            <span class="nx">content</span> <span class="o">+=</span> <span class="s1">''</span><span class="p">.</span><span class="nx">concat</span><span class="p">(</span>
+              <span class="s1">'&lt;'</span> <span class="o">+</span> <span class="nx">key</span> <span class="o">+</span> <span class="s1">'&gt;'</span><span class="p">,</span>
+              <span class="nx">value</span>
+              <span class="s1">'&lt;/'</span> <span class="o">+</span> <span class="nx">key</span> <span class="o">+</span> <span class="s1">'&gt;'</span>
+            <span class="p">)</span>
+          <span class="p">}</span>
+          <span class="k">return</span> <span class="nx">content</span><span class="p">;</span>
+        <span class="p">})(),</span>
+        <span class="s1">'&lt;/doc&gt;'</span>
+      <span class="p">)</span>
+    <span class="p">}</span>
+  <span class="p">})</span>
+  <span class="nx">registerType</span><span class="p">(</span><span class="s1">'text-json'</span><span class="p">,</span> <span class="s1">'text/json'</span><span class="p">)</span>
+  <span class="nx">provides</span><span class="p">(</span><span class="s1">'text-json'</span><span class="p">,</span> <span class="kd">function</span><span class="p">(){</span>
+    <span class="k">return</span> <span class="nx">toJSON</span><span class="p">(</span><span class="nx">doc</span><span class="p">);</span>
+  <span class="p">})</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This function may return <cite>html</cite>, <cite>json</cite> , <cite>xml</cite> or our custom <cite>text json</cite> format
+representation of same document object with same processing rules. Probably,
+the <cite>xml</cite> provider in our function needs more care to handle nested objects
+correctly, and keys with invalid characters, but you’ve got the idea!</p>
+<div class="admonition-see-also admonition seealso">
+<p class="first admonition-title">See also</p>
+<dl class="last docutils">
+<dt>CouchDB Wiki:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference external" href="http://wiki.apache.org/couchdb/Formatting_with_Show_and_List#Showing_Documents">Showing Documents</a></li>
+</ul>
+</dd>
+<dt>CouchDB Guide:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference external" href="http://guide.couchdb.org/editions/1/en/show.html">Show Functions</a></li>
+</ul>
+</dd>
+</dl>
+</div>
+</div>
+<div class="section" id="list-functions">
+<span id="listfun"></span><h2>6.3. List functions<a class="headerlink" href="#list-functions" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">listfun</tt><big>(</big><em>head</em>, <em>req</em><big>)</big></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>head</strong> – <a class="reference internal" href="json-structure.html#view-head-info-object"><em>View Head Information</em></a></li>
+<li><strong>req</strong> – <a class="reference internal" href="json-structure.html#request-object"><em>Request object</em></a>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Last chunk.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">string</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<p>While <a class="reference internal" href="#showfun"><em>Show functions</em></a> are used to customize document presentation, <a class="reference internal" href="#listfun"><em>List functions</em></a>
+are used for same purpose, but against <a class="reference internal" href="#viewfun"><em>View functions</em></a> results.</p>
+<p>The next list function formats view and represents it as a very simple HTML page:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">function</span><span class="p">(</span><span class="nx">head</span><span class="p">,</span> <span class="nx">req</span><span class="p">){</span>
+  <span class="nx">start</span><span class="p">({</span>
+    <span class="s1">'headers'</span><span class="o">:</span> <span class="p">{</span>
+      <span class="s1">'Content-Type'</span><span class="o">:</span> <span class="s1">'text/html'</span>
+    <span class="p">}</span>
+  <span class="p">});</span>
+  <span class="nx">send</span><span class="p">(</span><span class="s1">'&lt;html&gt;&lt;body&gt;&lt;table&gt;'</span><span class="p">);</span>
+  <span class="nx">send</span><span class="p">(</span><span class="s1">'&lt;tr&gt;&lt;th&gt;ID&lt;/th&gt;&lt;th&gt;Key&lt;/th&gt;&lt;th&gt;Value&lt;/th&gt;&lt;/tr&gt;'</span><span class="p">)</span>
+  <span class="k">while</span><span class="p">(</span><span class="nx">row</span> <span class="o">=</span> <span class="nx">getRow</span><span class="p">()){</span>
+    <span class="nx">send</span><span class="p">(</span><span class="s1">''</span><span class="p">.</span><span class="nx">concat</span><span class="p">(</span>
+      <span class="s1">'&lt;tr&gt;'</span><span class="p">,</span>
+      <span class="s1">'&lt;td&gt;'</span> <span class="o">+</span> <span class="nx">toJSON</span><span class="p">(</span><span class="nx">row</span><span class="p">.</span><span class="nx">id</span><span class="p">)</span> <span class="o">+</span> <span class="s1">'&lt;/td&gt;'</span><span class="p">,</span>
+      <span class="s1">'&lt;td&gt;'</span> <span class="o">+</span> <span class="nx">toJSON</span><span class="p">(</span><span class="nx">row</span><span class="p">.</span><span class="nx">key</span><span class="p">)</span> <span class="o">+</span> <span class="s1">'&lt;/td&gt;'</span><span class="p">,</span>
+      <span class="s1">'&lt;td&gt;'</span> <span class="o">+</span> <span class="nx">toJSON</span><span class="p">(</span><span class="nx">row</span><span class="p">.</span><span class="nx">value</span><span class="p">)</span> <span class="o">+</span> <span class="s1">'&lt;/td&gt;'</span><span class="p">,</span>
+      <span class="s1">'&lt;/tr&gt;'</span>
+    <span class="p">));</span>
+  <span class="p">}</span>
+  <span class="nx">send</span><span class="p">(</span><span class="s1">'&lt;/table&gt;&lt;/body&gt;&lt;/html&gt;'</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Templates and styles could obviously be used to present data in a nicer
+fashion, but this is an excellent starting point. Note that you may also
+use <a class="reference internal" href="query-servers.html#registerType" title="registerType"><tt class="xref js js-func docutils literal"><span class="pre">registerType()</span></tt></a> and <a class="reference internal" href="query-servers.html#provides" title="provides"><tt class="xref js js-func docutils literal"><span class="pre">provides()</span></tt></a> functions in the same
+way as for <a class="reference internal" href="#showfun"><em>Show functions</em></a>!</p>
+<div class="admonition-see-also admonition seealso">
+<p class="first admonition-title">See also</p>
+<dl class="last docutils">
+<dt>CouchDB Wiki:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference external" href="http://wiki.apache.org/couchdb/Formatting_with_Show_and_List#Listing_Views_with_CouchDB_0.10_and_later">Listing Views with CouchDB 0.10 and later</a></li>
+</ul>
+</dd>
+<dt>CouchDB Guide:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference external" href="http://guide.couchdb.org/draft/transforming.html">Transforming Views with List Functions</a></li>
+</ul>
+</dd>
+</dl>
+</div>
+</div>
+<div class="section" id="update-functions">
+<span id="updatefun"></span><h2>6.4. Update functions<a class="headerlink" href="#update-functions" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">updatefun</tt><big>(</big><em>doc</em>, <em>req</em><big>)</big></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>doc</strong> – Update function target document.</li>
+<li><strong>req</strong> – <a class="reference internal" href="json-structure.html#request-object"><em>Request object</em></a></li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Two-element array: the first element is the (updated or new)
+document, which is committed to the database. If the first element
+is <tt class="docutils literal"><span class="pre">null</span></tt> no document will be committed to the database.
+If you are updating an existing, it should already have an <tt class="docutils literal"><span class="pre">_id</span></tt>
+set, and if you are creating a new document, make sure to set its
+<tt class="docutils literal"><span class="pre">_id</span></tt> to something, either generated based on the input or the
+<tt class="docutils literal"><span class="pre">req.uuid</span></tt> provided. The second element is the response that will
+be sent back to the caller.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<p>Update handlers are functions that clients can request to invoke server-side
+logic that will create or update a document. This feature allows a range of use
+cases such as providing a server-side last modified timestamp, updating
+individual fields in a document without first getting the latest revision, etc.</p>
+<p>When the request to an update handler includes a document ID in the URL, the
+server will provide the function with the most recent version of that document.
+You can provide any other values needed by the update handler function via the
+<tt class="docutils literal"><span class="pre">POST</span></tt>/<tt class="docutils literal"><span class="pre">PUT</span></tt> entity body or query string parameters of the request.</p>
+<p>The basic example that demonstrates all use-cases of update handlers below:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">function</span><span class="p">(</span><span class="nx">doc</span><span class="p">,</span> <span class="nx">req</span><span class="p">){</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">doc</span><span class="p">){</span>
+        <span class="k">if</span> <span class="p">(</span><span class="s1">'id'</span> <span class="k">in</span> <span class="nx">req</span><span class="p">){</span>
+            <span class="c1">// create new document</span>
+            <span class="k">return</span> <span class="p">[{</span><span class="s1">'_id'</span><span class="o">:</span> <span class="nx">req</span><span class="p">[</span><span class="s1">'id'</span><span class="p">]},</span> <span class="s1">'New World'</span><span class="p">]</span>
+        <span class="p">}</span>
+        <span class="c1">// change nothing in database</span>
+        <span class="k">return</span> <span class="p">[</span><span class="kc">null</span><span class="p">,</span> <span class="s1">'Empty World'</span><span class="p">]</span>
+    <span class="p">}</span>
+    <span class="nx">doc</span><span class="p">[</span><span class="s1">'world'</span><span class="p">]</span> <span class="o">=</span> <span class="s1">'hello'</span><span class="p">;</span>
+    <span class="nx">doc</span><span class="p">[</span><span class="s1">'edited_by'</span><span class="p">]</span> <span class="o">=</span> <span class="nx">req</span><span class="p">[</span><span class="s1">'userCtx'</span><span class="p">][</span><span class="s1">'name'</span><span class="p">]</span>
+    <span class="k">return</span> <span class="p">[</span><span class="nx">doc</span><span class="p">,</span> <span class="s1">'Edited World!'</span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="admonition-see-also admonition seealso">
+<p class="first admonition-title">See also</p>
+<dl class="last docutils">
+<dt>CouchDB Wiki:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference external" href="http://wiki.apache.org/couchdb/Document_Update_Handlers">Document Update Handlers</a></li>
+</ul>
+</dd>
+</dl>
+</div>
+</div>
+<div class="section" id="filter-functions">
+<span id="filterfun"></span><h2>6.5. Filter functions<a class="headerlink" href="#filter-functions" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt>
+<tt class="descname">filterfun</tt><big>(</big><em>doc</em>, <em>req</em><big>)</big></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>doc</strong> – Processed document object.</li>
+<li><strong>req</strong> – <a class="reference internal" href="json-structure.html#request-object"><em>Request object</em></a></li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Boolean value: <tt class="docutils literal"><span class="pre">true</span></tt> means that <cite>doc</cite> passes the filter rules,
+<tt class="docutils literal"><span class="pre">false</span></tt> that not.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<p>Filter functions are mostly acts like <a class="reference internal" href="#showfun"><em>Show functions</em></a> and <a class="reference internal" href="#listfun"><em>List functions</em></a>: they
+formats, but more correctly to say, they <em>filters</em> <a class="reference internal" href="changes.html#changes"><em>changes feed</em></a>.</p>
+<div class="section" id="classic-filters">
+<h3>6.5.1. Classic filters<a class="headerlink" href="#classic-filters" title="Permalink to this headline">¶</a></h3>
+<p>By default the changes feed emits all database documents changes. But if you’re
+waiting for some special changes, processing all documents is inefficient.</p>
+<p>Filters are special design document functions that allows changes feed to emit
+only specific documents that pass filter rules.</p>
+<p>Lets assume that our database is a mailbox and we need to to handle only new mails
+(documents with status <cite>new</cite>) events. Assuming that, our filter function
+will looks like next one:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">function</span><span class="p">(</span><span class="nx">doc</span><span class="p">,</span> <span class="nx">req</span><span class="p">){</span>
+  <span class="c1">// we need only `mail` documents</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">doc</span><span class="p">.</span><span class="nx">type</span> <span class="o">!=</span> <span class="s1">'mail'</span><span class="p">){</span>
+    <span class="k">return</span> <span class="kc">false</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="c1">// we're interested only in `new` ones</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">doc</span><span class="p">.</span><span class="nx">status</span> <span class="o">!=</span> <span class="s1">'new'</span><span class="p">){</span>
+    <span class="k">return</span> <span class="kc">false</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="kc">true</span><span class="p">;</span> <span class="c1">// passed!</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Filter functions must return <tt class="docutils literal"><span class="pre">true</span></tt> in fact if document passed all defined
+rules. Now, if you apply this function to changes feed it will emit only changes
+about “new mails”:</p>
+<div class="highlight-json"><pre>GET /somedatabase/_changes?filter=mailbox/new_mail HTTP/1.1</pre>
+</div>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span><span class="s2">"results"</span><span class="o">:</span><span class="p">[</span>
+<span class="p">{</span><span class="s2">"seq"</span><span class="o">:</span><span class="mi">1</span><span class="p">,</span><span class="s2">"id"</span><span class="o">:</span><span class="s2">"df8eca9da37dade42ee4d7aa3401f1dd"</span><span class="p">,</span><span class="s2">"changes"</span><span class="o">:</span><span class="p">[{</span><span class="s2">"rev"</span><span class="o">:</span><span class="s2">"1-c2e0085a21d34fa1cecb6dc26a4ae657"</span><span class="p">}]},</span>
+<span class="p">{</span><span class="s2">"seq"</span><span class="o">:</span><span class="mi">7</span><span class="p">,</span><span class="s2">"id"</span><span class="o">:</span><span class="s2">"df8eca9da37dade42ee4d7aa34024714"</span><span class="p">,</span><span class="s2">"changes"</span><span class="o">:</span><span class="p">[{</span><span class="s2">"rev"</span><span class="o">:</span><span class="s2">"1-29d748a6e87b43db967fe338bcb08d74"</span><span class="p">}]},</span>
+<span class="p">],</span>
+<span class="s2">"last_seq"</span><span class="o">:</span><span class="mi">27</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Note, that <tt class="docutils literal"><span class="pre">last_seq</span></tt> number is 27, but we’d received only two records.
+Seems like any other changes was about documents that hasn’t passed our filter.</p>
+<p>Probably, we also need to filter changes feed of our mailbox not only by single
+status value: we’re also interested in statuses like “spam” to update
+spam-filter heuristic rules, “outgoing” to let mail daemon actually send mails
+and so on. Creating a lot of similar functions that actually does similar work
+isn’t good idea - so we need dynamic filter to go.</p>
+<p>If you have noted, filter functions takes second argument as
+<a class="reference internal" href="json-structure.html#request-object"><em>request</em></a> object - it allows to create dynamic filters
+based on query parameters, <a class="reference internal" href="json-structure.html#userctx-object"><em>user context</em></a> and more.</p>
+<p>The dynamic version of our filter now will be next:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">function</span><span class="p">(</span><span class="nx">doc</span><span class="p">,</span> <span class="nx">req</span><span class="p">){</span>
+  <span class="c1">// we need only `mail` documents</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">doc</span><span class="p">.</span><span class="nx">type</span> <span class="o">!=</span> <span class="s1">'mail'</span><span class="p">){</span>
+    <span class="k">return</span> <span class="kc">false</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="c1">// we're interested only in requested status</span>
+  <span class="k">if</span> <span class="p">(</span><span class="nx">doc</span><span class="p">.</span><span class="nx">status</span> <span class="o">!=</span> <span class="nx">req</span><span class="p">.</span><span class="nx">query</span><span class="p">.</span><span class="nx">status</span><span class="p">){</span>
+    <span class="k">return</span> <span class="kc">false</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="kc">true</span><span class="p">;</span> <span class="c1">// passed!</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>and now we have pass <cite>status</cite> query parameter in request to let filter match
+only required documents:</p>
+<div class="highlight-json"><pre>GET /somedatabase/_changes?filter=mailbox/by_status&amp;status=new HTTP/1.1</pre>
+</div>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span><span class="s2">"results"</span><span class="o">:</span><span class="p">[</span>
+<span class="p">{</span><span class="s2">"seq"</span><span class="o">:</span><span class="mi">1</span><span class="p">,</span><span class="s2">"id"</span><span class="o">:</span><span class="s2">"df8eca9da37dade42ee4d7aa3401f1dd"</span><span class="p">,</span><span class="s2">"changes"</span><span class="o">:</span><span class="p">[{</span><span class="s2">"rev"</span><span class="o">:</span><span class="s2">"1-c2e0085a21d34fa1cecb6dc26a4ae657"</span><span class="p">}]},</span>
+<span class="p">{</span><span class="s2">"seq"</span><span class="o">:</span><span class="mi">7</span><span class="p">,</span><span class="s2">"id"</span><span class="o">:</span><span class="s2">"df8eca9da37dade42ee4d7aa34024714"</span><span class="p">,</span><span class="s2">"changes"</span><span class="o">:</span><span class="p">[{</span><span class="s2">"rev"</span><span class="o">:</span><span class="s2">"1-29d748a6e87b43db967fe338bcb08d74"</span><span class="p">}]},</span>
+<span class="p">],</span>
+<span class="s2">"last_seq"</span><span class="o">:</span><span class="mi">27</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>and we can change filter behavior with easy:</p>
+<div class="highlight-json"><pre>GET /somedatabase/_changes?filter=mailbox/by_status&amp;status=spam HTTP/1.1</pre>
+</div>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="p">{</span><span class="s2">"results"</span><span class="o">:</span><span class="p">[</span>
+<span class="p">{</span><span class="s2">"seq"</span><span class="o">:</span><span class="mi">11</span><span class="p">,</span><span class="s2">"id"</span><span class="o">:</span><span class="s2">"8960e91220798fc9f9d29d24ed612e0d"</span><span class="p">,</span><span class="s2">"changes"</span><span class="o">:</span><span class="p">[{</span><span class="s2">"rev"</span><span class="o">:</span><span class="s2">"3-cc6ff71af716ddc2ba114967025c0ee0"</span><span class="p">}]},</span>
+<span class="p">],</span>
+<span class="s2">"last_seq"</span><span class="o">:</span><span class="mi">27</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Combining filters with <cite>continuous</cite> feed allows to create powerful event-driven
+systems.</p>
+</div>
+<div class="section" id="view-filters">
+<h3>6.5.2. View filters<a class="headerlink" href="#view-filters" title="Permalink to this headline">¶</a></h3>
+<p>View filters are the same as above, with one small difference: they use
+views <cite>map</cite> function instead to <cite>filter</cite> one to process the changes feed. Each
+time when a key-value pair could be emitted, a change is returned. This allows
+to avoid creating filter functions that are mostly does same works as views.</p>
+<p>To use them just specify <cite>_view</cite> value for <tt class="docutils literal"><span class="pre">filter</span></tt> parameter and
+<cite>designdoc/viewname</cite> for <tt class="docutils literal"><span class="pre">view</span></tt> one:</p>
+<div class="highlight-json"><pre>GET /somedatabase/_changes?filter=_view&amp;view=dname/viewname  HTTP/1.1</pre>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Since view filters uses <cite>map</cite> functions as filters, they can’t show any
+dynamic behavior since <a class="reference internal" href="json-structure.html#request-object"><em>request object</em></a> is not
+available.</p>
+</div>
+<div class="admonition-see-also admonition seealso">
+<p class="first admonition-title">See also</p>
+<dl class="last docutils">
+<dt>CouchDB Guide:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference external" href="http://guide.couchdb.org/draft/notifications.html#filters">Guide to filter change notification</a></li>
+</ul>
+</dd>
+<dt>CouchDB Wiki:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference external" href="http://wiki.apache.org/couchdb/Replication#Filtered_Replication">Filtered replication</a></li>
+</ul>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+<div class="section" id="validate-document-update-functions">
+<span id="vdufun"></span><h2>6.6. Validate document update functions<a class="headerlink" href="#validate-document-update-functions" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="validatefun"><a name="//apple_ref/cpp/func/validatefun"></a>
+<tt class="descname">validatefun</tt><big>(</big><em>newDoc</em>, <em>oldDoc</em>, <em>userCtx</em>, <em>secObj</em><big>)</big><a class="headerlink" href="#validatefun" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Arguments:</th><td class="field-body"><ul class="first simple">
+<li><strong>newDoc</strong> – New version of document that will be stored.</li>
+<li><strong>oldDoc</strong> – Previous version of document that is already stored.</li>
+<li><strong>userCtx</strong> – <a class="reference internal" href="json-structure.html#userctx-object"><em>User Context Object</em></a></li>
+<li><strong>secObj</strong> – <a class="reference internal" href="json-structure.html#security-object"><em>Security Object</em></a></li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Throws :</th><td class="field-body"><p class="first"><tt class="docutils literal"><span class="pre">forbidden</span></tt> error to gracefully prevent document storing.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Throws :</th><td class="field-body"><p class="first last"><tt class="docutils literal"><span class="pre">unauthorized</span></tt> error to prevent storage and allow the user to
+re-auth.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<p>A design document may contain a function named <cite>validate_doc_update</cite>
+which can be used to prevent invalid or unauthorized document update requests
+from being stored.  The function is passed the new document from the update
+request, the current document stored in the database, a <a class="reference internal" href="json-structure.html#userctx-object"><em>User Context Object</em></a>
+containing information about the user writing the document (if present), and
+a <a class="reference internal" href="json-structure.html#security-object"><em>Security Object</em></a> with lists of database security roles.</p>
+<p>Validation functions typically examine the structure of the new document to
+ensure that required fields are present and to verify that the requesting user
+should be allowed to make changes to the document properties.  For example,
+an application may require that a user must be authenticated in order to create
+a new document or that specific document fields be present when a document
+is updated. The validation function can abort the pending document write
+by throwing one of two error objects:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="c1">// user is not authorized to make the change but may re-authenticate</span>
+<span class="k">throw</span><span class="p">({</span> <span class="nx">unauthorized</span><span class="o">:</span> <span class="s1">'Error message here.'</span> <span class="p">});</span>
+
+<span class="c1">// change is not allowed</span>
+<span class="k">throw</span><span class="p">({</span> <span class="nx">forbidden</span><span class="o">:</span> <span class="s1">'Error message here.'</span> <span class="p">});</span>
+</pre></div>
+</div>
+<p>Document validation is optional, and each design document in the database may
+have at most one validation function.  When a write request is received for
+a given database, the validation function in each design document in that
+database is called in an unspecified order.  If any of the validation functions
+throw an error, the write will not succeed.</p>
+<p><strong>Example</strong>: The <tt class="docutils literal"><span class="pre">_design/_auth</span></tt> ddoc from <cite>_users</cite> database uses a validation
+function to ensure that documents contain some required fields and are only
+modified by a user with the <tt class="docutils literal"><span class="pre">_admin</span></tt> role:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span class="kd">function</span><span class="p">(</span><span class="nx">newDoc</span><span class="p">,</span> <span class="nx">oldDoc</span><span class="p">,</span> <span class="nx">userCtx</span><span class="p">,</span> <span class="nx">secObj</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">newDoc</span><span class="p">.</span><span class="nx">_deleted</span> <span class="o">===</span> <span class="kc">true</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// allow deletes by admins and matching users</span>
+        <span class="c1">// without checking the other fields</span>
+        <span class="k">if</span> <span class="p">((</span><span class="nx">userCtx</span><span class="p">.</span><span class="nx">roles</span><span class="p">.</span><span class="nx">indexOf</span><span class="p">(</span><span class="s1">'_admin'</span><span class="p">)</span> <span class="o">!==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">||</span>
+            <span class="p">(</span><span class="nx">userCtx</span><span class="p">.</span><span class="nx">name</span> <span class="o">==</span> <span class="nx">oldDoc</span><span class="p">.</span><span class="nx">name</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">return</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="k">throw</span><span class="p">({</span><span class="nx">forbidden</span><span class="o">:</span> <span class="s1">'Only admins may delete other user docs.'</span><span class="p">});</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">((</span><span class="nx">oldDoc</span> <span class="o">&amp;&amp;</span> <span class="nx">oldDoc</span><span class="p">.</span><span class="nx">type</span> <span class="o">!==</span> <span class="s1">'user'</span><span class="p">)</span> <span class="o">||</span> <span class="nx">newDoc</span><span class="p">.</span><span class="nx">type</span> <span class="o">!==</span> <span class="s1">'user'</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">throw</span><span class="p">({</span><span class="nx">forbidden</span> <span class="o">:</span> <span class="s1">'doc.type must be user'</span><span class="p">});</span>
+    <span class="p">}</span> <span class="c1">// we only allow user docs for now</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">newDoc</span><span class="p">.</span><span class="nx">name</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">throw</span><span class="p">({</span><span class="nx">forbidden</span><span class="o">:</span> <span class="s1">'doc.name is required'</span><span class="p">});</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">newDoc</span><span class="p">.</span><span class="nx">roles</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">throw</span><span class="p">({</span><span class="nx">forbidden</span><span class="o">:</span> <span class="s1">'doc.roles must exist'</span><span class="p">});</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">isArray</span><span class="p">(</span><span class="nx">newDoc</span><span class="p">.</span><span class="nx">roles</span><span class="p">))</span> <span class="p">{</span>
+        <span class="k">throw</span><span class="p">({</span><span class="nx">forbidden</span><span class="o">:</span> <span class="s1">'doc.roles must be an array'</span><span class="p">});</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nx">newDoc</span><span class="p">.</span><span class="nx">_id</span> <span class="o">!==</span> <span class="p">(</span><span class="s1">'org.couchdb.user:'</span> <span class="o">+</span> <span class="nx">newDoc</span><span class="p">.</span><span class="nx">name</span><span class="p">))</span> <span class="p">{</span>
+        <span class="k">throw</span><span class="p">({</span>
+            <span class="nx">forbidden</span><span class="o">:</span> <span class="s1">'Doc ID must be of the form org.couchdb.user:name'</span>
+        <span class="p">});</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nx">oldDoc</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// validate all updates</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">oldDoc</span><span class="p">.</span><span class="nx">name</span> <span class="o">!==</span> <span class="nx">newDoc</span><span class="p">.</span><span class="nx">name</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">throw</span><span class="p">({</span><span class="nx">forbidden</span><span class="o">:</span> <span class="s1">'Usernames can not be changed.'</span><span class="p">});</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nx">newDoc</span><span class="p">.</span><span class="nx">password_sha</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="nx">newDoc</span><span class="p">.</span><span class="nx">salt</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">throw</span><span class="p">({</span>
+            <span class="nx">forbidden</span><span class="o">:</span> <span class="s1">'Users with password_sha must have a salt.'</span> <span class="o">+</span>
+                <span class="s1">'See /_utils/script/couch.js for example code.'</span>
+        <span class="p">});</span>
+    <span class="p">}</span>
+
+    <span class="kd">var</span> <span class="nx">is_server_or_database_admin</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">userCtx</span><span class="p">,</span> <span class="nx">secObj</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// see if the user is a server admin</span>
+        <span class="k">if</span><span class="p">(</span><span class="nx">userCtx</span><span class="p">.</span><span class="nx">roles</span><span class="p">.</span><span class="nx">indexOf</span><span class="p">(</span><span class="s1">'_admin'</span><span class="p">)</span> <span class="o">!==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="kc">true</span><span class="p">;</span> <span class="c1">// a server admin</span>
+        <span class="p">}</span>
+
+        <span class="c1">// see if the user a database admin specified by name</span>
+        <span class="k">if</span><span class="p">(</span><span class="nx">secObj</span> <span class="o">&amp;&amp;</span> <span class="nx">secObj</span><span class="p">.</span><span class="nx">admins</span> <span class="o">&amp;&amp;</span> <span class="nx">secObj</span><span class="p">.</span><span class="nx">admins</span><span class="p">.</span><span class="nx">names</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span><span class="p">(</span><span class="nx">secObj</span><span class="p">.</span><span class="nx">admins</span><span class="p">.</span><span class="nx">names</span><span class="p">.</span><span class="nx">indexOf</span><span class="p">(</span><span class="nx">userCtx</span><span class="p">.</span><span class="nx">name</span><span class="p">)</span> <span class="o">!==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">return</span> <span class="kc">true</span><span class="p">;</span> <span class="c1">// database admin</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="c1">// see if the user a database admin specified by role</span>
+        <span class="k">if</span><span class="p">(</span><span class="nx">secObj</span> <span class="o">&amp;&amp;</span> <span class="nx">secObj</span><span class="p">.</span><span class="nx">admins</span> <span class="o">&amp;&amp;</span> <span class="nx">secObj</span><span class="p">.</span><span class="nx">admins</span><span class="p">.</span><span class="nx">roles</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">var</span> <span class="nx">db_roles</span> <span class="o">=</span> <span class="nx">secObj</span><span class="p">.</span><span class="nx">admins</span><span class="p">.</span><span class="nx">roles</span><span class="p">;</span>
+            <span class="k">for</span><span class="p">(</span><span class="kd">var</span> <span class="nx">idx</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">idx</span> <span class="o">&lt;</span> <span class="nx">userCtx</span><span class="p">.</span><span class="nx">roles</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">idx</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+                <span class="kd">var</span> <span class="nx">user_role</span> <span class="o">=</span> <span class="nx">userCtx</span><span class="p">.</span><span class="nx">roles</span><span class="p">[</span><span class="nx">idx</span><span class="p">];</span>
+                <span class="k">if</span><span class="p">(</span><span class="nx">db_roles</span><span class="p">.</span><span class="nx">indexOf</span><span class="p">(</span><span class="nx">user_role</span><span class="p">)</span> <span class="o">!==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="k">return</span> <span class="kc">true</span><span class="p">;</span> <span class="c1">// role matches!</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="k">return</span> <span class="kc">false</span><span class="p">;</span> <span class="c1">// default to no admin</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">is_server_or_database_admin</span><span class="p">(</span><span class="nx">userCtx</span><span class="p">,</span> <span class="nx">secObj</span><span class="p">))</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">oldDoc</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// validate non-admin updates</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nx">userCtx</span><span class="p">.</span><span class="nx">name</span> <span class="o">!==</span> <span class="nx">newDoc</span><span class="p">.</span><span class="nx">name</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">throw</span><span class="p">({</span>
+                    <span class="nx">forbidden</span><span class="o">:</span> <span class="s1">'You may only update your own user document.'</span>
+                <span class="p">});</span>
+            <span class="p">}</span>
+            <span class="c1">// validate role updates</span>
+            <span class="kd">var</span> <span class="nx">oldRoles</span> <span class="o">=</span> <span class="nx">oldDoc</span><span class="p">.</span><span class="nx">roles</span><span class="p">.</span><span class="nx">sort</span><span class="p">();</span>
+            <span class="kd">var</span> <span class="nx">newRoles</span> <span class="o">=</span> <span class="nx">newDoc</span><span class="p">.</span><span class="nx">roles</span><span class="p">.</span><span class="nx">sort</span><span class="p">();</span>
+
+            <span class="k">if</span> <span class="p">(</span><span class="nx">oldRoles</span><span class="p">.</span><span class="nx">length</span> <span class="o">!==</span> <span class="nx">newRoles</span><span class="p">.</span><span class="nx">length</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">throw</span><span class="p">({</span><span class="nx">forbidden</span><span class="o">:</span> <span class="s1">'Only _admin may edit roles'</span><span class="p">});</span>
+            <span class="p">}</span>
+
+            <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">oldRoles</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">if</span> <span class="p">(</span><span class="nx">oldRoles</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">!==</span> <span class="nx">newRoles</span><span class="p">[</span><span class="nx">i</span><span class="p">])</span> <span class="p">{</span>
+                    <span class="k">throw</span><span class="p">({</span><span class="nx">forbidden</span><span class="o">:</span> <span class="s1">'Only _admin may edit roles'</span><span class="p">});</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="nx">newDoc</span><span class="p">.</span><span class="nx">roles</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">throw</span><span class="p">({</span><span class="nx">forbidden</span><span class="o">:</span> <span class="s1">'Only _admin may set roles'</span><span class="p">});</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="c1">// no system roles in users db</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">newDoc</span><span class="p">.</span><span class="nx">roles</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">newDoc</span><span class="p">.</span><span class="nx">roles</span><span class="p">[</span><span class="nx">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">===</span> <span class="s1">'_'</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">throw</span><span class="p">({</span>
+                <span class="nx">forbidden</span><span class="o">:</span>
+                <span class="s1">'No system roles (starting with underscore) in users db.'</span>
+            <span class="p">});</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="c1">// no system names as names</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nx">newDoc</span><span class="p">.</span><span class="nx">name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">===</span> <span class="s1">'_'</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">throw</span><span class="p">({</span><span class="nx">forbidden</span><span class="o">:</span> <span class="s1">'Username may not start with underscore.'</span><span class="p">});</span>
+    <span class="p">}</span>
+
+    <span class="kd">var</span> <span class="nx">badUserNameChars</span> <span class="o">=</span> <span class="p">[</span><span class="s1">':'</span><span class="p">];</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">badUserNameChars</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">newDoc</span><span class="p">.</span><span class="nx">name</span><span class="p">.</span><span class="nx">indexOf</span><span class="p">(</span><span class="nx">badUserNameChars</span><span class="p">[</span><span class="nx">i</span><span class="p">])</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">throw</span><span class="p">({</span><span class="nx">forbidden</span><span class="o">:</span> <span class="s1">'Character `'</span> <span class="o">+</span> <span class="nx">badUserNameChars</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span> <span class="o">+</span>
+                    <span class="s1">'` is not allowed in usernames.'</span><span class="p">});</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The <tt class="docutils literal"><span class="pre">return</span></tt> statement used only for function, it has no impact on
+the validation process.</p>
+</div>
+<div class="admonition-see-also admonition seealso">
+<p class="first admonition-title">See also</p>
+<dl class="last docutils">
+<dt>CouchDB Guide:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference external" href="http://guide.couchdb.org/editions/1/en/validation.html">Validation Functions</a></li>
+</ul>
+</dd>
+<dt>CouchDB Wiki:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference external" href="http://wiki.apache.org/couchdb/Document_Update_Validation">Document Update Validation</a></li>
+</ul>
+</dd>
+</dl>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sphinxsidebar">
+<div class="sphinxsidebarwrapper">
+<p class="logo"><a href="index.html">
+<img alt="Logo" class="logo" src="_static/logo.png"/>
+</a></p>
+<!--
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the License for the
+specific language governing permissions and limitations under the License.
+
+-->
+<div id="searchbox" style="display: none">
+<h3>Quick Search</h3>
+<form action="search.html" class="search" method="get">
+<input name="q" type="text"/>
+<input type="submit" value="Go"/>
+<input name="check_keywords" type="hidden" value="yes"/>
+<input name="area" type="hidden" value="default"/>
+</form>
+<br/>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+<h3><a href="index.html">Table Of Contents</a></h3>
+<ul>
+<li><a class="reference internal" href="#">6. Design Docs</a><ul>
+<li><a class="reference internal" href="#view-functions">6.1. View functions</a><ul>
+<li><a class="reference internal" href="#map-functions">6.1.1. Map functions</a></li>
+<li><a class="reference internal" href="#reduce-and-rereduce-functions">6.1.2. Reduce and rereduce functions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#show-functions">6.2. Show functions</a></li>
+<li><a class="reference internal" href="#list-functions">6.3. List functions</a></li>
+<li><a class="reference internal" href="#update-functions">6.4. Update functions</a></li>
+<li><a class="reference internal" href="#filter-functions">6.5. Filter functions</a><ul>
+<li><a class="reference internal" href="#classic-filters">6.5.1. Classic filters</a></li>
+<li><a class="reference internal" href="#view-filters">6.5.2. View filters</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#validate-document-update-functions">6.6. Validate document update functions</a></li>
+</ul>
+</li>
+</ul>
+<h4>Previous topic</h4>
+<p class="topless"><a href="replicator.html" title="previous chapter">5. Replicator Database</a></p>
+<h4>Next topic</h4>
+<p class="topless"><a href="query-servers.html" title="next chapter">7. Query Servers</a></p><!--
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the License for the
+specific language governing permissions and limitations under the License.
+
+-->
+<!--
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the License for the
+specific language governing permissions and limitations under the License.
+
+-->
+<h3>More Help</h3>
+<ul>
+<li><a href="https://couchdb.apache.org/">Homepage</a></li>
+<li><a href="http://wiki.apache.org/couchdb/">Wiki</a></li>
+<li><a href="https://couchdb.apache.org/#mailing-list">Mailing Lists</a></li>
+<li><a href="http://webchat.freenode.net/?channels=couchdb">IRC</a></li>
+<li><a href="https://issues.apache.org/jira/browse/CouchDB">Issues</a></li>
+</ul>
+</div>
+</div>
+<div class="clearer"></div>
+</div>
+<div class="related">
+<h3>Navigation</h3>
+<ul>
+<li class="right" style="margin-right: 10px">
+<a href="genindex.html" title="General Index">index</a></li>
+<li class="right">
+<a href="query-servers.html" title="7. Query Servers">next</a> |</li>
+<li class="right">
+<a href="replicator.html" title="5. Replicator Database">previous</a> |</li>
+<li><a href="index.html">Apache CouchDB 1.4 Manual</a> »</li>
+</ul>
+</div>
+<div class="footer">
+        © Copyright 2013, The Apache Software Foundation.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+<!-- End original user content -->
+<br/>
+<br/>
+<br/>
+<style type="text/css">
+  #version_menu, .rtd-badge.rtd {
+    -webkit-transition: all 0.25s 0.75s;
+    transition: all 0.25s 0.75s;
+  }
+  .footer_popout:hover #version_menu, .footer_popout:hover .rtd-badge.rtd {
+    -webkit-transition: all 0.25s 0s;
+    transition: all 0.25s 0s;
+  }
+  .rtd-badge {
+    position: fixed;
+    display: block;
+    bottom: 5px;
+    height: 40px;
+    text-indent: -9999em;
+    border-radius: 3px;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2), 0 1px 0 rgba(255, 255, 255, 0.2) inset;
+    -moz-box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2), 0 1px 0 rgba(255, 255, 255, 0.2) inset;
+    -webkit-box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2), 0 1px 0 rgba(255, 255, 255, 0.2) inset;
+  }
+  #version_menu {
+    position: fixed;
+    visibility: hidden;
+    opacity: 0;
+    bottom: 11px;
+    right: 47px;
+    list-style-type: none;
+    margin: 0;
+  }
+  .footer_popout:hover #version_menu {
+    visibility: visible;
+    opacity: 1;
+    right: 166px;
+  }
+  #version_menu li {
+    display: block;
+    float: right;
+  }
+  #version_menu li a {
+    display: block;
+    padding: 6px 10px 4px 10px;
+    margin: 7px 7px 0 0;
+    font-weight: bold;
+    font-size: 14px;
+    height: 20px;
+    line-height: 17px;
+    text-decoration: none;
+    color: #fff;
+    background: #8ca1af url(//media.readthedocs.org//images/gradient-light.png) bottom left repeat-x;
+    border-radius: 3px;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+    box-shadow: 0 1px 1px #465158;
+    -moz-box-shadow: 0 1px 1px #465158;
+    -webkit-box-shadow: 0 1px 1px #465158;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+  }
+  #version_menu li a:hover {
+    text-decoration: none;
+    background-color: #697983;
+    box-shadow: 0 1px 0px #465158;
+    -moz-box-shadow: 0 1px 0px #465158;
+    -webkit-box-shadow: 0 1px 0px #465158;
+  }
+  .rtd-badge.rtd {
+    background: #3b4449 url(//media.readthedocs.org//images/badge-rtd.png) scroll top left no-repeat;
+    border: 1px solid #282E32;
+    width: 41px;
+    right: 5px;
+  }
+  .footer_popout:hover .rtd-badge.rtd {
+    width: 160px;
+  }
+  .rtd-badge.revsys { background: #465158 url(//media.readthedocs.org//images/badge-revsys.png) top left no-repeat;
+    border: 1px solid #1C5871;
+    width: 290px;
+    right: 173px;
+  }
+  .rtd-badge.revsys-inline-sponsored {
+    position: inherit;
+    margin-left: auto;
+    margin-right: 175px;
+    margin-bottom: 5px;
+    background: #465158 url(//media.readthedocs.org//images/badge-revsys.png) top left no-repeat;
+    border: 1px solid #1C5871;
+    width: 290px;
+    right: 173px;
+  }
+  .rtd-badge.revsys-inline {
+    position: inherit;
+    margin-left: auto;
+    margin-right: 175px;
+    margin-bottom: 5px;
+    background: #465158 url(//media.readthedocs.org//images/badge-revsys-sm.png) top left no-repeat;
+    border: 1px solid #1C5871;
+    width: 205px;
+    right: 173px;
+  }
+
+</style>
+<div class="rtd_doc_footer">
+<div class="footer_popout">
+<a class="rtd-badge rtd" href="//readthedocs.org/projects/couchdb/?fromdocs=couchdb"> Brought to you by Read the Docs</a>
+<ul id="version_menu">
+<li><a href="/en/latest/">latest</a></li>
+<li><a href="/en/1.4.x/">1.4.x</a></li>
+<li><a href="/en/1.3.x/">1.3.x</a></li>
+</ul>
+</div>
+</div>
+<!-- RTD Analytics Code -->
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-17997319-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+</script>
+</body></html>
