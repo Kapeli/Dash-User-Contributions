@@ -12,7 +12,7 @@ http://orgmode.org/org-keys.js
 LIST
 $ mkdir -p Org_Mode.docset/Contents/Resources/Documents/
 $ mv orgmode.org Org_Mode.docset/Contents/Resources/Documents/orgmode
-# Python 3 w/ Beautifulsoup4 is requied
+# Python 3 w/ Beautifulsoup4 is required
 $ $ pip install beautifulsoup4
 $ python ./gen_org_doc.py Org_Mode.docset/Contents/Resources
 $ tar --exclude='.DS_Store' -cvzf Org_Mode.tgz Org_Mode.docset
