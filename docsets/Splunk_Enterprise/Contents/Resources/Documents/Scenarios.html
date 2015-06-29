@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:og="http://ogp.me/ns#" xmlns:fb="http://ogp.me/ns/fb#" charset="utf-8"><head><meta charset="UTF-8"><title></title>
+<link rel="stylesheet" href="css/normalize.css">
+<link rel="stylesheet" type="text/css" href="css/main.css">
+<link rel="stylesheet" href="css/style.css">
+<style>
+html,body {
+margin: 0px;
+padding: 10px;
+width: 210mm;
+max-width: 210mm;
+overflow-x: hidden;
+}
+pre {
+	width: 100%;
+	overflow-x: hidden;
+}
+</style></head><body><h1>Create a Failed Login Dashboard</h1><a name="goals"></a><div class="all-questions"><h2> <a name="goals_1:_define_your_goals"><span class="mw-headline" id="1:_Define_your_goals">1: Define your goals</span></a></h2>
+<h3> <a name="goals_what_is_the_use_case.3f"><span class="mw-headline" id="What_is_the_use_case.3F">What is the use case?</span></a></h3>
+<p>The use case is based on standard IT operations and security monitoring, using the tutorial sample data. This tutorial walks you through some searches using the the "secure" sourcetype, filtering and displaying events involving failed login attempts. You will save your searches as reports, then use those reports to build and customize a useful dashboard that displays key information at a glance.
+</p>
+<h3> <a name="goals_what_does_this_tutorial_cover.3f"><span class="mw-headline" id="What_does_this_tutorial_cover.3F">What does this tutorial cover?</span></a></h3>
+<p>In this tutorial, you'll create a useful dashboard to track and analyze information about hackers trying to gain access to your systems. To do this, you'll complete the following stages.
+</p><p><img alt="HW1.png" src="images/3/3a/HW1.png" width="114" height="84"><img alt="HW2.png" src="images/9/97/HW2.png" width="114" height="86"><img alt="HW3.png" src="images/8/89/HW3.png" width="114" height="86"><img alt="HW4.png" src="images/e/ee/HW4.png" width="114" height="86"><img alt="HW5.png" src="images/7/74/HW5.png" width="114" height="86"><img alt="HW6.png" src="images/2/26/HW6.png" width="114" height="86"></p>
+<h3> <a name="goals_what_are_the_prerequisites.3f"><span class="mw-headline" id="What_are_the_prerequisites.3F">What are the prerequisites?</span></a></h3>
+<ul><li> A running instance of <b>Splunk Enterprise 6.2.X</b>. You can use an on-premises instance of Splunk Enterprise, Splunk Cloud, or the Splunk Cloud Free Trial. 
+</li><li> The <b>tutorial sample data</b>, which you can download. Follow these instructions to import the data into Splunk Enterprise before you proceed. Note that if you use Splunk Cloud, you need to work with Support to get the sample data file loaded in to your Cloud instance.
+</li></ul><h3> <a name="goals_what_is_the_end_goal.3f"><span class="mw-headline" id="What_is_the_end_goal.3F">What is the end goal?</span></a></h3>
+<p>You want to create a dashboard that displays
+</p>
+<ul><li> The number of failed login attempts, shown as total vs invalid accounts vs valid accounts, with values coded for severity by color.
+</li></ul><ul><li> A list of the top five hacker IP addresses responsible for the most failed login attempts.
+</li></ul><ul><li> A drilldown table showing the user accounts targeted by each hacker, populated dynamically by clicking on a hacker's IP address in the dashboard.
+</li></ul><ul><li> A drilldown map showing the IP address location, populated dynamically by clicking on a hacker's IP address in the dashboard.
+</li></ul><p>Watch this 30-second video that demonstrates how the finished dashboard looks when you load and use it.
+</p>
+<a name="examineyourdata"></a><h2> <a name="examineyourdata_2:_examine_your_data"><span class="mw-headline" id="2:_Examine_your_data"> 2: Examine your data</span></a></h2>
+<p><img alt="HWS1.png" src="images/9/95/HWS1.png" width="100" height="54"><img alt="HWS2o.png" src="images/e/e0/HWS2o.png" width="100" height="54"><img alt="HWS3.png" src="images/2/25/HWS3.png" width="100" height="54"><img alt="HWS4.png" src="images/d/dc/HWS4.png" width="100" height="53"><img alt="HWS5.png" src="images/c/c2/HWS5.png" width="100" height="54"><img alt="HWS6.png" src="images/3/38/HWS6.png" width="100" height="54"></p><p>When you get started, all you know is that hackers appear to be making hundreds of failed attempts to log into your system. This activity is tracked in a dataset that is new to you, so you need to examine it. Are there login failure events? What do they look like? How do you find them?
+</p><p>In this stage of the scenario you learn to: 
+</p>
+<ul><li> Review the event patterns in your data to identify specific kinds of events
+</li><li> Run a search that isolates events that match a particular event pattern.
+</li></ul><h3> <a name="examineyourdata_step_1:_see_what_events_are_in_the_sample_data"><span class="mw-headline" id="Step_1:_See_what_events_are_in_the_sample_data">Step 1: See what events are in the sample data</span></a></h3>
+<p>When you input the sample data (see the "Prerequisites" on the <a href="#goals" class="external text">Goals</a> page), you get a <code><font size="2">source</font></code> field value that applies to all of it. Start by using that source to search this data.
+</p><p>Run the following search over the <b>All Time</b> time range:
+</p>
+<div class="inlineQuery splunk_search_4_3"><code><font size="2">source="tutorialdata.zip:*"</font></code><br></div>
+<p>This search returns a large number of events. The events have been pulled from a variety of log files within <code><font size="2">tutorialdata.zip</font></code>. You may not see any login failure events in the first page of search results.
+</p><p><img alt="Step2-first search results.png" src="images/f/ff/Step2-first_search_results.png" width="700" height="436"></p><p><b>Note:</b> All searches and reports in this scenario are run over the <b>All Time</b> time range, due to the variable nature of the sample data. Depending on when you imported the sample data into your Splunk Enterprise or Splunk Cloud instance, your searches may display different results than the results shown here.
+</p><p>So now what? Simple. Examine the types of events in the dataset returned by this search.
+</p>
+<h3> <a name="examineyourdata_step_2:_find_the_event_patterns_in_the_dataset"><span class="mw-headline" id="Step_2:_Find_the_event_patterns_in_the_dataset">Step 2: Find the event patterns in the dataset</span></a></h3>
+<p>Use the Patterns tab to see the common event patterns in a dataset. You may be able to find a login error event that you can search on.
+</p><p><b>1.</b> Click on the <b>Patterns</b> tab. 
+</p>
+<dl><dd> When you do this, Splunk Enterprise runs a secondary search on the search results to find the different event patterns there.
+</dd></dl><p><img alt="Step2.2 patterns tab example small.png" src="images/6/6c/Step2.2_patterns_tab_example_small.png" width="700" height="355"></p>
+<dl><dd> The Patterns tab finds four event patterns. One of them obviously represents a failed password attempt. 
+</dd></dl><dl><dd> <b>Note:</b> If the <b>Smaller/Larger</b> slider is set to a different position than the default setting displayed above, you may see more or fewer patterns. Set it to that position to get these results.
+</dd></dl><p><b>2.</b> Click on the pattern to see details about the pattern, including the keyword that defines the event pattern, and the search that you should run to get the events represented by the pattern.
+</p>
+<dl><dd> <code><font size="2">source="tutorialdata.zip:*" Failed</font></code>
+</dd></dl><p>The Patterns tab is just one way to find out what is in your search data:
+</p>
+<ul><li> Review the fields returned in the Fields sidebar. Study field summaries and run pre-built searches.
+</li><li> Open the search in Pivot and play with tables and charts based on the search data.
+</li></ul><h3> <a name="examineyourdata_step_3:_run_another_search_to_find_the_events_represented_by_the_pattern"><span class="mw-headline" id="Step_3:_Run_another_search_to_find_the_events_represented_by_the_pattern">Step 3: Run another search to find the events represented by the pattern</span></a></h3>
+<p>In the Patterns tab, click <b>View Events</b>.
+</p><p>This runs a search that uses the search string from the end of the last step. The search isolates the events that fit this event pattern. The keyword <code><font size="2">failed</font></code> is identified with yellow highlighting. 
+</p><p><img alt="Step2.3-second search results.png" src="images/4/44/Step2.3-second_search_results.png" width="700" height="449"></p><p>If you look in the fields sidebar to the left of the event list you can see that all of the events returned by this search have the same source type value. For the rest of this exercise we use that source type in our searches. 
+</p><p>This alternate search string returns the same set of events: 
+</p>
+<div class="inlineQuery splunk_search_4_3"><code><font size="2">sourcetype=secure failed</font></code><br></div>
+<p><b>Next we identify fields that we need to extract from these events and set up field extractions for them. <a href="#extractfields" class="external text">Go to the next stage</a>.</b>
+</p>
+<a name="extractfields"></a><h2> <a name="extractfields_3:_extract_fields"><span class="mw-headline" id="3:_Extract_fields"> 3: Extract fields</span></a></h2>
+<p><img alt="HWS1.png" src="images/9/95/HWS1.png" width="100" height="54"><img alt="HWS2.png" src="images/e/e0/HWS2.png" width="100" height="54"><img alt="HWS3o.png" src="images/e/e0/HWS3o.png" width="100" height="54"><img alt="HWS4.png" src="images/d/dc/HWS4.png" width="100" height="53"><img alt="HWS5.png" src="images/c/c2/HWS5.png" width="100" height="54"><img alt="HWS6.png" src="images/3/38/HWS6.png" width="100" height="54"></p><p>Now you have a set of events that you can base some dashboard panels on. Before you start building visualizations and constructing dashboard panels, make sure you have everything you need.
+</p><p>In this stage of the scenario you learn how to:
+</p>
+<ul><li> Identify the fields you need to search on and determine whether they exist or must be extracted from the data.
+</li><li> Use the Field Extractor to create field extractions.
+</li></ul><h3> <a name="extractfields_step_1:_review_what_you_are_trying_to_do_and_determine_which_fields_you_need"><span class="mw-headline" id="Step_1:_Review_what_you_are_trying_to_do_and_determine_which_fields_you_need">Step 1: Review what you are trying to do and determine which fields you need</span></a></h3>
+<p>You want to build a dashboard that monitors failed login attempts. You would like to have the following panels:
+</p>
+<ul><li> A set of panels that provide counts of failed login attempts.
+</li><li> A panel that lists the top hackers by a count of failed login events they are responsible for.
+</li><li> A panel that shows the users targeted by a specific hacker with counts of login attempts made by the hacker for each user. 
+</li></ul><p>Now look at your events and think about what fields you will need to make these panels.
+</p>
+<table cellpadding="5" cellspacing="0" border="1" width="100%"><tr><th valign="top" style="width:100px;" bgcolor="#C0C0C0"> Panel concept
+</th><th valign="top" style="width:220px;" bgcolor="#C0C0C0"> How will you implement it?
+</th><th valign="top" bgcolor="#C0C0C0"> Are new fields required?
+</th></tr><tr valign="top"><td valign="center" align="left"> Counts of failed login attempts, broken out by valid and invalid accounts.
+</td><td valign="center" align="left"> Use a <code><font size="2">| stats count</font></code> operation to get an event count.
+</td><td valign="center" align="left"> No. We can use word searches to differentiate between valid and invalid accounts.
+</td></tr><tr valign="top"><td valign="center" align="left"> Top hackers
+</td><td valign="center" align="left"> Use a <code><font size="2">| top &lt;fieldname&gt;</font></code> operation to list the top hackers.
+</td><td valign="center" align="left"> Yes. We can identify the hackers by the ip address in the event, so we need to extract the ip address values.
+</td></tr><tr valign="top"><td valign="center" align="left"> Targeted users
+</td><td valign="center" align="left"> Design a drilldown search that runs <code><font size="2">| stats count by &lt;fieldname&gt;</font></code> for events with a specific ip address.
+</td><td valign="center" align="left"> Yes. We must extract the user name in each event. Also requires the ip address field mentioned above.
+</td></tr><tr valign="top"><td valign="center" align="left"> Locate hackers on a world map
+</td><td valign="center" align="left"> Use the <code><font size="2">iplocation</font></code> and <code><font size="2">geostats</font></code> commands to convert the ip address value for a hacker into a plotted location on a map.
+</td><td valign="center" align="left"> No new fields other than the ip address field mentioned above.
+</td></tr></table><p><b>Note:</b> The <code><font size="2">stats</font></code> and <code><font size="2">top</font></code> commands used in the example searches above are examples of transforming commands. You use transforming commands to display statistical information in the form of tables, charts, and visualizations.
+</p>
+<h3> <a name="extractfields_step_2:_see_if_the_fields_you_need_are_already_being_extracted"><span class="mw-headline" id="Step_2:_See_if_the_fields_you_need_are_already_being_extracted">Step 2: See if the fields you need are already being extracted</span></a></h3>
+<p>In the results for the search <code><font size="2">sourcetype=secure failed</font></code>, look at the fields sidebar. The fields sidebar displays two categories of extracted fields: <b>Selected Fields</b> and <b>Interesting Fields</b>. It does not always display every field that Splunk Enterprise has selected for the search.
+</p><p><img alt="Step3.1-fields sidebar.png" src="images/4/41/Step3.1-fields_sidebar.png" width="300" height="453"></p><p>There do not appear to be any fields that would have ip address or user name values. Just to be sure, click <b>All Fields</b>. This opens the Select Fields dialog, where you can see detail information about all of the fields extracted for this search, not just the ones that are selected or which Splunk Enterprise finds interesting.  
+</p><p><img alt="Step3.2 select fields dialog.png" src="images/6/6d/Step3.2_select_fields_dialog.png" width="600" height="371"></p><p>A quick review of the Select Fields dialog proves that ip address and user name fields are not being extracted from these events. You have to extract these fields. 
+</p><p>Click <b>Extract New Fields</b> in the Select Fields dialog to open the field extractor.
+</p>
+<h3> <a name="extractfields_step_3:_field_extraction_-_select_a_sample_event"><span class="mw-headline" id="Step_3:_Field_extraction_-_Select_a_sample_event">Step 3: Field extraction - Select a sample event</span></a></h3>
+<p>The field extractor opens on the Select Sample step, where you select a sample event for field extraction. 
+</p><p><img alt="Step3.3 fx select sample event.png" src="images/d/da/Step3.3_fx_select_sample_event.png" width="700" height="411"></p><p>Notice that the field extractor indicates that you are extracting fields for the secure source type. All field extractions created by the field extractor must be associated with a source type. In this case the field extractor obtained the source type from your search. If your search did not contain a source type, you would have to provide one when you entered the field extractor.
+</p><p><b>1.</b> Click on an event to select it. 
+</p>
+<dl><dd> It appears as white text over a blue background in the middle of the screen. 
+</dd></dl><p><b>2.</b> Click <b>Next</b> to select the fields that you want to extract from the event.
+</p><p>Field extractions can also be associated with specific host and source values, but the field extractor only enables source type field extractions. Go here for more information about field extractions and field extraction configuration.
+</p>
+<h3> <a name="extractfields_step_4:_field_extraction_-_select_the_fields_that_you_want_to_extract"><span class="mw-headline" id="Step_4:_Field_extraction_-_Select_the_fields_that_you_want_to_extract">Step 4: Field extraction - Select the fields that you want to extract</span></a></h3>
+<p>On the Select Fields step of the field extractor you highlight values in the sample event for the fields that you want to extract. You can extract multiple fields from the same event.
+</p><p><img alt="Step3.4 fx select fields.png" src="images/a/a7/Step3.4_fx_select_fields.png" width="700" height="290"></p><p><b>1.</b> Highlight the word <code><font size="2">root</font></code> and indicate that it is a sample value of a new field called <code><font size="2">username</font></code>. 
+</p><p><b>2.</b> Click <b>Add Extraction</b>. 
+</p>
+<dl><dd> When you do this, the field extractor attempts to extract the field from the sample events. You can see the results in the preview table near the bottom of the page. The extracted values for the field get highlighting in the same color as the value in the sample event. 
+</dd></dl><p><b>3.</b> Highlight the ip address in the event as a value of a new <code><font size="2">clientip</font></code> field. 
+</p><p><b>4.</b> Click <b>Add Extraction</b> again. 
+</p>
+<dl><dd> The preview table updates to show how the field extractor finds and extracts values for this second field.
+</dd></dl><p>After you have added both field extractions, your preview table should look something like this.
+</p><p><img alt="Step3.4.2 fx select fields.png" src="images/7/7b/Step3.4.2_fx_select_fields.png" width="700" height="390"></p><p>It appears that the fields have been extracted correctly.
+</p><p>Click <b>Next</b> to validate your field extractions and save them.
+</p><p><b>Note:</b> The field extractor has a variety of features that help you define field extractions and test them. Go here if you want to learn more.
+</p>
+<h3> <a name="extractfields_step_5:_validate_and_save_your_field_extractions"><span class="mw-headline" id="Step_5:_Validate_and_save_your_field_extractions">Step 5: Validate and save your field extractions</span></a></h3>
+<p>On the Validate Fields step of the field extractor you can validate your field extractions. You can investigate your field extraction success by toggling to the <b>Matches</b> and <b>Non-Matches</b> views, or by viewing the tabs that have been created for the <code><font size="2">username</font></code> and <code><font size="2">clientip</font></code> fields.
+</p><p>On this page you should not find errors, but if you do you can try to fix it by removing values in events that have been incorrectly highlighted. 
+</p><p><img alt="Step3.5 fx validate fields.png" src="images/7/7c/Step3.5_fx_validate_fields.png" width="700" height="442"></p><p><b>1.</b> Click <b>Next</b> to save the field extraction. 
+</p>
+<dl><dd> This extraction pulls out both fields.
+</dd></dl><p><b>2.</b> On the Save page the only thing you need to do is change <b>Permissions</b> to <b>All apps</b>. 
+</p>
+<dl><dd> If you keep the default value of <b>Owner</b>, the other dashboards you create with them will only work for you. 
+</dd></dl><dl><dd> You are given an opportunity to set permissions for the extraction by role. For now just leave it at the default of read access for Everyone and write access for Admin.
+</dd></dl><p><b>3.</b> Click <b>Finish</b> to save your extractions. 
+</p><p><b>Note:</b> All field extractions can have their own set of permissions. Permissions determine who can access and use the fields you extract. Go here for more information about permissions setup.
+</p><p><img alt="Step3.5.2 fx save extraction.png" src="images/6/6a/Step3.5.2_fx_save_extraction.png" width="700" height="637"></p><p>You are now ready to build a single value visualization. <a href="#createsingle-valuevisualizations" class="external text">Go to the next stage</a>.
+</p>
+<a name="createsingle-valuevisualizations"></a><h2> <a name="createsingle-valuevisualizations_4:_create_single-value_visualizations"><span class="mw-headline" id="4:_Create_single-value_visualizations"> 4: Create single-value visualizations</span></a></h2>
+<p><img alt="HWS1.png" src="images/9/95/HWS1.png" width="100" height="54"><img alt="HWS2.png" src="images/e/e0/HWS2.png" width="100" height="54"><img alt="HWS3.png" src="images/2/25/HWS3.png" width="100" height="54"><img alt="HWS4o.png" src="images/6/60/HWS4o.png" width="100" height="54"><img alt="HWS5.png" src="images/c/c2/HWS5.png" width="100" height="54"><img alt="HWS6.png" src="images/3/38/HWS6.png" width="100" height="54"></p><p>Now that you've taken a close look at the kind of events you are interested in tracking, you are ready to start building a dashboard. First, you want to know how many failed login attempts there have been against your system, and compare how many of those failed attempts were targeting valid accounts and how many were failed attempts at harvesting account data. 
+</p><p>In this stage of the use case you learn how to:
+</p>
+<ul><li> Turn simple searches into single value visualizations
+</li><li> Add saved reports to a dashboard
+</li></ul><h3> <a name="createsingle-valuevisualizations_step_1:_search_for_authentication_failures"><span class="mw-headline" id="Step_1:_Search_for_authentication_failures">Step 1: Search for authentication failures</span></a></h3>
+<p>Re-run your simple search for authentication failures in the Search and Reporting app.
+</p>
+<div class="inlineQuery splunk_search_4_3"><code><font size="2">sourcetype=secure failed</font></code><br></div>
+<p><img alt="HW-search2.png" src="images/d/dc/HW-search2.png" width="700" height="426"></p><p>The search in the image above returns 33,253 events, which means there are a total of 33,253 login failures in your data. (Your results may vary, due to variations in the sample data file.)
+</p>
+<h3> <a name="createsingle-valuevisualizations_step_2:_create_a_single-value_visualization"><span class="mw-headline" id="Step_2:_Create_a_single-value_visualization">Step 2: Create a single-value visualization</span></a></h3>
+<p>To capture this value in a visualization, you need to modify your search string slightly because the simple search string above is not generating results in a way that supports statistics or visualization. 
+</p><p>Adjust your search string to:
+</p>
+<div class="inlineQuery splunk_search_4_3"><code><font size="2">sourcetype=secure failed | stats count</font></code><br></div>
+<p>Run the search, then switch to the Visualization tab. If necessary, change the visualization type to <b>Single Value</b>.
+</p><p><img alt="HW-search3.png" src="images/8/89/HW-search3.png" width="700" height="443"></p><p>Now you have the single value that you want to display, but it lacks context. 
+</p><p><b>1.</b> Click <b>Format</b> to open the Format menu. 
+</p><p><b>2.</b> Add labels, as shown below. 
+</p>
+<dl><dd> In <b>After Label</b>, enter <b>Failed Attempts.</b>
+</dd></dl><dl><dd> In <b>Under Label</b>, enter <b>Total</b>.
+</dd></dl><p><b>3.</b> Click <b>Apply</b> to save your format changes.
+</p><p><img alt="HW-format1.png" src="images/2/2a/HW-format1.png" width="700" height="381"></p>
+<h3> <a name="createsingle-valuevisualizations_step_3:_save_your_visualization_as_a_report"><span class="mw-headline" id="Step_3:_Save_your_visualization_as_a_report">Step 3: Save your visualization as a report</span></a></h3>
+<p>Save this visualization as a report, by going to <b>Save As &gt; Report</b>.
+</p><p><img alt="HW-report1.png" src="images/3/3e/HW-report1.png" width="700" height="281"></p><p>Give your report a <b>Title</b>, set the <b>Time Range Picker</b> to <b>No</b>, then click <b>Save</b>.
+</p><p><img alt="HW-save1.png" src="images/1/13/HW-save1.png" width="300" height="211"></p>
+<h3> <a name="createsingle-valuevisualizations_step_4:_add_your_report_to_a_dashboard"><span class="mw-headline" id="Step_4:_Add_your_report_to_a_dashboard">Step 4: Add your report to a dashboard</span></a></h3>
+<p>On the next screen, select <b>Add to Dashboard</b>, and create a new dashboard called <b>Failed Authentication</b>. As shown below, select <b>Panel Powered By Report</b>. Click <b>Save.</b>
+</p><p><img alt="HW-createdashboard.png" src="images/8/8b/HW-createdashboard.png" width="300" height="333"></p><p>You now have a dashboard with a single panel showing the total number of failed authentications. The total is good to know, but it would also be convenient to see at a glance how many of those failed authentication attempts were using valid accounts versus invalid accounts.
+</p>
+<h3> <a name="createsingle-valuevisualizations_step_5:_repeat_these_steps_for_two_additional_visualizations"><span class="mw-headline" id="Step_5:_Repeat_these_steps_for_two_additional_visualizations">Step 5: Repeat these steps for two additional visualizations</span></a></h3>
+<p>Add two additional panels that show: 
+</p>
+<ul><li> The number of failed passwords for invalid accounts
+</li><li> The number of failed passwords for valid accounts
+</li></ul><p>Follow the preceding steps to run a search for the events you want to count, create a single value visualization, and format the visualization with labels. 
+</p><p>Use the following table for reference.
+</p>
+<h3> <a name="createsingle-valuevisualizations_step_5:_repeat_these_steps_for_two_additional_visualizations_2"><span class="mw-headline" id="Step_5:_Repeat_these_steps_for_two_additional_visualizations_2">Step 5: Repeat these steps for two additional visualizations</span></a></h3>
+<table cellpadding="5" cellspacing="0" border="1" width="100%"><tr><th valign="top" style="width:60px;" bgcolor="#C0C0C0"> Setting
+</th><th valign="top" bgcolor="#C0C0C0"> Invalid accounts
+</th><th valign="top" bgcolor="#C0C0C0"> Valid accounts
+</th></tr><tr valign="top"><td valign="center" align="left"> Search string
+</td><td valign="center" align="left"> <code><font size="2">sourcetype=secure failed "invalid user" | stats count</font></code>
+</td><td valign="center" align="left"> <code><font size="2">sourcetype=secure failed NOT "invalid user" | stats count</font></code>
+</td></tr><tr valign="top"><td valign="center" align="left"> After Label
+</td><td valign="center" align="left"> Failed Attempts
+</td><td valign="center" align="left"> Failed Attempts
+</td></tr><tr valign="top"><td valign="center" align="left"> Under Label
+</td><td valign="center" align="left"> Invalid Accounts
+</td><td valign="center" align="left"> Valid Accounts
+</td></tr></table><p>As you run each search and format each single value visualization, save it as a report and add it to your dashboard. Your resulting dashboard should look something like this.
+</p><p><img alt="HW-dashboard1.png" src="images/9/94/HW-dashboard1.png" width="700" height="341"></p>
+<h3> <a name="createsingle-valuevisualizations_step_6:_start_customizing_the_layout_of_your_dashboard"><span class="mw-headline" id="Step_6:_Start_customizing_the_layout_of_your_dashboard">Step 6: Start customizing the layout of your dashboard</span></a></h3>
+<p>To save space, rearrange the panels so that they all appear in one row. 
+</p><p><b>1.</b> Click <b>Edit &gt; Edit Panels</b>.
+</p><p><b>2.</b> Click and drag the panels so that they are arranged as shown below. 
+</p><p><b>3.</b> Click <b>Done</b>.
+</p><p><img alt="HW-dashboard2.png" src="images/2/2f/HW-dashboard2.png" width="700" height="146"></p><p>This looks good, but there is much more that you can do to customize the look of this information using Simple XML. 
+</p><p><b>Ready to find out more? Go to the next topic: <a href="#customizepanelswithsimplexml" class="external text">5. Customize Panels with Simple XML</a>.</b>
+</p>
+<a name="customizepanelswithsimplexml"></a><h2> <a name="customizepanelswithsimplexml_5:_customize_panels_with_simple_xml"><span class="mw-headline" id="5:_Customize_panels_with_Simple_XML"> 5: Customize panels with Simple XML</span></a></h2>
+<p><img alt="HWS1.png" src="images/9/95/HWS1.png" width="100" height="54"><img alt="HWS2.png" src="images/e/e0/HWS2.png" width="100" height="54"><img alt="HWS3.png" src="images/2/25/HWS3.png" width="100" height="54"><img alt="HWS4.png" src="images/d/dc/HWS4.png" width="100" height="53"><img alt="HWS5o.png" src="images/1/1e/HWS5o.png" width="100" height="54"><img alt="HWS6.png" src="images/3/38/HWS6.png" width="100" height="54"></p><p>Now that you have some data on your dashboard, take a moment to consider the ideal way to display the information so that it is helpful to the reader and easy to understand at a glance. In this case, you are presenting three, related values representing security risks. Perhaps the values could be color-coded to indicate severity so that anyone accessing this dashboard can see in a glance if there is an urgent concern.
+</p><p>In this stage of the use case you learn how to:
+</p>
+<ul><li>Use Simple XML and a modified search to color-code your single-value visualizations
+</li><li>Remove the vertical dividers between multiple panels in a single row to create a more streamlined look.
+</li></ul><h3> <a name="customizepanelswithsimplexml_step_1:_color-code_your_values_by_severity"><span class="mw-headline" id="Step_1:_Color-code_your_values_by_severity">Step 1: Color-code your values by severity</span></a></h3>
+<p>You can use simple XML to tag your single value visualization with an attribute that instructs Splunk Enterprise to display it in one of four colors to indicate severity. The attribute that you need for this is called classField. 
+</p><p><b>1.</b> First, open the XML editor for your dashboard by clicking <b>Edit &gt; Edit Source</b>.
+</p><p><img alt="HW-editsource1.png" src="images/8/8f/HW-editsource1.png" width="700" height="207"></p><p><b>Note:</b> The <code><font size="2">classField</font></code> attribute is one of many available attributes in the <code><font size="2">&lt;single&gt;</font></code> object (the tag for a single value visualization in the XML source) that you can use to customize the display of your dashboard panel. Access the reference information in the <i>Dashboards and Visualizations</i> manual.
+</p><p><b>2.</b> In the XML Editor that opens, observe that you have one <code><font size="2">&lt;single&gt;</font></code> object representing each of your three dashboard panels.  
+</p><p><img alt="HW-xml1.png" src="images/9/92/HW-xml1.png" width="700" height="434"></p><p><b>3.</b> Add the following line inside each <code><font size="2">&lt;single&gt;</font></code> object, as shown.
+</p>
+<code><font size="2"> &lt;option name="classField"&gt;class&lt;/option&gt; <br></font></code>
+<p><img alt="HW-classField.png" src="images/b/bc/HW-classField.png" width="700" height="432"></p><p><b>4.</b> Click <b>Save</b> to return to your dashboard. 
+</p><p><b>5.</b> Next, you need to adjust the search string that populates each dashboard panel to reference to the attribute that you just added to the XML. To do this, click <b>Edit &gt; Edit Panels</b>. 
+</p><p><b>6.</b> Then, click the panel type icon for your first panel, then click on the name of your panel in the dropdown that appears. Then, in the larger dropdown, click <b>Open in Search</b>.
+</p><p><img alt="HW-openinsearch.png" src="images/0/07/HW-openinsearch.png" width="700" height="364"></p><p><b>7.</b> Adjust your search query as shown below, and run your search again.
+</p>
+<div class="inlineQuery splunk_search_4_3"><code><font size="2">sourcetype=secure failed | stats count as Failed | eval class=if(Failed&gt;10000,"severe","low")</font></code><br></div>
+<p><b>8.</b> Observe the changes introduced by your new search string. Your single value, instead of being a plain count now has a name, Failed. You also now have a severity column called class. The logic in your search string evaluates the severity of your value as "severe".
+</p><p><img alt="HW-newsearch0.png" src="images/f/f2/HW-newsearch0.png" width="700" height="219"></p><p><b>9.</b> Click <b>Save</b> to overwrite the search in your saved report with this new string. Click <b>Save</b> again in the window that appears to save your report. 
+</p><p><img alt="HW-newsearch1.png" src="images/6/65/HW-newsearch1.png" width="700" height="221"></p><p><b>10.</b> Return to your dashboard. You should now see the first value in red.
+</p><p><img alt="HW-redvalue1.png" src="images/c/c8/HW-redvalue1.png" width="700" height="142"></p><p><b>Note:</b> Of course, you can set <code><font size="2">classField</font></code> ranges with more than two colors. You can even use the <code><font size="2">charting.fieldColors</font></code> attribute to determine exactly what colors display. To get an idea of how you might set this up, go here.
+</p><p><b>11.</b> Repeat the steps above for the other two panels in your dashboard:
+</p>
+<ul><li> Edit &gt; Edit Panels
+</li><li> Click the panel type icon, then the name of your panel. In the dropdown, click Open in Search.
+</li><li> Adjust the search to include as Failed | eval class=if(Failed&gt;10000,"severe","low") at the end.
+</li><li> Save your new search to overwrite your original search in your saved report.
+</li><li> Return to your dashboard.
+</li></ul><p>Once you've adjusted the search strings for all three panels, your dashboard should look like this.
+</p><p><img alt="HW-dashboard3.png" src="images/1/15/HW-dashboard3.png" width="700" height="141"></p><p>In the example above, the Failed Login Attempts with Valid Accounts appears in green (i.e. severity=low) because the value is under 10000, which is the threshold set in the search string. The first two values appear in red because they are both over 10000. As you might have guessed, you can configure the threshold and severity tags applied in your search string to match your use case.
+</p>
+<h3> <a name="customizepanelswithsimplexml_step_2:_merge_your_panels_to_reduce_clutter"><span class="mw-headline" id="Step_2:_Merge_your_panels_to_reduce_clutter">Step 2: Merge your panels to reduce clutter</span></a></h3>
+<p><b>1.</b> Next, assume you want to display these three single value visualizations in a single, unbroken panel to visually indicate that the numbers are closely related. You can do this by editing the XML to remove the panel tags in between your panels.
+</p><p><b>2.</b> Go to <b>Edit &gt; Edit Source</b> to open the XML Editor. Remove the two sets of
+</p>
+<code><font size="2"> &lt;/panel&gt;<br>&nbsp;&lt;panel&gt;<br></font></code>
+<p>tags indicated in the image below.
+</p><p><img alt="HW-removepaneltags.png" src="images/8/82/HW-removepaneltags.png" width="700" height="438"></p><p>Your XML should now read as follows:
+</p>
+<div class="samplecode">
+<code><font size="2"><br>&lt;dashboard&gt;<br>&nbsp;&nbsp;&lt;label&gt;Failed Authentication&lt;/label&gt;<br>&nbsp;&nbsp;&lt;row&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;panel&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;single&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;title&gt;Total Failed Login Attempts&lt;/title&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;search ref="Total Failed Login Attempts"&gt;&lt;/search&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;option name="drilldown"&gt;none&lt;/option&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;option name="classField"&gt;class&lt;/option&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/single&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;single&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;title&gt;Failed Login Attempts with Invalid Accounts&lt;/title&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;search ref="Failed Login Attempts with Invalid Accounts"&gt;&lt;/search&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;option name="afterLabel"&gt;Failed Attempts&lt;/option&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;option name="underLabel"&gt;Invalid Accounts&lt;/option&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;option name="classField"&gt;class&lt;/option&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/single&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;single&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;title&gt;Failed Login Attempts with Valid Accounts&lt;/title&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;search ref="Failed Login Attempts with Valid Accounts"&gt;&lt;/search&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;option name="afterLabel"&gt;Failed Attempts&lt;/option&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;option name="underLabel"&gt;Valid Accounts&lt;/option&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;option name="classField"&gt;class&lt;/option&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/single&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/panel&gt;<br>&nbsp;&nbsp;&lt;/row&gt;<br>&lt;/dashboard&gt;<br></font></code></div>
+<p><b>3.</b> Click <b>Save</b> to return to your dashboard. What was formerly three separate panels are now merged into one.
+</p><p><img alt="HW-dashboard4.png" src="images/9/9b/HW-dashboard4.png" width="700" height="140"></p><p><b>4.</b> Now that you have a single panel, you can reduce the text on the page to remove some of the extra labels. Go to <b>Edit &gt; Edit Panels</b> again to remove the old panel titles (if you had them). You can include a more general title in the first panel title space with a title that works for the entire row, as shown.
+</p><p><img alt="HW-edittitles.png" src="images/5/5a/HW-edittitles.png" width="700" height="218"></p><p><b>5.</b> Click <b>Done</b> and review the result.
+</p><p><img alt="DL-dashboard5.png" src="images/1/1b/DL-dashboard5.png" width="700" height="142"></p><p><b>Ready for the next step? Go to <a href="#adddrilldownpanels" class="external text">6. Add Drilldown Panels</a> to finish up this use case with some stylish drilldown panels.</b>
+</p>
+<a name="adddrilldownpanels"></a><h2> <a name="adddrilldownpanels_6:_add_drilldown_panels"><span class="mw-headline" id="6:_Add_drilldown_panels"> 6: Add drilldown panels</span></a></h2>
+<p><img alt="HWS1.png" src="images/9/95/HWS1.png" width="100" height="54"><img alt="HWS2.png" src="images/e/e0/HWS2.png" width="100" height="54"><img alt="HWS3.png" src="images/2/25/HWS3.png" width="100" height="54"><img alt="HWS4.png" src="images/d/dc/HWS4.png" width="100" height="53"><img alt="HWS5.png" src="images/c/c2/HWS5.png" width="100" height="54"><img alt="HWS6o.png" src="images/3/3f/HWS6o.png" width="100" height="54"></p><p>You're almost done! In order to fulfill all the goals you set out to achieve with this dashboard, you need to add three more panels:
+</p>
+<ol><li>A table showing the IP addresses of the five hackers responsible for the most failed authentication attempts.
+</li><li>A drilldown table showing the user accounts targeted by a selected hacker.
+</li><li>A drilldown map showing the location associated with the IP address of a selected hacker.
+</li></ol><p>The first panel is fairly straightforward, but the two drilldown panels require some additional Simple XML modifications to enable a click value. 
+In this stage of the use case you learn how to:
+</p>
+<ul><li>Create additional panels based on saved searches.
+</li><li>Configure a token for a click value to enable dynamic drilldown in your dashboard.
+</li><li>Invoke the token in your search strings to create drilldown panels.
+</li></ul><h3> <a name="adddrilldownpanels_step_1:_create_a_panel_with_a_table_showing_the_top_five_hackers"><span class="mw-headline" id="Step_1:_Create_a_panel_with_a_table_showing_the_top_five_hackers">Step 1: Create a panel with a table showing the top five hackers</span></a></h3>
+<p><b>1.</b> Run a search that displays a table of the five IP addresses responsible for the most failed logins.
+</p>
+<div class="inlineQuery splunk_search_4_3"><code><font size="2">sourcetype=secure failed | top 5 clientip</font></code><br></div>
+<p><img alt="HW-searchhackers1.png" src="images/e/e6/HW-searchhackers1.png" width="600" height="200"></p><p><b>2.</b> Next, clean up this table a little bit by removing the percent column and renaming the remaining two columns to better describe the context.
+</p>
+<div class="inlineQuery splunk_search_4_3"><code><font size="2">sourcetype=secure failed | top 5 clientip showperc=f | rename clientip as "Hacker" count as "Failed Logins"</font></code><br></div>
+<p><b>3.</b> The resulting table now has just the two columns you want and more descriptive column titles. Click <b>Save As</b> and save this search as a <b>Dashboard Panel</b>.
+</p><p><img alt="HW-searchhackers2.png" src="images/7/76/HW-searchhackers2.png" width="700" height="233"></p><p><b>4.</b> Add the panel to your existing Failed Authentication dashboard with the panel title <b>Top Five Hackers</b>. Click <b>Save</b>, then click <b>View Dashboard</b>.
+</p><p><img alt="HW-saveasdashboardpanel.png" src="images/2/2d/HW-saveasdashboardpanel.png" width="400" height="309"></p><p><b>5.</b> Your dashboard now includes a table listing the top five hacker IP addresses. 
+</p><p><img alt="HW-dashboard5.png" src="images/a/aa/HW-dashboard5.png" width="700" height="275"></p>
+<h3> <a name="adddrilldownpanels_step_2:_create_a_drilldown_table_showing_targeted_accounts_for_each_hacker_ip"><span class="mw-headline" id="Step_2:_Create_a_drilldown_table_showing_targeted_accounts_for_each_hacker_IP">Step 2: Create a drilldown table showing targeted accounts for each hacker IP</span></a></h3>
+<p>Having a list of IP addresses is great, but you want to be able to provide more information about these hackers. First, you want anyone who views this dashboard to be able to click on one of the IP addresses and view a list of targeted accounts. To achieve this, you'll create a drilldown relationship between your Top Five Hackers panel and a new panel that lists user accounts. 
+</p><p><b>Note:</b> Splunk Enterprise dashboards support a variety of drilldown configurations. Read more about dynamic drilldown in dashboards and forms in the <i>Dashboards and Visualizations</i> manual.
+</p><p><b>1.</b> First, configure the drilldown behavior of your Top Five Hackers panel. Go to Edit &gt; Edit Source and scroll to the section of XML that represents your Top Five Hackers panel.
+</p><p><b>2.</b> Add the following XML immediately below your <code><font size="2">&lt;search&gt;</font></code> tags.
+</p>
+<code><font size="2"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;drilldown&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;set token="hackerip"&gt;$click.value$&lt;/set&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/drilldown&gt;<br></font></code>
+<p><img alt="HW-clickvalue.png" src="images/1/11/HW-clickvalue.png" width="700" height="426"></p><p><b>3.</b> This code defines a token "hackerip" as a dynamic, clickable value that you can reference in searches using the notation <code><font size="2">$hackerip$</font></code>.
+</p><p><b>4.</b> Click <b>Save</b> to return to your dashboard.
+</p><p><b>5.</b> Next, add a new panel to this dashboard by clicking <b>Edit &gt; Edit Panels &gt; Add Panel</b>. A slider panel opens with several options for creating a new dashboard panel. You want to create a table based on a new search, so select <b>New</b>, then select <b>Statistics Table</b>. 
+</p><p><img alt="HW-newstatstable.png" src="images/0/06/HW-newstatstable.png" width="700" height="386"></p><p><b>6.</b> In the slider panel that opens to the right, give your panel the name <b>Victims of $hackerip$</b> and enter the search string:
+</p>
+<div class="inlineQuery splunk_search_4_3"><code><font size="2">sourcetype=secure clientip="$hackerip$" | stats count by username | sort -count</font></code><br></div>
+<p>This search invokes the <code><font size="2">$hackerip$</font></code> token that you created earlier and identifies the clientip field as the clickable value for that token. When a user clicks one of the ip addresses in the Top Five Hackers table, Splunk Enterprise runs the search to generate a table of usernames based on that input.
+</p><p><b>7.</b> Click <b>Add to Dashboard</b> and close the slider panels. Your new panel appears at the bottom of your dashboard. It currently has no data showing because the panel only populates when a user viewing the panel clicks on an IP address in the Top Five Hackers panel.
+</p><p><b>8.</b> Click and drag your new panel so that it sits directly to the right of the Top Five Hackers panel, as shown.
+</p><p><img alt="HW-rearrangepanels.png" src="images/6/66/HW-rearrangepanels.png" width="700" height="417"></p><p><b>9.</b> Click <b>Done</b> in the upper right corner to commit your edits.
+</p><p><b>10.</b> Test out your drilldown panel by clicking one of the IP addresses in the Top Five Hackers panel.
+</p><p>Before:
+</p><p><img alt="HW-before.png" src="images/3/3f/HW-before.png" width="700" height="317"></p><p>After:
+</p><p><img alt="HW-after.png" src="images/8/84/HW-after.png" width="700" height="355"></p><p>It looks nice! In the next step you will add a map below these two panels, so make one more edit to save some space in your dashboard.
+</p><p><b>11.</b> Go to <b>Edit &gt; Edit Panels</b>, then click on the paintbrush icon in your Victims panel. Change the number or rows that display to <b>5</b>. 
+</p><p><img alt="HW-fiverows.png" src="images/d/d2/HW-fiverows.png" width="700" height="463"></p><p><b>12.</b> Click <b>Apply</b>. Now your panels are aligned neatly at the bottom, leaving more room for the map you are about to add.
+</p><p><img alt="HW-aligned.png" src="images/4/49/HW-aligned.png" width="700" height="287"></p>
+<h3> <a name="adddrilldownpanels_step_3:_create_a_drilldown_map_showing_the_location_of_the_hacker"><span class="mw-headline" id="Step_3:_Create_a_drilldown_map_showing_the_location_of_the_hacker">Step 3: Create a drilldown map showing the location of the hacker</span></a></h3>
+<p>Next, add a panel that plots the location of a hacker's IP address on a map. Like the panel you just created, this panel should be a drilldown panel based on the Top Five Hackers panel, allowing the dashboard user to generate a map by clicking on an IP address.
+</p><p><b>1.</b> Click <b>Edit &gt; Edit Panels &gt; Add Panel</b>. In the slide panel, click <b>New &gt; Map</b>. Enter <b>Hacker Location</b> for the content title, then enter the following search string.
+</p>
+<div class="inlineQuery splunk_search_4_3"><code><font size="2">sourcetype=secure failed clientip="$hackerip$" | dedup clientip | iplocation prefix=cip_ clientip | geostats latfield=cip_lat longfield=cip_lon count</font></code><br></div>
+<p><img alt="HW-mapsearch.png" src="images/4/4d/HW-mapsearch.png" width="700" height="409"></p><p>Once again, this search invokes the $hackerip$ token that you created earlier and identifies the clientip field as the clickable value for that token. When a user clicks one of the IP addresses in the Top Five Hackers table, Splunk Enterprise runs the search to generate a map based on that input.
+</p><p><b>Note:</b> To learn more about creating map visualizations, access the geostats reference in the <i>Search</i> manual. Also, read more about editing and customizing map visualizations in the <i>Dashboards and Visualizations</i> manual. 
+</p><p><b>2.</b> Click <b>Add to Dashboard</b>, then close the slider panel and click <b>Done</b> to save your edits to the dashboard.
+</p><p><b>3.</b> Click on an IP address to populate both the Victims panel and the map. 
+</p><p><img alt="HW-finaldashboard.png" src="images/0/0d/HW-finaldashboard.png" width="700" height="543"></p><p>Congratulations, you're done! If you enjoyed this tutorial, go further! Consider downloading the Dashboard Example App, which gives you a hands-on way to learn the basic concepts and tools needed to rapidly create rich dashboards using Simple XML.
+</p>
+</body><script src='http://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js'></script>
+
+        <script src="js/index.js"></script></html>

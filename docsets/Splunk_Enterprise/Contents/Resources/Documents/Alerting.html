@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:og="http://ogp.me/ns#" xmlns:fb="http://ogp.me/ns/fb#" charset="utf-8"><head><meta charset="UTF-8"><title></title>
+<link rel="stylesheet" href="css/normalize.css">
+<link rel="stylesheet" type="text/css" href="css/main.css">
+<link rel="stylesheet" href="css/style.css">
+<style>
+html,body {
+margin: 0px;
+padding: 10px;
+width: 210mm;
+max-width: 210mm;
+overflow-x: hidden;
+}
+pre {
+	width: 100%;
+	overflow-x: hidden;
+}
+</style></head><body><h1>Alerting Overview </h1><a name="aboutalerts"></a><div class="all-questions">
+<h2> <a name="aboutalerts_about_alerts"><span class="mw-headline" id="About_alerts"> About alerts</span></a></h2>
+<p>An alert is an action that a saved search triggers based on the results of the search. When creating an alert, you specify a condition that triggers the alert. Typically the action is an email based on the results of the search. But you can also choose to run a script or to list the alert as a triggered alert in Settings. When you create an alert you are creating a saved search with trigger conditions for the alert.
+</p><p>To avoid sending out alerts too frequently, specify a throttle condition for an alert.
+</p><p>The following list describes the types of alerts:
+</p>
+<ul><li> <b>Per result alert.</b> Based on a real-time search. The trigger condition is whenever the search returns a result. 
+</li></ul><ul><li> <b>Scheduled alert.</b> Runs a search according to a schedule that you specify when creating the alert. You specify results of the search that trigger the alert.
+</li></ul><ul><li> <b>Rolling-window alert.</b> Based on a real-time search. The trigger condition is a combination of specified results of the search within a specified time window.
+</li></ul>
+<h3> <a name="aboutalerts_alert_scenarios"><span class="mw-headline" id="Alert_scenarios">Alert scenarios</span></a></h3>
+<p>This section discusses the scenarios for each type of alert.
+</p>
+<h4><font size="3"><b><i> <a name="aboutalerts_per_result_alert"><span class="mw-headline" id="Per_result_alert">Per result alert</span></a></i></b></font></h4>
+<p>Use a per result alert to notify when a real-time search returns a result that matches a condition. Typically, you specify a throttle condition so that the alert triggers only once for a specified time period. Per result examples include the following:
+</p>
+<ul><li> Trigger an alert for every failed login attempt.
+</li></ul><ul><li> Trigger an alert when a specific type of error occurs on any host.<br>You can choose field values that suppress hosts for which you do not want an alert notification.
+</li></ul><ul><li> Trigger an alert when a CPU on a host sustains 100% utilization for an extended period of time.
+</li></ul><dl><dd><b>Caution:</b> Be careful using a per result alert in a high availability deployment. If a peer is not available, a real-time search does not warn that the search might be incomplete. Use a scheduled alert for this scenario.
+</dd></dl><h4><font size="3"><b><i> <a name="aboutalerts_scheduled_alert"><span class="mw-headline" id="Scheduled_alert">Scheduled alert</span></a></i></b></font></h4>
+<p>Use a scheduled alert to notify when a scheduled search returns results that meet a specific condition. A scheduled alert is useful when an immediate reaction to the alert is not a priority. 
+Scheduled alert examples include:
+</p>
+<ul><li> Trigger an alert that runs daily, notifying when the number of items sold that day is less than 500.
+</li></ul><ul><li> Trigger an alert that runs hourly, notifying when the number of 404 errors in any hour exceeds 100.
+</li></ul><h4><font size="3"><b><i> <a name="aboutalerts_rolling-window_alert"><span class="mw-headline" id="Rolling-window_alert">Rolling-window alert</span></a></i></b></font></h4>
+<p>Use a rolling window alert to monitor the results of a real-time search within a specified time interval. For example, monitor the results every 10 minutes or every four hours. Rolling-window alert examples include:
+</p>
+<ul><li> Trigger an alert when a user has three consecutive failed logins within a 10 minute period.<br>You can set a throttle condition to suppress an alert to once an hour from any user.
+</li></ul><ul><li> Trigger an alert when a host is unable to complete an hourly file transfer to another host.<br>Set a throttle condition so the alert fires only once every hour for any specific host.
+</li></ul><dl><dd><b>Caution:</b> Be careful using a real-time search in a high availability deployment. If a peer is not available, a real-time search does not warn that the search might be incomplete. Use a scheduled alert for this scenario.
+</dd></dl><h4><font size="3"><b><i> <a name="aboutalerts_use_throttling_to_limit_alerts"><span class="mw-headline" id="Use_throttling_to_limit_alerts">Use throttling to limit alerts</span></a></i></b></font></h4>
+<p>Use throttling to reduce the frequency at which an alert triggers. An alert can trigger frequently based on similar results that the search returns. The schedule to run an alert can also cause the alert to trigger frequently. To reduce the frequency of the alert firing, configure the following:
+</p>
+<ul><li> A time period in which to suppress results.
+</li><li> Field values that the search returns.
+</li></ul><p>For example, you can create an alert that fires when a system error occurs. For this example, assume that when the system error occurs, it occurs 20 or more times each minute. However, you want to send an alert only once every hour. To reduce the frequency of the alert firing, configure throttling for the alert. 
+</p>
+<ol><li> From the Search Page, enter the following search:<br><div class="inlineQuery splunk_search_4_3"><code><font size="2">index=_internal log_level=ERROR</font></code><br></div>
+</li><li> Select <b>Save As &gt; Alert</b>
+</li><li> For <b>Result Type</b>, click <b>Real Time</b> to configure a per-result alert.
+</li><li> Click <b>Next</b>.
+</li><li> Select the actions you want to enable.
+</li><li> Select <b>Throttle</b>.
+</li><li> Enter <b>log_level</b> to suppress the alert for the field <code><font size="2">log_level</font></code>.<br>You can configure throttling to suppress on more than one field. Use a comma-delimited list to specify fields for throttling.
+</li><li> Enter <b>1 hour</b> as the time to suppress triggering for the alert.<br><br><img alt="Alert throttle.png" src="images/1/1f/Alert_throttle.png" width="500" height="354"></li><li> Click <b>Save</b>.
+</li></ol><p>You can set up a per-result alert that throttles events that share the same <code><font size="2">clientip</font></code> and <code><font size="2">host</font></code> values. For example, a real-time search with a 60 second window triggers an alert every time an event with disk error appears. Ten events with the error message that occurs in the window triggers five disk error alerts, which is ten alerts within one minute. If the alert sends an email notification each time it triggers, you can overwhelm a email Inbox. 
+</p><p>You can configure throttling so that when one alert of this type triggers, it suppresses all successive alerts of the same type for the next 10 minutes. After each successive 10 minutes period pass, the alert can trigger again.
+</p>
+<h4><font size="3"><b><i> <a name="aboutalerts_throttling_scheduled_and_real-time_searches"><span class="mw-headline" id="Throttling_scheduled_and_real-time_searches">Throttling scheduled and real-time searches</span></a></i></b></font></h4>
+<p>For scheduled searches that run on a frequent basis, and you do not want to be notified for each run, set the throttling controls to suppress the alert to a longer time window.
+</p><p>For real-time searches, if you configure an alert so that it fires once for a trigger condition, you do not need to configure throttling. If the alert fires more than once for the trigger condition, consider throttling to suppress results.
+</p><p>When you configure throttling for a real-time search, start with a throttling period that matches the length of the base search's time window. Expand the throttling period if necessary. This prevents multiple notifications for a given event.
+</p>
+<h3> <a name="aboutalerts_scheduled_reports_compared_to_alerts"><span class="mw-headline" id="Scheduled_reports_compared_to_alerts">Scheduled reports compared to alerts</span></a></h3>
+<p>A scheduled report is similar to an alert. A scheduled report can execute an action each time the scheduled report runs. For example, a scheduled report that sends a daily report of failed log-ins sends an email even if there are no failed log-ins. 
+</p><p>An alert executes its action only when it meets specified conditions. An alert to notify of failed log-ins each hour does not send an email if there are no failed log-ins for a specific hour. 
+</p><p>For more information, see Schedule reports, in the <i>Reporting Manual</i>.
+</p>
+<h3> <a name="aboutalerts_permissions_to_create_and_share_alerts"><span class="mw-headline" id="Permissions_to_create_and_share_alerts">Permissions to create and share alerts</span></a></h3>
+<p>The ability to run an alert and edit an alert depend on the user role and capabilties assigned to that role. For information about managing permissions for knowledge objects such as alerts, see Manage knowledge object permissions in the <i>Knowledge Manager</i>.
+</p><p>By default, only users with the Admin or Power roles can do the following:
+</p>
+<ul><li> Create alerts.
+</li><li> Run real-time searches.
+</li><li> Schedule searches.
+</li><li> Save searches.
+</li><li> Share alerts.
+</li></ul><p>You can share an alert in an app so other users of the app can take advantage of the alert. You share an alert by editing the permissions of the alert. 
+</p><p>When you share an alert for a user who is not an Admin user or Power user, make sure the user has the necessary permissions to access the alerting features. For example, make sure the user has the capability to run a real-time search if you share a per result alert.
+</p><p>When you create an alert, you can edit permissions for the alert after you configure it. You can later edit permissions for the alert from the Alerts page. You can share an alert from the Alerts page:
+</p>
+<ol><li> Go to the <b>Alerts</b> page.
+</li><li> For the alert you want to share, select <b>Edit &gt; Edit Permissions</b>. <br><br><img alt="Alert permissions.png" src="images/9/98/Alert_permissions.png" width="400" height="430"><br></li><li> Select for whom to display the alert.<br><br><ul><li><b>Owner</b>. This choice makes the alert private to the creator of the alert.</li><li><b>App</b>. Display the alert for all users of the app.</li><li><b>All Apps</b>. Display the alert for all users of the Splunk Enterprise instance.</li></ul></li><li> Select read and write permissions for the user roles listed in the Permissions Window.<br><br><ul><li><b>Read</b>: Users can see the alert in the Alerts Page and run the alerts in the app.</li><li><b>Write</b>: Users with the appropriate permissions can modify, enable, and disable the alert.</li></ul></li></ol><h1>Creating alerts using Splunk Web</h1><a name="defineper-resultalerts"></a><h2> <a name="defineper-resultalerts_create_per-result_alerts"><span class="mw-headline" id="Create_per-result_alerts"> Create per-result alerts</span></a></h2>
+<p>The per-result alert is the most basic type of alert. It runs in real-time over an "all-time" time span. The alert triggers whenever the search returns a result.
+</p><p>You can create a search to retrieve events from an index. You can also use use transforming commands to return results based on processing the retrieved events. A per-result alert triggers in both cases, when the search returns an event or when a transforming command returns results. 
+</p>
+<h3> <a name="defineper-resultalerts_create_a_per-result_alert"><span class="mw-headline" id="Create_a_per-result_alert"> Create a per-result alert</span></a></h3>
+<p>The following procedure shows how to create a per-result alert.
+</p>
+<ol><li> From the Search Page, enter the following search:<br><div class="inlineQuery splunk_search_4_3"><code><font size="2">index=_internal (log_level=ERROR OR log_level=WARN* OR log_level=FATAL OR log_level=CRITICAL) | stats count as log_events</font></code><br></div>
+</li><li> Select <b>Save As &gt; Alert</b>
+</li><li> In the <b>Save As Alert</b> dialog box, enter a <b>Title</b> for the alert.
+</li><li> For <b>Alert Type</b>, select <b>Real Time</b>.<br>A per-result alert is always a real-time alert type.
+</li><li> For trigger condition, select <b>Per-Result</b>.<br>For a per-result alert, you can select only the <b>Per-Result</b> trigger condition.
+</li><li> Click <b>Next</b>.
+</li><li> Select the actions you want to enable.<br>For this example, select <b>List in Triggered Alert</b>. <br><br>See <a href="#defineper-resultalerts" class="external text">Set up alert actions</a> for information on other actions.
+</li><li> Click <b>Save</b>.
+</li><li> Click <b>Continue Editing</b>.
+</li></ol><a name="definescheduledalerts"></a><h2> <a name="definescheduledalerts_create_scheduled_alerts"><span class="mw-headline" id="Create_scheduled_alerts"> Create scheduled alerts</span></a></h2>
+<p>A scheduled alert evaluates the results of a historical search that runs over a specified time range on a regular schedule. The alert fires when it encounters the trigger condition.
+</p><p>For example, you can create a scheduled alert to monitor online sales. The search runs daily at midnight and triggers when the sum of the sales of a specific item is below 500 for the previous day. When the alert triggers, it sends an email to the appropriate administrators monitoring sales.
+</p>
+<ol><li> From the Search Page, create the following search. Select <b>Last 24 Hours</b> for the time range:<br><div class="inlineQuery splunk_search_4_3"><code><font size="2">index=_internal (log_level=ERROR OR log_level=WARN* OR log_level=FATAL OR log_level=CRITICAL) | stats count as log_events</font></code><br></div>
+</li><li> Select <b>Save As &gt; Alert</b>
+</li><li> In the <b>Save As Alert</b> dialog box, specify the following:<br><br><ul><li><b>Title</b>: Server Errors Last 24 hours</li><li><b>Alert Type</b>: Scheduled</li><li><b>Time Range</b>: Run Every Day</li><li><b>Schedule At</b>: 0:00</li><li><b>Trigger Condition</b>: Number of Results</li><li><b>Trigger if number of results</b>: is Greater than 5</li></ul><img alt="Alert create scheduled.png" src="images/0/0e/Alert_create_scheduled.png" width="600" height="318"></li><li> Click <b>Next</b>.
+</li><li> In the <b>Save As Alert</b> dialog box, specify the following:<br><br><ul><li><b>Enable Actions</b>: List in Triggered Alerts</li><li><b>When triggered, execute actions</b>: Once</li></ul>See <a href="#setupalertactions" class="external text">Set up alert actions</a> for information on other actions.<br><br><img alt="Alert create scheduled2.png" src="images/3/3d/Alert_create_scheduled2.png" width="600" height="389"></li><li> Click <b>Save</b>.
+</li><li> Click <b>Continue Editing</b>.
+</li></ol><h3> <a name="definescheduledalerts_use_cron_notation_for_scheduled_alerts"><span class="mw-headline" id="Use_cron_notation_for_scheduled_alerts">Use cron notation for scheduled alerts</span></a></h3>
+<p>When scheduling an alert, you can use cron notation for customized schedules. When specifying a cron schedule, only five cron parameters are available, not six. The sixth parameter for year, common in other forms of cron notation, is not available.
+</p><p>The following cron parameters:
+</p>
+<dl><dd><code><font size="2">* * * * *</font></code>
+</dd></dl><p>correspond to:
+</p>
+<dl><dd><code><font size="2">minute hour day month day-of-week</font></code>
+</dd></dl><p>Following are some cron examples:
+</p>
+<div class="samplecode">
+<code><font size="2"><br>*/5 * * * * &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Every 5 minutes.<br>*/30 * * * * &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Every 30 minutes.<br>0 */12 * * * &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Every 12 hours, on the hour.<br>*/20 &nbsp;* * * 1-5 &nbsp;&nbsp;Every 20 minutes, Monday through Friday.<br>0 9 1-7 * 1 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;First Monday of each month, at 9am.</font></code></div>
+<p>When you select  <b>Run on Cron Schedule</b> for the time range of a scheduled alert, enter the earliest and latest parameters for a search. What you enter overrides the time range you set when you first ran the search.
+</p><p>To avoid overlaps or gaps, the execution schedule should match the search time range. For example, to run a search every 20 minutes the search's time range should also be 20 minutes (-20m).
+</p><p><img alt="Alert cron schedule.png" src="images/4/4d/Alert_cron_schedule.png" width="600" height="395"></p>
+<h4><font size="3"><b><i> <a name="definescheduledalerts_best_practices_for_scheduled_alerts"><span class="mw-headline" id="Best_practices_for_scheduled_alerts">Best practices for scheduled alerts</span></a></i></b></font></h4>
+<p>This section discusses some best practices for scheduled alerts.
+</p>
+<h5> <a name="definescheduledalerts_coordinate_an_alert.27s_schedule_with_the_search_time_range"><span class="mw-headline" id="Coordinate_an_alert.27s_schedule_with_the_search_time_range">Coordinate an alert's schedule with the search time range</span></a></h5>
+<p>Coordinating the alert's schedule with the search time range prevents situations where event data is evaluated twice by the search. This can happen if the search time range exceeds the search schedule, resulting in overlapping event data sets. 
+</p><p>In cases where the search time range is shorter than the time range for the scheduled alert, an event might never be evaluated.
+</p>
+<h5> <a name="definescheduledalerts_schedule_alerts_with_at_least_60_seconds_of_delay"><span class="mw-headline" id="Schedule_alerts_with_at_least_60_seconds_of_delay">Schedule alerts with at least 60 seconds of delay</span></a></h5>
+<p>This practice is important in distributed search deployments where event data might not reach the indexer precisely at the moment when it is generated. A delay ensures that you are counting all events, not just the events that were quickest to get indexed.
+</p>
+<h5> <a name="definescheduledalerts_best_practices_example"><span class="mw-headline" id="Best_practices_example">Best practices example</span></a></h5>
+<p>This example shows how to configure an alert that builds 30 minutes of delay into the alert schedule. Both the search time range and the alert schedule span one hour, so there are no event data overlaps or gaps.
+</p><p>The alert runs every hour at the half hour. It collects an hour's worth of event data, beginning an hour and a half before the search runs. When the scheduled search kicks off at a designated time, such as 3:30 pm, it collects the event data that was indexed from 2:00 pm to 3:00 pm. 
+</p>
+<ol><li> From the Search Page, create a search and select <b>Save As &gt; Alert</b>.
+</li><li> In the <b>Save As Alert</b> dialog, specify the following to schedule the alert:<br><br><ul><li><b>Title</b>: Alert Example (30 Minute Delay)</li><li><b>Alert Type</b>: Scheduled</li><li><b>Time Range</b>: Run on Cron Schedule</li><li><b>Earliest</b>: -90m</li><li><b>Latest</b>: -30<br>Earliest and Latest values set the time that the search covers to a period that begins 90 minutes before the search launch time, ending 30 minutes before the search launch time.</li><li><b>Cron Expression</b>: 30 * * * *<br>The alert runs every hour on the half hour</li></ul><img alt="Alert 30 min delay schedule.png" src="images/4/40/Alert_30_min_delay_schedule.png" width="600" height="395"></li><li> Click <b>Next</b> and continue defining actions for the alert.
+</li></ol><h4><font size="3"><b><i> <a name="definescheduledalerts_manage_the_priority_of_concurrently_scheduled_searches"><span class="mw-headline" id="Manage_the_priority_of_concurrently_scheduled_searches">Manage the priority of concurrently scheduled searches</span></a></i></b></font></h4>
+<p>Depending on your Splunk Enterprise deployment, you might be able to run only one scheduled search at a time. In this case, when you schedule multiple searches to run at approximately the same time, the search scheduler ensures that all scheduled searches run consecutively for the period of time over which they gather data.
+</p><p>However, you might have cases where you need certain searches to run ahead of others. This is to ensure that the searches obtain current data or to ensure that there are no gaps in data collection. 
+</p><p>You can configure the priority of scheduled searches in the <code><font size="2">savedsearches.conf</font></code> configuration file. See "Configure the priority of scheduled reports" in the <i>Reporting Manual</i>.
+</p>
+<h3> <a name="definescheduledalerts_set_up_triggering_conditions_for_a_scheduled_alert"><span class="mw-headline" id="Set_up_triggering_conditions_for_a_scheduled_alert"> Set up triggering conditions for a scheduled alert </span></a></h3>
+<p>Trigger conditions apply to two types of conditional alerts:
+</p>
+<ul><li> Basic conditional alert
+</li><li> Advanced conditional alert
+</li></ul><p>Set the triggering conditions when you set values for the <b>Trigger condition</b> field in the <b>Save As Alert</b> dialog box, as described in the following subtopics. 
+</p>
+<h4><font size="3"><b><i> <a name="definescheduledalerts_basic_conditional_alert"><span class="mw-headline" id="Basic_conditional_alert">Basic conditional alert</span></a></i></b></font></h4>
+<p>A <b>basic conditional alert</b> triggers when the number of results of a scheduled search meet, exceed, or are less than a specified numerical value. When you create the alert, you can specify the following conditions:
+</p>
+<ul><li> Number of results
+</li><li> Number of hosts
+</li><li> Number of sources
+</li></ul><p>The alert triggers when the number of hosts in the results rises by a count of more than 12.
+</p>
+<ol><li> From the Search Page, create a search and select <b>Save As &gt; Alert</b>.
+</li><li> In the <b>Save As Alert</b> dialog box, specify the following fields to schedule the alert:<br><br><ul><li><b>Title</b>: Alert Example (Basic Conditional)</li><li><b>Alert Type</b>: Scheduled<br>You can also select Real Time for a basic conditional search.</li><li><b>Time Range</b> and <b>Schedule</b>: Select any time range and schedule.</li><li><b>Trigger Condition</b>: Number of Hosts<br>You can also select Number of Results or Number of Sources</li><li><b>Trigger if number of results</b>: Select a comparison operator and trigger value.</li></ul><img alt="Alert basic conditional schedule.png" src="images/e/eb/Alert_basic_conditional_schedule.png" width="600" height="317"></li><li> Click <b>Next</b> and continue defining actions for the alert.
+</li></ol><h5> <a name="definescheduledalerts_basic_conditional_alert_for_rolling-window_alerts"><span class="mw-headline" id="Basic_conditional_alert_for_rolling-window_alerts">Basic conditional alert for rolling-window alerts</span></a></h5>
+<p>The behavior for basic conditional alerts differs slightly for a rolling-window alert. The alert triggers when the set condition occurs within the rolling time window of the search. 
+</p><p>For example, a rolling-window alert that triggers when a time window of 60 seconds has five or more results. If the real-time search returns one result and then four more results five minutes later, the alert does not trigger. The alert does trigger If the search returns five results within a single 60-second span.
+</p>
+<h4><font size="3"><b><i> <a name="definescheduledalerts_advanced_conditional_alert"><span class="mw-headline" id="Advanced_conditional_alert">Advanced conditional alert</span></a></i></b></font></h4>
+<p>An <b>advanced conditional alert</b> uses a secondary, custom conditional search to evaluate the results of a scheduled or real-time search. The alert triggers when the custom search returns any number of results. If the alerting conditions are not met, then the custom conditional search returns zero results.
+</p><p>A secondary conditional search can help reduce the incidence of false positive alerts.
+</p><p>In the following example, the alert triggers when there are 10 or more log level events that are not INFO. When the alert triggers, it sends an email with the results of the search. The search results detail the count for each log level.
+</p>
+<ol><li> From the Search Page, create the following search. Specify <b>Last 7 days</b> for the time period. <div class="inlineQuery splunk_search_4_3"><code><font size="2">index=_internal (log_level=ERROR OR log_level=FATAL OR log_level=CRITICAL) | stats count by log_level</font></code><br></div> 
+</li><li> Select <b>Save As &gt; Alert</b>.
+</li><li> In the <b>Save As Alert</b> dialog box, specify the following fields to schedule the alert:<br><br><ul><li><b>Title</b>: Alert Example (Advanced Conditional)</li><li><b>Alert Type</b>: Scheduled<br>You can also select Real Time for an advanced conditional search.</li><li><b>Time Range</b> and <b>Schedule</b>: Select any time range and schedule.</li><li><b>Trigger Condition</b>: Custom</li><li><b>Custom condition</b>: search count &gt; 10</li></ul><img alt="Alert advanced conditional schedule.png" src="images/4/4f/Alert_advanced_conditional_schedule.png" width="600" height="316"></li><li> Click <b>Next</b>.
+</li><li>Define an action that sends an email that includes the results of the search.<br>When you configure a <b>Send Email</b> action that includes search results, the email contains the results of the original base search. It does not include the results of the custom search.
+</li></ol><p>It might appear that you can get the same results if you specify instead, the following search for the base search of a basic conditional search: 
+</p>
+<div class="inlineQuery splunk_search_4_3"><code><font size="2">log_level=ERROR OR log_level=FATAL OR log_level=CRITICAL) | stats count by log_level | search count &gt; 10</font></code><br></div> 
+<p>However, a basic conditional alert based on this search provides different results. The search results contain only log level values that are greater than 10. The results from the advanced conditional search details the count for all log levels, but triggers only when the log levels are greater than 10.
+</p>
+<h5> <a name="definescheduledalerts_advanced_conditional_alert_for_rolling-window_alerts"><span class="mw-headline" id="Advanced_conditional_alert_for_rolling-window_alerts">Advanced conditional alert for rolling-window alerts</span></a></h5>
+<p>The behavior for advanced conditional alerts differs slightly for a rolling-window alert, which runs in real-time. For a rolling-window alert, the alert triggers when the set condition occurs within the rolling time window of the search. 
+</p><p>For the previous example, you can design a rolling-window alert with the same base search and get similar results with the custom condition search. Set the rolling window to a 10 minutes time span. When the real-time search returns 10 log level entries within the 10 minute time span, the alert triggers.
+</p><p>For more examples of scheduled alerts, see <a href="#alertexamples" class="external text">"Alert examples,"</a> in this manual.
+</p>
+<a name="definerolling-windowalerts"></a><h2> <a name="definerolling-windowalerts_create_rolling-window_alerts"><span class="mw-headline" id="Create_rolling-window_alerts"> Create rolling-window alerts</span></a></h2>
+<p>Use a rolling-window alert to monitor and evaluate events in real time within a rolling window. The alert triggers only when it meets the trigger condition within a specified time period.
+</p><p>The rolling-window alert type is in some ways a hybrid of a per-result alert and a scheduled alert. A rolling-window alert and a per result alert both run in real-time. But unlike the per result alert, a rolling-window alert does not trigger each time the search returns a result. A rolling-window alert fires only when it meets specified trigger conditions within the specified time window. This makes the alert similar to a scheduled alert.
+</p><p><br></p>
+<ol><li> From the Search Page, create the following search. Select <b>Last 24 Hours</b> for the time range:<br><div class="inlineQuery splunk_search_4_3"><code><font size="2">index=_internal (log_level=ERROR OR log_level=WARN* OR log_level=FATAL OR log_level=CRITICAL) | stats count as log_events</font></code><br></div>
+</li><li> Select <b>Save As &gt; Alert</b>
+</li><li> In the <b>Save As Alert</b> dialog box, specify the following:<br><br><ul><li><b>Title</b>: Alert Example (Rolling-Window)</li><li><b>Alert Type</b>: Real Time</li><li><b>Trigger Condition</b>: Number of Results</li><li><b>Trigger if number of results</b>: is Greater than 5</li><li><b>in</b>: 30 minutes</li></ul><img alt="Alert rolling window.png" src="images/7/78/Alert_rolling_window.png" width="600" height="290"></li><li> Click <b>Next</b> and continue defining actions for the alert.<br></li></ol><h3> <a name="definerolling-windowalerts_set_the_width_of_the_rolling_window"><span class="mw-headline" id="Set_the_width_of_the_rolling_window">Set the width of the rolling window</span></a></h3>
+<p>When you create a rolling-window alert, you specify a time span for a real-time search window. Real-time search windows can be any number of minutes, hours, or days. The alert monitors events as they pass through the window in real-time. 
+</p><p>For example, you can create an alert that triggers when a login for a user fails four times in a 10 minute period. When the alert runs, various login failure events pass through this window. The alert triggers only when four login failures for the same user occur within the span of the 10 minute window. 
+</p><p>This example might appear to fail in the following scenario. A user experiences three login failures in quick succession. After 11 minutes pass, the user has another login failure. The alert does not trigger because the first three failures and the fourth failure are in different time windows.
+</p>
+<h3> <a name="definerolling-windowalerts_set_up_triggering_conditions_for_a_rolling-window_alert"><span class="mw-headline" id="Set_up_triggering_conditions_for_a_rolling-window_alert">Set up triggering conditions for a rolling-window alert</span></a></h3>
+<p>Trigger conditions apply to two types of rolling-window alerts:
+</p>
+<ul><li> Basic conditional alert
+</li><li> Advanced conditional alert
+</li></ul><p>You set the triggering conditions when you set values for the <b>Trigger condition</b> field in the <b>Save As Alert</b> dialog, as described in the following subtopics. 
+</p>
+<h4><font size="3"><b><i> <a name="definerolling-windowalerts_basic_conditional_alert"><span class="mw-headline" id="Basic_conditional_alert">Basic conditional alert</span></a></i></b></font></h4>
+<p>A <b>basic conditional alert</b> triggers when the number of results from a search, within a specified time window, meet, exceed, or are less than a specified numerical value. When you create the alert, you can specify the following conditions:
+</p>
+<ul><li> Number of results
+</li><li> Number of hosts
+</li><li> Number of sources
+</li></ul><p>You create a basic conditional alert for a rolling-window similarly to how you create one for a scheduled alert. See <a href="#definescheduledalerts_set_up_triggering_conditions_for_a_scheduled_alert" class="external text">Set up triggering conditions for a scheduled alert</a> for an example.
+</p>
+<h4><font size="3"><b><i> <a name="definerolling-windowalerts_advanced_conditional_alert"><span class="mw-headline" id="Advanced_conditional_alert">Advanced conditional alert</span></a></i></b></font></h4>
+<p>An <b>advanced conditional alert</b> uses a secondary, custom conditional search to evaluate the results of a scheduled or real-time search. For a rolling-window alert, the alert triggers when the custom search returns any number of results within the specified time window. If the alerting conditions are not met, then the custom conditional search should return zero results.
+</p><p>A secondary conditional search can help reduce the incidence of false positive alerts.
+</p><p>You create an advanced conditional alert for a rolling-window similarly to how you create one for a scheduled alert. See <a href="#definescheduledalerts_set_up_triggering_conditions_for_a_scheduled_alert" class="external text">Set up triggering conditions for a scheduled alert</a> for an example.
+</p>
+<a name="usingmanagertoupdateandexpandalertfunctionality"></a><h2> <a name="usingmanagertoupdateandexpandalertfunctionality_update_and_expand_alert_functionality"><span class="mw-headline" id="Update_and_expand_alert_functionality"> Update and expand alert functionality</span></a></h2>
+<p>You can update alerts from the following places in Splunk Web.
+</p>
+<table border="1" cellpadding="5" cellspacing="0" width="90%"><tr><th bgcolor="#C0C0C0"> Location </th><th bgcolor="#C0C0C0"> Description
+</th></tr><tr><td valign="center" align="left"> <b>Alerts page</b>
+</td><td valign="center" align="left"> Provides a listing of all all alerts created within an app. It contains options for editing an alert. Click an alert entry to view the detail page for the alert.
+</td></tr><tr><td valign="center" align="left"> <b>Alert detail page</b>
+</td><td valign="center" align="left"> Provides links to update an alert. When applicable, lists triggered alerts.
+</td></tr><tr><td valign="center" align="left"> <b>Settings</b>
+</td><td valign="center" align="left"> Alerts are a type of saved search. You can view saved searches, reports, and alerts from the <b>Searches, reports, and alerts</b> view in Settings. From this view, you can do the following:<br><br><ul><li>Create a new alert.
+</li><li>Create an alert based on an existing search.
+</li><li>Modify an alert.
+</li><li>Enable or disable an alert.
+</li><li>Delete alerts for which you have the appropriate permissions.
+</li></ul></td></tr></table><h3> <a name="usingmanagertoupdateandexpandalertfunctionality_alerts_page"><span class="mw-headline" id="Alerts_page">Alerts page</span></a></h3>
+<p>The Alerts page lists all alerts for an app. The Alerts page is available from the top-level menu for an app.
+</p><p>From the Alerts page you can do the following:
+</p>
+<ul><li> Specify which alerts to view:<br><br><ul><li> <b>All</b>: View all alerts for which you have permissions to view.
+</li><li><b>Yours</b>: View alerts that you have created.
+</li><li><b>This App's</b>: View alerts for the current app.<br>Only alerts for which you have permission to view display in the list.
+</li></ul></li></ul><ul><li> Click an alert to open the detail page for an alert.
+</li></ul><ul><li> Open an alert from the Search page.<br>Use this option to view or update the search for an alert. 
+</li></ul><ul><li> Edit the details for an alert from the <b>Edit</b> menu.
+</li></ul><h4><font size="3"><b><i> <a name="usingmanagertoupdateandexpandalertfunctionality_modify_the_search_for_an_alert_from_the_alerts_page"><span class="mw-headline" id="Modify_the_search_for_an_alert_from_the_Alerts_page">Modify the search for an alert from the Alerts page</span></a></i></b></font></h4>
+<p>You can modify the search for an alert by opening the alert in Search.
+</p>
+<ol><li> From the <b>Alerts page</b>, locate the alert that you want to modify.
+</li><li> For the alert, click <b>Open in Search</b>.
+</li><li> In the Search page, modify the search.
+</li><li> Run the modified search.
+</li><li> Click <b>Save</b> to update the alert. Click <b>Save</b> in the dialog box that opens.
+</li><li> Select from the following:<br><br><ul><li><b>View Alert</b><br>Opens the detail page for the alert.</li><li><b>Continue Editing</b><br>Return to the Search page</li><li><b>Permissions</b><br>To view and modify the permissions for the alert.</li></ul></li></ol><h4><font size="3"><b><i> <a name="usingmanagertoupdateandexpandalertfunctionality_update_the_details_of_an_alert"><span class="mw-headline" id="Update_the_details_of_an_alert">Update the details of an alert</span></a></i></b></font></h4>
+<ol><li> From the <b>Alerts page</b>, locate the alert that you want to modify.
+</li><li> For the alert, click <b>Edit</b> and select the detail that you want to modify.<br>Update the alert in the <b>Edit Alert</b> dialog box that opens.<br>For example, select <b>Edit Actions</b> and modify the alert actions that appear in the <b>Edit Alert</b> dialog.
+</li><li> Click <b>Save</b>, then click <b>Done</b>.
+</li></ol><h3> <a name="usingmanagertoupdateandexpandalertfunctionality_alert_details_page"><span class="mw-headline" id="Alert_details_page">Alert details page</span></a></h3>
+<p>The Alert details page provides access to editing views for alerts. You can modify the search and update details from this page. 
+</p><p>The Alert details page also displays the trigger history for the alert.
+</p>
+<h4><font size="3"><b><i> <a name="usingmanagertoupdateandexpandalertfunctionality_modify_the_search_for_an_alert_from_the_alert_detail_page"><span class="mw-headline" id="Modify_the_search_for_an_alert_from_the_Alert_detail_page">Modify the search for an alert from the Alert detail page</span></a></i></b></font></h4>
+<ol><li> From the alert detail page, select <b>Edit &gt; Open in Search</b>.
+</li><li> In the Search page that opens, modify the search.
+</li><li> Run the modified search.
+</li><li> Click <b>Save</b> to update the alert. Click <b>Save</b> in the dialog that appears.
+</li><li> Select from the following:<br><br><ul><li><b>View Alert</b><br>Opens the detail page for the alert.</li><li><b>Continue Editing</b><br>Return to the search page</li><li><b>Permissions</b><br>To view and modify the permissions for the alert.</li></ul></li></ol><h4><font size="3"><b><i> <a name="usingmanagertoupdateandexpandalertfunctionality_view_and_modify_alert_details"><span class="mw-headline" id="View_and_modify_alert_details">View and modify alert details</span></a></i></b></font></h4>
+<p>The Alert details page provides a listing of the current settings for an alert. You can view and modify the following details:
+</p>
+<ul><li> Whether the alert is enabled
+</li><li>Alert type, Scheduled or Real-time
+</li><li>Trigger condition
+</li><li>Actions
+</li><li>Permissions
+</li></ul><h4><font size="3"><b><i> <a name="usingmanagertoupdateandexpandalertfunctionality_view_an_alert.27s_trigger_history"><span class="mw-headline" id="View_an_alert.27s_trigger_history">View an alert's trigger history</span></a></i></b></font></h4>
+<p>If you specify List in Triggered Alerts as an alert action, the alert detail page lists the trigger history for the alert.
+</p><p>From the trigger history you can view the results that triggered the alert.
+</p><p>You can also view trigger history from the Alerts Manager. 
+</p>
+<ol><li>From the Splunk Enterprise menu bar, select <b>Activity &gt; Triggered Alerts</b>.
+</li><li> In the Alert Manager, filter the results according to <b>App</b>, <b>Owner</b>, <b>Severity</b>, and <b>Alert</b> name.
+</li><li>Take the following actions from the Alert Manager:
+</li></ol><dl><dd><ul><li>View the results.
+</li><li>Edit the search.
+</li><li>Delete a triggered alert listing.
+</li></ul></dd></dl><p>For more information, see <a href="#reviewtriggeredalerts" class="external text">Review triggered alerts</a>.
+</p>
+<h3> <a name="usingmanagertoupdateandexpandalertfunctionality_update_alerts_from_settings"><span class="mw-headline" id="Update_alerts_from_Settings">Update alerts from Settings</span></a></h3>
+<p>The <b>Searches, reports, and alerts</b> view in Settings lets you enter the information to create and modify alerts. Some fields for modifying an alert are available only from the Settings. You typically create alerts from the Search page by saving a search as an alert. You typically modify alerts from the Alerts page or an alert detail page.
+</p><p>However, you can create, view, and update alerts from Settings. From Settings you can also define the retention time and enable summary indexing for alerts. Retention time defines how long to keep a record of triggered alerts, and associated artifacts, available. Summary indexing enables faster overall searching.
+</p>
+<dl><dd><b>Note</b>: Creating and editing alerts from Settings is for advanced users.
+</dd></dl><p>To view a listing of alerts in Settings:
+</p>
+<ol><li> Select <b>Settings &gt; Searches, reports, and alerts</b>. <br>This view lists all saved searches and reports. An alert is a type of saved search.
+</li><li> Filter the list of searches and reports using the <b>App context</b> and <b>Owner</b> menus.
+</li></ol><h4><font size="3"><b><i> <a name="usingmanagertoupdateandexpandalertfunctionality_create_an_alert_from_settings"><span class="mw-headline" id="Create_an_alert_from_Settings">Create an alert from Settings</span></a></i></b></font></h4>
+<ol><li>In the <b>Searches, reports, and alerts</b> view in Settings, click <b>New</b>.<br>This opens a view that lets you create a new scheduled search.
+</li><li>Fill in the details of the scheduled search you want to create.
+</li><li> Click <b>Schedule this search</b> to create the alert.
+</li><li> Specify details for the alert.<br>The editing fields here correspond to the editing fields described in <a href="#defineper-resultalerts" class="external text">Create per-result alerts</a>, <a href="#definescheduledalerts" class="external text">Create scheduled alerts</a>, and <a href="#definerolling-windowalerts" class="external text">Create rolling-window alerts</a>.
+</li><li> Click <b>Save</b>.
+</li></ol><h4><font size="3"><b><i> <a name="usingmanagertoupdateandexpandalertfunctionality_convert_an_existing_search_to_an_alert"><span class="mw-headline" id="Convert_an_existing_search_to_an_alert">Convert an existing search to an alert</span></a></i></b></font></h4>
+<ol><li>In the <b>Searches, reports, and alerts</b> view in Settings, locate the search for which you want to create an alert.
+</li><li>Click the name of the search.
+</li><li> Click <b>Schedule this search</b> to create the alert.
+</li><li> Specify details for the alert.<br>The editing fields here correspond to the editing fields described in <a href="#defineper-resultalerts" class="external text">Create per-result alerts</a>, <a href="#definescheduledalerts" class="external text">Create scheduled alerts</a>, and <a href="#definerolling-windowalerts" class="external text">Create rolling-window alerts</a>.
+</li><li> Click <b>Save</b>.
+</li></ol><h4><font size="3"><b><i> <a name="usingmanagertoupdateandexpandalertfunctionality_modify_an_alert_from_settings"><span class="mw-headline" id="Modify_an_alert_from_Settings">Modify an alert from Settings</span></a></i></b></font></h4>
+<p>The following alert properties are only available from the <b>Searches, reports, and alerts</b> view. 
+</p>
+<ul><li>Expiration
+</li><li>Summary indexing
+</li></ul><p>See <a href="#usingmanagertoupdateandexpandalertfunctionality_define_alert_retention_time" class="external text">Define alert retention time</a> and <a href="#usingmanagertoupdateandexpandalertfunctionality_enable_summary_indexing_for_an_alert" class="external text">Enable summary indexing for an alert</a> for details.
+To modify an alert from this view:
+</p>
+<ol><li>In the <b>Searches, reports, and alerts</b> view in Settings, locate the alert that you want to modify.
+</li><li>Click the name of the search.
+</li><li> Click <b>Schedule this search</b> to create the alert.
+</li><li> Specify details for the alert.<br>The editing fields here correspond to the editing fields described in <a href="#defineper-resultalerts" class="external text">Create per-result alerts</a>, <a href="#definescheduledalerts" class="external text">Create scheduled alerts</a>, and <a href="#definerolling-windowalerts" class="external text">Create rolling-window alerts</a>.
+</li><li> Click <b>Save</b>.
+</li></ol><h4><font size="3"><b><i> <a name="usingmanagertoupdateandexpandalertfunctionality_define_alert_retention_time"><span class="mw-headline" id="Define_alert_retention_time"> Define alert retention time</span></a></i></b></font></h4>
+<p>Retention time is how long to keep a record of triggered alerts, and associated artifacts, available. You can view the listing of triggered alerts from the detail page for an alert. 
+</p>
+<ol><li>When editing an alert, select the retention time from the <b>Expiration</b> menu.<br>Select from the presets or specify a custom time.
+</li><li>Verify that the <b>List in Triggered Alerts</b> check box is selected.
+</li></ol><p>To review and manage your triggered alerts, go to the Alert manager by clicking the <b>Triggered Alerts</b> link on the Splunk Bar. For more information, see <a href="#reviewtriggeredalerts" class="external text">"Review triggered alerts"</a> in this manual.
+</p>
+<h4><font size="3"><b><i> <a name="usingmanagertoupdateandexpandalertfunctionality_enable_summary_indexing_for_an_alert"><span class="mw-headline" id="Enable_summary_indexing_for_an_alert"> Enable summary indexing for an alert </span></a></i></b></font></h4>
+<p>You can enable <b>summary indexing</b> for an alert. Summary indexing lets you write the results of a report to a separate index. This enables faster searching overall. See Use summary indexing for increased reporting efficiency.
+</p>
+<ul><li> To enable summary indexing, click the <b>Enable</b> check box in the <b>Summary Indexing</b> section.<br>The <b>Alert condition</b> changes to "always." Summary indexing for an alert cannot be conditional. If you want the alert to trigger on certain conditions, disable summary indexing for the alert.
+</li></ul><a name="setupalertactions"></a><h2> <a name="setupalertactions_set_up_alert_actions"><span class="mw-headline" id="Set_up_alert_actions"> Set up alert actions</span></a></h2>
+<p>You can enable the following alert actions:
+</p>
+<ul><li> Send email notification.<br>The email notification can include information related to the alert.
+</li><li> Run scripts.
+</li><li> Enable RSS notification for the alert.
+</li><li> Enable summary indexing for alerts.
+</li><li> Track the alert in Splunk Enterprise Settings.
+</li></ul><h3> <a name="setupalertactions_email_notification"><span class="mw-headline" id="Email_notification"> Email notification</span></a></h3>
+<p>You can configure an alert to send an email notification to specified recipients when the alert triggers. The email notification is a multipart MIME message that includes both HTML and text parts.
+</p><p>You configure the email notification action for an alert when you save the alert from the Search page. You can also configure email notification from the Alerts Page and directly from a search command.
+</p><p>Before you can send an email notification, configure the email notification settings in Settings. See <a href="#setupalertactions_configure_email_notification_settings" class="external text">Configure email notification settings</a>.
+</p>
+<h4><font size="3"><b><i> <a name="setupalertactions_email_notification_contexts"><span class="mw-headline" id="Email_notification_contexts">Email notification contexts</span></a></i></b></font></h4>
+<p>There are several contexts from which you can send email notifications. The email options available differ, depending on the context.
+</p>
+<ul><li> Alert actions<br>Send email notifications as an alert action from a search. Specify the notification from the Search Page, a listing in the Alerts Page, or directly from the search command.
+</li></ul><ul><li> Scheduled report<br>Configure email notifications for a scheduled report either from a listing in the Reports Page or from a report.
+</li></ul><ul><li> Scheduled PDF delivery of dashboards<br>Configure PDF delivery either from a listing in the Dashboards Page or from a dashboard.
+</li></ul><p>This topic covers alert actions from a search job. See Schedule reports and Generate Dashboard PDFs for information on the other contexts for email notification.
+</p>
+<h4><font size="3"><b><i> <a name="setupalertactions_configure_email_notification_for_alerts"><span class="mw-headline" id="Configure_email_notification_for_alerts">Configure email notification for alerts</span></a></i></b></font></h4>
+<p>You configure email notifications from the Search Page when you save a search. You can also configure email notifications for an alert listed on the Alerts Page by editing an alert's actions. The procedure is the same as from the Search page.
+</p><p>After running a search from the Search page, save the search as an alert and configure email notification settings.
+</p>
+<ol><li> Run the search.
+</li><li> Select <b>Save As &gt; Alert</b>.
+</li><li> Provide a <b>Title</b> and other information about the alert. Click <b>Next</b>.
+</li><li> Select <b>Send Email</b>.<br>The Email Actions dialog box opens.<br><img alt="AlertEmailNotification.png" src="images/3/32/AlertEmailNotification.png" width="650" height="565"></li><li> Specify the following:<br><br><ul><li><b>To</b>, <b>CC</b>, and <b>BCC</b> email recipients.<br>Specify a comma-separated list of email recipients.</li><li><b>Priority</b><br>Enforcement of priority depends on your email client.</li><li><b>Subject</b></li><li><b>Message</b></li><li><b>Include</b><br>You can include the following items:<br><br><b>Information about the search</b><br>&nbsp;&nbsp;Link to the alert<br>&nbsp;&nbsp;Search string<br>&nbsp;&nbsp;Trigger condition<br>&nbsp;&nbsp;Trigger time<br><br><b>Information about search results</b><br>&nbsp;&nbsp;Link to results<br>&nbsp;&nbsp;Inline listing of results, as a table, raw events, or CSV file<br>&nbsp;&nbsp;Results as a PDF attachment<br>&nbsp;&nbsp;Results as a CSV attachment</li></ul></li><li> Specify other alert actions.<br>See <a href="#setupalertactions_run_a_script" class="external text">Run a script</a> and <a href="#setupalertactions_create_an_rss_feed" class="external text">Create an RSS feed</a>.
+</li><li> Click <b>Save</b>.
+</li></ol><h4><font size="3"><b><i> <a name="setupalertactions_send_email_notification_from_a_search_command"><span class="mw-headline" id="Send_email_notification_from_a_search_command">Send email notification from a search command</span></a></i></b></font></h4>
+<p>You can send email notifications directly from the <code><font size="2">sendemail</font></code> search command. For example:
+</p>
+<div class="inlineQuery splunk_search_4_3"><code><font size="2"> index=main | head 5 | sendemail to=example@splunk.com server=mail.example.com subject="Here is an email notification" message="This is an example message" sendresults=true inline=true format=raw sendpdf=true </font></code><br></div>
+<p>See the sendemail command listing in the <i>Search Reference</i> for details.
+</p>
+<h4><font size="3"><b><i> <a name="setupalertactions_use_tokens_in_email_notifications"><span class="mw-headline" id="Use_tokens_in_email_notifications">Use tokens in email notifications</span></a></i></b></font></h4>
+<p>A token is a type of variable that represents data generated by a search job. Splunk Enterprise provides tokens that you can use to include information generated by a search in the fields of an email:
+</p>
+<ul><li>To
+</li><li>Cc
+</li><li>Bcc
+</li><li>Subject
+</li><li>Message
+</li><li>Footer
+</li></ul><p>Access the value of a token with the following syntax:
+</p>
+<div class="samplecode">$&lt;token-name&gt;$</div>
+<p>For example, place the following token in the subject field of an email notification to reference the search ID of a search job.
+</p>
+<div class="samplecode">Search results from $job.sid$</div>
+<h4><font size="3"><b><i> <a name="setupalertactions_tokens_available_for_email_notifications"><span class="mw-headline" id="Tokens_available_for_email_notifications">Tokens available for email notifications</span></a></i></b></font></h4>
+<p>This section lists common tokens you can use in email notifications. There are four categories of tokens that access data generated from a search. The context for using the tokens differ.
+</p>
+<table border="0" style="width:100%;" cellpadding="6"><tr><th style="background: #efefef;width:20%" bgcolor="#C0C0C0"> Category
+</th><th style="background: #efefef;" bgcolor="#C0C0C0"> Description
+</th><th style="background: #efefef;" bgcolor="#C0C0C0"> Context
+</th></tr><tr><td valign="center" align="left"> <b>Search metadata</b>
+</td><td valign="center" align="left"> Information about the search.
+</td><td valign="center" align="left"> Alert actions from search<br>Scheduled reports<br>Scheduled PDF delivery of dashboards
+</td></tr><tr><td valign="center" align="left"> <b>Search results</b>
+</td><td valign="center" align="left"> Access results of a search
+</td><td valign="center" align="left"> Alert actions from search<br>Scheduled reports
+</td></tr><tr><td valign="center" align="left"> <b>Job information</b>
+</td><td valign="center" align="left"> Data specific to a search job
+</td><td valign="center" align="left"> Alert actions from search<br>Scheduled reports
+</td></tr><tr><td valign="center" align="left"> <b>Server information</b>
+</td><td valign="center" align="left"> Information about the Splunk Enterprise server
+</td><td valign="center" align="left"> Alert actions from search<br>Scheduled reports<br>Scheduled PDF delivery of dashboards
+</td></tr></table><p>In addition to the common tokens listed in this topic, the <code><font size="2">savedsearches.conf</font></code> and <code><font size="2">alert_action.conf</font></code> configuration files list attributes whose values are available from tokens. To access these attribute values, place the attribute between the '$' token delimiters. For example, to access the subject of an email notification, reference the following attribute listed in <code><font size="2">savedsearches.conf</font></code>:
+</p>
+<div class="samplecode">$action.email.subject$</div>
+<h5> <a name="setupalertactions_tokens_that_access_search_metadata"><span class="mw-headline" id="Tokens_that_access_search_metadata">Tokens that access search metadata</span></a></h5>
+<p>Common tokens that access information about a search. These tokens are available from the following contexts:
+</p>
+<ul><li> Alert actions
+</li><li> Scheduled reports
+</li><li> Scheduled PDF delivery of dashboards
+</li></ul><p>Here are some of the common tokens available.
+</p>
+<table border="0" style="width:80%;" cellpadding="6"><tr><th style="background: #efefef;width:30%" bgcolor="#C0C0C0"> Token
+</th><th style="background: #efefef;" bgcolor="#C0C0C0"> Description
+</th></tr><tr><td valign="center" align="left"> $action.email.hostname$
+</td><td valign="center" align="left"> Hostname of the email server.
+</td></tr><tr><td valign="center" align="left"> $action.email.priority$
+</td><td valign="center" align="left"> Priority of the search.
+</td></tr><tr><td valign="center" align="left"> $app$
+</td><td valign="center" align="left"> Name of the app containing the search.
+</td></tr><tr><td valign="center" align="left"> $cron_schedule$
+</td><td valign="center" align="left"> Cron schedule for the app.
+</td></tr><tr><td valign="center" align="left"> $description$
+</td><td valign="center" align="left"> Description of the search.
+</td></tr><tr><td valign="center" align="left"> $name$
+</td><td valign="center" align="left"> Name of the search.
+</td></tr><tr><td valign="center" align="left"> $next_scheduled_time$
+</td><td valign="center" align="left"> The next time the search runs.
+</td></tr><tr><td valign="center" align="left"> $owner$
+</td><td valign="center" align="left"> Owner of the search.
+</td></tr><tr><td valign="center" align="left"> $results_link$
+</td><td valign="center" align="left"> (Alert actions and scheduled reports only) Link to the search results.
+</td></tr><tr><td valign="center" align="left"> $search$
+</td><td valign="center" align="left"> The actual search.
+</td></tr><tr><td valign="center" align="left"> $trigger_date$
+</td><td valign="center" align="left"> (Alert actions only) The date that triggers the alert.
+</td></tr><tr><td valign="center" align="left"> $trigger_time$
+</td><td valign="center" align="left"> (Alert actions only) The scheduled time the alert runs.
+</td></tr><tr><td valign="center" align="left"> $type$
+</td><td valign="center" align="left"> Indicates if the search is from an alert, report, view, or the search command.
+</td></tr><tr><td valign="center" align="left"> $view_link$
+</td><td valign="center" align="left"> Link to view the saved report.
+</td></tr><tr><td valign="center" align="left"> $alert.severity$
+</td><td valign="center" align="left"> Severity level of the alert.
+</td></tr><tr><td valign="center" align="left"> $alert.expires$
+</td><td valign="center" align="left"> Time the alert expires.
+</td></tr></table><h5> <a name="setupalertactions_tokens_available_from_results"><span class="mw-headline" id="Tokens_available_from_results">Tokens available from results</span></a></h5>
+<p>From results, you use the <code><font size="2">result.&lt;fieldname&gt;</font></code> token to access the first value of a specified field in search results. This token is available from the following contexts:
+</p>
+<ul><li> Alert actions
+</li><li> Scheduled reports
+</li></ul><table border="0" style="width:80%;" cellpadding="6"><tr><th style="background: #efefef;width:30%" bgcolor="#C0C0C0"> Token
+</th><th style="background: #efefef;" bgcolor="#C0C0C0"> Description
+</th></tr><tr><td valign="center" align="left"> $result.<i>fieldname</i>$
+</td><td valign="center" align="left"> Returns the first value for the specified field name from the first result in the search. The field name must be present in the search.
+</td></tr></table><h5> <a name="setupalertactions_tokens_that_access_job_information"><span class="mw-headline" id="Tokens_that_access_job_information">Tokens that access job information</span></a></h5>
+<p>Common tokens that access data specific to a search job, such as the search ID or messages generated by the search job. These tokens are available from the following contexts:
+</p>
+<ul><li> Alert actions
+</li><li> Scheduled reports
+</li></ul><table border="0" style="width:80%;" cellpadding="6"><tr><th style="background: #efefef;width:30%" bgcolor="#C0C0C0"> Token
+</th><th style="background: #efefef;" bgcolor="#C0C0C0"> Description
+</th></tr><tr><td valign="center" align="left"> $job.earliestTime$
+</td><td valign="center" align="left"> Initial time a search job starts.
+</td></tr><tr><td valign="center" align="left"> $job.eventSearch$
+</td><td valign="center" align="left"> Subset of the search that contains the part of the search before any transforming commands.
+</td></tr><tr><td valign="center" align="left"> $job.latestTime$
+</td><td valign="center" align="left"> Latest time recorded for the search job.
+</td></tr><tr><td valign="center" align="left"> $job.messages$
+</td><td valign="center" align="left"> List of error and debug messages generated by the search job.
+</td></tr><tr><td valign="center" align="left"> $job.resultCount$
+</td><td valign="center" align="left"> Number of results returned by the search job.
+</td></tr><tr><td valign="center" align="left"> $job.runDuration$
+</td><td valign="center" align="left"> Time, in seconds, that the search took to complete.
+</td></tr><tr><td valign="center" align="left"> $job.sid$
+</td><td valign="center" align="left"> Search ID.
+</td></tr><tr><td valign="center" align="left"> $job.label$
+</td><td valign="center" align="left"> Name given to the search job.
+</td></tr></table><h5> <a name="setupalertactions_tokens_available_from_server"><span class="mw-headline" id="Tokens_available_from_server">Tokens available from server</span></a></h5>
+<p>Common tokens that provide details available from your Splunk Enterprise server. They are available in the following contexts:
+</p>
+<ul><li> Alert actions
+</li><li> Scheduled reports
+</li><li> Scheduled PDF delivery of dashboards
+</li></ul><table border="0" style="width:80%;" cellpadding="6"><tr><th style="background: #efefef;width:30%" bgcolor="#C0C0C0"> Token
+</th><th style="background: #efefef;" bgcolor="#C0C0C0"> Description
+</th></tr><tr><td valign="center" align="left"> $server.build$
+</td><td valign="center" align="left"> Build number of the Splunk Enterprise instance.
+</td></tr><tr><td valign="center" align="left"> $server.serverName$
+</td><td valign="center" align="left"> Server name hosting the Splunk Enterprise instance.
+</td></tr><tr><td valign="center" align="left"> $server.version$
+</td><td valign="center" align="left"> Version number of the Splunk Enterprise instance.
+</td></tr></table><h5> <a name="setupalertactions_deprecated_email_notification_tokens"><span class="mw-headline" id="Deprecated_email_notification_tokens">Deprecated email notification tokens</span></a></h5>
+<p>The following tokens from prior releases of Splunk Enterprise are deprecated.
+</p>
+<table border="0" style="width:80%;" cellpadding="6"><tr><th style="background: #efefef;width:30%" bgcolor="#C0C0C0"> Token
+</th><th style="background: #efefef;" bgcolor="#C0C0C0"> Description
+</th></tr><tr><td valign="top" align="left"> $results.count$
+</td><td valign="top" align="left"> (Deprecated) Use $job.resultCount$.
+</td></tr><tr><td valign="center" align="left"> $results.url$
+</td><td valign="center" align="left"> (Deprecated) Use $results_link$.
+</td></tr><tr><td valign="center" align="left"> $results.file$
+</td><td valign="center" align="left"> (Deprecated) No equivalent available.
+</td></tr><tr><td valign="center" align="left"> $search_id$
+</td><td valign="center" align="left"> (Deprecated) Use $job.id$.
+</td></tr></table><h4><font size="3"><b><i> <a name="setupalertactions_configure_email_notification_settings"><span class="mw-headline" id="Configure_email_notification_settings">Configure email notification settings</span></a></i></b></font></h4>
+<p>Before you send an email notification for an alert, configure the email notification settings. Configure email notifications by editing the <code><font size="2">alert_actions.conf</font></code> configuration file or from Splunk Web.
+</p><p>To configure email alert settings from a configuration file, see alert_actions.conf.
+</p><p>Configure email alert settings from Splunk Web.
+</p>
+<ol><li> From Splunk Web, select <b>Settings &gt; System settings &gt; Email settings</b>.
+</li><li> Select <b>Mail Server Settings</b>:<br><br><ul><li><b>Mail host</b><br>The default is localhost. To schedule PDF delivery requires additional configuration of user roles. See <a href="#setupalertactions_user_role_configuration_to_schedule_pdf_delivery_of_dashboards" class="external text">User role configuration to schedule PDF delivery of dashboards</a>. </li><li><b>Email security</b></li><li><b>Username</b><br><b>Password</b><br>User name and password are optional. You do not need to specify these fields to configure email notification.</li></ul></li><li> Specify <b>Email Format</b>:<br><br><ul><li><b>Link hostname</b><br>The host name of the server from which to create URLs for outgoing results.<br><br>This is also the search head host name for the instance sending requests to a PDF Report Server. Use the Remote PDF Report Server to print dashboards built with advanced XML. Set this option only if your environment improperly auto-detects the host name. See Dashboards and forms that use advanced XML.</li><li><b>Send emails as</b><br>The From field in the email.</li><li><b>Email footer</b><br>Text to be added as a footer to each email. You can specify tokens in the email footer. See <a href="#setupalertactions_use_tokens_in_email_notifications" class="external text">Use tokens in email notifications</a>.</li></ul></li><li> Specify <b>PDF Report Settings</b>.<br><br><ul><li><b>Report Paper Size</b></li><li><b>Report Paper Orientation</b></li></ul></li><li> Click <b>Save</b>.
+</li></ol><h4><font size="3"><b><i> <a name="setupalertactions_user_role_configuration_to_schedule_pdf_delivery_of_dashboards"><span class="mw-headline" id="User_role_configuration_to_schedule_PDF_delivery_of_dashboards">User role configuration to schedule PDF delivery of dashboards</span></a></i></b></font></h4>
+<p>For a user to schedule PDF delivery of dashboards, the user role must contain the following capabilities:
+</p>
+<ul><li> schedule_search
+</li><li> admin_all_objects<br>This capability is required only if the mail host requires log-in credentials.
+</li></ul><p>See About defining roles with capabilities.
+</p>
+<h3> <a name="setupalertactions_run_a_script_for_an_alert_action"><span class="mw-headline" id="Run_a_script_for_an_alert_action">Run a script for an alert action</span></a></h3>
+<p>You can run an alert script when a alert triggers. Select <b>Run a script</b> under <b>Enable actions</b>. Enter the file name of the script that you want to run. 
+</p><p>For example, you can configure an alert to run a script that generates a Simple Network Management Protocol (SNMP) trap notification. The script sends the notification to another system such as a Network Systems Management console. You can configure a different alert that runs a script that calls an API, which in turn sends the triggering event to another system.  
+</p>
+<dl><dd><b>Note:</b> For security reasons, place all alert scripts in either of the following locations:<br><br><ul><li> <code><font size="2">$SPLUNK_HOME/bin/scripts</font></code></li><li><code><font size="2">$SPLUNK_HOME/etc/&lt;AppName&gt;/bin/scripts</font></code></li></ul></dd></dl><p>For details on alert script configuration using <code><font size="2">savedsearches.conf</font></code> with a shell script or batch file that you create, see "Configure scripted alerts" in this manual.
+</p><p>If you are having trouble with alert scripts, see Troubleshooting alert scripts on the Splunk Community Wiki.
+</p>
+<h3> <a name="setupalertactions_show_triggered_alerts_in_the_alert_manager"><span class="mw-headline" id="Show_triggered_alerts_in_the_Alert_manager">Show triggered alerts in the Alert manager</span></a></h3>
+<p>Select the <b>List in Triggered Alerts</b> action to display triggered alerts in the Alert manager. The Alert manager lists details of triggered alerts for 24 hours or a specified duration. See <a href="#reviewtriggeredalerts" class="external text">"Review triggered alerts"</a> in this manual.
+</p>
+<h4><font size="3"><b><i> <a name="setupalertactions_give_tracked_alerts_a_severity_level"><span class="mw-headline" id="Give_tracked_alerts_a_severity_level"> Give tracked alerts a severity level </span></a></i></b></font></h4>
+<p>When listing a triggered alert, you can specify a <b>Severity</b> level. Severity levels are informational only. They let you group and highlight alerts in the Alert Manager according to the severity levels. You decide which level applies to the alert.
+</p><p>You can choose from the following severity levels. The default level is Medium.
+</p>
+<ul><li>Info
+</li><li>Low
+</li><li>Medium
+</li><li>High
+</li><li>Critical
+</li></ul><h3> <a name="setupalertactions_create_an_rss_feed"><span class="mw-headline" id="Create_an_RSS_feed">Create an RSS feed</span></a></h3>
+<p>You can add an RSS feed for alert notifications. When the alert triggers, the alert generates notification to the RSS feed. An alert must trigger at least once to generate the RSS feed. 
+</p><p>This alert action is available only from Settings. 
+</p>
+<ol><li>Go to <b>Settings &gt; Searches, reports, and alerts</b>.
+</li><li>Select the alert you are updating.
+</li><li>Scroll to <b>Alert actions</b>.
+</li><li>For <b>Add to RSS</b>, select <b>Enable</b>. 
+</li><li>Return to <b>Settings &gt; Searches, reports, and alerts</b>.
+</li><li>Click the RSS feed icon to subscribe to the feed.<br><br><img alt="Alert rss.png" src="images/9/94/Alert_rss.png" width="500" height="57"><br>You are given several options to subscribe to the feed.
+</li></ol><p><br>
+When an alert with the <b>Add to RSS</b> action triggers, it generates a notification to its RSS feed. The feed is located at:
+</p>
+<dl><dd><code><font size="2">http://[splunkhost]:[port]/[locale]/rss/[alert_name]</font></code>
+</dd></dl><p>For example, here is the location for an RSS feed for an alert named "Errors in the last 24 hours", on a Splunk Enterprise instance using port 8000, and on a machine named "MyHost."
+</p>
+<dl><dd><code><font size="2">http://MyHost:8000/en-US/rss/Errors%20in%20the%20last%2024%20hours</font></code>.
+</dd></dl><p>In <b>Settings &gt; Searches, reports, and alerts</b>, click the RSS Feed icon to subscribe to the RSS feed.
+</p>
+<dl><dd><b>Caution:</b> The RSS feed is available to any user with access to the web server that displays the feed. Unauthorized users cannot follow the RSS link back to the Splunk Enterprise application to view the results of a specific search. But unauthorized users can see the summarization displayed in the RSS feed. The summarization includes the name of the search that was run and the number of results returned by the search. 
+</dd></dl><p>This example shows the XML that generates the feed.
+</p>
+<div class="samplecode">
+<code><font size="2"><br>&lt;?xml version="1.0" encoding="UTF-8"?&gt;<br>&lt;rss version="2.0"&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;channel&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;title&gt;Alert: errors last15&lt;/title&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;link&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;http://localhost:8000/app/search/@go?sid=scheduler_Z2d1cHRh<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/link&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;description&gt;Reports Feed for report errors last15&lt;/description&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;item&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;title&gt;errors last15&lt;/title&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;link&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;http://localhost:8000/app/search/@go?sid=scheduler_Z2d1cHRh<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/link&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;description&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Alert trigger: errors last15, results.count=123<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/description&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;pubDate&gt;Mon, 01 Feb 2010 12:55:09 -0800&lt;/pubDate&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/item&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/channel&gt;<br>&lt;/rss&gt;<br></font></code></div>
+<h3> <a name="setupalertactions_specify_fields_to_show_in_alerts_through_search_language"><span class="mw-headline" id="Specify_fields_to_show_in_alerts_through_search_language"> Specify fields to show in alerts through search language </span></a></h3>
+<p>The results of an alerting search job (in an alert email, for example) includes all the fields in those results. To include or exclude specific fields from the results, use the <code><font size="2">fields</font></code> command in the base search for the alert.
+</p>
+<ul><li> To eliminate a field from the search results, pipe your search to <code><font size="2">fields - $FIELDNAME</font></code>.
+</li><li> To add a field to the search results, pipe your search to <code><font size="2">fields + $FIELDNAME</font></code>.
+</li></ul><p>You can specify multiple fields in one string. The following search generates an alert that excludes <code><font size="2">$FIELD1</font></code> and <code><font size="2">$FIELD2</font></code>, but includes <code><font size="2">$FIELD3</font></code> and <code><font size="2">$FIELD4</font></code>.
+</p>
+<div class="inlineQuery splunk_search_4_3"><code><font size="2">yoursearch | fields - $FIELD1,$FIELD2 + $FIELD3,$FIELD4</font></code><br></div>
+<h3> <a name="setupalertactions_enable_summary_indexing_in_settings"><span class="mw-headline" id="Enable_summary_indexing_in_Settings"> Enable summary indexing in Settings</span></a></h3>
+<p>Summary indexing is an action that you can configure for any alert using <b>Settings &gt; Searches and Reports</b>. Use summary indexing to perform analysis/reports on large amounts of data over long timespans. Typically this can be quite time consuming and a drain on performance if several users are running similar searches on a regular basis. 
+</p>
+<dl><dd><b>Caution:</b> For summary indexing you typically use reporting commands to properly construct the search that populates the summary index.  Before setting up a summary index, read "Use summary indexing for increased reporting efficiency" in the <i>Knowledge Manager</i> manual.
+</dd></dl><p>With summary indexing, you base an alert on a search that computes sufficient statistics (a summary) for events covering a slice of time. The search is set up so that each time it runs on its schedule, the search results are saved into a summary index that you designate. You can then run searches against this smaller (and thus faster) summary index instead of working with the much larger dataset from which the summary index receives its events. 
+</p>
+<dl><dd><b>Note:</b> You do not need to use summary indexing for searches that already benefit from report acceleration. For more information and a distinction between these two methods of speeding up slow running searches, see "About report acceleration and summary indexing" in the <i>Knowledge Manager</i> manual.
+</dd></dl><p>To set up summary indexing for an alert, go to <b>Settings &gt; Searches and Reports</b>, and either add a new report or open up the detail page for an existing search or alert. (You cannot set up summary indexing through the <b>Create Alert</b> window.) To enable the summary index to gather data on a regular interval, set its <b>Alert condition</b> to <i>always</i> and then select <b>Enable</b> under <b>Summary indexing</b> at the bottom of the view.
+</p>
+<a name="alertexamples"></a><h2> <a name="alertexamples_alert_examples"><span class="mw-headline" id="Alert_examples"> Alert examples </span></a></h2>
+<p>This chapter shows examples of creating various types of alerts.
+</p>
+<ul><li> Scheduled alert
+</li><li> Real-time alert
+</li><li> Custom conditional alert
+</li></ul><h3> <a name="alertexamples_scheduled_alert_example"><span class="mw-headline" id="Scheduled_alert_example">Scheduled alert example</span></a></h3>
+<p>A scheduled alert runs periodically at a scheduled time, responding to a condition that triggers the alert.
+</p><p>This example uses a search to track when there are too many errors in a Splunk Enterprise instance during the last 24 hours. When the number of errors exceeds 5, the alert sends an email with information about the conditions that triggered the alert. The alert sends an email every day at 10:00AM when the number of errors exceed the threshold.
+</p>
+<ol><li>From the Search Page, create the following search<br><div class="inlineQuery splunk_search_4_3"><code><font size="2">index=_internal " error " NOT debug source=*splunkd.log* earliest=-24h latest=now</font></code><br></div>
+</li><li>Click <b>Save As &gt; Alert</b>.
+</li><li>Specify the following values for the fields in the <b>Save As Alert</b> dialog box:<br><br><b>Title</b>: Errors in the last 24 hours<br><b>Alert type</b>: Scheduled<br><b>Time Range</b>: Run every day<br><b>Schedule: </b>At 10:00<br><b>Trigger condition</b>: Number of Results<br><b>Trigger if number of results</b>: is Greater than 5.<br><br><img alt="Alert SchedAlertExample1.png" src="images/1/12/Alert_SchedAlertExample1.png" width="650" height="337"></li><li>Click <b>Next</b>.
+</li><li>Click <b>Send Email</b>.
+</li><li>Set the following email settings, using tokens in the <b>Subject</b> and <b>Message</b> fields:<br><br><b>To</b>: email recipient<br><b>Priority</b>: Normal<br><b>Subject</b>: Too many errors alert: $name$<br><b>Message</b>: There were $job.resultCount$ errors reported on $trigger_date$.<br><b>Include</b>: Link to Alert and Link to Results<br><br>Accept defaults for all other options.<br><br>For more information on tokens, see <a href="#setupalertactions_use_tokens_in_email_notifications" class="external text">Use tokens in email notifications</a><br><br><img alt="Alert SchedAlertExample.png" src="images/1/1f/Alert_SchedAlertExample.png" width="650" height="556"></li><li> Click <b>Save</b>.<br>After you create the alert you can view and edit the alert in the Alerts Page.
+</li></ol><p>When the alert triggers, it sends the following email:
+</p><p><img alt="Alert SchedAlertEmail.png" src="images/3/34/Alert_SchedAlertEmail.png" width="600" height="368"></p>
+<h3> <a name="alertexamples_real-time_alert_example"><span class="mw-headline" id="Real-time_alert_example">Real-time alert example</span></a></h3>
+<p>You can configure a real-time alert to ensure that you get timely updates to the condition that triggers the alert. The procedure to configure a real-time alert is similar to that of a scheduled alert, but contains differences to ensure timely delivery.
+</p><p>In this example, do not specify a time range for the search. The real-time alert specifies when the search runs.
+</p>
+<ol><li>From the Search Page, create the following search:<br><div class="inlineQuery splunk_search_4_3"><code><font size="2">index=_internal " error " NOT debug source=*splunkd.log*</font></code><br></div>
+</li><li>Click <b>Save As &gt; Alert</b>.
+</li><li>Specify the following values for the fields in the <b>Save As Alert</b> dialog box:<br><br><b>Title</b>: Errors reported (Real-time)<br><b>Alert type</b>: Real Time<br><b>Trigger condition</b>: Number of Results<br><b>Trigger if number of results</b>: is Greater than 5 in 1 minute.<br><br><img alt="Alert RTAlertExample1.png" src="images/d/d7/Alert_RTAlertExample1.png" width="650" height="310"></li><li>Click <b>Next</b>.
+</li><li>Click <b>Send Email</b>.
+</li><li>Specify the following email settings, using tokens in the <b>Subject</b> and <b>Message</b> fields:<br><br><b>To</b>: email recipient<br><b>Priority</b>: Normal<br><b>Subject</b>: Real Time Alert: $name$<br><b>Message</b>: There were $job.resultCount$ errors.<br><b>Include</b>: Link to Alert, Link to Results, Trigger Condition, and Trigger Time.<br><br>Accept defaults for all other options.<br><br>For more information on tokens, see <a href="#setupalertactions_use_tokens_in_email_notifications" class="external text">Use tokens in email notifications</a><br><br><img alt="Alert RTAlertExample.png" src="images/2/2d/Alert_RTAlertExample.png" width="650" height="557"></li><li> Click <b>Save</b>.<br>After you create the alert you can view and edit the alert in the Alerts Page.
+</li></ol><p><br></p>
+<h4><font size="3"><b><i> <a name="alertexamples_modify_trigger_condition"><span class="mw-headline" id="Modify_trigger_condition">Modify trigger condition</span></a></i></b></font></h4>
+<p>If a search takes longer to run than the time specified in the trigger condition, then the alert could fail to fire. Modify the trigger condition accordingly. 
+</p><p>For the previous real-time alert example, assume that the search takes longer than one minute to run. To ensure the alert fires, modify the trigger condition period to 10 minutes.
+</p>
+<h4><font size="3"><b><i> <a name="alertexamples_modify_throttling_setting"><span class="mw-headline" id="Modify_throttling_setting">Modify throttling setting</span></a></i></b></font></h4>
+<p>For some searches, the trigger condition can happen many times during the period configured to fire the alert. For real-time alerts, this can result in numerous emails that can overwhelm your inbox. Use the throttle action to limit the number of emails. For the previous real-time alert example, when configuring alert actions specify a reasonable time to wait before the alert fires. For example:
+</p>
+<ol><li>In the Edit Alert dialog box, click <b>Throttle</b>.
+</li><li>For <b>Suppress triggering for</b> enter 10 minutes.
+</li></ol><h3> <a name="alertexamples_custom_conditional_alert"><span class="mw-headline" id="Custom_conditional_alert">Custom conditional alert</span></a></h3>
+<p>When you create an alert you specify the trigger condition for the alert. You can choose from the following trigger conditions.
+</p>
+<table border="1" cellpadding="5" cellspacing="0" width="90%"><tr><th bgcolor="#C0C0C0"> Directory </th><th bgcolor="#C0C0C0"> Description
+</th></tr><tr><td valign="center" align="left"> <b>Per result</b>
+</td><td valign="center" align="left"> Triggers when the search returns a result.
+</td></tr><tr><td valign="center" align="left"> <b>Number of results</b>
+</td><td valign="center" align="left"> Triggers when the search returns a specified number of results.
+</td></tr><tr><td valign="center" align="left"> <b>Number of hosts</b>
+</td><td valign="center" align="left"> Triggers when the search returns a specified number of hosts.
+</td></tr><tr><td valign="center" align="left"> <b>Number of sources</b>
+</td><td valign="center" align="left"> Triggers when the search returns a specified number of hosts.
+</td></tr><tr><td valign="center" align="left"> <b>Custom</b>
+</td><td valign="center" align="left"> Triggers on a custom search condition.
+</td></tr></table><p>The following example shows how to create an alert with a custom search condition.
+The example uses a base base search that checks for all errors. The trigger condition is when an error of type WARNING occurs. The alert action lists the triggered alert.
+</p>
+<ol><li>From the Search Page, create the following search<br><div class="inlineQuery splunk_search_4_3"><code><font size="2">index=_internal source="*splunkd.log" ( log_level=ERROR OR log_level=WARN* OR log_level=FATAL OR log_level=CRITICAL)</font></code><br></div>
+</li><li>Click <b>Save As &gt; Alert</b>.
+</li><li>Specify the following values for the fields in the <b>Save As Alert</b> dialog box:<br><br><b>Title</b>: Warning Errors<br><b>Alert type</b>: Real-time<br><b>Trigger condition</b>: Custom<br><b>Custom Condition</b>: search log_level=WARN* in 1 minute
+</li><li>Click <b>Next</b>.
+</li><li>Click <b>List in Triggered Alerts</b>.
+</li><li> Click <b>Save</b>.<br>After you create the alert you can view and edit the alert in the Alerts Page. When the alert triggers, the Alerts Page lists the alert in the Trigger History section.
+</li></ol><a name="reviewtriggeredalerts"></a><h2> <a name="reviewtriggeredalerts_triggered_alerts"><span class="mw-headline" id="Triggered_alerts"> Triggered alerts</span></a></h2>
+<p>You can see records of recently triggered <b>alerts</b> in the <b>Alert Manager</b>. A triggered alert appears in the Alert Manager under the following conditions:
+</p>
+<ul><li> The <b>List in Triggered Alert</b> action is enabled for the alert.
+</li><li> The alert triggered recently.
+</li><li> The retention time span for the alert has not been reached.
+</li><li> The triggered alert listing has not been deleted.
+</li></ul><h3> <a name="reviewtriggeredalerts_open_the_alert_manager"><span class="mw-headline" id="Open_the_Alert_Manager">Open the Alert Manager</span></a></h3>
+<p>The Alert Manager is available from the Splunk Web menu. When listing triggered alerts, the Alert Manager provides details on the following:
+</p>
+<ul><li><b>Time</b>: When the alert fired.
+</li><li><b>Fired alerts</b>: The name of the alert.
+</li><li><b>App</b>: The app for the alert.
+</li><li><b>Type</b>: Real-time or scheduled.
+</li><li><b>Severity</b>: The severity level.
+</li><li><b>Mode</b>: Digest or Per Result. For Digest, the alert represents a set of events. Per Result represents a single event.
+</li><li><b>Actions</b>: Links to view results of the alert, edit the base search, and delete the triggered alert listing.
+</li></ul><ol><li>From the Splunk Enterprise menu bar, select <b>Activity &gt; Triggered Alerts</b>.<br>The Alert Manager displays the triggered alerts that are available for viewing.<br><br><img alt="Alert triggered.png" src="images/2/2c/Alert_triggered.png" width="700" height="234"></li><li> In the Alert Manager, filter the results according to <b>App</b>, <b>Owner</b>, <b>Severity</b>, and <b>Alert</b> name.
+</li><li> (Optional) Use the keyword search to find fired alerts by alert name or app name containing the alert.
+</li><li> (Optional) Take the following actions from the Alert Manager:
+</li></ol><dl><dd><ul><li>View the results.
+</li><li>Edit the search for an alert.
+</li><li>Delete a triggered alert listing.
+</li></ul></dd></dl><h3> <a name="reviewtriggeredalerts_enable_an_alert_for_listing_in_the_alert_manager"><span class="mw-headline" id="Enable_an_alert_for_listing_in_the_Alert_Manager">Enable an alert for listing in the Alert Manager</span></a></h3>
+<p>There are several ways you can enable or disable an action for an alert. To make an alert eligible for listing in the Alert Manager, enable the <b>List in Triggered Alerts</b> action. 
+</p><p><br><img alt="Alert enable triggered.png" src="images/5/52/Alert_enable_triggered.png" width="700" height="240"></p><p><br>
+The dialog to enable this action appears in various workflows.
+</p>
+<ul><li> When creating the alert.
+</li><li> From the listing of alerts in the Alerts page, select <b>Edit &gt; Edit Actions</b>.
+</li><li> From an alert detail page, for <b>Actions</b>, select <b>Edit</b>.
+</li><li> From <b>Settings &gt; Searches, reports, and alerts</b>, click the name of the alert. Scroll to the <b>List in Triggered Alerts</b> check box.
+</li></ul><p>When listing an alert, you specify the <b>Severity</b> of the alert. Severity levels are informational only. They let you group and highlight alerts in the Alert Manager according to severity level.
+</p>
+<h3> <a name="reviewtriggeredalerts_alert_retention"><span class="mw-headline" id="Alert_retention">Alert retention</span></a></h3>
+<p>By default, the Alert Manager retains a listing of a triggered alert for 24 hours. You can customize the alert retention period from Settings. After the retention period expires, the alert is no longer available from the Alert Manager.
+</p><p>You can also manually delete the listing of an alert from the Alert Manager. 
+</p>
+<ol><li> From the Splunk Enterprise menu bar, select <b>Settngs &gt; Searches, reports, and alerts</b>.
+</li><li> In the listing, click the <b>Search Name</b> for the alert you want to modify.
+</li><li> In the dialog box that opens, scroll to the <b>Expiration</b> menu.
+</li><li> Select a preset from the menu or select <b>Custom</b> to define a custom time for expiration.<br>The Expiration setting applies only to alerts that enable the <b>List in Triggered Alerts</b> action.<br><br><img alt="Alert retention.png" src="images/6/64/Alert_retention.png" width="400" height="403"></li><li> Click <b>Save</b>.
+</li></ol><h3> <a name="reviewtriggeredalerts_delete_a_triggered_alert_listing"><span class="mw-headline" id="Delete_a_triggered_alert_listing">Delete a triggered alert listing</span></a></h3>
+<p>You can remove a triggered alert listing from the Alert Manager in the following ways:
+</p>
+<ul><li> Specify a retention time<br>The triggered alert listing is deleted when the retention time expires. See <a href="#reviewtriggeredalerts_alert_retention" class="external text">Alert retention</a>.
+</li></ul><ul><li> Delete triggered alert listings manually<br>You can select one or more alerts from the listing and click <b>Delete</b>. You can delete individual alerts by clicking the <b>Delete</b> link in the listing.
+</li></ul><ul><li> Disable the alert<br>Disabling an alert removes all listings of triggered alerts from the Alert Manager. It also removes the listing from the alert details page. You can disable an alert from Settings, the Alerts page, and the detail page for an alert.
+</li></ul><h1>Manual alert configuration with .conf files</h1><a name="configuringalertsinsavedsearches.conf"></a><h2> <a name="configuringalertsinsavedsearches.conf_configure_alerts_in_savedsearches.conf"><span class="mw-headline" id="Configure_alerts_in_savedsearches.conf"> Configure alerts in savedsearches.conf</span></a></h2>
+<p>You can create and configure alerts in <code><font size="2">savedsearches.conf</font></code>. 
+</p><p>Configuring alerts in configuration files is for advanced users familiar with editing Splunk Enterprise configuration files. You should also be familiar with the alerting functionality documented in this manual. <br><br>See "About configuration files" in the <i>Admin Manual</i> and <a href="#aboutalerts" class="external text">About alerts</a> in this manual.
+</p><p>The following file contains examples of defining searches and alert in configuration files:
+</p>
+<dl><dd><code><font size="2">$SPLUNK_HOME/etc/system/README/savedsearches.conf.example</font></code>
+</dd></dl><p>Create or edit <code><font size="2">savedsearches.conf</font></code> in the local directory:
+</p>
+<dl><dd><code><font size="2">$SPLUNK_HOME/etc/system/local/</font></code>
+</dd></dl><p>For apps, create or edit <code><font size="2">savedsearches.conf</font></code> in the custom application directory:
+</p>
+<dl><dd><code><font size="2">$SPLUNK_HOME/etc/apps/</font></code>
+</dd></dl><p>These are the basic steps for defining alerts in <code><font size="2">savedsearches.conf</font></code>:
+</p>
+<ol><li>Create a report.<br>A report is basically a saved search. You can set up an alert at the time you create a report or later, add the alert configuration to <code><font size="2">savedsearches.conf</font></code>.
+</li><li>Schedule the report.
+</li><li>Define the alert's triggering conditions.
+</li><li>Configure alert actions.<br>If you configure an email notification for the alert, configure the email notification settings in Settings. See <a href="#setupalertactions_configure_email_notification_settings" class="external text">Configure email notification settings</a>.
+</li></ol><h3> <a name="configuringalertsinsavedsearches.conf_create_a_report"><span class="mw-headline" id="Create_a_report"> Create a report </span></a></h3>
+<p>Create a report, either by saving a search or pivot as a report or by configuring a new stanza in <code><font size="2">savedsearches.conf</font></code>. You also create a report when you save a search as an alert. See <a href="#defineper-resultalerts" class="external text">Create alerts from Splunk Web</a> and Create and edit reports..
+</p><p>The <code><font size="2">savedsearches.conf</font></code> file contains a stanza for each saved report. Attributes that define an alert for the saved report appear in this stanza. The following example shows the stanza for a saved search. Within the stanza are attributes defining the alert for this search.
+</p>
+<div class="samplecode"><code><font size="2"><br>[Too Many Errors Today]<br># send an email notification<br>action.email = 1<br>action.email.message.alert = The alert condition for '$name$' in the $app$ fired with $job.resultCount$ error events.<br>action.email.reportServerEnabled = 0<br>action.email.to = Splunk250@example.com<br>action.email.useNSSubject = 1<br><br>alert.suppress = 0<br>alert.track = 0<br><br>counttype = number of events<br>quantity = 5<br>relation = greater than<br><br># run every day at 14:00<br>cron_schedule = 0 14 * * *<br><br>#search for results in the last day<br>dispatch.earliest_time = -1d<br>dispatch.latest_time = now<br><br>display.events.fields = ["host","source","sourcetype","latitude"]<br>display.page.search.mode = verbose<br>display.visualizations.charting.chart = area<br>display.visualizations.type = mapping<br><br>enableSched = 1<br><br>request.ui_dispatch_app = search<br>request.ui_dispatch_view = search<br>search = index=_internal " error " NOT debug source=*splunkd.log* earliest=-7d latest=now<br>disabled = 1<br></font></code></div>
+<h3> <a name="configuringalertsinsavedsearches.conf_schedule_the_report"><span class="mw-headline" id="Schedule_the_report"> Schedule the report </span></a></h3>
+<p>You can schedule a report by editing <code><font size="2">savesearches.conf</font></code> or by configuring the report in Splunk Web. This topic discusses editing <code><font size="2">savesearches.conf</font></code>. See Schedule a report in the <i>Reporting Manual</i> for information on how to schedule a report from Splunk Web.
+</p><p>Schedule a report in <code><font size="2">savesearches.conf</font></code> by adding the following attributes to the stanza for the report.
+</p>
+<table border="0" style="width:100%;" cellpadding="6"><tr><th style="background: #efefef;" bgcolor="#C0C0C0"> Attribute
+</th><th style="background: #efefef; width:10%" bgcolor="#C0C0C0"> Type
+</th><th style="background: #efefef;width:15%" bgcolor="#C0C0C0"> <div style="text-align: center">Default </div>
+</th><th style="background: #efefef;" bgcolor="#C0C0C0"> Description
+</th></tr><tr><td valign="center" align="left"> <b>enableSched</b>
+</td><td valign="center" align="left"> string
+</td><td valign="center" align="left"> <div style="text-align: center">false</div>
+</td><td valign="center" align="left"> Enable scheduling for the report.
+</td></tr><tr><td valign="center" align="left"> <b>cron_schedule</b>
+</td><td valign="center" align="left"> text
+</td><td valign="center" align="left"> <div style="text-align: center">&ndash;</div>
+</td><td valign="center" align="left"> The cron scheduler to run the report.
+<p>The following cron schedule runs the search for the report every 5 minutes:
+</p>
+<dl><dd><code><font size="2">*/5 * * * * </font></code>
+</dd></dl><p>The following cron schedule specifies real-time for a per-result search or a rolling window.
+</p>
+<dl><dd><code><font size="2">* * * * *</font></code>
+</dd></dl><p>See <a href="#definescheduledalerts_cron_notation" class="external text">Cron notation</a> for details.
+</p>
+</td></tr><tr><td valign="center" align="left"> <b>dispatch.earliest</b><br><b>dispatch.latest</b>
+</td><td valign="center" align="left"> time modifier
+</td><td valign="center" align="left"> <div style="text-align: center">&ndash;</div>
+</td><td valign="center" align="left"> Set the time window for the search.
+<p>For real-time searches:
+</p>
+<ul><li> Per event, use: <code><font size="2">rt</font></code>, for example<br><code><font size="2">dispatch.earliest_time = rt<br>dispatch.latest_time = rt</font></code>
+</li></ul><ul><li> Rolling-window alerts use: <code><font size="2">rt-[#][unit]</font></code>, for example<br><code><font size="2">dispatch.earliest_time = rt-30m<br>dispatch.latest_time = rt-0m</font></code>
+</li></ul><p>See Specify time modifiers in your search for more information.
+</p>
+</td></tr><tr><td valign="center" align="left"> <b>max_concurrent</b>
+</td><td valign="center" align="left"> integer
+</td><td valign="center" align="left"> <div style="text-align: center">1</div>
+</td><td valign="center" align="left"> The maximum number of instances of the report that can run concurrently.
+</td></tr></table><h3> <a name="configuringalertsinsavedsearches.conf_configure_basic_and_advanced_alert_conditions_in_savedsearches.conf"><span class="mw-headline" id="Configure_basic_and_advanced_alert_conditions_in_savedsearches.conf"> Configure basic and advanced alert conditions in savedsearches.conf </span></a></h3>
+<p>Two categories of conditions cn trigger an alert. You can configure both of these type of alerts in <code><font size="2">savedsearches.conf</font></code>.
+</p>
+<ul><li> <b>Basic conditional alerts</b><br>Trigger alerts when the results of the search exceed the threshold for the number of events, sources, or hosts. 
+</li></ul><ul><li> <b>Advanced conditional alerts<br></b>Trigger alerts based on the results of a conditional search that is evaluated against the results of the scheduled report. If the conditional search returns one or more events, the event triggers.
+</li></ul><h4><font size="3"><b><i> <a name="configuringalertsinsavedsearches.conf_configure_a_basic_conditional_alert"><span class="mw-headline" id="Configure_a_basic_conditional_alert"> Configure a basic conditional alert </span></a></i></b></font></h4>
+<p>To configure a basic conditional alert in <code><font size="2">savedsearches.conf</font></code>, use a combination of the following attributes:
+</p>
+<table border="0" style="width:100%;" cellpadding="6"><tr><th style="background: #efefef;" bgcolor="#C0C0C0"> Attribute
+</th><th style="background: #efefef; width:10%" bgcolor="#C0C0C0"> Type
+</th><th style="background: #efefef;width:15%" bgcolor="#C0C0C0"> <div style="text-align: center">Default </div>
+</th><th style="background: #efefef;" bgcolor="#C0C0C0"> Description
+</th></tr><tr><td valign="center" align="left"> <b>counttype</b>
+</td><td valign="center" align="left"> text
+</td><td valign="center" align="left"> <div style="text-align: center">&ndash;</div>
+</td><td valign="center" align="left"> Set the type of count for alerting.
+<p>Possible values:
+</p>
+<ul><li>always<br>Default value for counttype. Triggers the alert each time the scheduled report runs. Use this value for per-result alerts. Per-result alerts are not conditional. 
+</li><li>number of events
+</li><li>number of hosts
+</li><li>number of sources
+</li><li>custom<br>Configure an <a href="#configuringalertsinsavedsearches.conf_configure_an_advanced_conditional_alert" class="external text">advanced conditional alert</a>.
+</li></ul></td></tr><tr><td valign="center" align="left"> <b>relation</b>
+</td><td valign="center" align="left"> string
+</td><td valign="center" align="left"> <div style="text-align: center">&ndash;</div>
+</td><td valign="center" align="left"> Comparison factor between <code><font size="2">counttype</font></code> and <code><font size="2">quantity</font></code>.
+<p>Possible values:
+</p>
+<ul><li>greater than
+</li><li>less than
+</li><li>equal to
+</li><li>drops by
+</li><li>rises by
+</li></ul></td></tr><tr><td valign="center" align="left"> <b>quantity</b>
+</td><td valign="center" align="left"> integer
+</td><td valign="center" align="left"> <div style="text-align: center">&ndash;</div>
+</td><td valign="center" align="left"> Numeric value that triggers the alert. Use with <code><font size="2">counttype</font></code> and <code><font size="2">quantity</font></code>.
+</td></tr></table><p>For example, to trigger an alert if the results of a scheduled report rise by 25 between runs of the report, do the following:
+</p>
+<div class="samplecode"><code><font size="2"><br>counttype = number of events<br>relation = rises by<br>quantity = 25<br></font></code></div>
+<p>The exception to using these settings together is to trigger an alert each time the scheduled report runs. In this case, use only the <code><font size="2">counttype</font></code> attribute:
+</p>
+<div class="samplecode"><code><font size="2"><br>counttype = always<br></font></code></div>
+<p>For more information, see <a href="#definescheduledalerts_set_up_triggering_conditions_for_a_scheduled_alert" class="external text">Set up triggering conditions for a scheduled alert</a>.
+</p>
+<h4><font size="3"><b><i> <a name="configuringalertsinsavedsearches.conf_configure_an_advanced_conditional_alert"><span class="mw-headline" id="Configure_an_advanced_conditional_alert"> Configure an advanced conditional alert </span></a></i></b></font></h4>
+<p>To configure an advanced conditional alert in <code><font size="2">savedsearches.conf</font></code>, use the following attributes:
+</p>
+<table border="0" style="width:100%;" cellpadding="6"><tr><th style="background: #efefef;" bgcolor="#C0C0C0"> Attribute
+</th><th style="background: #efefef; width:10%" bgcolor="#C0C0C0"> Type
+</th><th style="background: #efefef;width:15%" bgcolor="#C0C0C0"> <div style="text-align: center">Default </div>
+</th><th style="background: #efefef;" bgcolor="#C0C0C0"> Description
+</th></tr><tr><td valign="center" align="left"> <b>alert_condition</b>
+</td><td valign="center" align="left"> string
+</td><td valign="center" align="left"> <div style="text-align: center">&ndash;</div>
+</td><td valign="center" align="left">  A custom search string to trigger the alert.
+<p>The search string is a secondary search of the artifacts of the report job that determines whether to trigger an alert. The alert triggers when the secondary search yields a non-empty search result list.
+</p><p>If you specify <code><font size="2">alert_condition</font></code>, set <code><font size="2">counttype</font></code> to "custom."  Do not use the other attributes for a basic conditional alert, <code><font size="2">relation</font></code> and <code><font size="2">quantity</font></code>.
+</p>
+</td></tr><tr><td valign="center" align="left"> <b>counttype</b>
+</td><td valign="center" align="left"> string
+</td><td valign="center" align="left"> <div style="text-align: center">&ndash;</div>
+</td><td valign="center" align="left"> Set the type of count for alerting.
+<p>If you specify <code><font size="2">alert_condition</font></code>, set <code><font size="2">counttype</font></code> to "custom."  Do not use the other attributes for a basic conditional alert, <code><font size="2">relation</font></code> and <code><font size="2">quantity</font></code>.
+</p>
+</td></tr></table><p>For example:
+</p>
+<div class="samplecode"><code><font size="2"><br>counttype = custom<br>alert_condition = [search string]<br></font></code></div>
+<p>For more information, see <a href="#definescheduledalerts_set_up_triggering_conditions_for_a_scheduled_alert" class="external text">Set up triggering conditions for a scheduled alert</a>.
+</p>
+<h3> <a name="configuringalertsinsavedsearches.conf_configure_alert_actions"><span class="mw-headline" id="Configure_alert_actions"> Configure alert actions </span></a></h3>
+<p>Use the <code><font size="2">action</font></code> attribute in <code><font size="2">savedsearches.conf</font></code> to configure the following alert actions. Each alert action contains configurable parameters.
+</p><p><br></p>
+<table border="1" cellpadding="5" cellspacing="0" width="90%"><tr><th bgcolor="#C0C0C0"> Parameter </th><th bgcolor="#C0C0C0"> Description
+</th></tr><tr><td valign="center" align="left"> <code><font size="2">action.email</font></code>
+</td><td valign="center" align="left"> Send an email notification.
+</td></tr><tr><td valign="center" align="left"> <code><font size="2">action.rss</font></code>
+</td><td valign="center" align="left"> Write to an RSS feed.
+</td></tr><tr><td valign="center" align="left"><code><font size="2">action.script</font></code>
+</td><td valign="center" align="left"> Run a script.
+</td></tr></table><p>Global defaults for alert actions are in <code><font size="2">alert_actions.conf</font></code>. You can override the defaults in <code><font size="2">savedsearches.conf</font></code>.
+</p><p>Use the following syntax to enable or disable an action:
+</p>
+<div class="samplecode"><code><font size="2"> <br>action.&lt;action_name&gt; = [0 | 1] # 0 disables, 1 enables the action<br></font></code></div>
+<p>Use the following syntax to configure a parameter for an action:
+</p>
+<div class="samplecode"><code><font size="2"> <br>action.&lt;action_name&gt;.&lt;parameter&gt; = &lt;value&gt;<br></font></code></div>
+<p>Global defaults for all alert actions are configured in <code><font size="2">alert_actions.conf</font></code>. You can override the defaults for a saved report in <code><font size="2">savedsearches.conf</font></code>.
+</p>
+<h4><font size="3"><b><i> <a name="configuringalertsinsavedsearches.conf_action.email"><span class="mw-headline" id="action.email"> action.email </span></a></i></b></font></h4>
+<p>The <code><font size="2">action.email</font></code> action sends email notifications when an alert triggers. The following example shows configuration parameters for <code><font size="2">action.email</font></code>:
+</p>
+<div class="samplecode"><code><font size="2"><br>. . .<br># send an email notification<br>action.email = 1<br>action.email.message.alert = The alert condition for '$name$' in the $app$ fired with $job.resultCount$ error events.<br>action.email.reportServerEnabled = 0<br>action.email.to = Splunk250@example.com<br>action.email.useNSSubject = 1<br>. . .<br></font></code></div>
+<table border="0" style="width:100%;" cellpadding="6"><tr><th style="background: #efefef;" bgcolor="#C0C0C0"> Parameter
+</th><th style="background: #efefef; width:10%" bgcolor="#C0C0C0"> Type
+</th><th style="background: #efefef;width:20%" bgcolor="#C0C0C0"> <div style="text-align: center">Default </div>
+</th><th style="background: #efefef;" bgcolor="#C0C0C0"> Description
+</th></tr><tr><td valign="center" align="left"> <b>action.email.to</b>
+</td><td valign="center" align="left"> email list
+</td><td valign="center" align="left"> <div style="text-align: center">&ndash;</div>
+</td><td valign="center" align="left"> Comma-delimited list of email addresses to notify.
+<p>You cannot define a default value for this in alert actions.conf.
+</p>
+</td></tr><tr><td valign="center" align="left"> <b>action.email.from</b>
+</td><td valign="center" align="left"> text
+</td><td valign="center" align="left"> <div style="text-align: center">splunk</div>
+</td><td valign="center" align="left"> The from email address for the email notification.
+</td></tr><tr><td valign="center" align="left"> <b>action.email.subject</b>
+</td><td valign="center" align="left"> text
+</td><td valign="center" align="left"> <div style="text-align: center">Splunk Alert: $name$</div>
+</td><td valign="center" align="left"> The subject of the email notification.
+</td></tr><tr><td valign="center" align="left"> <b>action.email.sendresults</b>
+</td><td valign="center" align="left"> boolean
+</td><td valign="center" align="left"> <div style="text-align: center">false</div>
+</td><td valign="center" align="left"> Include search results in the email. The can be attached or included in the body of the email. See the <code><font size="2">action.email.inline</font></code> parameter. Results include only the results from the base search. It does not include results from secondary conditional searches.
+</td></tr><tr><td valign="center" align="left"> <b>action.email.inline</b>
+</td><td valign="center" align="left"> email list
+</td><td valign="center" align="left"> <div style="text-align: center">&ndash;</div>
+</td><td valign="center" align="left"> Include results of the base search in the body of the email notification.
+</td></tr><tr><td valign="center" align="left"> <b>action.email.server</b>
+</td><td valign="center" align="left"> text
+</td><td valign="center" align="left"> <div style="text-align: center">localhost</div>
+</td><td valign="center" align="left"> The address of the SMTP server that sends the alert emails.
+</td></tr><tr><td valign="center" align="left"> <b>email.preprocess_results</b>
+</td><td valign="center" align="left"> search string
+</td><td valign="center" align="left"> <div style="text-align: center">empty string</div>
+</td><td valign="center" align="left"> Search string to preprocess results before sending the email notification. Use this parameter to filter unwanted fields.
+</td></tr></table><p><br></p>
+<h4><font size="3"><b><i> <a name="configuringalertsinsavedsearches.conf_action.rss"><span class="mw-headline" id="action.rss"> action.rss </span></a></i></b></font></h4>
+<p>You can configure an alert to enable an RSS feed. When the alert triggers, the alert generates notification to the RSS feed. An alert must trigger at least once to generate the RSS feed. See <a href="#setupalertactions_create_an_rss_feed" class="external text">Create an RSS feed</a> for details.
+</p><p>Use <code><font size="2">action.rss</font></code> to configure an RSS feed.
+</p>
+<table border="0" style="width:100%;" cellpadding="6"><tr><th style="background: #efefef;" bgcolor="#C0C0C0"> Attribute
+</th><th style="background: #efefef; width:10%" bgcolor="#C0C0C0"> Type
+</th><th style="background: #efefef;width:15%" bgcolor="#C0C0C0"> <div style="text-align: center">Default </div>
+</th><th style="background: #efefef;" bgcolor="#C0C0C0"> Description
+</th></tr><tr><td valign="center" align="left"> <b>action.rss</b>
+</td><td valign="center" align="left"> boolean
+</td><td valign="center" align="left"> <div style="text-align: center">0</div>
+</td><td valign="center" align="left"> Configures an RSS feed.
+</td></tr></table><h4><font size="3"><b><i> <a name="configuringalertsinsavedsearches.conf_action.script"><span class="mw-headline" id="action.script"> action.script </span></a></i></b></font></h4>
+<p>You can configure an alert to run a shell script. When the alert triggers the shell script runs.
+</p><p>Use <code><font size="2">action.script</font></code> to configure an alert to run a script. See <a href="#configuringscriptedalerts" class="external text">Configure scripted alerts</a> for details.
+</p>
+<table border="0" style="width:100%;" cellpadding="6"><tr><th style="background: #efefef;" bgcolor="#C0C0C0"> Attribute
+</th><th style="background: #efefef; width:10%" bgcolor="#C0C0C0"> Type
+</th><th style="background: #efefef;width:15%" bgcolor="#C0C0C0"> <div style="text-align: center">Default </div>
+</th><th style="background: #efefef;" bgcolor="#C0C0C0"> Description
+</th></tr><tr><td valign="center" align="left"> <b>action.script</b>
+</td><td valign="center" align="left"> boolean
+</td><td valign="center" align="left"> <div style="text-align: center">0</div>
+</td><td valign="center" align="left"> Configure an alert to run a script when the alert triggers.
+</td></tr><tr><td valign="center" align="left"> <b>action.script.filename</b>
+</td><td valign="center" align="left"> text
+</td><td valign="center" align="left"> <div style="text-align: center">&ndash;</div>
+</td><td valign="center" align="left"> The filename of the shell script to run when the alert triggers.
+<p>Place the script in the following directory:
+</p>
+<dl><dd>$SPLUNK_HOME/bin/scripts/
+</dd></dl></td></tr></table><a name="configuringscriptedalerts"></a><h2> <a name="configuringscriptedalerts_configure_a_script_for_an_alert_action"><span class="mw-headline" id="Configure_a_script_for_an_alert_action"> Configure a script for an alert action</span></a></h2>
+<p>You can configure an alert to run a shell script or batch file when the alert triggers. This topic shows how to access information about an alert in a script that runs as an alert action. 
+</p><p>The script or batch file that an alert triggers must be at either of the following locations:
+</p>
+<div class="samplecode"><code><font size="2"><br>$SPLUNK_HOME/bin/scripts<br>$SPLUNK_HOME/etc/apps/&lt;AppName&gt;/bin/scripts</font></code></div>
+<h3> <a name="configuringscriptedalerts_access_arguments_to_scripts_that_are_run_as_an_alert_action"><span class="mw-headline" id="Access_arguments_to_scripts_that_are_run_as_an_alert_action">Access arguments to scripts that are run as an alert action</span></a></h3>
+<p>When you run a script as an alert action, Splunk Enterprise passes positional arguments to the script that capture information about the alert. The positional arguments are also available as environment variables. 
+</p><p>You can access the information from each argument using the notation in the following table. 
+</p>
+<table border="0" style="width:75%;" cellpadding="6"><tr><th style="background: #efefef; text-align:center;" bgcolor="#C0C0C0"> Arg
+</th><th style="background: #efefef; text-align:center;" bgcolor="#C0C0C0"> Environment Variable
+</th><th style="background: #efefef;" bgcolor="#C0C0C0"> Value
+</th></tr><tr><td style="text-align:center;" valign="center" align="left"> <b>0</b>
+</td><td style="text-align:center;" valign="center" align="left"> <b>SPLUNK_ARG_0</b>
+</td><td valign="center" align="left"> Script name
+</td></tr><tr><td style="text-align:center;" valign="center" align="left"> <b>1</b>
+</td><td style="text-align:center;" valign="center" align="left"> <b>SPLUNK_ARG_1</b>
+</td><td valign="center" align="left"> Number of events returned
+</td></tr><tr><td style="text-align:center;" valign="center" align="left"> <b>2</b>
+</td><td style="text-align:center;" valign="center" align="left"> <b>SPLUNK_ARG_2</b>
+</td><td valign="center" align="left"> Search terms
+</td></tr><tr><td style="text-align:center;" valign="center" align="left"> <b>3</b>
+</td><td style="text-align:center;" valign="center" align="left"> <b>SPLUNK_ARG_3</b>
+</td><td valign="center" align="left"> Fully qualified query string
+</td></tr><tr><td style="text-align:center;" valign="center" align="left"> <b>4</b>
+</td><td style="text-align:center;" valign="center" align="left"> <b>SPLUNK_ARG_4</b>
+</td><td valign="center" align="left"> Name of report
+</td></tr><tr><td style="text-align:center;" valign="center" align="left"> <b>5</b>
+</td><td style="text-align:center;" valign="center" align="left"> <b>SPLUNK_ARG_5</b>
+</td><td valign="center" align="left"> Trigger reason
+<p>For example, "The number of events was greater than 1."
+</p>
+</td></tr><tr><td style="text-align:center;" valign="center" align="left"> <b>6</b>
+</td><td style="text-align:center;" valign="center" align="left"> <b>SPLUNK_ARG_6</b>
+</td><td valign="center" align="left"> Browser URL to view the report.
+</td></tr><tr><td style="text-align:center;" valign="center" align="left"> <b>7</b>
+</td><td style="text-align:center;" valign="center" align="left"> <b>SPLUNK_ARG_7</b>
+</td><td valign="center" align="left"> Not used for historical reasons.
+</td></tr><tr><td style="text-align:center;" valign="center" align="left"> <b>8</b>
+</td><td style="text-align:center;" valign="center" align="left"> <b>SPLUNK_ARG_8</b>
+</td><td valign="center" align="left"> File in which the results for the search are stored.
+<p>Contains raw results.
+</p>
+</td></tr></table><p>You can reference the information captured by these arguments in UNIX shell scripts or Microsoft batch files, as shown below. In other languages, such as perl and python, use the methods native to that language to access script arguments.
+</p>
+<div class="samplecode"><code><font size="2"><br># UNIX scripts can access environment variables and positional args<br>$SPLUNK_ARG_0<br>$0<br><br># Microsoft batch files capture environment variables reliably<br>%SPLUNK_ARG_0%<br></font></code></div>
+<h4><font size="3"><b><i> <a name="configuringscriptedalerts_test_script_that_accesses_positional_arguments"><span class="mw-headline" id="Test_script_that_accesses_positional_arguments">Test script that accesses positional arguments</span></a></i></b></font></h4>
+<p>Use the following test script to see the results of accessing the positional arguments.
+</p><p>To use this test script, create an alert that runs the script as an alert action. Then check the contents of the generated <code><font size="2">echo_output.txt</font></code> file:
+</p>
+<div class="samplecode"><code><font size="2"><br># $SPLUNK_HOME/bin/scripts/echo.sh<br># simple script that writes parameters 0-7 to <br># $SPLUNK_HOME/bin/scripts/echo_output.txt <br># $SPLUNK_ARG_0 and $0 show how to use the long and short form. <br><br>read sessionKey<br>echo "'$SPLUNK_ARG_0' '$0' '$1' '$2' '$3' '$4' '$5' '$6' '$7' '$8' '$sessionKey'" &gt;&gt; \<br>"$SPLUNK_HOME/bin/scripts/echo_output.txt" <br></font></code></div>
+<p>For an example of how to configure scripts to work with alerts, see the topic  "Send SNMP traps to other systems," in this manual.
+</p><p><br></p>
+<h3> <a name="configuringscriptedalerts_script_example:_write_to_syslog"><span class="mw-headline" id="Script_example:_Write_to_syslog"> Script example: Write to syslog</span></a></h3>
+<p>You can configure a script for an alert to write to the system log daemon. This is useful if you have syslog set up to send alerts to other applications and you want to include alerts from Splunk Enterprise.
+</p>
+<ol><li> Create a script, <code><font size="2">logIt</font></code> that calls <code><font size="2">logger</font></code>, or any other program that writes to syslog.<br>Place the script in <code><font size="2">$SPLUNK_HOME/bin/scripts</font></code>. 
+</li><li>Add the following in <code><font size="2">logIt</font></code>:<br><div class="samplecode">logger $5</div><br>The script can access any of the arguments available when called as an alert action.<br><br></li><li> Create an alert to a report that runs <code><font size="2">logIt</font></code> as an alert action.<br>When the alert triggers, the log entry looks something like this:<div class="samplecode">Aug 15 15:01:40 localhost logger:  Report [j_myadmin]: The number of events(65) was greater than 10</div>
+</li></ol><p>See Best practices for using UDP when configuring a syslog input, a topic in the Splunk Community Wiki.
+</p>
+<h3> <a name="configuringscriptedalerts_script_example:_write_to_the_windows_event_log"><span class="mw-headline" id="Script_example:_Write_to_the_Windows_Event_Log">Script example: Write to the Windows Event Log</span></a></h3>
+<p>For Windows platforms, you can configure an alert action to run a script that writes to the Windows Event Log.  
+</p><p>The following example shows a script that calls the <code><font size="2">EVENTCREATE</font></code> utility that writes to the Event log.  The script can access any of the environment variables available with an alert. You can substitute the EVENTCREATE utility with any command-line executable that writes to the Event Log.
+</p>
+<ol><li> Create the following batch file, <code><font size="2">logIt.bat</font></code>.<br>Place the script in <code><font size="2">$SPLUNK_HOME/bin/scripts</font></code>. 
+</li><li> Include the following command in the batch file:<div class="samplecode">@echo off<br>EVENTCREATE /T ERROR /SO Splunk /D&nbsp;%SPLUNK_ARG_5%</div>Use the type that best suits the message contained in the argument. This example uses <code><font size="2">ERROR</font></code>.<br><br></li><li> Create an alert to a report that runs <code><font size="2">logIt.bat</font></code> as an alert action.
+</li></ol><h3> <a name="configuringscriptedalerts_troubleshoot_scripts_launched_from_an_alert"><span class="mw-headline" id="Troubleshoot_scripts_launched_from_an_alert">Troubleshoot scripts launched from an alert</span></a></h3>
+<p>The Splunk Community Wiki has a topic, Troubleshooting alert scripts, that can help you configure and troubleshoot scripts launched from an alert.
+</p>
+<a name="sendingsnmptrapstoothersystems"></a><h2> <a name="sendingsnmptrapstoothersystems_send_snmp_traps_to_other_systems"><span class="mw-headline" id="Send_SNMP_traps_to_other_systems"> Send SNMP traps to other systems</span></a></h2>
+<p>You can use Splunk as a monitoring tool to send SNMP alerts to other systems such as a Network Management System console.
+</p><p><b>Note:</b> For information on how to index SNMP alerts on Splunk, read "Send SNMP events to Splunk" in the Getting Data In manual.
+</p>
+<h3> <a name="sendingsnmptrapstoothersystems_create_a_script_that_sends_the_snmp_traps"><span class="mw-headline" id="Create_a_script_that_sends_the_SNMP_traps"> Create a script  that sends the SNMP traps </span></a></h3>
+<h4><font size="3"><b><i> <a name="sendingsnmptrapstoothersystems_requirements"><span class="mw-headline" id="Requirements"> Requirements </span></a></i></b></font></h4>
+<p>Requirements for the example script:
+</p>
+<ul><li> Perl is required to run the script.
+</li><li> Net-SNMP package is required in order to use the <code><font size="2">/usr/bin/snmptrap</font></code> command. If you have another way of sending an SNMP trap from a shell script, modify the script as needed.
+</li><li> Make sure there's admin access to the <code><font size="2">$SPLUNK_HOME/bin/scripts</font></code> directory.  
+</li><li> For security reasons, scripts must reside in the <code><font size="2">$SPLUNK_HOME/bin/scripts</font></code> directory.
+</li></ul><h4><font size="3"><b><i> <a name="sendingsnmptrapstoothersystems_example_script_to_send_snmp_traps_to_other_systems"><span class="mw-headline" id="Example_script_to_send_SNMP_traps_to_other_systems"> Example script to send SNMP traps to other systems</span></a></i></b></font></h4>
+<p>Note the following:
+</p>
+<ul><li> Create the script in the <code><font size="2">$SPLUNK_HOME/bin/scripts</font></code> directory. Create the directory if it doesn't already exist. Copy the code listed below into <code><font size="2">sendsnmptrap.pl</font></code>.
+</li></ul><ul><li> Run <code><font size="2">chmod +x sendsnmptrap.pl</font></code> to make the script executable.
+</li></ul><ul><li> In the scrpt, change the <code><font size="2">Host:Port</font></code> of the SNMP trap handler, the paths to the external commands <code><font size="2">splunk</font></code> and <code><font size="2">snmptrap</font></code>, and the user/password if necessary.
+</li></ul><h4><font size="3"><b><i> <a name="sendingsnmptrapstoothersystems_sample_script_code"><span class="mw-headline" id="Sample_script_code">Sample script code</span></a></i></b></font></h4>
+<div class="samplecode">
+<code><font size="2"><br>#!/usr/bin/perl<br>#<br># sendsnmptrap.pl: A script to enable using Splunk alerts to send an SNMP trap.<br>#<br># Modify the following code as necessary for your local environment.<br>#<br>$hostPortSNMP = "qa-tm1:162"; # Host:Port of snmpd or other SNMP trap handler<br>$snmpTrapCmd = "/usr/bin/snmptrap"; # Path to snmptrap, from http://www.net-snmp.org<br>$TRAPOID = "1.3.6.1.4.1.27389.1.2"; # Object IDentifier for traps/notifications <br>$OID = "1.3.6.1.4.1.27389.1.1"; # Object IDentifier for objects, Splunk Enterprise OID is 27389<br># Parameters passed in from the alert.<br># $1-$9 is the positional parameter list. $ARGV[0] starts at $1 in Perl.<br>$searchCount = $ARGV[0]; # $1 - Number of events returned<br>$searchTerms = $ARGV[1]; # $2 - Search terms<br>$searchQuery = $ARGV[2]; # $3 - Fully qualified query string<br>$searchName = $ARGV[3]; # $4 - Name of saved search<br>$searchReason = $ARGV[4]; # $5 - Reason saved search triggered<br>$searchURL = $ARGV[5]; # $6 - URL/Permalink of saved search<br>$searchTags = $ARGV[6]; # $7 - Always empty as of 4.1<br>$searchPath = $ARGV[7]; # $8 - Path to raw saved results in Splunk instance (advanced)<br><br># Send trap, with the parameter list above mapping down into the OID.<br>$cmd = qq/$snmpTrapCmd -v 2c -c public $hostPortSNMP '' $TRAPOID <br>$OID.1 i $searchCount $OID.2 s "$searchTerms" $OID.3 s "$searchQuery" $OID.4 s <br>"$searchName" $OID.5 s "$searchReason" $OID.6 s "$searchURL" $OID.7 s <br>"$searchTags" $OID.8 s "$searchPath"/;<br>&nbsp;system($cmd);<br></font></code></div>
+<h4><font size="3"><b><i> <a name="sendingsnmptrapstoothersystems_for_windows"><span class="mw-headline" id="For_Windows">For Windows </span></a></i></b></font></h4>
+<p>This Perl script will work on MS Windows systems with Perl. However, on some Windows systems, Perl may not be installed, or Perl scripts may not be configured to be directly executable via Splunk. In those cases, you might find it easier to use a Windows CMD script, as described in "Sending SNMP traps on Windows".
+</p>
+<h4><font size="3"><b><i> <a name="sendingsnmptrapstoothersystems_provide_an_mib_file"><span class="mw-headline" id="Provide_an_MIB_file"> Provide an MIB file </span></a></i></b></font></h4>
+<p>You can provide a Splunk MIB file for the SNMP monitoring agent. See "Splunk Alert MIB" for details.
+</p>
+<h3> <a name="sendingsnmptrapstoothersystems_configure_your_alert_to_call_the_script"><span class="mw-headline" id="Configure_your_alert_to_call_the_script"> Configure your alert to call the script </span></a></h3>
+<p>Follow these steps:
+</p><p><b>1.</b> Create an alert. Read <a href="#aboutalerts" class="external text">"About alerts"</a> in the Alerting Manual for more information.  
+</p><p><b>2.</b> Set up your alert so that it calls the script. To do so, specify the name of the script (which must reside in <code><font size="2">$SPLUNK_HOME/bin/scripts</font></code>).
+</p><p><img alt="Shellscript.png" src="images/8/8a/Shellscript.png" width="383" height="94"></p>
+<h3> <a name="sendingsnmptrapstoothersystems_example_script_run"><span class="mw-headline" id="Example_script_run"> Example script run </span></a></h3>
+<p>Here is an example of the script running, including what it returns:
+</p>
+<div class="samplecode">
+<code><font size="2"><br>[root@qa-tm1 ~]# snmptrapd -f -Lo<br>2007-08-13 16:13:07 NET-SNMP version 5.2.1.2 Started.<br>2007-08-13 16:14:03 qa-el4.splunk.com [172.16.0.121] (via UDP: [172.16.0.121]:32883) TRAP, SNMP v1, community public<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SNMPv2-SMI::enterprises.27389.1 Warm Start Trap (0) Uptime: 96 days, 20:45:08.35<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SNMPv2-SMI::enterprises.27389.1.1 = INTEGER: 7 SNMPv2-<br>SMI::enterprises.27389.1.2 = STRING: "sourcetype::syslog" SNMPv2-<br>SMI::enterprises.27389.1.3 = STRING: "search sourcetype::syslog starttime:12/31<br>/1969:16:00:00 endtime::08/13/2007:16:14:01" SNMPv2-SMI::enterprises.27389.1.4 <br>= STRING: "SyslogEventsLast24" SNMPv2-SMI::enterprises.27389.1.5 = STRING: <br>"Saved Search [SyslogEventsLast24]: The number of hosts(7) was greater than 1" <br>SNMPv2-SMI::enterprises.27389.1.6 = STRING: "http://qa-el4:18000/?q=sourcetype<br>%3a%3asyslog%20starttimeu%3a%3a0%20endtimeu%3a%3a1187046841" SNMPv2-<br>SMI::enterprises.27389.1.7 = STRING: "/home/tet/inst/splunk/var/run/splunk<br>/SyslogEventsLast24"<br>2007-08-13 16:14:15 NET-SNMP version 5.2.1.2 Stopped.<br></font></code></div>
+
+</body><script src='http://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js'></script>
+
+        <script src="js/index.js"></script></html>

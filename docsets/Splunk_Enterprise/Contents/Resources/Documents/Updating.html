@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:og="http://ogp.me/ns#" xmlns:fb="http://ogp.me/ns/fb#" charset="utf-8"><head><meta charset="UTF-8"><title></title>
+<link rel="stylesheet" href="css/normalize.css">
+<link rel="stylesheet" type="text/css" href="css/main.css">
+<link rel="stylesheet" href="css/style.css">
+
+<style>
+html,body {
+margin: 0px;
+padding: 10px;
+width: 210mm;
+max-width: 210mm;
+overflow-x: hidden;
+}
+pre {
+	width: 100%;
+	overflow-x: hidden;
+}
+
+</style>
+    <script src="js/prefixfree.min.js"></script>
+
+</head><body><h1>Deployment server and forwarder management </h1><a name="aboutdeploymentserver"></a><div class="all-questions">
+<h2> <a name="aboutdeploymentserver_about_deployment_server_and_forwarder_management"><span class="mw-headline" id="About_deployment_server_and_forwarder_management"> About deployment server and forwarder management</span></a></h2>
+<p><b>Important:</b> Before reading this manual, you should be familiar with the fundamentals of Splunk Enterprise distributed deployment, as described in the Distributed Deployment Manual.
+</p><p>Splunk Enterprise provides the deployment server, with its forwarder management interface, to manage the update process across distributed instances of Splunk Enterprise.
+</p>
+	
+<h3> <a name="aboutdeploymentserver_what_is_deployment_server.3f"><span class="mw-headline" id="What_is_deployment_server.3F">What is deployment server?</span></a></h3>
+<p>The <b>deployment server</b> is the tool for distributing configurations, apps, and content updates to groups of Splunk Enterprise instances. You can use it to distribute updates to most types of Splunk Enterprise components: forwarders, non-clustered indexers, and search heads.
+</p><p>The deployment server is just a Splunk Enterprise instance that has been configured to manage the update process across sets of other Splunk Enterprise instances. Depending on the number of instances it's deploying updates to, the deployment server instance might need to be dedicated exclusively to managing updates. For more information, read <a href="#planadeployment" class="external text">"Plan a deployment"</a>.
+</p>
+<table cellpadding="10" cellspacing="0" border="1" width="100%"><tr><td valign="center" align="left"><b>The deployment server handles configuration and content updates to existing Splunk Enterprise installations.</b> You cannot use it for initial or upgrade installations of Splunk Enterprise or the universal forwarder. To learn how to install and deploy Splunk Enterprise, see  "Step-by-step installation procedures" for full Splunk Enterprise and "Universal forwarder deployment overview" for the Splunk Enterprise universal forwarder. To learn how to upgrade your deployment to a new version of Splunk Enterprise, see "Upgrade your deployment".
+</td></tr></table><h3> <a name="aboutdeploymentserver_is_deployment_server_mandatory.3f"><span class="mw-headline" id="Is_deployment_server_mandatory.3F">Is deployment server mandatory?</span></a></h3>
+<p>Deployment server is not required for managing forwarders and other Splunk Enterprise instances.  If you prefer, you can use a third-party tool, such as Chef, Puppet, Salt, or one of the Windows configuration tools.
+</p>
+<h3> <a name="aboutdeploymentserver_what_is_forwarder_management.3f"><span class="mw-headline" id="What_is_forwarder_management.3F">What is forwarder management?</span></a></h3>
+<p><b>Forwarder management</b> is a graphical interface built on top of deployment server that provides an easy way to configure the deployment server and monitor the status of deployment updates. Although its primary purpose is to manage large groups of forwarders, you can use forwarder management to configure the deployment server for any update purposes, including managing and deploying updates to non-clustered indexers and search heads. For most purposes, the capabilities of forwarder management and the deployment server are identical. For more information, see <a href="#forwardermanagementoverview" class="external text">"Forwarder management overview"</a>.
+</p><p><b>Important:</b> If you are upgrading from a pre-6.0 version of the deployment server, your existing  <code><font size="2">serverclass.conf</font></code> file might not be compatible with the forwarder management interface. This is because forwarder management can handle only a subset of the configurations possible through <code><font size="2">serverclass.conf</font></code>.  In some cases, you might need to continue to work directly with <code><font size="2">serverclass.conf</font></code>, rather than switching to forwarder management as your configuration tool. For details on what configurations are compatible with forwarder management and how to handle deployment server upgrades, see the topic <a href="#forwardermanagementcompatibility" class="external text">"Compatibility and forwarder management"</a>.
+</p>
+<h3> <a name="aboutdeploymentserver_what_the_deployment_server_offers"><span class="mw-headline" id="What_the_deployment_server_offers">What the deployment server offers</span></a></h3>
+<p>The deployment server makes it possible to group Splunk Enterprise components by common characteristics and then distribute content based on those groups.
+</p><p>For example, if you've got Splunk Enterprise instances serving a variety of different needs within your organization, it's likely that their configurations vary depending on who uses them and for what purpose. You might have some instances serving the help desk team, configured with a specific app to accelerate troubleshooting of Windows desktop issues. You might have another group of instances in use by your operations staff, set up with a few different apps designed to track network issues, security incidents, and email traffic management. A third group of instances might serve the Web hosting group within the operations team. 
+</p><p>Rather than trying to manage and maintain these divergent Splunk Enterprise instances one at a time, you can group them based on their use, identify the  configurations and apps needed by each group, and then use the deployment server to update their apps and configurations when needed. 
+</p><p>In addition to grouping Splunk Enterprise instances by use, there are other useful types of groupings you can specify. For example, you might group instances by OS or hardware type, by version, or by geographical location or timezone. 
+</p><p>A key use case is to manage configurations for groups of forwarders. For example, if you have forwarders residing on a variety of machine types, you can use the deployment server to deploy different content to each machine type. The Windows forwarders can get one set of configuration updates; the Linux forwarders another, and so on. 
+</p>
+<h3> <a name="aboutdeploymentserver_deployment_server_and_clusters"><span class="mw-headline" id="Deployment_server_and_clusters">Deployment server and clusters</span></a></h3>
+<p>You cannot use the deployment server to update indexer cluster peer nodes or search head cluster members.
+</p>
+<h4><font size="3"><b><i> <a name="aboutdeploymentserver_indexer_clusters"><span class="mw-headline" id="Indexer_clusters">Indexer clusters</span></a></i></b></font></h4>
+<p>Do not use deployment server or forwarder management to manage configuration files across peer nodes (indexers) in an indexer cluster. Instead, use the <b>configuration bundle</b>  method. You can, however, use the deployment server to distribute updates to the master node, which then uses the configuration bundle method to distribute them to the peer nodes. See "Update common peer configurations" in the <i>Managing Indexers and Clusters of Indexers</i> manual. 
+</p><p>You can also use the deployment server to distribute updates to search heads in indexer clusters. 
+</p>
+<h4><font size="3"><b><i> <a name="aboutdeploymentserver_search_head_clusters"><span class="mw-headline" id="Search_head_clusters">Search head clusters </span></a></i></b></font></h4>
+<p>Do not use deployment server to update search head cluster members.
+</p><p>The deployment server is not supported as a means to distribute configurations or apps to cluster members. To distribute configurations across the set of members, you must use the search head cluster deployer. See "Use the deployer to distribute apps and configuration updates" in the <i>Distributed Search</i> manual.
+</p>
+<a name="deploymentserverarchitecture"></a><h2> <a name="deploymentserverarchitecture_deployment_server_architecture"><span class="mw-headline" id="Deployment_server_architecture"> Deployment server architecture</span></a></h2>
+<p>You use a <b>deployment server</b> to distribute content and configurations (collectively called <b>deployment apps</b>) to <b>deployment clients</b>, grouped into <b>server classes</b>. Deployment apps can be full-fledged <b>apps</b>, such as those available on  Splunkbase, or they can be just simple groups of configurations.
+</p>
+<h3> <a name="deploymentserverarchitecture_key_elements_of_the_architecture"><span class="mw-headline" id="Key_elements_of_the_architecture">Key elements of the architecture</span></a></h3>
+<p>A <b>deployment server</b> is a Splunk Enterprise instance that acts as a centralized configuration manager for any number of other instances, called "deployment clients". Any full  Splunk Enterprise instance - even one indexing data locally - can act as a deployment server. A deployment server cannot be a client of itself.
+</p><p>A <b>deployment client</b> is a Splunk Enterprise instance remotely configured by a deployment server. Deployment clients can be forwarders, indexers, or search heads. Each deployment client belongs to one or more server classes. 
+</p><p>A <b>deployment app</b> is a set of content (including configuration files) maintained on the deployment server and deployed as a unit to clients of a server class. A deployment app might consist of just a single configuration file, or it can consist of many files. Over time, an app can be updated with new content and then redeployed to its designated clients. The deployment app can be an existing Splunk Enterprise app or one developed solely to group some content for deployment purposes.
+</p><p><b>Note:</b> The term "app" has a somewhat different meaning in the context of the deployment server from its meaning in the general Splunk Enterprise context. For more information on Splunk Enterprise apps in general, see "What are apps and add-ons?" in the Admin manual. 
+</p><p>A <b>server class</b> is a group of deployment clients that share one or more defined characteristics. For example, you can group all Windows clients into one server class and all Linux clients into another server class. You use server classes to map a group of  deployment clients to one or more deployment apps. By creating a server class, you are telling the deployment server that a specific set of clients should receive configuration updates in the form of a specific set of apps.
+</p>
+<h3> <a name="deploymentserverarchitecture_how_it_all_fits_together"><span class="mw-headline" id="How_it_all_fits_together">How it all fits together </span></a></h3>
+<p>This diagram provides a conceptual overview of the relationship between a deployment server and its set of deployment clients and server classes:
+</p><p><img alt="Deployment2-small 60.png" src="images/1/10/Deployment2-small_60.png" width="700" height="554"></p><p>In this example, each deployment client is a Splunk Enterprise forwarder that belongs to two server classes, one for its OS and the other for its geographical location. The deployment server maintains the list of server classes and uses those server classes to determine what content to distribute to each client. For an example of how to implement this type of arrangement to govern the flow of content to clients, see <a href="#extendedexampledeployseveralstandardforwarders" class="external text">"Deploy configurations to several forwarders"</a>.
+</p><p>For more information on deployment apps, see <a href="#createdeploymentapps" class="external text">"Create deployment apps"</a>. For more information on server classes, see <a href="#definedeploymentclasses" class="external text">"About server classes"</a>. For more information on deployment clients, see <a href="#configuredeploymentclients" class="external text">"Configure deployment clients"</a>.
+</p>
+<h3> <a name="deploymentserverarchitecture_summary_of_key_terminology"><span class="mw-headline" id="Summary_of_key_terminology"> Summary of key terminology </span></a></h3>
+<p>Here's a recap of the key definitions:
+</p>
+<table cellpadding="5" cellspacing="0" border="1"><tr><th bgcolor="#C0C0C0"> Term
+</th><th bgcolor="#C0C0C0"> Meaning
+</th></tr><tr><td valign="center" align="left"> deployment server
+</td><td valign="center" align="left"> A Splunk Enterprise instance that acts as a centralized configuration manager. It deploys configuration updates to other instances.  Also refers to the overall configuration update facility comprising deployment server, clients, and apps.
+</td></tr><tr><td valign="center" align="left"> deployment client
+</td><td valign="center" align="left"> A remotely configured Splunk Enterprise instance. It receives updates from the deployment server.
+</td></tr><tr><td valign="center" align="left"> server class
+</td><td valign="center" align="left"> A deployment configuration category shared by a group of deployment clients. A deployment client can belong to multiple server classes.
+</td></tr><tr><td valign="center" align="left"> deployment app
+</td><td valign="center" align="left"> A unit of content deployed to the members of one or more server classes.
+</td></tr></table><a name="howdeploymentupdateshappen"></a><h2> <a name="howdeploymentupdateshappen_how_deployment_updates_happen"><span class="mw-headline" id="How_deployment_updates_happen"> How deployment updates happen</span></a></h2>
+<p>The deployment update process works like this:
+</p><p><b>1.</b> Each deployment client periodically polls the deployment server, identifying itself. 
+</p><p><b>2.</b> The deployment server determines the set of deployment apps for the client, based on which server classes the client belongs to.
+</p><p><b>3.</b> The deployment server gives the client the list of apps that belong to it, along with those apps' current checksums.
+</p><p><b>4.</b> The client compares the app info from the deployment server with its own app info, to determine whether there are any new or changed apps that it needs to download.  
+</p><p><b>5.</b> If there are new or updated apps, the deployment client downloads them.  
+</p><p><b>6.</b> Depending on the configuration for a given app, the client might restart itself before the app changes take effect.
+</p>
+<a name="forwardermanagementoverview"></a><h2> <a name="forwardermanagementoverview_forwarder_management_overview"><span class="mw-headline" id="Forwarder_management_overview"> Forwarder management overview</span></a></h2>
+<p>The forwarder management interface is an interactive, visual tool for creating <b>server classes</b>, which map <b>deployment clients</b> to <b>deployment apps</b>. You can also use forwarder management to manage and monitor your deployment. 
+</p><p>The interface saves server class configurations to a serverclass.conf file, located under <code><font size="2">$SPLUNK_HOME/etc/system/local</font></code> on the deployment server.
+</p>
+<h3> <a name="forwardermanagementoverview_capabilities_of_the_interface"><span class="mw-headline" id="Capabilities_of_the_interface">Capabilities of the interface</span></a></h3>
+<p>The main purpose of the forwarder management interface is to create and edit server classes. You can also use it for a number of other purposes:
+</p>
+<ul><li> To track the status of the system
+</li><li> To monitor deployment activity
+</li><li> To view the assocations between apps, clients, and server classes
+</li><li> To configure app behavior
+</li><li> To uninstall apps from clients
+</li></ul><h3> <a name="forwardermanagementoverview_access_the_forwarder_management_interface"><span class="mw-headline" id="Access_the_forwarder_management_interface">Access the forwarder management interface</span></a></h3>
+<p>You access the forwarder management interface through Splunk Web on the deployment server.  To open the interface:
+</p><p><b>1.</b> Click the <b>Settings</b> link at the top of Splunk Web. A window pops up with links to the set of system interfaces. 
+</p><p><b>2.</b> Select "Forwarder Management" in the <b>Distributed Environment</b> section. This takes you to the main page of the interface.  
+</p><p>The following example shows the forwarder management home page as it might appear when you already have some apps, clients, and server classes:
+</p><p><img alt="Forwarder management start page.png" src="images/9/91/Forwarder_management_start_page.png" width="700" height="251"></p><p>The page contains these features (going from top to bottom):
+</p>
+<ul><li> The <b>Repository Location</b>. The repository location is where deployment apps reside on the deployment server.  
+</li><li> A status section, with information on deployment clients and recent downloads. 
+</li><li> Three tabs:
+<ul><li> <b>Apps</b>. This tab lists the set of deployment apps in the repository location, along with their status. You can edit some app properties from here. 
+</li><li> <b>Server Classes.</b> This tab lists the set of server classes, along with their status. From here, you can create new server classes and edit existing ones. You can also drill down on existing server classes for information on their associated apps and clients. For a new, unconfigured deployment server, the list will be empty. 
+</li><li> <b>Clients.</b> This tab lists all of the deployment server's clients, along with status information. You can filter this list in various ways to limit the current view. 
+</li></ul></li></ul><p>For more information on this page, read <a href="#useforwardermanagement" class="external text">"Use forwarder management to define server classes"</a>.
+</p>
+<h3> <a name="forwardermanagementoverview_limitations_of_the_interface"><span class="mw-headline" id="Limitations_of_the_interface"> Limitations of the interface </span></a></h3>
+<p>The forwarder management interface supports the vast majority of deployment server use cases. For some complex configuration requirements, however, you might need to edit <code><font size="2">serverclass.conf</font></code> directly. 
+</p><p><b>Important:</b> If you switch from forwarder management to direct editing of <code><font size="2">serverclass.conf</font></code>, you might not be able to use forwarder management for any subsequent configuration. This is because the forwarder management interface can handle only a subset of the configurations possible through <code><font size="2">serverclass.conf</font></code>. 
+</p><p>Here are some limitations of the interface, compared to direct editing of the configuration file:
+</p>
+<ul><li> Deployment behavior of any app must be the same across server classes. For example, you cannot specify that an app initiate a restart on a client when it's downloaded via one server class but not when it's downloaded via another server class.
+</li><li> You cannot modify the default <code><font size="2">repositoryLocation</font></code> on the deployment server.
+</li><li> The <code><font size="2">filterType</font></code>, which governs the combined behavior of whitelists and blacklists, must use the default value of <code><font size="2">whitelist</font></code>.
+</li><li> Client filters are only supported at the server class level.
+</li></ul><p>For details on forwarder management limitations and compatibility between forwarder management and <code><font size="2">serverclass.conf</font></code>, see the topic <a href="#forwardermanagementcompatibility" class="external text">"Compatibility and forwarder management"</a>.
+</p>
+<h1>Configure the deployment system</h1><a name="planadeployment"></a><h2> <a name="planadeployment_plan_a_deployment"><span class="mw-headline" id="Plan_a_deployment"> Plan a deployment</span></a></h2>
+<p>To set up a deployment server, you need to configure both the deployment server and the deployment clients, although most configuration occurs on the deployment server side. The main actions you need to perform are these:
+</p>
+<ul><li> Configure the deployment clients to connect to a deployment server.
+</li></ul><ul><li> Create directories on the deployment server to hold the deployment apps and populate them with content.
+</li></ul><ul><li> Create mappings between deployment clients and app directories (the <b>server classes</b>).
+</li></ul><p>The order in which you perform these actions is, to some degree, up to you, although a suggested procedure is described below, in <a href="#planadeployment_configuration_procedure" class="external text">"The basic steps"</a>.
+</p><p>After you set up the clients, the app directories, and the mappings, you can populate the app directories with content. At any time, you can tell the deployment server to distribute new or updated content from the app directories to the clients they're mapped to.
+</p><p><b>Important:</b> Do not use deployment server or forwarder management to distribute updates to peer nodes (indexers) in an indexer cluster. Similarly, do not use deployment server to distribute apps or configuration files to search head cluster members. See <a href="#aboutdeploymentserver_deployment_server_and_clusters" class="external text">"Deployment server and clusters"</a>.
+</p>
+<h3> <a name="planadeployment_deployment_server_system_requirements"><span class="mw-headline" id="Deployment_server_system_requirements">Deployment server system requirements</span></a></h3>
+<h4><font size="3"><b><i> <a name="planadeployment_deployment_server_machine_requirements"><span class="mw-headline" id="Deployment_server_machine_requirements"> Deployment server machine requirements </span></a></i></b></font></h4>
+<p>Because of high CPU and memory usage during app downloads, it is recommended that the deployment server instance reside on a dedicated machine.
+</p>
+<h4><font size="3"><b><i> <a name="planadeployment_operating_system_compatibility"><span class="mw-headline" id="Operating_system_compatibility">Operating system compatibility </span></a></i></b></font></h4>
+<p>Unix deployment servers can update both Windows and Unix clients. Windows deployment servers, however, should be used only with Windows clients.
+</p><p>Use a Unix deployment server to update Unix deployment clients.  Apps that employ scripted inputs, alerts, search commands, and so on, can run into permission problems when deployed from Windows to Unix. Specifically, scripts and other programs will not be set to executable upon delivery to the Unix clients.
+</p>
+<h4><font size="3"><b><i> <a name="planadeployment_client_version_compatibility"><span class="mw-headline" id="Client_version_compatibility">Client version compatibility</span></a></i></b></font></h4>
+<p>6.x deployment servers are compatible with deployments clients running 5.0 and above.
+</p>
+<h4><font size="3"><b><i> <a name="planadeployment_deployment_server_and_other_roles"><span class="mw-headline" id="Deployment_server_and_other_roles"> Deployment server and other roles</span></a></i></b></font></h4>
+<p>For most deployments, the deployment server must run on a dedicated Splunk Enterprise instance that is not serving as an indexer or a search head.  The exception is if the deployment server has only a small number of clients, 50 or less. Under those limited circumstances, it is possible for an indexer or search head to double as a deployment server. 
+</p><p>Similarity, do not host a distributed management console, which is essentially a search head, on a deployment server with more than 50 clients. 
+</p><p>You can, however, usually run a search head cluster <b>deployer</b> on the same instance as the deployment server. See "Deployer requirements."
+</p><p>For more information about deployment server sizing, read <a href="#calculatedeploymentserverperformance" class="external text">"Estimate deployment server performance."</a>
+</p>
+<h3> <a name="planadeployment_what_to_configure"><span class="mw-headline" id="What_to_configure">What to configure</span></a></h3>
+<p>You need to configure both the deployment server and the deployment clients:
+</p>
+<ul><li> <b>On each deployment client,</b> you specify its deployment server by invoking a CLI command, by directly editing a configuration file, or (on Windows universal forwarders only) during installation.
+</li></ul><ul><li> <b>On the deployment server,</b> you create directories in which the deployment apps will live. You can then use forwarder management to define server classes that encapsulate the client/app mappings.  
+</li></ul><h3> <a name="planadeployment_the_basic_steps"><span class="mw-headline" id="The_basic_steps"> The basic steps </span></a></h3>
+<p>To set up the deployment server, you need to perform several steps on both the deployment clients and the deployment server. Although the order of the steps is optional to some degree, here's a recommended order:
+</p><p><b>1.</b> Determine your remote configuration needs. Questions to ask include:
+</p>
+<dl><dd><ul><li> What types of Splunk Enterprise components do I want to configure remotely? For example: forwarders, indexers.
+</li><li> Within each component type, what characteristics dictate the configuration needs? For example: machine type, geographic location, application.
+</li></ul></dd></dl><p>2. Group your deployment clients by their configuration needs. You can group clients by application, machine type, or any other criteria that make sense for your deployment topology. A client can be a member of multiple groups. For example, forwarder-x might be a member of the linux-x86_64 machine type, the north-american geographic location, and the security application groups, and forwarder-y might be a member of the windows-intel machine type, the asian geographic location, and the security application groups.
+</p><p>These groups form the basis for your server classes. A server class maps a group of deployment clients to sets of content (in the form of deployment apps) that get deployed to them. A client can belong to mutiple server classes. For guidance on the ways that you can group deployment clients into server classes, see <a href="#definedeploymentclasses" class="external text">"About server classes."</a>
+</p><p><b>3.</b> Choose one of your Splunk Enterprise instances to be the deployment server.  Deployment server capability is automatically enabled on Splunk Enterprise, so there is nothing you need to do in this step, beyond choosing the instance. This is the instance where you will place the downloadable content and define your server classes. The deployment server distributes content updates to its set of deployment clients. 
+</p><p>In most cases, the deployment server requires a dedicated Splunk Enterprise instance. See <a href="#planadeployment_deployment_server_system_requirements" class="external text">"Deployment server system requirements."</a>
+</p><p><b>Important:</b> The deployment server cannot be a deployment client of itself. If it is, the following error will appear in <code><font size="2">splunkd.log</font></code>: "This DC shares a Splunk instance with its DS: unsupported configuration".
+</p><p><b>4.</b> On each deployment client, specify the deployment server chosen in step 3. Refer to <a href="#configuredeploymentclients" class="external text">"Configure deployment clients"</a> for details. You can add more clients later.
+</p><p><b>5.</b> On the deployment server's file system, create directories for the  deployment apps that will hold the content you plan to distribute to clients. Put the app content into those directories, either now or later. Refer to <a href="#createdeploymentapps" class="external text">"Create deployment apps"</a> for details. You can add more deployment apps later.
+</p><p><b>6.</b> On the deployment server, create the server classes that map deployment clients to deployment apps. Refer to <a href="#definedeploymentclasses" class="external text">"About server classes"</a> for details on configuring server classes.
+</p><p><b>Note:</b> In most cases, the forwarder management interface can handle the server class configuration. For some unusual situations, you might need to directly edit the underlying configuration file. No matter whether you use forwarder management or directly edit the configuration file, the basic steps are the same.
+</p><p>Once you've completed this configuration process, you can start distributing content to the clients. See <a href="#updateconfigurations" class="external text">"Deploy apps to clients"</a> for information on how to deploy new content to clients.
+</p>
+<h3> <a name="planadeployment_ssl_encryption"><span class="mw-headline" id="SSL_encryption"> SSL encryption </span></a></h3>
+<p>SSL encryption using default certificates is enabled out-of-the-box. If you change the SSL configuration on the deployment server, you must change it on its deployment clients as well. The deployment server and its clients must agree in the SSL settings for their <code><font size="2">splunkd</font></code> management ports. <i>They must all have SSL enabled, or they must all have SSL disabled.</i>
+</p><p>To disable the SSL configuration on a Splunk Enterprise instance, set the <code><font size="2">enableSplunkdSSL</font></code> attribute in server.conf to "false":
+</p>
+<code><font size="2"><br>[sslConfig]<br>enableSplunkdSSL = false<br></font></code>
+<p>For detailed information on using SSL with deployment server, see "Securing deployment server and clients" in the <i>Securing Splunk</i> manual.
+</p>
+<a name="configuredeploymentclients"></a><h2> <a name="configuredeploymentclients_configure_deployment_clients"><span class="mw-headline" id="Configure_deployment_clients"> Configure deployment clients</span></a></h2>
+<p>This topic explains how to set up <b>deployment clients</b> to receive content from a <b>deployment server</b>. In most cases, you just need to specify the deployment server that you want the client to connect to.
+</p><p>Even though this step occurs on the deployment clients, not the deployment server itself, it is an essential part of the overall configuration of the deployment server system.
+</p><p><b>Important:</b> The deployment server cannot be a deployment client of itself. If it is, the following error will appear in <code><font size="2">splunkd.log</font></code>: "This DC shares a Splunk instance with its DS: unsupported configuration".
+</p>
+<h3> <a name="configuredeploymentclients_specify_the_deployment_server"><span class="mw-headline" id="Specify_the_deployment_server"> Specify the deployment server</span></a></h3>
+<p>On each client, you must specify the deployment server it will connect to. You do this by configuring the client's deploymentclient.conf file.  There are three ways to configure this file:
+</p>
+<ul><li> Use the CLI. See <a href="#configuredeploymentclients_use_the_cli" class="external text">"Use the CLI"</a>, later in this topic.
+</li></ul><ul><li> Edit the file directly. See <a href="#configuredeploymentclients_edit_deploymentclient.conf" class="external text">"Edit deploymentclient.conf"</a>, later in this topic.
+</li></ul><ul><li> <b>For Windows universal forwarders only:</b> You can configure a Windows forwarder as a deployment client as part of the installation process.  For details, see "Deploy a Windows universal forwarder via the installer GUI" or "Deploy a Windows universal forwarder via the commandline" in the <i>Forwarding Data</i> manual.
+</li></ul><p><b>Note:</b> Each deployment client must have a unique network hostname. 
+</p>
+<h4><font size="3"><b><i> <a name="configuredeploymentclients_use_the_cli"><span class="mw-headline" id="Use_the_CLI">Use the CLI</span></a></i></b></font></h4>
+<p>On the deployment client, run these CLI commands:
+</p>
+<div class="samplecode">
+<code><font size="2"><br>splunk set deploy-poll &lt;IP_address/hostname&gt;:&lt;management_port&gt;<br>splunk restart<br></font></code>
+</div>
+<p>Use the <code><font size="2">IP_address/hostname</font></code> and <code><font size="2">management_port</font></code> of the deployment server you want the client to connect with.
+</p><p>For example:
+</p>
+<div class="samplecode">
+<code><font size="2"><br>splunk set deploy-poll deploymentserver.splunk.mycompany.com:8089<br>splunk restart<br></font></code>
+</div>
+<h4><font size="3"><b><i> <a name="configuredeploymentclients_edit_deploymentclient.conf"><span class="mw-headline" id="Edit_deploymentclient.conf">Edit deploymentclient.conf</span></a></i></b></font></h4>
+<p>You can also directly create and edit a <code><font size="2">deploymentclient.conf</font></code> file in <code><font size="2">$SPLUNK_HOME/etc/system/local</font></code>.
+</p>
+<h5> <a name="configuredeploymentclients_syntax"><span class="mw-headline" id="Syntax">Syntax</span></a></h5>
+<p>The <code><font size="2">deploymentclient.conf</font></code> file requires two <b>stanzas</b>:
+</p>
+<table cellpadding="5" cellspacing="0" border="1"><tr><th bgcolor="#C0C0C0"> Stanza
+</th><th bgcolor="#C0C0C0"> What it's for
+</th></tr><tr><td valign="center" align="left"> <code><font size="2">[deployment-client]</font></code>
+</td><td valign="center" align="left"> Configures a number of attributes, including where to find new or updated content. You do not usually need to change the default values for this stanza.
+</td></tr><tr><td valign="center" align="left"> <code><font size="2">[target-broker:deploymentServer]</font></code>
+</td><td valign="center" align="left"> Specifies the location of this client's deployment server. <code><font size="2">deploymentServer</font></code> is the default name for a deployment server. You must specify the deployment server under this stanza.
+</td></tr></table><p>This file has a large number of optional attributes, but for most deployments, you only need to set the <code><font size="2">targetUri</font></code> attribute under the <code><font size="2">[target-broker:deploymentServer]</font></code> stanza.  This attribute specifies the client's deployment server. Here's the attribute's syntax:
+</p>
+<table cellpadding="5" cellspacing="0" border="1" width="100%"><tr><th bgcolor="#C0C0C0"> Attribute
+</th><th bgcolor="#C0C0C0"> What it's for
+</th><th bgcolor="#C0C0C0"> Default
+</th></tr><tr><td valign="top" align="left"> <code><font size="2">targetUri</font></code>
+</td><td valign="center" align="left"> Specifies the deployment server connection information.
+<p>Set to <code><font size="2">&lt;deployment_server_URI&gt;:&lt;management_port&gt;</font></code>. The management port is typically 8089.
+</p>
+</td><td valign="top" align="left"> n/a
+</td></tr></table><p>For a complete list of <code><font size="2">deploymentclient.conf</font></code> attributes, see the deploymentclient.conf specification file in the Admin manual.
+</p><p><b>Important:</b> You must restart the deployment client for the change to take effect.
+</p>
+<h5> <a name="configuredeploymentclients_example"><span class="mw-headline" id="Example">Example</span></a></h5>
+<p>Here is a typical client configuration:
+</p>
+<div class="samplecode">
+<code><font size="2"><br>[deployment-client]<br><br>[target-broker:deploymentServer]<br>targetUri= deploymentserver.splunk.mycompany.com:8089<br></font></code>
+</div>
+<p>As is usually the case, this example accepts the default values for nearly all attributes. The one attribute that you must set, the location of the deployment server, has a value of <code><font size="2">deploymentserver.splunk.mycompany.com:8089</font></code>.
+</p>
+<h3> <a name="configuredeploymentclients_set_a_client_name"><span class="mw-headline" id="Set_a_client_name">Set a client name</span></a></h3>
+<p>You can assign each deployment client a client name. The deployment server can filter on client names, as described in <a href="#filterclients" class="external text">"Set up client filters"</a>. 
+</p><p>By default, the client name is set to the deployment client's GUID. If you plan to use the client name in filtering, it's recommended that you explicitly set it to some reasonable and readable name.
+</p><p><b>Important:</b> Client names should be unique.
+</p><p>To configure a client name, set the <code><font size="2">clientName</font></code> attribute in <code><font size="2">deploymentclient.conf</font></code> to the chosen name. For example:
+</p>
+<code><font size="2"><br>[deployment-client]<br>...<br>clientName = Fflanda-LINUX1<br></font></code>
+<p>Restart the deployment client for the configuration change to take effect.
+</p>
+<h3> <a name="configuredeploymentclients_get_deployment_client_information"><span class="mw-headline" id="Get_deployment_client_information">Get deployment client information</span></a></h3>
+<p>You can find information about the deployment client from two locations:
+</p>
+<ul><li> On the deployment client itself
+</li><li> On the deployment server
+</li></ul><h4><font size="3"><b><i> <a name="configuredeploymentclients_view_status_from_the_deployment_client"><span class="mw-headline" id="View_status_from_the_deployment_client">View status from the deployment client</span></a></i></b></font></h4>
+<p>You can view the status of a deployment client from Splunk Web:
+</p><p><b>1.</b> Click the <b>Settings</b> link at the top of Splunk Web. A window pops up with links to the set of system interfaces. 
+</p><p><b>2.</b> Select <b>Server settings</b> in the <b>System</b> section. 
+</p><p><b>3.</b> Choose <b>Deployment client settings.</b> This takes you to a read-only screen that provides some information about the client:
+</p>
+<ul><li> Its deployment server.
+</li><li> Its server classes and apps.
+</li><li> Its status.
+</li></ul><h4><font size="3"><b><i> <a name="configuredeploymentclients_view_clients_from_the_deployment_server"><span class="mw-headline" id="View_clients_from_the_deployment_server">View clients from the deployment server</span></a></i></b></font></h4>
+<p>Once you configure and restart the client, it will initiate a handshake process with the specified deployment server. The deployment server adds it to its list of clients under the <b>Clients</b> tab of the forwarder management interface. For example:
+</p><p><img alt="Forwarder management start page.png" src="images/9/91/Forwarder_management_start_page.png" width="700" height="251"></p>
+<h3> <a name="configuredeploymentclients_disable_a_deployment_client"><span class="mw-headline" id="Disable_a_deployment_client">Disable a deployment client</span></a></h3>
+<p>To disable a deployment client, run this CLI command on the deployment client:
+</p>
+<div class="samplecode">
+<code><font size="2"><br>splunk disable deploy-client<br></font></code>
+</div>
+<h3> <a name="configuredeploymentclients_upgrade_a_deployment_client"><span class="mw-headline" id="Upgrade_a_deployment_client">Upgrade a deployment client</span></a></h3>
+<p>You upgrade a client in the usual way, according to whether the client is a universal forwarder or a full Splunk Enterprise instance.  The fact that an instance is a deployment client does not make any difference in how you perform the upgrade.
+</p><p>However, after you upgrade the client, the client will appear twice in the client list that the deployment server maintains and presents through the forwarder management interface.  To eliminate the duplicate listing, you must restart the deployment server after a client upgrade.
+</p>
+<a name="createdeploymentapps"></a><h2> <a name="createdeploymentapps_create_deployment_apps"><span class="mw-headline" id="Create_deployment_apps"> Create deployment apps</span></a></h2>
+<p>A <b>deployment app</b> consists of any arbitrary content that you want to download to a set of <b>deployment clients</b>. The content can include:
+</p>
+<ul><li> A Splunk Enterprise app (such as those on Splunkbase)
+</li><li> A set of Splunk Enterprise configurations
+</li><li> Other content, such as scripts, images, and supporting files
+</li></ul><p>You add a deployment app by creating a directory for it on the deployment server. Once you create the directory, you can use the forwarder management interface to map the app to deployment clients.  
+</p><p>You can add to or change the content of an app at any time -- when you initially create the directory, or later, when you're ready to deploy or redeploy the app to deployment clients.
+</p>
+<h3> <a name="createdeploymentapps_create_the_app_directories"><span class="mw-headline" id="Create_the_app_directories">Create the app directories</span></a></h3>
+<p>You create separate directories for each deployment app in a special location on the deployment server. The default location is <code><font size="2">$SPLUNK_HOME/etc/deployment-apps</font></code>, but this is configurable through the <code><font size="2">repositoryLocation</font></code> attribute in serverclass.conf. Underneath this location, each app must have its own subdirectory.  The name of the subdirectory serves as the app name in the forwarder management interface.
+</p><p><b>Note:</b> After an app is downloaded, it resides under <code><font size="2">$SPLUNK_HOME/etc/apps</font></code> on the deployment clients. 
+</p><p>You can add apps at any time. After creating any new app directories, you must run the CLI <code><font size="2">reload deploy-server</font></code> command to make the deployment server aware of them: 
+</p>
+<code><font size="2"><br>&nbsp;splunk reload deploy-server<br></font></code>
+<p>By creating an app directory, you have effectively created the app itself, even if the directory does not yet contain any content. The app now appears in the forwarder management interface and you can use it to define server classes, as described in <a href="#definedeploymentclasses" class="external text">"About server classes"</a>.
+</p><p><b>Important:</b> When specifying app names (that is, when creating the app directories), you should be aware of the rules of configuration file precedence, as described in the topic "Configuration file precedence" in the Admin manual. In particular, note that app directory precedence is determined by ASCII sort order. For example, if you set an attribute/value pair <code><font size="2">whatever=1</font></code> in the configuration file <code><font size="2">x.conf</font></code> in an app directory named "A", the setting in app A overrides the setting <code><font size="2">whatever=0</font></code> in <code><font size="2">x.conf</font></code> in an app named "B", and so on.
+</p>
+<h3> <a name="createdeploymentapps_populate_the_apps"><span class="mw-headline" id="Populate_the_apps">Populate the apps</span></a></h3>
+<p>You can put content into an app directory at any time prior to deploying the app to its clients. You can later update and redeploy the app. To update the app, just add to or overwrite the files in the directory. For information on updating and deploying apps to clients, see <a href="#updateconfigurations" class="external text">"Deploy apps to clients"</a>.
+</p>
+<h3> <a name="createdeploymentapps_view_apps_with_forwarder_management"><span class="mw-headline" id="View_apps_with_forwarder_management">View apps with forwarder management </span></a></h3>
+<p>Once you create an app directory, the deployment server adds it to its list of apps under the <b>Apps</b> tab of the forwarder management interface. For example:
+</p><p><img alt="Forwarder management apps.png" src="images/2/22/Forwarder_management_apps.png" width="700" height="331"></p>
+<h3> <a name="createdeploymentapps_app_management_issues"><span class="mw-headline" id="App_management_issues">App management issues</span></a></h3>
+<p>Before deciding whether to use the deployment server to manage an app, there are some issues to consider.
+</p>
+<h4><font size="3"><b><i> <a name="createdeploymentapps_the_decision_to_manage_an_app_with_deployment_server_is_irreversible"><span class="mw-headline" id="The_decision_to_manage_an_app_with_deployment_server_is_irreversible">The decision to manage an app with deployment server is irreversible</span></a></i></b></font></h4>
+<p><b>Important:</b> Once you start using the deployment server to manage an app, you cannot later stop using the deployment server to manage the app. It is important to understand the implications of this.
+</p><p>If you remove an app from the deployment server's <code><font size="2">repositoryLocation</font></code> (defined in <code><font size="2">serverclass.conf</font></code>),  the deployment client will delete its copy of the app. There is no way to tell the deployment client instead to start managing the app on its own.
+</p><p>For example, say you are using the deployment server to manage updates to "appA". To do this, you have created a directory called "appA" on the deployment server and you have placed the app's contents there. From now on, whenever the deployment clients poll the server to check for updates, they compare their checksum for appA with the server's checksum for appA. If the checksums differ, the clients download the latest version of the app from the server. However, if appA has been deleted from the server's app repository, the client behavior is to delete their own instances of the app.
+</p><p>Therefore, by deleting an app from the deployment server, you are <b>not</b> telling the clients to stop using the deployment server to manage the app and to start managing it on their own. Instead, you're actually telling them to delete the app. <i>Once the deployment server manages an app, it always manages that app.</i>
+</p><p><b>Warning:</b> Because of this behavior, you should be <i>extremely</i> cautious before deciding to use the deployment server to manage the Splunk Enterprise search app.  Managing the search app through the deployment server prevents users from saving any unique searches on their search heads. And because there's no way to tell the deployment server to stop managing an app, you're stuck with that decision.
+</p>
+<h4><font size="3"><b><i> <a name="createdeploymentapps_apps_with_lookup_tables"><span class="mw-headline" id="Apps_with_lookup_tables"> Apps with lookup tables</span></a></i></b></font></h4>
+<p>In some cases, your indexers or search heads might be running apps that save information in lookup tables. Be careful about using the deployment server to manage such apps. When the deployment server distributes 
+an updated app configuration, it overwrites the existing app. At that point, you'll lose those lookup tables.
+</p>
+<a name="definedeploymentclasses"></a><h2> <a name="definedeploymentclasses_create_server_classes"><span class="mw-headline" id="Create_server_classes"> Create server classes</span></a></h2>
+<p>A <b>server class</b> maps a group of  <b>deployment clients</b> to one or more <b>deployment apps</b>.  By creating a server class, you are telling the <b>deployment server</b> that a set of clients should receive updates in the form of a set of apps. 
+</p><p><br></p>
+<h3> <a name="definedeploymentclasses_ways_to_group_clients"><span class="mw-headline" id="Ways_to_group_clients">Ways to group clients</span></a></h3>
+<p>A client grouping can be based on a variety of criteria, such as machine type, OS, geographical area, or application type. 
+</p><p>A client can belong to multiple server classes. For example, a Windows forwarder located in Kelowna and providing information to the Web hosting team might belong to three server classes: "canada", "windows", and "web_host". This diagram shows how clients can span multiple server classes:
+</p><p><img alt="Deployment2-small 60.png" src="images/1/10/Deployment2-small_60.png" width="700" height="554"></p><p><br>
+In this example, each deployment client is a Splunk Enterprise forwarder that belongs to two server classes, one for its OS and the other for its geographical location. The deployment server maintains the list of server classes and uses those server classes to determine what content to distribute to each client. For an example of how to implement this type of arrangement to govern the flow of content to clients, see <a href="#extendedexampledeployseveralstandardforwarders" class="external text">"Deploy configurations to several forwarders"</a>.
+</p><p>Another common way to group clients is to define one server class that applies to all deployment clients by default. You can then override various aspects of it as needed by defining more specific server classes for subgroups of clients. For example, if you have a mix of Windows and Linux universal forwarders sending data to the same indexer, you can specify that all forwarders get a common <code><font size="2">outputs.conf</font></code> file, but that Windows forwarders get one <code><font size="2">inputs.conf</font></code> file while Linux forwarders get a different one. To implement this, you can define an "all forwarder" server class that distributes a deployment app containing a common <code><font size="2">outputs.conf</font></code> file to all forwarders, while also defining Windows and Linux server classes that distribute separate apps containing different <code><font size="2">inputs.conf</font></code> files to the appropriate subsets of forwarders.
+</p>
+<h3> <a name="definedeploymentclasses_overview_of_server_class_configuration"><span class="mw-headline" id="Overview_of_server_class_configuration"> Overview of server class configuration</span></a></h3>
+<p>A server class is a mapping between deployment clients and apps. It tells the deployment server which apps to send to which clients. Therefore, when you define a server class, you associate one or more apps with a group of deployment clients. 
+</p><p>You define server classes on the deployment server with these steps:
+</p><p><b>1.</b> Create the server class.
+</p><p><b>2.</b> Specify one or more deployment apps for the server class.
+</p><p><b>3.</b> Specify the clients that belong to the server class.
+</p><p>This  section provides an overview of these steps. The specifics of the configuration process depend on the method you use to create the server class: the forwarder management interface or direct editing of serverclass.conf. See <a href="#definedeploymentclasses_ways_to_define_server_classes" class="external text">"Ways to define server classes"</a>.
+</p>
+<h4><font size="3"><b><i> <a name="definedeploymentclasses_1._create_the_server_class"><span class="mw-headline" id="1._Create_the_server_class"> 1. Create the server class</span></a></i></b></font></h4>
+<p>Create and name the server class through the forwarder management interface or directly in <code><font size="2">serverclass.conf</font></code>.
+</p><p><b>Important:</b> Server class names must be unique.
+</p>
+<h4><font size="3"><b><i> <a name="definedeploymentclasses_2._specify_apps_for_the_server_class"><span class="mw-headline" id="2._Specify_apps_for_the_server_class"> 2. Specify apps for the server class</span></a></i></b></font></h4>
+<p>Once you've created the server class, you need to associate deployment apps with it. These are the apps that you earlier created on the deployment server's file system, as described in <a href="#createdeploymentapps" class="external text">"Create deployment apps"</a>. There is not necessarily a one-to-one correspondence between server classes and apps. Rather, a single server class can include several apps.  Similarly, one app can belong to multiple server classes.
+</p>
+<h4><font size="3"><b><i> <a name="definedeploymentclasses_3._specify_clients_for_the_server_class"><span class="mw-headline" id="3._Specify_clients_for_the_server_class"> 3. Specify clients for the server class</span></a></i></b></font></h4>
+<p>Next, you need to associate clients with the server class. You do not ordinarily specify clients individually. Instead, you set up filters that dynamically determine which clients belong to the server class, based on common identifiable characteristics.
+</p>
+<h3> <a name="definedeploymentclasses_ways_to_define_server_classes"><span class="mw-headline" id="Ways_to_define_server_classes"> Ways to define server classes</span></a></h3>
+<p>You define server classes on the deployment server. Server class definitions are saved in the deployment server's <code><font size="2">serverclass.conf</font></code> file. There are two ways to define server classes:
+</p>
+<ul><li> By using the forwarder management interface.  See <a href="#useforwardermanagement" class="external text">"Use forwarder management to define server classes"</a> for details. This is the easy way to define server classes. It offers a quick, interactive approach to filtering clients and mapping them to apps.
+</li></ul><ul><li> By directly editing the deployment server's <code><font size="2">serverclass.conf</font></code> file. See <a href="#useserverclass.conf" class="external text">"Use serverclass.conf to define server classes"</a> for details. Some advanced configurations require that you directly edit <code><font size="2">serverclass.conf</font></code>.
+</li></ul><p><b>Important:</b> Once you edit <code><font size="2">serverclass.conf</font></code> directly, you will probably not be able to use the forwarder management interface for subsequent configuration. This is because forwarder management can handle only a subset of possible configurations. For details on what <code><font size="2">serverclass.conf</font></code> changes are compatible with forwarder management, see the topic <a href="#forwardermanagementcompatibility" class="external text">"Compatibility and forwarder management"</a>.
+</p>
+<h3> <a name="definedeploymentclasses_the_serverclass.conf_file"><span class="mw-headline" id="The_serverclass.conf_file"> The serverclass.conf file</span></a></h3>
+<p>The <code><font size="2">serverclass.conf</font></code> file is the key deployment server configuration file. All server class definitions get written to that file. In addition, it holds a number of other settings related to the functioning of the deployment server. For a detailed description of that file, including a list of all configuration attributes, read the serverclass.conf specification file.
+</p><p>For background information on Splunk Enterprise configuration files, read "About configuration files" in the Admin Manual. 
+</p><p>When the forwarder management interface configures server classes, it writes the definitions to a copy of <code><font size="2">serverclass.conf</font></code>. You can also edit <code><font size="2">serverclass.conf</font></code> directly, and you might need to do so for some complex configurations.
+</p><p>The deployment server can have multiple versions of <code><font size="2">serverclass.conf</font></code>. When there are multiple versions of a configuration file, Splunk Enterprise follows a defined process for merging the attributes from all the versions. For details on the order of precedence that Splunk Enterprise uses, read "Configuration file precedence" in the Admin Manual.
+</p><p>When you use forwarder management to create a new server class, it saves the server class definition in a copy of <code><font size="2">serverclass.conf</font></code> under <code><font size="2">$SPLUNK_HOME/etc/system/local</font></code>.  If, instead of using forwarder management, you decide to directly edit <code><font size="2">serverclass.conf</font></code>, it is recommended that you create the <code><font size="2">serverclass.conf</font></code> file in that same directory, <code><font size="2">$SPLUNK_HOME/etc/system/local</font></code>.  
+</p><p>If a server class definition exists in a <code><font size="2">serverclass.conf</font></code> file under some other directory (most typically an app directory located at <code><font size="2">$SPLUNK_HOME/etc/apps/&lt;app_name&gt;/local</font></code>), the forwarder management interface will still display that server class, along with any other server class definitions located in files elsewhere on the system. If you use forwarder management to edit an existing server class, the interface will save the edits to the same version of <code><font size="2">serverclass.conf</font></code>. That is, if you edit a server class that's defined in <code><font size="2">$SPLUNK_HOME/etc/apps/SomeApp/local/serverclass.conf</font></code>, forwarder management saves the updated definition back to that same directory. However, if you then use forwarder management to create a new server class, it saves the new server class to <code><font size="2">$SPLUNK_HOME/etc/system/local/serverclass.conf</font></code>.
+</p><p><b>Important:</b> Server class names must be unique across all <code><font size="2">serverclass.conf</font></code> files.
+</p>
+<a name="useforwardermanagement"></a><h2> <a name="useforwardermanagement_use_forwarder_management_to_define_server_classes"><span class="mw-headline" id="Use_forwarder_management_to_define_server_classes"> Use forwarder management to define server classes</span></a></h2>
+<p>The forwarder management interface is an interactive, visual tool for creating and editing <b>server classes</b>, which map <b>deployment clients</b> to <b>deployment apps</b>. You run it on the <b>deployment server</b>. For an introduction to the interface, including details on how to access it, see <a href="#forwardermanagementoverview" class="external text">"Forwarder management overview"</a>. 
+</p><p>The interface saves server class configurations to a serverclass.conf file. The first time you save a server class, forwarder management creates the <code><font size="2">serverclass.conf</font></code> file under <code><font size="2">$SPLUNK_HOME/etc/system/local</font></code> on the deployment server. For information on <code><font size="2">serverclass.conf</font></code>, see <a href="#definedeploymentclasses_the_serverclass.conf_file" class="external text">"The serverclass.conf file"</a>.
+</p><p><b>Note:</b> For some advanced server class configurations, you might need to directly edit <code><font size="2">serverclass.conf</font></code>. For information on forwarder management limitations, see <a href="#forwardermanagementcompatibility" class="external text">"Compatibility and forwarder management"</a>. For details on editing <code><font size="2">serverclass.conf</font></code> directly, see the topic <a href="#useserverclass.conf" class="external text">"Use serverclass.conf to define server classes"</a>. 
+</p>
+<h3> <a name="useforwardermanagement_define_a_server_class"><span class="mw-headline" id="Define_a_server_class"> Define a server class </span></a></h3>
+<p>A server class maps deployment clients to deployment apps. Therefore, before you define a server class, you need to configure the clients and create the apps that you intend to map. For information, read the topics <a href="#configuredeploymentclients" class="external text">"Configure deployment clients"</a> and <a href="#createdeploymentapps" class="external text">"Create deployment apps"</a>. 
+</p><p>After you set up the clients and apps, they appear automatically in the forwarder management interface.
+</p><p>There are three steps to defining a server class:
+</p><p><b>1.</b> Create the server class.
+</p><p><b>2.</b> Add deployment apps to the server class.
+</p><p><b>3.</b> Specify clients for the server class.
+</p><p>You can perform steps 2 and 3 in either order. You can also change the set of clients and apps at any time. 
+</p><p><b>Important:</b> Each time you use the forwarder management interface to edit and save a server class configuration, the deployment server will reload and then deploy the latest app content to any clients that haven't already received it. For example, if you add an app to the server class, all clients in the server class will then receive it. If you add some new clients to the server class but don't change the apps, only the new clients will get the distribution. For a detailed discussion of what actions prompt the deployment server to deploy or redeploy apps, read the topic <a href="#updateconfigurations" class="external text">"Deploy apps to clients"</a>.
+</p>
+<h4><font size="3"><b><i> <a name="useforwardermanagement_1._create_the_server_class"><span class="mw-headline" id="1._Create_the_server_class">1. Create the server class</span></a></i></b></font></h4>
+<p>To create the server class, go to the forwarder management interface, as described in <a href="#forwardermanagementoverview_access_the_forwarder_management_interface" class="external text">"Access the forwarder management interface"</a>, and perform these actions:
+</p><p><b>1.</b> Select the <b>Server Classes</b> tab.
+</p><p><b>2.</b> Select the <b>New Server Class</b> button.
+</p><p><b>3.</b> Enter a name for the server class in the <b>Title</b> field of the pop-up window and click <b>Save</b>.
+</p><p>This takes you to a screen with prompts for adding apps and clients.  
+</p><p><b>Important:</b> Server class names must be unique. Also, they cannot contain spaces.
+</p>
+<h4><font size="3"><b><i> <a name="useforwardermanagement_2._add_apps"><span class="mw-headline" id="2._Add_apps">2. Add apps</span></a></i></b></font></h4>
+<p>When you save a server class, the interface takes you to a screen with prompts for adding apps and clients.  To add apps to the server class:
+</p><p><b>1.</b> Click the <b>Add Apps</b> button. This takes you to the <b>Edit Apps</b> page. (You can also edit the set of apps later, by going to the <b>Server Classes</b> tab and clicking the <b>Edit</b> button for the particular server class.)
+</p><p>On the <b>Edit Apps</b> page, there are two columns: <b>Unselected Apps</b> and <b>Selected Apps</b>, with a list of apps under each. For a new server class, all apps will initially be in the <b>Unselected</b> column. The apps appearing there are the ones with subdirectories in the repository location on the deployment server (by default, <code><font size="2">$SPLUNK_HOME/etc/deployment-apps</font></code>), as described in <a href="#createdeploymentapps" class="external text">"Create deployment apps"</a>.
+</p><p><b>2.</b> To add an app to the server class, click on it. That moves it from the <b>Unselected Apps</b> column to the <b>Selected Apps</b> column. 
+</p><p><b>3.</b> After you select all the apps for the server class, click <b>Save</b>.  If you haven't yet added any clients, you'll now be prompted to do so.
+</p><p>When you save the app settings, the deployment server reloads and deploys the apps to the set of clients, assuming you have already specified the clients for this server class. If you have yet to specify the clients, the apps will get deployed once you do.
+</p>
+<h4><font size="3"><b><i> <a name="useforwardermanagement_3._specify_clients"><span class="mw-headline" id="3._Specify_clients">3. Specify clients</span></a></i></b></font></h4>
+<p>When you save a server class, the interface takes you to a screen with prompts for adding apps and clients.  To add clients to the server class:
+</p><p><b>1.</b> Click the <b>Add Clients</b> button. (You can also edit the set of clients later, by going to the <b>Server Classes</b> tab and clicking the <b>Edit</b> button for the particular server class.) The <b>Edit Clients</b> page appears:
+</p><p><img alt="Forwarder management edit clients.png" src="images/2/2c/Forwarder_management_edit_clients.png" width="700" height="316"></p><p>On the <b>Edit Clients</b> page, there are three buttons, <b>All</b>, <b>Matched</b> and <b>Unmatched</b>, followed by a list of clients. The clients appearing when you select the <b>All</b> button will be the ones that you earlier configured for this deployment server, as described in <a href="#configuredeploymentclients" class="external text">"Configure deployment clients"</a>. The <b>Matched</b> and <b>Unmatched</b> buttons list clients according to whether they match the filters that you've created at the top of the page. For a new server class, no clients initially appear under the <b>Matched</b> tab. 
+</p><p><b>2.</b> To add clients to the server class, you do not specify them individually. Instead, you create filters that dynamically include or exclude clients. You enter the filters using the fields near the top of the page: <b>Include, Exclude,</b> and <b>Filter by Machine Type.</b> There's a lot to learn about creating client filters, and so the details are covered in a separate topic, <a href="#filterclients" class="external text">"Set up client filters"</a>.
+</p><p>After you enter one or more filters, click the <b>Preview</b> button to view the set of matched clients. 
+</p><p>If you have a long list of clients and you only want to view a subset of them, you can use the <b>filter</b> field to the right of the <b>All/Matched/Unmatched</b> buttons. This particular filter only limits the clients shown in the table; it does <i>not</i> filter the set of clients included in the server class. You can filter on the columns in the client table; for example, host name or IP address.
+</p><p><b>3.</b> After you specify the clients you want in the server class, click <b>Save</b>. If you haven't yet added any apps, you'll now be prompted to do so.
+</p><p>When you save the client settings, the deployment server reloads and then deploys the set of  apps for this server class to any clients that haven't already received them. It only does this if you have already specified the apps for the server class.
+</p>
+<h3> <a name="useforwardermanagement_view_a_server_class"><span class="mw-headline" id="View_a_server_class"> View a server class </span></a></h3>
+<p>To view the contents of a server class:
+</p><p><b>1.</b> Go to the <b>Server Classes</b> tab on the home page for Forwarder Management. This shows you a list of all server classes on the deployment server. 
+</p><p><b>2.</b> Click on the server class you want to view. This takes you to a page for that server class.  The page contains three sections:
+</p>
+<ul><li> <b>Status.</b> The top of the page lists the number of apps and clients in the server class. It also provides information on the deployment success rate. 
+</li><li> <b>Apps.</b> The middle section lists the apps for the server class and their deployment status. From here, you can:
+<ul><li> Edit the set of apps for the server class, by clicking the <b>Edit</b> link at the top of the list. 
+</li><li> Get more information on any app, by clicking on its name. 
+</li><li> Edit an app's attributes, by clicking on the app's <b>Edit</b> action. 
+</li></ul></li><li> <b>Clients.</b> The bottom section lists the clients for the server class, along with some information about them, including their status. From here, you can:
+<ul><li> Edit the set of clients for the server class, by clicking the <b>Edit</b> link at the top of the list. 
+</li><li> Filter the list by how recently the clients phoned home, their deployment status, or other fields in the client table. 
+</li><li> Get more details about a client, by clicking on the arrow in the leftmost colummn of each row.
+</li></ul></li></ul><p>For information on managing apps, see <a href="#useforwardermanagementtomanageapps" class="external text">"Use forwarder management to manage apps"</a>.  For information on managing clients, see <a href="#useforwardermanagementtomanageclients" class="external text">"Use forwarder management to manage clients"</a>.
+</p>
+<h3> <a name="useforwardermanagement_edit_a_server_class"><span class="mw-headline" id="Edit_a_server_class"> Edit a server class </span></a></h3>
+<p>You can edit a server class at any time. Go to the <b>Server Classes</b> tab on the entry page for Forwarder Management. Locate the server class you want and click the <b>Edit</b> button for that row. You have these choices:
+</p>
+<ul><li> <b>Edit clients.</b> Edit the set of clients for the server class. See  <a href="#useforwardermanagementtomanageclients" class="external text">"Use forwarder management to manage clients"</a>. 
+</li><li> <b>Edit apps.</b> Edit the set of apps for the server class. See  <a href="#useforwardermanagementtomanageapps" class="external text">"Use forwarder management to manage apps"</a>. 
+</li><li> <b>Rename.</b> Rename the server class.
+</li><li> <b>Delete.</b> Delete the server class.
+</li></ul><p>When you click <b>Save</b> after editing the set of clients or apps, the deployment server reloads and makes the latest app content available to any clients that haven't already received it.
+</p><p><b>Note:</b> The same edit actions are available from the <b>Edit</b> button near the upper right corner of the individual server class page.
+</p>
+<a name="filterclients"></a><h2> <a name="filterclients_set_up_client_filters"><span class="mw-headline" id="Set_up_client_filters"> Set up client filters</span></a></h2>
+<p>A key activity in defining a server class is specifying the set of clients that belong to the server class. You do this through client filters. 
+</p>
+<h3> <a name="filterclients_types_of_filters"><span class="mw-headline" id="Types_of_filters">Types of filters</span></a></h3>
+<p>There are three types of client filters:
+</p>
+<ul><li> <b>Whitelist.</b> Specifies clients to include, based on IP address, host name,  DNS name, or client name.
+</li><li> <b>Blacklist.</b> Specifies clients to exclude, based on IP address, host name,  DNS name, or client name.
+</li><li> <b>Machine type.</b> Specifies clients to include, based on machine type, such as <code><font size="2">linux-i686, linux-x86_64</font></code>, and so on. 
+</li></ul><p><b>Note:</b> The "client name" is a logical name that you can assign to a deployment client through the <code><font size="2">clientName</font></code> attribute in <code><font size="2">deploymentclient.conf</font></code>. For more information, see <a href="#configuredeploymentclients_set_a_client_name" class="external text">"Set a client name"</a>.
+</p><p>You can use one or all of these filters to define the set of clients for a server class. For example, you can combine a whitelist for all clients for the North American region with a machine type filter that includes all Windows clients. That way, North American Windows clients will be in their own server class and handled separately from North American Linux clients or clients in other regions.
+</p>
+<h3> <a name="filterclients_define_filters_through_forwarder_management"><span class="mw-headline" id="Define_filters_through_forwarder_management">Define filters through forwarder management</span></a></h3>
+<p><i>In forwarder management, you always define filters for an entire server class.</i> If you need to define filters at either the global or app level, you must edit <code><font size="2">serverclass.conf</font></code> directly.
+</p><p>You define filters when you specify clients for a server class. The process of specifying clients is described in <a href="#useforwardermanagement" class="external text">"Use forwarder management to define server classes"</a>. The instructions in that topic take you to the <b>Edit Clients</b> dashboard. At the top of that dashboard, there are separate fields for include (whitelist), exclude (blacklist), and machine type:
+</p><p><img alt="Forwarder management edit clients.png" src="images/2/2c/Forwarder_management_edit_clients.png" width="700" height="316"></p><p>Note:
+</p>
+<ul><li> You can enter values for as many of these filter fields as you need to. You can also enter multiple filters for each field. 
+</li></ul><ul><li> To enter multiple whitelist/blacklist filters, separate each filter with a comma. 
+</li></ul><ul><li> When specifying IP addresses or host names, you can use wildcards; for example, <code><font size="2">10.1.1.*</font></code> or <code><font size="2">fwdr-*</font></code>.
+</li></ul><ul><li> For machine type filters, use the dropdown list. The list is populated with all machine types for the deployment server's set of clients. For example, the dropdown list could include these values: <code><font size="2">linux-x86_64</font></code>, <code><font size="2">linux-i686</font></code>, and <code><font size="2">windows-x64</font></code>. Depending on how you're grouping your clients, you might need a separate server class for each machine type, or you might be able to combine several machine types (for example, all Linux machine types) in a single server class. 
+</li></ul><ul><li> The machine type filter in forwarder management corresponds to the <code><font size="2">machineTypesFilter</font></code> attribute in <code><font size="2">serverclass.conf</font></code>, <i>not</i> to the <code><font size="2">machineTypes</font></code> attribute.
+</li></ul><h4><font size="3"><b><i> <a name="filterclients_how_filters_combine"><span class="mw-headline" id="How_filters_combine"> How filters combine</span></a></i></b></font></h4>
+<p>The various filters combine like this:
+</p>
+<ul><li> Clients are not included in the server class by default.
+</li><li> Clients that match any whitelist entry, and do not match any blacklist entry, are included in the server class.
+</li><li> Clients that match any blacklist entry are not included in the server class, regardless of whitelist.
+</li><li> The machine type filter operates on the output from the whitelist/blacklist filters. <i>If you want to use the machine type as the sole qualifier, you must also put an asterisk in the whitelist filter.</i>
+</li></ul><p>The following examples describe various results and what you need to enter into the filter fields to obtain them. These are just examples and are dependent on specific conventions for client host names and DNS names.
+</p>
+<h5> <a name="filterclients_example_1"><span class="mw-headline" id="Example_1">Example 1</span></a></h5>
+<p>This example includes all Windows 64-bit clients:
+</p>
+<ul><li> Whitelist: <code><font size="2">*</font></code>
+</li><li> Blacklist: 
+</li><li> Machine type: <code><font size="2">windows-x64</font></code>
+</li></ul><p><b>Important:</b> The asterisk in the whitelist filter is necessary. Otherwise, there will be no clients for the machine type filter to operate on.
+</p>
+<h5> <a name="filterclients_example_2"><span class="mw-headline" id="Example_2">Example 2</span></a></h5>
+<p>This example includes all Windows 64-bit forwarders:
+</p>
+<ul><li> Whitelist: <code><font size="2">fwdr-*</font></code>
+</li><li> Blacklist: 
+</li><li> Machine type: <code><font size="2">windows-x64</font></code>
+</li></ul><h5> <a name="filterclients_example_3"><span class="mw-headline" id="Example_3">Example 3</span></a></h5>
+<p>This example includes Linux clients that are in the Ops area of the company and outside North America:
+</p>
+<ul><li> Whitelist: <code><font size="2">*.ops.yourcompany.com</font></code>
+</li><li> Blacklist: <code><font size="2">northamerican-*</font></code>
+</li><li> Machine type: <code><font size="2">linux-i686, linux-x86_64</font></code>
+</li></ul><p>The section in this topic that covers <code><font size="2">serverclass.conf</font></code> includes additional information on filters that is also relevant to forwarder management filter configuration:
+</p>
+<ul><li> More details on filter behavior
+</li><li> More examples
+</li></ul><h3> <a name="filterclients_define_filters_through_serverclass.conf"><span class="mw-headline" id="Define_filters_through_serverclass.conf">Define filters through serverclass.conf</span></a></h3>
+<p>You can directly edit <code><font size="2">serverclass.conf</font></code> if your filtering needs exceed the capabilities of the forwarder management interface; for example, if you need to layer filters across multiple levels or if you need to define different filters for different apps within a server class. 
+</p><p>In <code><font size="2">serverclass.conf</font></code>, you  can define filters at any of three levels:
+</p>
+<ul><li> <b>Global.</b> These filters apply to all server classes.
+</li><li> <b>Server class.</b> These filters apply to an entire server class.
+</li><li> <b>App.</b> These filters apply to just a single app within a server class.
+</li></ul><p>You can define multiple filters at different levels. More specific filters always take precedence. For example, you can set up a whitelist filter at the global level and then use different blacklist filters at each server class level to exclude some clients from each server class.
+</p><p>After you edit <code><font size="2">serverclass.conf</font></code>, you must reload the deployment server so that the changes take effect. To reload the deployment server, invoke the CLI <code><font size="2">reload deploy-server</font></code> command:
+</p>
+<code><font size="2"><br>&nbsp;splunk reload deploy-server<br></font></code>
+<p>See <a href="#useserverclass.conf_reload_the_deployment_server" class="external text">"Reload the deployment server"</a> for details.
+</p><p><b>Important:</b> Once you edit <code><font size="2">serverclass.conf</font></code> directly, there's a strong possibility that you will no longer be able to use the forwarder management interface for configuration purposes. For details, see the topic <a href="#forwardermanagementcompatibility" class="external text">"Compatibility and forwarder management"</a>. 
+</p>
+<h4><font size="3"><b><i> <a name="filterclients_determine_host_names_of_deployment_clients"><span class="mw-headline" id="Determine_host_names_of_deployment_clients">Determine host names of deployment clients </span></a></i></b></font></h4>
+<p>The filters operate on the host names of the deployment clients. To determine the correct set of host names to filter on, you can run a CLI command on the deployment server:
+</p>
+<code><font size="2"><br>&nbsp;splunk list deploy-clients<br></font></code>
+<h4><font size="3"><b><i> <a name="filterclients_list_of_filtering_attributes"><span class="mw-headline" id="List_of_filtering_attributes">List of filtering attributes</span></a></i></b></font></h4>
+<p>The following attributes in <code><font size="2">serverclass.conf</font></code> determine filter behavior:
+</p>
+<table cellpadding="5" cellspacing="0" border="1" width="100%"><tr><th bgcolor="#C0C0C0"> Filter attribute
+</th><th bgcolor="#C0C0C0"> What it's for
+</th><th bgcolor="#C0C0C0"> Default
+</th></tr><tr><td valign="top" align="left"> filterType
+</td><td valign="center" align="left"> Set to <b>"whitelist"</b> or <b>"blacklist"</b>.
+<p>This determines the order of execution of filters. If <code><font size="2">filterType</font></code> is <code><font size="2">whitelist</font></code>, all whitelist filters are applied first, followed by blacklist filters. If <code><font size="2">filterType</font></code> is <code><font size="2">blacklist</font></code>, all blacklist filters are applied first, followed by whitelist filters.
+</p><p>The <code><font size="2">whitelist</font></code> setting indicates a filtering strategy that pulls in a subset:
+</p>
+<ul><li> Items are not considered to match the stanza by default.
+</li><li> Items that match any whitelist entry, and do not match any blacklist entry, are considered to match the stanza.
+</li><li> Items that match any blacklist entry are not considered to match the stanza, regardless of whitelist.
+</li></ul><p>The <code><font size="2">blacklist</font></code> setting indicates a filtering strategy that rules out a subset:
+</p>
+<ul><li> Items are considered to match the stanza by default.
+</li><li> Items that match any blacklist entry, and do not match any whitelist entry, are considered to not match the stanza.
+</li><li> Items that match any whitelist entry are considered to match the stanza.
+</li></ul><p>To summarize:
+</p>
+<ul><li> <code><font size="2">whitelist</font></code>: default no-match -&gt; whitelists enable -&gt; blacklists disable
+</li><li> <code><font size="2">blacklist</font></code>: default match -&gt; blacklists disable-&gt; whitelists enable
+</li></ul><p>You can override this value at the <code><font size="2">serverClass</font></code> and <code><font size="2">serverClass:app</font></code> levels. If you specify <code><font size="2">whitelist</font></code> at the global level, and then specify <code><font size="2">blacklist</font></code> for an individual server class, the setting becomes <code><font size="2">blacklist</font></code> for that server class, and you have to provide another filter in that server class definition to replace the one you overrode. 
+</p><p><b>Important:</b> The forwarder management interface requires that <code><font size="2">filterType</font></code> retain its default value of <code><font size="2">whitelist</font></code>.
+</p>
+</td><td valign="top" align="left"> whitelist
+</td></tr><tr><td valign="top" align="left"> whitelist.&lt;n&gt;<br><p>blacklist.&lt;n&gt;
+</p>
+</td><td valign="center" align="left">&lt;n&gt; is a number starting at 0, and incrementing by 1.
+<p>Set the attribute to <code><font size="2">ipAddress, hostname, DNSname,</font></code> or <code><font size="2">clientName</font></code>:
+</p>
+<ul><li> <code><font size="2">ipAddress</font></code> is the IP address of the deployment client. Can use wildcards, such as <code><font size="2">10.1.1.*</font></code>
+</li><li> <code><font size="2">hostname</font></code> is the host name of deployment client. Can use wildcards, such as <code><font size="2">*.splunk.com</font></code>
+</li><li> <code><font size="2">DNSname</font></code> is the DNS name of the deployment client. Can use wildcards, such as <code><font size="2">*.ops.yourcompany.com</font></code>
+</li><li> <code><font size="2">clientName</font></code> is a logical or tag name that can be assigned to a deployment client in <code><font size="2">deploymentclient.conf</font></code>. It takes precedence over <code><font size="2">ipAddress</font></code>, <code><font size="2">hostname</font></code>, or <code><font size="2">DNSname</font></code> when matching a client to a filter.
+</li></ul><p>Here are some examples: 
+When <code><font size="2">filterType</font></code> is whitelist:
+</p><p><code><font size="2">whitelist.0=*.fflanda.com<br>
+blacklist.0=printer.fflanda.com<br>
+blacklist.1=scanner.fflanda.com</font></code>
+</p><p>This will cause all deployment clients in fflanda.com except "printer" and "scanner" to match this server class.
+</p><p>When <code><font size="2">filterType</font></code> is blacklist:
+</p><p><code><font size="2">blacklist.0=*<br>
+whitelist.0=*.web.fflanda.com<br>
+whitelist.1=*.linux.fflanda.com</font></code>
+</p><p>This will cause only the "web" and "linux" clients to match the server class. No other clients will match.
+</p><p>The deployment server stops evaluating a filter at the first break in sequence of <code><font size="2">&lt;n&gt;</font></code> values.
+</p><p>You can override filters at the <code><font size="2">serverClass</font></code> and <code><font size="2">serverClass:app</font></code> levels.
+</p><p><b>Important:</b> Overriding one type of filter (whitelist/blacklist) causes the other to be overridden too. If, for example, you override the whitelist, the blacklist will not be inherited from the parent; you must provide one in the stanza.
+</p>
+</td><td valign="top" align="left"> n/a
+</td></tr><tr><td valign="top" align="left"> machineTypesFilter
+</td><td valign="center" align="left"> Matches any of the machine types in a comma-separated list.
+<p>This setting lets you use the hardware type of the deployment client as a filter. This filter will be used only if a client matches the whitelist/blacklist filters. 
+</p><p>The value for <code><font size="2">machineTypesFilter</font></code> is a comma-separated list of machine types; for example, <code><font size="2">linux-i686, linux-x86_64</font></code>, etc. Each machine type is a specific string designated by the hardware platform itself. 
+</p><p><b>Note:</b> A <code><font size="2">machineTypesFilter</font></code> value can contain wildcards; for example: <code><font size="2">linux-*</font></code>, <code><font size="2">windows-*</font></code>, or <code><font size="2">aix-*</font></code>
+</p><p>The method for finding this string on the client varies by platform, but if the deployment client is already connected to the deployment server, you can determine the string's value by using this CLI command on the deployment server: 
+</p><p><code><font size="2">splunk list deploy-clients</font></code>
+</p><p>This will return a value for <code><font size="2">utsname</font></code> that you can use to specify <code><font size="2">machineTypesFilter</font></code>.
+</p><p>This setting will match any of the machine types in a comma-delimited list. Commonly-used machine types are: <code><font size="2">linux-x86_64, windows-x64, linux-i686, freebsd-i386, darwin-i386, sunos-sun4u, linux-x86_64, sunos-i86pc, freebsd-amd64.</font></code>
+</p>
+</td></tr></table><p>For more details on these attributes, see the serverclass.conf spec file in the Admin manual.
+</p>
+<h4><font size="3"><b><i> <a name="filterclients_examples"><span class="mw-headline" id="Examples">Examples</span></a></i></b></font></h4>
+<p>Here are several examples of <code><font size="2">serverclass.conf</font></code> client filtering. Note that these examples cannot be exactly duplicated in forwarder management for various reasons. The first example, for instance, defines one whitelist at the global level. In forwarder management, all filters are defined at the server class level. In the second example, one of the server classes sets the <code><font size="2">filterType</font></code> attribute to <code><font size="2">blacklist</font></code>. In forwarder management, the <code><font size="2">filterType</font></code> is always set to <code><font size="2">whitelist</font></code>.
+</p>
+<code><font size="2"><br># Example 1<br># Match all clients and includes all apps in the server class<br><br>[global]<br>whitelist.0=*<br># whitelist matches all clients.<br>[serverClass:AllApps]<br>[serverClass:AllApps:app:*]<br># a server class that encapsulates all apps in the repositoryLocation <br><br><br># Example 2<br># Assign server classes based on hostnames.<br><br>[global]<br><br>[serverClass:AppsForOps]<br>whitelist.0=*.ops.yourcompany.com<br>[serverClass:AppsForOps:app:unix]<br>[serverClass:AppsForOps:app:SplunkLightForwarder]<br><br>[serverClass:AppsForDesktops]<br>filterType=blacklist<br># blacklist everybody except the Windows desktop machines.<br>blacklist.0=* <br>whitelist.0=*.desktops.yourcompany.com<br>[serverClass:AppsForDesktops:app:SplunkDesktop]<br><br><br># Example 3<br># Deploy server class based on machine types<br><br>[global]<br># whitelist.0=* at the global level ensures that the machineTypesFilter attribute<br># invoked later will apply.<br>whitelist.0=*<br><br>[serverClass:WindowsMachineTypes]<br>machineTypesFilter=windows-*<br><br>[serverClass:WindowsMachineTypes:app:WindowsApp]<br><br>[serverClass:LinuxMachineTypes]<br>machineTypesFilter=linux-i686, linux-x86_64<br><br>[serverClass:LinuxMachineTypes:app:LinuxApp]<br><br># Example 4<br># Blacklist a range of IP addresses, using a regular expression<br><br>[global]<br><br>[serverClass:ExcludeSomeIPAddresses]<br>filterType=whitelist<br>whitelist.0=*<br>blacklist.0=192.168.1.1[34][0-9]<br><br></font></code>
+
+<h1>Deploy apps</h1><a name="updateconfigurations"></a><h2> <a name="updateconfigurations_deploy_apps_to_clients"><span class="mw-headline" id="Deploy_apps_to_clients"> Deploy apps to clients</span></a></h2>
+<p>The <b>deployment server</b> distributes <b>deployment apps</b> to <b> clients</b>.
+</p><p>It deploys apps at these times:
+</p>
+<ul><li> When you create a server class and map a set of clients to one or more apps. 
+</li><li> When you change a server class (for example, by changing its set of apps or clients).
+</li><li> When you change the content of an app.
+</li><li> When a new client joins a server class.
+</li></ul><p>In some cases, it deploys apps automatically. In other cases, you need to manually initiate the deployment. In part, this depends on whether you are using forwarder management or editing <code><font size="2">serverclass.conf</font></code> directly.
+</p><p>For help estimating the time required to deploy apps, see <a href="#calculatedeploymentserverperformance" class="external text">"Estimate deployment server performance"</a>.
+</p>
+<h3> <a name="updateconfigurations_deploy_apps_to_clients_in_a_new_or_updated_server_class"><span class="mw-headline" id="Deploy_apps_to_clients_in_a_new_or_updated_server_class">Deploy apps to clients in a new or updated server class</span></a></h3>
+<p>After you create or change a server class, the next step is to deploy its apps to the clients qualified by its filters. If you configure the server class through forwarder management, this happens automatically. If you configure the server class by directly editing <code><font size="2">serverclass.conf</font></code>, you must manually initiate the deployment.
+</p>
+<h4><font size="3"><b><i> <a name="updateconfigurations_when_using_forwarder_management"><span class="mw-headline" id="When_using_forwarder_management"> When using forwarder management</span></a></i></b></font></h4>
+<p>When you first create a server class, you map a set of clients to a set of apps. After you specify both the client filters and the apps, the deployment server automatically deploys the apps to the qualifying clients. This process is described in <a href="#useforwardermanagement" class="external text">"Use forwarder management to define server classes"</a>.
+</p><p>When you later edit a server class, changing either its set of apps or its client filters, the deployment server redeploys <i>all</i> server classes. That is, if the content of any app in any server class (not only in the server class you just edited) has changed since it was last deployed, the deployment server now deploys the latest version to the qualifying clients. 
+</p><p><b>Important:</b> Whenever you use forwarder management to change a configuration, it automatically reloads the deployment server. This causes the deployment server to redeploy any changed apps across all server classes.
+</p>
+<h4><font size="3"><b><i> <a name="updateconfigurations_when_editing_serverclass.conf_directly"><span class="mw-headline" id="When_editing_serverclass.conf_directly">When editing serverclass.conf directly</span></a></i></b></font></h4>
+<p>You can create server classes by directly editing <code><font size="2">serverclass.conf</font></code>. The deployment server does not automatically deploy apps in response to direct edits of <code><font size="2">serverclass.conf</font></code>, unlike when you edit through forwarder management. Instead, you must manually reload the deployment server to initiate deployments.
+</p><p>To reload, invoke the CLI <code><font size="2">reload deploy-server</font></code> command:
+</p>
+<code><font size="2"><br>&nbsp;splunk reload deploy-server<br></font></code>
+<p>After you run <code><font size="2">reload deploy-server</font></code>, the deployment server deploys <i>all</i> server classes. That is, if any app in any server class is new or has changed since it was last deployed, the deployment server deploys the latest version to the qualifying clients for that server class. Similarly, if you have edited a client filter since the last time you reloaded the deployment server, the deployment server ensures, for each server class, that all the currently qualifying clients get the latest set of apps.
+</p><p>For information on creating server classes by directly editing <code><font size="2">serverclass.conf</font></code>, see <a href="#useserverclass.conf" class="external text">"Use serverclass.conf to define server classes"</a>.
+</p>
+<h3> <a name="updateconfigurations_redeploy_an_app_after_you_change_its_content"><span class="mw-headline" id="Redeploy_an_app_after_you_change_its_content">Redeploy an app after you change its content </span></a></h3>
+<p>When you update the content of an app, you must reload the deployment server in order for the deployment server to redeploy the app.
+</p><p><b>Note:</b> If you are using forwarder management, you must also manually reload the deployment server if you want to redeploy the app immediately. However, if do not manually reload the deployment server, the app will still get redeployed once you make <i>any</i> subsequent configuration changes in forwarder management.
+</p><p>To redeploy an app with updated content:
+</p><p><b>1.</b> Update the content in the relevant deployment app directory on the deployment server.
+</p><p><b>2.</b> Reload the deployment server to make the deployment server aware of the changed content.
+</p><p>The deployment server then redeploys the app to all clients that it's mapped to.
+</p>
+<h4><font size="3"><b><i> <a name="updateconfigurations_1._update_the_content"><span class="mw-headline" id="1._Update_the_content">1. Update the content </span></a></i></b></font></h4>
+<p>The topic <a href="#createdeploymentapps" class="external text">"Create deployment apps"</a> described how to create app directories on the deployment server. You can add or overwrite the content in those directories at any time. 
+</p>
+<h4><font size="3"><b><i> <a name="updateconfigurations_2._reload_the_deployment_server"><span class="mw-headline" id="2._Reload_the_deployment_server">2. Reload the deployment server </span></a></i></b></font></h4>
+<p>After you edit the content of an app, you must reload the deployment server so that the deployment server learns of the changed app. It then redeploys the app to the mapped set of clients.
+</p><p>To reload the deployment server, use the CLI <code><font size="2">reload deploy-server</font></code> command:
+</p>
+<code><font size="2"><br>&nbsp;splunk reload deploy-server<br></font></code>
+<p>The command checks all apps for changes and notifies the relevant clients.
+</p>
+<h3> <a name="updateconfigurations_deploy_apps_to_a_new_client"><span class="mw-headline" id="Deploy_apps_to_a_new_client">Deploy apps to a new client</span></a></h3>
+<p>When a deployment client connects with the deployment server for the first time, the deployment server automatically deploys the apps for any server classes that it qualifies for. You do not need to reload the deployment server in this instance.
+</p><p>An example of this is when you configure a new deployment client, and that client has a machine type that an existing server class filters for.
+</p>
+<a name="excludecontent"></a><h2> <a name="excludecontent_exclude_content_from_app_updates"><span class="mw-headline" id="Exclude_content_from_app_updates"> Exclude content from app updates</span></a></h2>
+<p>You can exclude specified files or directories from app updates.  If you enable this feature, the deployment client copies the content the first time it downloads the app but ignores it on future updates of that app.  This can be particularly useful for preventing the contents of the <code><font size="2">/local</font></code> directory from getting wiped out on update.
+</p><p>To use this feature, set the <code><font size="2">excludeFromUpdate</font></code> attribute in <code><font size="2">serverclass.conf</font></code> on the deployment server.  
+</p><p>For example, say that you want to prevent app updates from overwriting <code><font size="2">my-app</font></code>'s <code><font size="2">/local</font></code> directory. Assume the app has the typical directory structure:
+</p>
+<div class="samplecode">
+<code><font size="2"><br>my-app/<br>&nbsp;&nbsp;&nbsp;default/<br>&nbsp;&nbsp;&nbsp;local/<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;some-conf.conf<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br></font></code>
+</div>
+<p>To exclude the content of the <code><font size="2">/local</font></code> directory from updates, place the attribute <code><font size="2">excludeFromUpdate</font></code> in the <code><font size="2">my-app</font></code> stanza of <code><font size="2">serverclass.conf</font></code>:
+</p>
+<div class="samplecode">
+<code><font size="2"><br>[serverClass:my-class:app:my-app]<br>excludeFromUpdate = $app_root$/local<br></font></code>
+</div>
+<p>When the deployment client downloads the app for the first time, it copies the <code><font size="2">/local</font></code> directory and its contents. On subsequent  downloads, it completely ignores the directory.  Any content already in <code><font size="2">/local</font></code> directory on the client remains there.  Similarly, any new content in the download's <code><font size="2">/local</font></code> directory is ignored.
+</p><p>Note the following:
+</p>
+<ul><li> You must use <code><font size="2">$app_root$</font></code> to specify the app root directory.
+</li><li> You can exclude single files or entire directories.
+</li><li> You can specify <code><font size="2">excludeFromUpdate</font></code> at any of the three stanza levels: global, server class, or app.  If you specify it at the global level, for example, it excludes the specified content from all apps.
+</li></ul><a name="viewappstatus"></a><h2> <a name="viewappstatus_view_app_deployment_status"><span class="mw-headline" id="View_app_deployment_status">View app deployment status</span></a></h2>
+<p>You can use the forwarder management interface to view the status of app distribution. 
+</p><p>Go to the <b>Apps</b> tab. For each app, there's information on the number of clients the app was deployed to. Click on an app to go to a detailed page for that app: 
+</p><p><img alt="Forwarder management app drilldown.png" src="images/9/98/Forwarder_management_app_drilldown.png" width="700" height="250"></p><p><b>Note:</b> The <b>App Data Size</b> field near the top of the dashboard specifies the size of the app <b>bundle</b>.  The bundle is a compressed file containing the app. It's how the deployment server packages the app to distribute it to clients. Once a client receives a bundle, it uncompresses it and installs the app in its proper location.
+</p><p>You can also use the CLI to get information on deployment status. To confirm that all clients received the deployment, run this command from the deployment server:
+</p>
+<code><font size="2"><br>&nbsp;splunk list deploy-clients<br></font></code>
+<p>This lists all the deployment clients that have contacted the deployment server since the last restart of the deployment server.
+</p>
+<h1>Manage the deployment server</h1><a name="calculatedeploymentserverperformance"></a><h2> <a name="calculatedeploymentserverperformance_estimate_deployment_server_performance"><span class="mw-headline" id="Estimate_deployment_server_performance"> Estimate deployment server performance</span></a></h2>
+<p>This topic can help you estimate how long it will take to download your apps to a set of clients. These are the key determining factors:
+</p>
+<ul><li> The deployment server specs
+</li><li> The phone home interval (that is, how frequently each client checks in with the deployment server for updates)
+</li><li> The number of clients
+</li><li> The total size of the apps
+</li></ul><h3> <a name="calculatedeploymentserverperformance_deployment_server_provisioning"><span class="mw-headline" id="Deployment_server_provisioning"> Deployment server provisioning</span></a></h3>
+<p>When provisioning a deployment server, note the following:
+</p>
+<ul><li> If it will be deploying to more than 50 clients, the deployment server must run on a dedicated Splunk Enterprise instance. The instance cannot double as an indexer or search head. 
+</li><li> Do not host a distributed management console, which is essentially a search head, on a deployment server with more than 50 clients. 
+</li><li> Do not host a search head cluster deployer on a deployment server with more than 50 clients.
+</li><li> If the deployment server has less than 50 clients, you can co-locate the deployment server on an indexer or search head, including a distributed management console. 
+</li><li> Because of high CPU and memory usage during the app download process, it is recommended that the instance reside on a dedicated host machine.
+</li></ul><h3> <a name="calculatedeploymentserverperformance_time_to_deploy_on_linux"><span class="mw-headline" id="Time_to_deploy_on_Linux"> Time to deploy on Linux</span></a></h3>
+<p>The guidance here is based on testing done using the following set-up:
+</p>
+<ul><li> A deployment server running on a dedicated bare metal 64-bit Linux system with 12GB RAM and 12 cores. 
+</li><li> Deployment across a high-speed LAN network. On higher latency networks, the time to deploy will be longer.
+</li><li> A client phone home interval of 60 seconds.
+</li><li> A set of apps totaling 50MB in size. This is considered a relatively large size to deploy, because in most situations you would deploy a set of apps only once, followed by incremental updates.
+</li></ul><p>To estimate the total time it will take to deploy 50MB to all your clients (assuming the deployment server hardware discussed above), you can use this formula:
+</p>
+<code><font size="2"><br>T = 0.0075 * C + 2<br></font></code>
+<p>where T is the maximum time to deploy in minutes, and C is the number of deployment clients.
+</p><p>For example, it would take a maximum of 9.5 minutes to deploy 50MB of apps to 1000 clients.
+</p>
+<h3> <a name="calculatedeploymentserverperformance_time_to_deploy_on_windows"><span class="mw-headline" id="Time_to_deploy_on_Windows"> Time to deploy on Windows</span></a></h3>
+<p>The guidance here is based on testing done using the following set-up:
+</p>
+<ul><li> A deployment server running on a dedicated 64-bit Windows Server 2008 virtual machine, with 12GB RAM and 8 cores. 
+</li><li> Deployment across a high-speed LAN network. On higher latency networks, the time to deploy will be longer.
+</li><li> A client phone home interval of 60 seconds.
+</li><li> A set of apps totaling 50MB in size. This is considered a relatively large size to deploy, because in most situations you would deploy a set of apps only once, followed by incremental updates.
+</li></ul><p>To estimate the total time it will take to deploy 50MB to all your clients (assuming the deployment server hardware discussed above), you can use this formula:
+</p>
+<code><font size="2"><br>T = 0.04 * C + 8<br></font></code>
+<p>where T is the maximum time to deploy in minutes, and C is the number of deployment clients. This formula is valid for deployments up to 3000 clients.
+</p><p>If you are deploying to more than 2000 clients, you might experience significantly improved performance by increasing the phone home interval to five minutes (300 seconds).
+</p>
+<a name="useforwardermanagementtomanageapps"></a><h2> <a name="useforwardermanagementtomanageapps_use_forwarder_management_to_manage_apps"><span class="mw-headline" id="Use_forwarder_management_to_manage_apps"> Use forwarder management to manage apps</span></a></h2>
+<p>The main function of forwarder management is to create <b>server classes</b> that map <b>deployment apps</b> to <b>clients</b>. This process is described in the topic <a href="#useforwardermanagement" class="external text">"Use forwarder management to define server classes"</a>.
+</p><p>The interface also provides tools to manage deployment apps. You can:
+</p>
+<ul><li> Edit an app
+</li><li> Uninstall an app
+</li><li> View app deployment status
+</li></ul><h3> <a name="useforwardermanagementtomanageapps_edit_an_app"><span class="mw-headline" id="Edit_an_app"> Edit an app</span></a></h3>
+<p>To edit an app:
+</p><p><b>1.</b> Go to the <b>Apps</b> tab, where you'll see a list of all apps. 
+</p><p><b>2.</b> Find the app you want to edit and click its <b>Edit</b> action. 
+</p><p><b>3.</b> Select the <b>Edit</b> option. This takes you to the <b>Edit App</b> screen for that app.
+</p><p>There are a few things you can do from here:
+</p>
+<ul><li> Add the app to a new server class or delete it from an existing server class. On the upper part of the screen, there's a section called <b>Server Classes</b>. Click the <b>+</b> button to add the app to a new server class. Click the <b>x</b> to the right of a server class to remove the app from a server class.
+</li></ul><ul><li> Specify the behavior that occurs immediately after a deployment client downloads the app. There are two options:
+<ul><li> <b>Enable App</b>. This enables the app on the client.
+</li><li> <b>Restart Splunkd</b>. This restarts <code><font size="2">splunkd</font></code> on the client.
+</li></ul></li></ul><p>When you have finished with your changes, click the <b>Save</b> button. This will cause the deployment server to save the changes and redeploy the app (as well as any other apps that have been updated in the interim). For details on how app deployment occurs, see  <a href="#updateconfigurations" class="external text">"Deploy apps to clients"</a>.
+</p><p><b>Important:</b> You cannot edit the actual content of the app from the forwarder management interface. To change its content, you must update the app through the deployment server's file system, as described in <a href="#createdeploymentapps" class="external text">"Create deployment apps"</a>.
+</p>
+<h3> <a name="useforwardermanagementtomanageapps_uninstall_an_app"><span class="mw-headline" id="Uninstall_an_app">Uninstall an app</span></a></h3>
+<p>You can uninstall an app from all server classes or from just a single server class.
+</p>
+<h4><font size="3"><b><i> <a name="useforwardermanagementtomanageapps_uninstall_from_all_server_classes"><span class="mw-headline" id="Uninstall_from_all_server_classes">Uninstall from all server classes</span></a></i></b></font></h4>
+<p>To uninstall an app from all server classes:
+</p><p><b>1.</b> Go to the <b>Apps</b> tab, where you'll see a list of all apps. 
+</p><p><b>2.</b> Find the app you want to edit and click its <b>Edit</b> action.
+</p><p><b>3.</b> Select the <b>Uninstall</b> option. 
+</p><p>This action removes the app from all server classes and uninstalls it from all clients. It does <i>not</i> actually remove the app from the deployment server's file system. 
+</p>
+<h4><font size="3"><b><i> <a name="useforwardermanagementtomanageapps_uninstall_from_one_server_class"><span class="mw-headline" id="Uninstall_from_one_server_class">Uninstall from one server class</span></a></i></b></font></h4>
+<p>To uninstall an app from just one server class:
+</p><p><b>1.</b> Go to the <b>Server Classes</b> tab, where you'll see a list of all server classes. 
+</p><p><b>2.</b> Find the server class from which you want to remove the app, and click its <b>Edit</b> action.
+</p><p><b>3.</b> Select the <b>Edit Apps</b> option.  This takes you to the <b>Edit Apps</b> page. On the <b>Edit Apps</b> page, there are two columns: <b>Unselected Apps</b> and <b>Selected Apps</b>, with a list of apps under each. 
+</p><p><b>4.</b> Locate the app that you want to uninstall in the <b>Selected Apps</b> column. 
+</p><p><b>5.</b> Click the app name to move it from the <b>Selected Apps</b> column to the <b>Unselected Apps</b> column. 
+</p><p><b>6.</b> Click <b>Save</b>.  
+</p><p>The deployment server removes the app from all clients in that server class.
+</p>
+<h3> <a name="useforwardermanagementtomanageapps_view_app_deployment_status"><span class="mw-headline" id="View_app_deployment_status">View app deployment status</span></a></h3>
+<p>To view the deployment status of an app:
+</p><p><b>1.</b> Go to the <b>Apps</b> tab, where you'll see a list of all apps. 
+</p><p><b>2.</b> Locate the <b>Clients</b> column. The column indicates how many clients have received the app. 
+</p><p>For more information, click on the app name. This takes you to a screen that shows a summary of information about the app, as well as the app's clients and their deployment status. You can click on the arrow to the left of each client column to see the apps and server classes that the client is associated with.
+</p>
+<a name="useforwardermanagementtomanageclients"></a><h2> <a name="useforwardermanagementtomanageclients_use_forwarder_management_to_manage_clients"><span class="mw-headline" id="Use_forwarder_management_to_manage_clients"> Use forwarder management to manage clients</span></a></h2>
+<p>You can use forwarder management to edit client mappings and view client status.
+</p>
+<h3> <a name="useforwardermanagementtomanageclients_edit_client_mapping"><span class="mw-headline" id="Edit_client_mapping">Edit client mapping</span></a></h3>
+<p>To change the client mapping for a server class:
+</p><p><b>1.</b> Go to the <b>Server Classes</b> tab, where you'll see a list of all server classes. 
+</p><p><b>2.</b> Find the server class whose client mapping you want to change, and click its <b>Edit</b> action.
+</p><p><b>3.</b> Select the <b>Edit Clients</b> option.  This takes you to the <b>Edit Clients</b> page, with the filter fields at the top: <b>Include</b>, <b>Exclude</b>, and <b>Filter by Machine Type</b>.
+</p><p><b>4.</b> Edit the set of filters. For information on filters, see <a href="#filterclients" class="external text">"Set up client filters"</a>.
+</p><p><b>5.</b> Click <b>Save</b>.  
+</p><p>If changing a filter results in a client getting unmapped from the server class, any previously downloaded deployment apps remain on the client but they will no longer get updated by the deployment server.
+</p>
+<h3> <a name="useforwardermanagementtomanageclients_view_client_status"><span class="mw-headline" id="View_client_status"> View client status</span></a></h3>
+<p>To view the status of a particular client, go to the <b>Clients</b> tab, where you'll see a list of all clients. At the top of the list are various options for filtering the list.
+</p><p>The list provides information on each client, including its host name, client name, IP address, machine type, how many apps have been deployed to it, and the last time it contacted the deployment server. You can get more information on a client by clicking the arrow on the far left of the row.
+</p><p>The list also contains an action, <b>Delete Record</b>. This action just temporarily deletes the client's record from the deployment server. The next time the client contacts the deployment server, the record will be regenerated. The action does not affect the client itself in any way.
+</p>
+<h1>Advanced configuration</h1><a name="useserverclass.conf"></a><h2> <a name="useserverclass.conf_use_serverclass.conf_to_define_server_classes"><span class="mw-headline" id="Use_serverclass.conf_to_define_server_classes"> Use serverclass.conf to define server classes</span></a></h2>
+<p>You can optionally define server classes by directly editing the <code><font size="2">serverclass.conf</font></code> configuration file, rather than using the forwarder management interface. More advanced configurations might require you to edit <code><font size="2">serverclass.conf</font></code>, because the forwarder management interface only handles a subset of possible configurations. You can also start the configuration process through forwarder management and then switch to directly editing the configuration file to deal with advanced configuration issues. 
+</p><p><b>Important:</b> If you edit <code><font size="2">serverclass.conf</font></code> directly, you will likely not be able to return later to configuring via the forwarder management interface. This is because the forwarder management interface can handle only a subset of the configurations possible through <code><font size="2">serverclass.conf</font></code>. For details on what changes are compatible with forwarder management, see the topic <a href="#forwardermanagementcompatibility" class="external text">"Compatibility and forwarder management"</a>.
+</p>
+<h3> <a name="useserverclass.conf_location_for_serverclass.conf"><span class="mw-headline" id="Location_for_serverclass.conf">Location for serverclass.conf</span></a></h3>
+<p>Create a  serverclass.conf file in <code><font size="2">$SPLUNK_HOME/etc/system/local</font></code> on the deployment server. If you have previously defined one or more server classes by means of the forwarder management interface, this file will already exist and you just need to edit or append to it. For information on <code><font size="2">serverclass.conf</font></code>, see <a href="#definedeploymentclasses_the_serverclass.conf_file" class="external text">"The serverclass.conf file"</a>.
+</p>
+<h3> <a name="useserverclass.conf_what_you_can_configure_for_a_server_class"><span class="mw-headline" id="What_you_can_configure_for_a_server_class">What you can configure for a server class</span></a></h3>
+<p>The most important settings define the set of deployment clients and the set of apps for each server class. You can set most attributes at any of three stanza levels.
+</p>
+<h4><font size="3"><b><i> <a name="useserverclass.conf_stanza_levels"><span class="mw-headline" id="Stanza_levels">Stanza levels</span></a></i></b></font></h4>
+<p>You can specify settings at the global level, as well as for individual server classes or apps within server classes. There are three levels of <b>stanzas</b> to enable this:
+</p>
+<table cellpadding="5" cellspacing="0" border="1"><tr><th bgcolor="#C0C0C0"> Stanza
+</th><th bgcolor="#C0C0C0"> Meaning
+</th><th bgcolor="#C0C0C0"> Scope
+</th></tr><tr><td width="15%" valign="center" align="left"> <code><font size="2">[global]</font></code>
+</td><td width="30%" valign="center" align="left"> The global level.
+</td><td width="55%" valign="center" align="left"> Attributes defined here pertain to all server classes.
+</td></tr><tr><td valign="center" align="left"> <code><font size="2">[serverClass:&lt;serverClassName&gt;]</font></code>
+</td><td valign="top" align="left"> An individual server class.
+<p>There can be multiple <code><font size="2">serverClass</font></code> stanzas - one for each server class.
+</p>
+</td><td valign="center" align="left"> Attributes defined here pertain to just the server class <code><font size="2">&lt;serverClassName&gt;</font></code>.
+<p><b>Note:</b> <code><font size="2">&lt;serverClassName&gt;</font></code> cannot contain spaces. In addition, <code><font size="2">&lt;serverClassName&gt;</font></code> must be unique across all serverclass.conf files.
+</p>
+</td></tr><tr><td valign="center" align="left"> <code><font size="2">[serverClass:&lt;serverClassName&gt;:app:&lt;appName&gt;]</font></code>
+</td><td valign="top" align="left"> App within the named server class. You use this to specify the apps that the server class applies to.
+<p>There can be multiple stanzas of this type - one for each app in the server class.
+</p>
+</td><td valign="center" align="left"> <code><font size="2">&lt;appname&gt;</font></code> can be either the name of a single app (usually, its directory name in <code><font size="2">repositoryLocation</font></code>) or the wildcard character "*" to specify all apps in <code><font size="2">repositoryLocation</font></code>.
+<p>Attributes defined here pertain to just the specified deployment app <code><font size="2">&lt;appName&gt;</font></code> within <code><font size="2">&lt;serverClassName&gt;</font></code> (or to all apps, if "*" is specified). 
+</p>
+</td></tr></table><p>Attributes are definable at each stanza level, unless otherwise indicated in the  serverclass.conf spec file. Attributes in more specific stanzas override less specific stanzas. Therefore, an attribute defined in a <code><font size="2">[serverClass:&lt;serverClassName&gt;]</font></code> stanza will override the same attribute defined in <code><font size="2">[global]</font></code>.
+</p>
+<h4><font size="3"><b><i> <a name="useserverclass.conf_client_filtering_attributes"><span class="mw-headline" id="Client_filtering_attributes"> Client filtering attributes </span></a></i></b></font></h4>
+<p>The most common attributes are the ones that configure client filtering. See the topic <a href="#filterclients" class="external text">"Set up client filters"</a> for detailed information on those attributes.  
+</p>
+<h4><font size="3"><b><i> <a name="useserverclass.conf_non-filtering_attributes"><span class="mw-headline" id="Non-filtering_attributes">Non-filtering attributes</span></a></i></b></font></h4>
+<p>Most of the non-filtering attributes are rarely changed from their defaults.  These ones are of particular interest:
+</p>
+<table cellpadding="5" cellspacing="0" border="1" width="100%"><tr><th bgcolor="#C0C0C0"> Attribute
+</th><th bgcolor="#C0C0C0"> What it's for
+</th><th bgcolor="#C0C0C0"> Default
+</th></tr><tr valign="top"><td width="15%" valign="center" align="left">repositoryLocation
+</td><td width="70%" valign="center" align="left">The location on the deployment server where the content to be deployed for this server class is stored.
+</td><td valign="top" width="15%" align="left"><code><font size="2">$SPLUNK_HOME/etc /deployment-apps</font></code>
+</td></tr><tr><td valign="top" align="left"> stateOnClient
+</td><td valign="center" align="left"> Set to "enabled", "disabled", or "noop". This setting specifies whether the deployment client receiving an app should enable or disable the app once it is installed. The "noop" value is for apps that do not require enablement; for example, apps containing only event and source types.
+</td><td valign="top" align="left"> enabled
+</td></tr><tr><td valign="top" align="left"> restartSplunkWeb
+</td><td valign="center" align="left"> Set to "true" or "false". Determines whether the client's Splunk Web restarts after receiving an update.
+</td><td valign="top" align="left"> false
+</td></tr><tr><td valign="top" align="left"> restartSplunkd
+</td><td valign="center" align="left"> Set to "true" or "false". Determines whether the client's <code><font size="2">splunkd</font></code> restarts after receiving an update.
+</td><td valign="top" align="left"> false
+</td></tr></table><p><b>Note:</b> The most accurate and complete list of settings available for a given configuration file is in the <code><font size="2">.spec</font></code> file for that configuration file. You can find the latest version of the <code><font size="2">.spec</font></code> and <code><font size="2">.example</font></code> files for <code><font size="2">serverclass.conf</font></code> in serverclass.conf in the <b>Configuration file reference</b> in the Admin manual, or in <code><font size="2">$SPLUNK_HOME/etc/system/README</font></code>.
+</p>
+<h3> <a name="useserverclass.conf_examples"><span class="mw-headline" id="Examples">Examples</span></a></h3>
+<p>For some simple examples of <code><font size="2">serverclass.conf</font></code> configurations, see <a href="#filterclients" class="external text">"Set up client filters"</a>. In addition, there are several longer and more complete examples presented later in this manual.
+</p>
+<h3> <a name="useserverclass.conf_reload_the_deployment_server"><span class="mw-headline" id="Reload_the_deployment_server"> Reload the deployment server</span></a></h3>
+<p>In order for changes to take effect, you must reload the deployment server after you add a server class or change its configuration. For example, if you add an app to a server class, the deployment server only deploys the new app to the server class clients after you reload. Similarly, if you change the client filters for a server class, the change in the set of clients (and any subsequent app deployment) only takes effect after you reload. 
+</p><p>To reload the deployment server, invoke the CLI <code><font size="2">reload deploy-server</font></code> command:
+</p>
+<code><font size="2"><br>&nbsp;splunk reload deploy-server<br></font></code>
+<p>For more information on reloading the deployment server, see the topic <a href="#updateconfigurations" class="external text">"Deploy apps to clients"</a>.
+</p>
+<a name="forwardermanagementcompatibility"></a><h2> <a name="forwardermanagementcompatibility_compatibility_and_forwarder_management"><span class="mw-headline" id="Compatibility_and_forwarder_management"> Compatibility and forwarder management</span></a></h2>
+<p>Forwarder management can handle the configuration needs for most deployment servers. However, if you have complex requirements, you might still need to edit <code><font size="2">serverclass.conf</font></code>. 
+</p><p>If you do all your configuration in one tool or the other (forwarder management or direct editing of <code><font size="2">serverclass.conf</font></code>), you can skip the rest of this topic. Compatibility issues can arise, however, if you alternate between forwarder management and the configuration file, performing configuration through both interfaces. 
+</p><p>For information on directly configuring <code><font size="2">serverclass.conf</font></code>, read <a href="#useserverclass.conf" class="external text">"Use serverclass.conf to define server classes"</a>.
+</p>
+<h3> <a name="forwardermanagementcompatibility_compatibility_works_in_one_direction_only"><span class="mw-headline" id="Compatibility_works_in_one_direction_only">Compatibility works in one direction only</span></a></h3>
+<p>The forwarder management interface provides a key subset of the configuration capabilities available through <code><font size="2">serverclass.conf</font></code>.  Most configuration needs can be met by working exclusively in forwarder management. 
+</p><p>If you have unusually complex requirements, you can start by configuring in forwarder management and then switch to <code><font size="2">serverclass.conf</font></code> for advanced configuration. <i>However, once you start editing the configuration file directly, there is a strong likelihood that you will not be able to later return to configuring via the forwarder management interface.</i>  This is because the forwarder management interface supports only a subset of the capabilities available through the configuration file. 
+</p><p>If you do return to forwarder management after editing <code><font size="2">serverclass.conf</font></code>, forwarder management will detect any incompatibilities and generate error messages in appropriate locations in the interface. As long as the incompatibilities persist, you will not be able to configure via the forwarder management interface. 
+</p><p>Even if you can no longer use the interface to edit configurations, you can still use it to monitor the deployment. It will correctly show the mappings between apps, clients, and server classes. It will also correctly report the deployment metrics.
+</p>
+<h3> <a name="forwardermanagementcompatibility_upgrade_from_a_pre-6.0_deployment_server"><span class="mw-headline" id="Upgrade_from_a_pre-6.0_deployment_server"> Upgrade from a pre-6.0 deployment server</span></a></h3>
+<p>If you have configured <code><font size="2">serverclass.conf</font></code> in a pre-6.0 release of Splunk Enterprise (that is, before the forwarder management interface was introduced), you might have introduced incompatibilities that prevent the forwarder management interface from functioning properly after you upgrade to 6.0. When you first view the forwarder management interface, it will detect any incompatibilities and generate error messages as needed. As long as incompatibilities exist, you will not be able to configure via forwarder management.
+</p><p>If incompatibilities are detected but you want to use the forwarder management interface going forward, you need to do one of two things:
+</p>
+<ul><li> Remove the existing <code><font size="2">serverclass.conf</font></code> file and start fresh with the forwarder management interface, using it to recreate your server classes and other settings. 
+</li><li> Edit your existing <code><font size="2">serverclass.conf</font></code> file directly, so that it conforms strictly to the capabilities of the forwarder management interface. This should be possible in most situations. If you want to do this, see the following section for a list of the key incompatibilities that you need to account for.
+</li></ul><p><b>Important:</b> Whether forwarder management can handle your configuration depends on your specific needs.
+</p>
+<h3> <a name="forwardermanagementcompatibility_list_of_incompatibilities"><span class="mw-headline" id="List_of_incompatibilities">List of incompatibilities</span></a></h3>
+<p>Some <code><font size="2">serverclass.conf</font></code> attributes are incompatible with the forwarder management interface.  In addition, some attributes can be set at multiple levels (global, server class, and app) in the configuration file but are only allowable at a single level with forwarder management. 
+</p><p>If your <code><font size="2">serverclass.conf</font></code> file contains incompatible attributes, the forwarder management interface goes into lock-down mode. You cannot use it for configuration purposes until the incompatibilities are resolved.
+</p><p>This table correlates the <code><font size="2">serverclass.conf</font></code> attributes with their support in forwarder management. 
+</p>
+<table class="wikitable" cellpadding="6"><tr><th bgcolor="#C0C0C0"> Attribute </th><th bgcolor="#C0C0C0"> Default </th><th bgcolor="#C0C0C0"> Global </th><th bgcolor="#C0C0C0"> Server Class </th><th bgcolor="#C0C0C0"> App
+</th></tr><tr><td valign="center" align="left"> repositoryLocation </td><td valign="center" align="left"> $SPLUNK_HOME/etc/deployment-apps </td><td valign="center" align="left"> Supported </td><td valign="center" align="left"> Unsupported </td><td valign="center" align="left"> n/a
+</td></tr><tr><td valign="center" align="left"> targetRepositoryLocation </td><td valign="center" align="left"> $SPLUNK_HOME/etc/apps </td><td valign="center" align="left"> Unsupported </td><td valign="center" align="left"> n/a </td><td valign="center" align="left"> n/a
+</td></tr><tr><td valign="center" align="left"> tmpFolder </td><td valign="center" align="left"> $SPLUNK_HOME/var/run/tmp </td><td valign="center" align="left"> Unsupported </td><td valign="center" align="left"> n/a </td><td valign="center" align="left"> n/a
+</td></tr><tr><td valign="center" align="left"> continueMatching </td><td valign="center" align="left"> True </td><td valign="center" align="left"> Unsupported </td><td valign="center" align="left"> Unsupported </td><td valign="center" align="left"> n/a
+</td></tr><tr><td valign="center" align="left"> endpoint </td><td valign="center" align="left"> $deploymentServerUri$/services/streams/deployment?name=$serverClassName$:$appName$ </td><td valign="center" align="left"> Unsupported </td><td valign="center" align="left"> Unsupported </td><td valign="center" align="left"> n/a
+</td></tr><tr><td valign="center" align="left"> filterType </td><td valign="center" align="left"> whitelist (forwarder management implicitly uses this default value) </td><td valign="center" align="left"> Unsupported </td><td valign="center" align="left"> Unsupported </td><td valign="center" align="left"> Unsupported
+</td></tr><tr><td valign="center" align="left"> whitelist </td><td valign="center" align="left">none </td><td valign="center" align="left"> Unsupported </td><td valign="center" align="left"> Supported</td><td valign="center" align="left"> Unsupported
+</td></tr><tr><td valign="center" align="left"> blacklist </td><td valign="center" align="left"> none </td><td valign="center" align="left"> Unsupported </td><td valign="center" align="left"> Supported </td><td valign="center" align="left"> Unsupported
+</td></tr><tr><td valign="center" align="left"> machineTypesFilter </td><td valign="center" align="left"> none </td><td valign="center" align="left"> Unsupported </td><td valign="center" align="left"> Supported </td><td valign="center" align="left"> Unsupported
+</td></tr><tr><td valign="center" align="left"> machineTypes </td><td valign="center" align="left"> none </td><td valign="center" align="left"> Unsupported </td><td valign="center" align="left"> Unsupported </td><td valign="center" align="left"> Unsupported
+</td></tr><tr><td valign="center" align="left"> stateOnClient </td><td valign="center" align="left"> enabled </td><td valign="center" align="left"> Unsupported
+</td><td colspan="2" valign="center" align="left"> Single per-app setting across all server classes
+</td></tr><tr><td valign="center" align="left"> restartSplunkd </td><td valign="center" align="left"> False </td><td valign="center" align="left"> Unsupported
+</td><td colspan="2" valign="center" align="left"> Single per-app setting across all server classes
+</td></tr><tr><td valign="center" align="left"> restartSplunkWeb </td><td valign="center" align="left"> False </td><td valign="center" align="left"> Unsupported </td><td valign="center" align="left"> Unsupported </td><td valign="center" align="left"> Unsupported
+</td></tr><tr><td valign="center" align="left"> appFile </td><td valign="center" align="left"> none </td><td valign="center" align="left"> n/a </td><td valign="center" align="left"> n/a </td><td valign="center" align="left"> Unsupported
+</td></tr></table><p><b>Notes regarding entries in the table:</b> 
+</p>
+<ul><li> <b>n/a</b>: This means that the attribute cannot be set at that level in <code><font size="2">serverclass.conf</font></code>.
+</li></ul><ul><li> <b>Single per-app setting across all server classes</b>: The <code><font size="2">stateOnClient</font></code> and <code><font size="2">restartSplunkd</font></code> attributes are configured under the app-level stanzas. App-level stanzas include both an <code><font size="2">appName</font></code> and a <code><font size="2">serverClassName</font></code> component, like this: <code><font size="2">[serverClass::app:]</font></code>. See <a href="#useserverclass.conf" class="external text">"Use serverclass.conf to define server classes"</a>.<br><br>If you are not using forwarder management, you can configure those attributes differently depending on the server class, even for the same app. For example, in <code><font size="2">[serverClass:X:app:A]</font></code>, you can specify <code><font size="2">stateOnClient=enabled</font></code>, while in <code><font size="2">[serverClass:Y:app:A]</font></code> (same app, different server class), you can specify <code><font size="2">stateOnClient=disabled</font></code>. So, depending on the server class, the same app will be either enabled or disabled when it gets downloaded to the client.<br><br>However, forwarder management allows only a single definition for each app, across all server classes in which it is used. So, <code><font size="2">[serverClass:X:app:A]</font></code> and <code><font size="2">[serverClass:Y:app:A]</font></code> must both configure <code><font size="2">stateOnClient</font></code> identically. The same condition applies to <code><font size="2">restartSplunkd</font></code>.
+</li></ul><h1>Examples</h1><a name="extendedexampledeployseveralstandardforwarders"></a><h2> <a name="extendedexampledeployseveralstandardforwarders_extended_example:_deploy_configurations_to_several_forwarders"><span class="mw-headline" id="Extended_example:_Deploy_configurations_to_several_forwarders"> Extended example: Deploy configurations to several forwarders </span></a></h2>
+<h3> <a name="extendedexampledeployseveralstandardforwarders_what_we.27re_aiming_for"><span class="mw-headline" id="What_we.27re_aiming_for">What we're aiming for</span></a></h3>
+<p>A common use for <b>deployment servers</b> is to manage configuration files for <b>forwarders</b>. In some distributed environments, forwarders can number into the thousands, and the deployment server greatly eases the work of configuring and updating them. This example shows how to use the deployment server to initially configure a set of dissimilar universal forwarders. A follow-up example, in <a href="#exampleaddaninputtoforwarders" class="external text">"Example: Add inputs to forwarders"</a>,  shows how to use the deployment server to update the forwarders' configurations with new inputs.
+</p><p>The example sets up the following distributed environment, in which a deployment server deploys configurations for three universal forwarders sending data to two <b>indexers</b>:
+</p>
+<ul><li> The deployment server Fflanda-SPLUNK3 (10.1.2.4) manages deployment for these universal forwarders:
+<ul><li> Fflanda-WIN1
+</li><li> Fflanda-LINUX1
+</li><li> Fflanda-LINUX2
+</li></ul></li><li> Fflanda-WIN1 forwards Windows event logs to the receiving indexer Fflanda-SPLUNK1 (10.1.2.2).
+</li><li> Fflanda-LINUX1 and Fflanda-LINUX2 forward Linux messages to the receiving indexer Fflanda-SPLUNK2 (10.1.2.3).
+</li></ul><p>The forwarders are <b>deployment clients</b>, receiving their configuration files from the deployment server.
+</p><p>Here's the basic set up:
+</p><p><img alt="Deployment1 60.png" src="images/e/e2/Deployment1_60.png" width="700" height="554"></p><p>For information on forwarders (including the universal forwarder), see "About forwarding and receiving" in the <i>Forwarding Data</i> manual.
+</p><p>For information on monitoring Windows event log data, see "Monitor Windows event log data" in the <i>Getting Data In</i> manual.
+</p><p>For information on monitoring files, such as message logs, see "Monitor files and directories" in the <i>Getting Data In</i> manual.
+</p>
+<h3> <a name="extendedexampledeployseveralstandardforwarders_configuration_overview"><span class="mw-headline" id="Configuration_overview">Configuration overview</span></a></h3>
+<p>Here's an overview of the set-up process (the detailed steps follow in the next section):
+</p><p><b>On each indexer that will be receiving data from the forwarders:</b>
+</p><p><b>1.</b> Enable receiving through the CLI.
+</p><p><b>2.</b> Restart the indexer.
+</p><p><b>On each deployment client (forwarder):</b>
+</p><p><b>1.</b> Create a <code><font size="2">deploymentclient.conf</font></code> file that points to the deployment server.
+</p><p><b>2.</b> Restart the forwarder.
+</p><p><b>On the deployment server:</b>
+</p><p><b>1.</b> Create directories for the deployment apps.
+</p><p><b>2.</b> Use forwarder management to create the set of <b>server classes</b> for the deployment clients (forwarders). You'll create two server classes to represent the two OS types (Windows, Linux). Each server class will map a set of clients to two separate apps, for a total of four apps. These apps, defined in a later step, encapsulate:
+</p>
+<ul><li> The type of input -- the data that the universal forwarder will monitor (Windows event logs or Linux messages).
+</li><li> The type of output -- the indexer the forwarder will send data to (SPLUNK1 or SPLUNK2).
+</li></ul><p>This configuration results in each universal forwarder belonging to a server class and receiving two apps: one for its inputs and one for its outputs. 
+</p><p><b>Note:</b> You can also create the server classes directly in <code><font size="2">serverclass.conf</font></code>, as described below in <a href="#extendedexampledeployseveralstandardforwarders_configure_server_classes_with_serverclass.conf" class="external text">"Configure server classes in serverclass.conf"</a>
+</p><p><b>3.</b> Populate the app directories with the contents of the apps. Each app consists of a configuration file, either <code><font size="2">outputs.conf</font></code> or <code><font size="2">inputs.conf</font></code>. 
+</p><p><b>4.</b> Deploy the apps by reloading the deployment server.
+</p><p>After a short delay (while the forwarders receive and act upon their deployed content), Windows event logs begin flowing from Fflanda-WIN1 to Fflanda-SPLUNK1, and /var/log/messages begin flowing from Fflanda-LINUX1 and Fflanda-LINUX2 to Fflanda-SPLUNK2.
+</p>
+<h3> <a name="extendedexampledeployseveralstandardforwarders_detailed_configuration_steps"><span class="mw-headline" id="Detailed_configuration_steps">Detailed configuration steps</span></a></h3>
+<h4><font size="3"><b><i> <a name="extendedexampledeployseveralstandardforwarders_for_each_receiving_indexer_.28fflanda-splunk1_and_fflanda-splunk2.29:"><span class="mw-headline" id="For_each_receiving_indexer_.28Fflanda-SPLUNK1_and_Fflanda-SPLUNK2.29:">For each receiving indexer (Fflanda-SPLUNK1 and Fflanda-SPLUNK2):</span></a></i></b></font></h4>
+<p><b>1.</b> Install Splunk Enterprise on the machine where you want the indexer to reside.
+</p><p><b>2.</b> Run the following CLI command:
+</p>
+<code><font size="2"><br>splunk enable listen 9997 -auth &lt;username&gt;:&lt;password&gt;<br></font></code>
+<p>This specifies that the indexer will serve as a receiver, listening for data on port 9997. With proper authorization, any forwarder can now send data to the receiver by designating its IP address and port number. You must enable the indexers as receivers <i>before</i> you configure the forwarders to send data to them.
+</p><p>For more information on enabling receivers, see "Enable a receiver" in the <i>Forwarding Data</i> manual.
+</p><p><b>3.</b> Restart the indexer.
+</p>
+<h4><font size="3"><b><i> <a name="extendedexampledeployseveralstandardforwarders_for_each_universal_forwarder_.28fflanda-win1.2c_fflanda-linux1.2c_and_fflanda-linux2.29:"><span class="mw-headline" id="For_each_universal_forwarder_.28Fflanda-WIN1.2C_Fflanda-LINUX1.2C_and_Fflanda-LINUX2.29:">For each universal forwarder (Fflanda-WIN1, Fflanda-LINUX1, and Fflanda-LINUX2):</span></a></i></b></font></h4>
+<p><b>1.</b> Install the forwarder on the machine where you want it to reside, if you haven't already done so. 
+</p><p><b>2.</b> Specify the deployment server that the forwarder will poll. You can do this as part of the forwarder installation process, or later, by editing  <code><font size="2">$SPLUNK_HOME/etc/system/local/deploymentclient.conf</font></code>, like this:
+</p>
+<code><font size="2"><br>&nbsp;&nbsp;&nbsp;[deployment-client]<br><br>&nbsp;&nbsp;&nbsp;[target-broker:deploymentServer]<br>&nbsp;&nbsp;&nbsp;# Specify the deployment server; for example, "10.1.2.4:8089".<br>&nbsp;&nbsp;&nbsp;targetUri= &lt;URI:port&gt; <br></font></code>
+<p>See <a href="#configuredeploymentclients" class="external text">"Configure deployment clients"</a> for details on how to configure this file. To learn how to specify the deployment server at installation time, see "Universal forwarder deployment overview" and the topics that follow it in the <i>Forwarding Data</i> manual.
+</p><p><b>3.</b> Restart the forwarder.
+</p>
+<h4><font size="3"><b><i> <a name="extendedexampledeployseveralstandardforwarders_on_the_deployment_server_.28fflanda-splunk3.29:"><span class="mw-headline" id="On_the_deployment_server_.28Fflanda-SPLUNK3.29:">On the deployment server (Fflanda-SPLUNK3):</span></a></i></b></font></h4>
+<h5> <a name="extendedexampledeployseveralstandardforwarders_a._prepare_the_deployment_server"><span class="mw-headline" id="A._Prepare_the_deployment_server">A. Prepare the deployment server</span></a></h5>
+<p><b>1.</b> Install Splunk Enterprise, if you haven't already done so.
+</p><p><b>2.</b> Create these deployment app directories:
+</p>
+<ul><li> <code><font size="2">$SPLUNK_HOME/etc/deployment-apps/fwd_to_splunk1</font></code>
+</li><li> <code><font size="2">$SPLUNK_HOME/etc/deployment-apps/fwd_to_splunk2</font></code>
+</li><li> <code><font size="2">$SPLUNK_HOME/etc/deployment-apps/winevt</font></code>
+</li><li> <code><font size="2">$SPLUNK_HOME/etc/deployment-apps/linmess</font></code>
+</li></ul><p>The directory name determines the name of the app: "fwd_to_splunk1", "fwd_to_splunk2", etc.
+</p>
+<h5> <a name="extendedexampledeployseveralstandardforwarders_b._configure_the_server_classes_for_windows_forwarders"><span class="mw-headline" id="B._Configure_the_server_classes_for_Windows_forwarders">B. Configure the server classes for Windows forwarders</span></a></h5>
+<p><b>Note:</b> This procedure and the one that follows both use forwarder management to configure the server classes. For an example of how to configure these server classes instead by direct editing of <code><font size="2">serverclass.conf</font></code>, see <a href="#extendedexampledeployseveralstandardforwarders_configure_server_classes_with_serverclass.conf" class="external text">"Configure server classes in serverclass.conf"</a> later in this topic.
+</p><p>To configure the <code><font size="2">Fflanda-WIN</font></code> server class for Windows forwarders, go to the forwarder management interface and perform these actions:
+</p><p><b>1.</b> Select the <b>Server Classes</b> tab.
+</p><p><b>2.</b> Select the <b>New Server Class</b> button.
+</p><p><b>3.</b> Enter <code><font size="2">Fflanda-WIN</font></code> in the <b>Title</b> field of the pop-up window and click <b>Save</b>. This takes you to a screen with prompts for adding apps and clients.  
+</p><p><b>4.</b> Click the <b>Add Apps</b> button. This takes you to the <b>Edit Apps</b> page. On this page, there are two columns: <b>Unselected Apps</b> and <b>Selected Apps</b>, with a list of apps under each. For a new server class, all apps will initially be in the <b>Unselected</b> column. 
+</p><p><b>5.</b> In the <b>Unselected Apps</b> column, look for the apps <code><font size="2">winevt</font></code> and <code><font size="2">fwd_to_splunk1</font></code>. Click on each of these apps to move them to the <b>Selected Apps</b> column. 
+</p><p><b>6.</b> Click <b>Save</b> to save the apps in the server class.  You'll now be prompted to add clients to the server class. Click the <b>Add Clients</b> button. This takes you to the <b>Edit Clients</b> page.
+</p><p><b>7.</b> To configure a filter to include all Windows clients, enter <code><font size="2">Fflanda-WIN*</font></code> in the <b>Include</b> field and click <b>Save</b>.
+</p><p><b>8.</b> Set the apps' post-deployment behavior. For each app, go to the <b>App</b> tab, find the row with the app, and click the <b>Edit</b> action to edit the app. In the <b>After installation</b> section near the top of the page, select <b>Enable app</b> and <b>Restart Splunkd</b>.
+</p>
+<h5> <a name="extendedexampledeployseveralstandardforwarders_c._configure_the_server_classes_for_linux_forwarders"><span class="mw-headline" id="C._Configure_the_server_classes_for_Linux_forwarders">C. Configure the server classes for Linux forwarders</span></a></h5>
+<p>To configure the <code><font size="2">Fflanda-LINUX</font></code> server class for Linux forwarders, go to the forwarder management interface and perform these actions:
+</p><p><b>1.</b> Select the <b>Server Classes</b> tab.
+</p><p><b>2.</b> Select the <b>New Server Class</b> button.
+</p><p><b>3.</b> Enter <code><font size="2">Fflanda-LINUX</font></code> in the <b>Title</b> field of the pop-up window and click <b>Save</b>. This takes you to a screen with prompts for adding apps and clients.  
+</p><p><b>4.</b> Click the <b>Add Apps</b> button. 
+</p><p><b>5.</b> In the <b>Unselected Apps</b> column, look for the apps <code><font size="2">linmess</font></code> and <code><font size="2">fwd_to_splunk2</font></code>. Click on each of these apps to move them to the <b>Selected Apps</b> column. 
+</p><p><b>6.</b> Click <b>Save</b> to save the apps in the server class.  You'll now be prompted to add clients to the server class. Click the <b>Add Clients</b> button. This takes you to the <b>Edit Clients</b> page.
+</p><p><b>7.</b> To configure a filter to include all Linux clients, enter <code><font size="2">Fflanda-LINUX*</font></code> in the <b>Include</b> field and click <b>Save</b>.
+</p><p><b>8.</b> Set the apps' post-deployment behavior. For each app, go to the <b>App</b> tab, find the row with the app, and click the <b>Edit</b> action to edit the app. In the <b>After installation</b> section near the top of the page, select <b>Enable app</b> and <b>Restart Splunkd</b>.
+</p><p>See <a href="#useforwardermanagement" class="external text">"Use forwarder management to define server classes"</a> for details on the forwarder management interface.
+</p>
+<h5> <a name="extendedexampledeployseveralstandardforwarders_d._populate_the_apps"><span class="mw-headline" id="D._Populate_the_apps">D. Populate the apps</span></a></h5>
+<p><b>1.</b> Create <code><font size="2">$SPLUNK_HOME/etc/deployment-apps/fwd_to_splunk1/default/outputs.conf</font></code> with the following settings:
+</p>
+<code><font size="2"><br>&nbsp;&nbsp;&nbsp;&nbsp;[tcpout]<br>&nbsp;&nbsp;&nbsp;&nbsp;defaultGroup=splunk1<br><br>&nbsp;&nbsp;&nbsp;&nbsp;[tcpout:splunk1]<br>&nbsp;&nbsp;&nbsp;&nbsp;# Specifies the server that receives data from the forwarder.<br>&nbsp;&nbsp;&nbsp;&nbsp;server=10.1.2.2:9997<br></font></code>
+<p>For information on <code><font size="2">outputs.conf</font></code>, see "Configure forwarders with outputs.conf" in the <i>Forwarding Data</i> manual.
+</p><p><b>2.</b> Create <code><font size="2">$SPLUNK_HOME/etc/deployment-apps/fwd_to_splunk2/default/outputs.conf</font></code> with the following settings:
+</p>
+<code><font size="2"><br>&nbsp;&nbsp;&nbsp;&nbsp;[tcpout]<br>&nbsp;&nbsp;&nbsp;&nbsp;defaultGroup=splunk2<br><br>&nbsp;&nbsp;&nbsp;&nbsp;[tcpout:splunk2]<br>&nbsp;&nbsp;&nbsp;&nbsp;server=10.1.2.3:9997<br></font></code>
+<p><b>3.</b> Create <code><font size="2">$SPLUNK_HOME/etc/deployment-apps/winevt/default/inputs.conf</font></code> with the following settings:
+</p>
+<code><font size="2"><br>&nbsp;&nbsp;&nbsp;&nbsp;[WinEventLog:Application]<br>&nbsp;&nbsp;&nbsp;&nbsp;disabled=0<br><br>&nbsp;&nbsp;&nbsp;&nbsp;[WinEventLog:Security]<br>&nbsp;&nbsp;&nbsp;&nbsp;disabled=0<br><br>&nbsp;&nbsp;&nbsp;&nbsp;[WinEventLog:System]<br>&nbsp;&nbsp;&nbsp;&nbsp;disabled=0<br></font></code>
+<p>For information on monitoring Windows event log data, see "Monitor Windows event log data" in the Getting Data In manual.
+</p><p><b>4.</b> Create <code><font size="2">$SPLUNK_HOME/etc/deployment-apps/linmess/default/inputs.conf</font></code> with the following settings:
+</p>
+<code><font size="2"><br>&nbsp;&nbsp;&nbsp;&nbsp;[monitor:///var/log/messages]<br>&nbsp;&nbsp;&nbsp;&nbsp;disabled=false<br>&nbsp;&nbsp;&nbsp;&nbsp;sourcetype=syslog<br></font></code>
+<p>For information on monitoring files, such as message logs, see "Monitor files and directories" in the Getting Data In manual.
+</p>
+<h5> <a name="extendedexampledeployseveralstandardforwarders_e._deploy_the_apps"><span class="mw-headline" id="E._Deploy_the_apps">E. Deploy the apps</span></a></h5>
+<p>To deploy the apps, just reload the deployment server:
+</p>
+<code><font size="2"><br>splunk reload deploy-server<br></font></code>
+<p>Each forwarder will now poll the deployment server, download its configuration files, restart, and begin forwarding data to its receiving indexer.
+</p><p><b>Note:</b> When you change the content of an app, you must always invoke the <code><font size="2">reload</font></code> command, so that the clients know they need to download the new content. 
+</p><p>For a follow-up example showing how to use the deployment server to update forwarder configurations, see <a href="#exampleaddaninputtoforwarders" class="external text">"Example: Add inputs to forwarders"</a>.
+</p>
+<h4><font size="3"><b><i> <a name="extendedexampledeployseveralstandardforwarders_configure_server_classes_with_serverclass.conf"><span class="mw-headline" id="Configure_server_classes_with_serverclass.conf">Configure server classes with serverclass.conf</span></a></i></b></font></h4>
+<p>Instead of using forwarder management to configure server classes, you can directly edit <code><font size="2">serverclass.conf</font></code>. For most purposes, however, it is faster and easier to use forwarder management. 
+</p><p>In the case of the example under discussion, you can fully define the required server classes with forwarder management, so it is not necessary to edit <code><font size="2">serverclass.conf</font></code>.  However, for those who prefer to work directly in configuration files, this subtopic shows how to create the example's set of server classes by editing <code><font size="2">serverclass.conf</font></code>. This version takes advantage of some minor optimization only available through direct editing of <code><font size="2">serverclass.conf</font></code>. 
+</p><p>Create <code><font size="2">$SPLUNK_HOME/etc/system/local/serverclass.conf</font></code> with the following settings:
+</p>
+<code><font size="2"><br>&nbsp;&nbsp;&nbsp;&nbsp;# Global server class <br>&nbsp;&nbsp;&nbsp;&nbsp;[global]<br>&nbsp;&nbsp;&nbsp;&nbsp;# Filter (whitelist) all clients<br>&nbsp;&nbsp;&nbsp;&nbsp;whitelist.0=*<br><br>&nbsp;&nbsp;&nbsp;&nbsp;# Server class for Windows<br>&nbsp;&nbsp;&nbsp;&nbsp;[serverClass:Fflanda-WIN]<br>&nbsp;&nbsp;&nbsp;&nbsp;# Filter (whitelist) all Windows clients<br>&nbsp;&nbsp;&nbsp;&nbsp;whitelist.0=Fflanda-WIN*<br><br>&nbsp;&nbsp;&nbsp;&nbsp;# App for inputting Windows event logs<br>&nbsp;&nbsp;&nbsp;&nbsp;# This app is only for clients in the server class Fflanda-WIN<br>&nbsp;&nbsp;&nbsp;&nbsp;[serverClass:Fflanda-WIN:app:winevt]<br>&nbsp;&nbsp;&nbsp;&nbsp;#Enable the app and restart Splunk, after the client receives the app<br>&nbsp;&nbsp;&nbsp;&nbsp;stateOnClient=enabled<br>&nbsp;&nbsp;&nbsp;&nbsp;restartSplunkd=true<br><br>&nbsp;&nbsp;&nbsp;&nbsp;# App for forwarding to SPLUNK1<br>&nbsp;&nbsp;&nbsp;&nbsp;# This app is only for clients in the server class Fflanda-WIN<br>&nbsp;&nbsp;&nbsp;&nbsp;[serverClass:Fflanda-WIN:app:fwd_to_splunk1]<br>&nbsp;&nbsp;&nbsp;&nbsp;stateOnClient=enabled<br>&nbsp;&nbsp;&nbsp;&nbsp;restartSplunkd=true<br>&nbsp;&nbsp;&nbsp;&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;# Server class for Linux<br>&nbsp;&nbsp;&nbsp;&nbsp;[serverClass:Fflanda-LINUX]<br>&nbsp;&nbsp;&nbsp;&nbsp;# Filter (whitelist) all Linux clients<br>&nbsp;&nbsp;&nbsp;&nbsp;whitelist.0=Fflanda-LINUX*<br>&nbsp;&nbsp;&nbsp;&nbsp;<br>&nbsp;&nbsp;&nbsp;&nbsp;# App for inputting Linux messages<br>&nbsp;&nbsp;&nbsp;&nbsp;# This app is only for clients in the server class Fflanda-LINUX<br>&nbsp;&nbsp;&nbsp;&nbsp;[serverClass:Fflanda-LINUX:app:linmess]<br>&nbsp;&nbsp;&nbsp;&nbsp;stateOnClient=enabled<br>&nbsp;&nbsp;&nbsp;&nbsp;restartSplunkd=true<br><br>&nbsp;&nbsp;&nbsp;&nbsp;# App for forwarding to SPLUNK2<br>&nbsp;&nbsp;&nbsp;&nbsp;# This app is only for clients in the server class Fflanda-LINUX<br>&nbsp;&nbsp;&nbsp;&nbsp;[serverClass:Fflanda-LINUX:app:fwd_to_splunk2]<br>&nbsp;&nbsp;&nbsp;&nbsp;stateOnClient=enabled<br>&nbsp;&nbsp;&nbsp;&nbsp;restartSplunkd=true<br></font></code>
+<p>See <a href="#useserverclass.conf" class="external text">"Use serverclass.conf to define server classes"</a> for details on how to configure this file.
+</p>
+<h3> <a name="extendedexampledeployseveralstandardforwarders_what_the_communication_between_the_deployment_server_and_its_clients_looks_like"><span class="mw-headline" id="What_the_communication_between_the_deployment_server_and_its_clients_looks_like">What the communication between the deployment server and its clients looks like</span></a></h3>
+<p>Using the above example, the communication from Fflanda-WIN1 to Fflanda-SPLUNK3 on port 8089 would look like this:
+</p><p><b>Fflanda-WIN1:</b> Hello, I am Fflanda-WIN1.
+</p><p><b>Fflanda-SPLUNK3:</b> Hello, Fflanda-WIN1.  I have been expecting to hear from you.  I have you down as a member of the Fflanda-WIN server class, and you should have the fwd_to_splunk1 (checksum=12345) and winevt (checksum=12378) apps.
+</p><p><b>Fflanda-WIN1:</b> Hmmm, I don&acirc;&#128;&#153;t have those configs.  Using this connection I just opened up to you, can I grab the configs from you?
+</p><p><b>Fflanda-SPLUNK3:</b> Sure! I have them ready for you.
+</p><p><b>Fflanda-WIN1:</b> Thanks!  I am going to back off a random number of seconds between 1 and 60 (in case you have a lot of clients that are polling you at the moment) ... OK, now send me the files.
+</p><p><b>Fflanda-SPLUNK3:</b> Done!  You now have fwd_to_splunk1-timestamp.bundle and winevt-timestamp.bundle.
+</p><p><b>Fflanda-WIN1:</b> Awesome!  I am going to store them in my $SPLUNK_HOME/etc/apps directory.  Now I am going to restart myself, and when I come back up I am going to read the configurations that you sent me directly out of the .bundle files, which I know are just tar balls with a different extension.
+</p><p><i>A couple of minutes go by....</i>
+</p><p><b>Fflanda-WIN1:</b> Hello, I am Fflanda-WIN1.
+</p><p><b>Fflanda-SPLUNK3:</b> Hello, Fflanda-WIN1.  I have been expecting to hear from you.  I have you down as a member of the Fflanda-WIN server class, and you should have the fwd_to_splunk1 (checksum=12345) and winevt (checksum=12378) Apps.
+</p><p><b>Fflanda-WIN1:</b> Hmmm, I already have both of those, but thanks anyway!
+</p><p><i>Later on, an admin modifies the <code><font size="2">winevt/inputs.conf</font></code> file on Fflanda-SPLUNK3 to disable the collection of system event logs, and then runs the CLI command <code><font size="2">splunk reload deploy-server</font></code> to force the deployment server to rescan serverclass.conf and the app directories.  The next time Fflanda-WIN1 talks to Fflanda-SPLUNK3, it goes like this:</i>
+</p><p><b>Fflanda-WIN1:</b> Hello, I am Fflanda-WIN1.
+</p><p><b>Fflanda-SPLUNK3:</b> Hello, Fflanda-WIN1.  I have been expecting to hear from you.  I have you down as a member of the Fflanda-WIN server class, and you should have the fwd_to_splunk1 (checksum=12345) and winevt (checksum=13299) Apps.
+</p><p><b>Fflanda-WIN1:</b> Hmmm, I know I have those configs, but the checksum I have for the winevt configs is different than the one you just told me about.  Using this connection I just opened up to you, can I grab the updated winevt config from you?
+</p><p><b>Fflanda-SPLUNK3:</b> Sure! I have it ready for you.
+</p><p><b>Fflanda-WIN1:</b> Thanks! I am going to back off a random number of seconds between 1 and 60 (in case you have a lot of clients that are polling you at the moment) ... Ok, now send me the updated config.
+</p><p><b>Fflanda-SPLUNK3:</b> Done! You now have winevt-newer_timestamp.bundle.
+</p><p><b>Fflanda-WIN1:</b> Awesome! I am going to store it in my $SPLUNK_HOME/etc/apps directory and move the old winevt.bundle I had out of the way.  Now I am going to restart myself, and when I come back up, I'll have the most up-to-date config.
+</p>
+<a name="exampleaddaninputtoforwarders"></a><h2> <a name="exampleaddaninputtoforwarders_example:_add_inputs_to_forwarders"><span class="mw-headline" id="Example:_Add_inputs_to_forwarders"> Example: Add inputs to forwarders </span></a></h2>
+<p>The previous topic, <a href="#extendedexampledeployseveralstandardforwarders" class="external text">"Extended example: Deploy configurations to several forwarders"</a>, described setting up a deployment environment to manage a set of universal forwarders. It showed how to configure a new deployment server to deploy content to a new set of deployment clients. The current example follows on directly from there, using the configurations created in that topic. It shows how to update a forwarder configuration file and deploy the updated file to a subset of forwarders, defined by a server class. 
+</p>
+<h3> <a name="exampleaddaninputtoforwarders_overview_of_the_update_process"><span class="mw-headline" id="Overview_of_the_update_process"> Overview of the update process </span></a></h3>
+<p>This example starts with the set of configurations and Splunk Enterprise instances created in the topic <a href="#extendedexampledeployseveralstandardforwarders" class="external text">"Extended example: Deploy configurations to several forwarders"</a>. The Linux universal forwarders now need to start monitoring data from a second source. To accomplish this, perform these steps on the deployment server:
+</p><p><b>1.</b> Edit the <code><font size="2">inputs.conf</font></code> file for the Linux server class to add the new source, overwriting the previous version in its apps directory.
+</p><p><b>2.</b> Reload the deployment server, so that it becomes aware of the change and can deploy it to the appropriate set of clients (forwarders).
+</p><p>You make changes only on the deployment server. When the deployment clients in the Linux server class next poll the server, they'll be notified of the changed <code><font size="2">inputs.conf</font></code> file. They'll download the file, enable it, restart <code><font size="2">splunkd</font></code>, and immediately begin monitoring the second data source.
+</p>
+<h3> <a name="exampleaddaninputtoforwarders_detailed_configuration_steps"><span class="mw-headline" id="Detailed_configuration_steps"> Detailed configuration steps </span></a></h3>
+<p><b>On the deployment server:</b>
+</p><p><b>1.</b> Edit <code><font size="2">$SPLUNK_HOME/etc/deployment-apps/linmess/default/inputs.conf</font></code> to add new inputs: 
+</p>
+<code><font size="2"><br>[monitor:///var/log/messages]<br>disabled=false<br>sourcetype=syslog &nbsp;&nbsp;&nbsp;<br><br>[monitor:///var/log/httpd]<br>disabled=false<br>sourcetype = access_common<br></font></code>
+<p><b>2.</b> Reload the deployment server:
+</p>
+<code><font size="2"><br>splunk reload deploy-server <br></font></code>
+<p>Once this command has been run, the deployment server notifies the clients that are members of the Fflanda-LINUX server class of the changed file. They'll download the file, enable it, restart <code><font size="2">splunkd</font></code>, and immediately begin monitoring the second data source.
+</p>
+</body>
+<script src='http://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js'></script>
+
+        <script src="js/index.js"></script></html>
