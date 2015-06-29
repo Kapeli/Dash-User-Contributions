@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:og="http://ogp.me/ns#" xmlns:fb="http://ogp.me/ns/fb#" charset="utf-8"><head><meta charset="UTF-8"><title></title>
+<link rel="stylesheet" href="css/normalize.css">
+<link rel="stylesheet" type="text/css" href="css/main.css">
+<link rel="stylesheet" href="css/style.css">
+<style>
+
+html,body {
+margin: 0px;
+padding: 10px;
+width: 210mm;
+max-width: 210mm;
+overflow-x: hidden;
+}
+pre {
+	width: 100%;
+	overflow-x: hidden;
+}
+</style> <script src="js/prefixfree.min.js"></script>
+</head><body>
+
+
+<h1>Introduction</h1><a name="introductiontocapacityplanningforsplunkenterprise"></a><div class="all-questions"><h2> <a name="introductiontocapacityplanningforsplunkenterprise_introduction_to_capacity_planning_for_splunk_enterprise"><span class="mw-headline" id="Introduction_to_capacity_planning_for_Splunk_Enterprise"> Introduction to capacity planning for Splunk Enterprise</span></a></h2>
+<p>You can expand Splunk Enterprise to meet almost any capacity requirement. To take advantage of this scaling capability requires planning. This manual discusses high-level hardware guidance for Splunk Enterprise deployments and describes how Splunk Enterprise uses hardware resources in different situations. 
+</p><p>New for Splunk Enterprise version 6.2 and later, this manual supersedes guidance about capacity planning in the <i>Installation</i> and <i>Distributed Deployment</i> manuals. It provides information about reference hardware and a performance checklist to determine when and how you should scale your deployment based on your needs.
+</p><p>Before you decide on hardware for Splunk Enterprise, see the following information:
+</p>
+<ul><li> Review "<a href="#componentsofasplunkenterprisedeployment" class="external text">Components of a Splunk Enterprise Deployment</a>" in this manual for a description of the elements in a Splunk Enterprise installation.
+</li></ul><ul><li> Read about <a href="#dimensionsofasplunkenterprisedeployment" class="external text">the dimensions of a Splunk Enterprise deployment</a>, how those dimensions impact performance, and how to maximize performance.
+</li></ul><ul><li> Learn about the basic building block of a Splunk Enterprise deployment in "<a href="#referencehardware" class="external text">Reference hardware</a>" in this manual.
+</li></ul>
+
+<h1>Hardware capacity planning</h1><a name="componentsofasplunkenterprisedeployment"></a><h2> <a name="componentsofasplunkenterprisedeployment_components_of_a_splunk_enterprise_deployment"><span class="mw-headline" id="Components_of_a_Splunk_Enterprise_deployment"> Components of a Splunk Enterprise deployment</span></a></h2>
+<p>By using a single software component and easy to understand configurations, Splunk Enterprise can coexist with existing infrastructure or be deployed as a universal platform for accessing IT data.
+</p><p>The simplest deployment is the one you get by default when you install Splunk Enterprise: indexing and searching on the same server. You log into Splunk Web or the CLI on the server and configure data inputs to collect machine data. You then use the same server to search, monitor, alert, and report on the incoming data. 
+</p><p>You can also deploy components of Splunk Enterprise on different servers to address your load and availability requirements. This section introduces the types of components. See the <i>Distributed Deployment</i> manual, particularly the topic, "Scale your deployment: Splunk components."
+</p>
+
+<h3> <a name="componentsofasplunkenterprisedeployment_indexer"><span class="mw-headline" id="Indexer"> Indexer </span></a></h3>
+<p>Splunk <b>indexers</b> provide data processing and storage for local and remote data and host the primary Splunk data store. See "How indexing works" in the <i>Managing Indexers and Clusters</i> manual for more information.
+</p>
+<h3> <a name="componentsofasplunkenterprisedeployment_search_head"><span class="mw-headline" id="Search_head"> Search head </span></a></h3>
+<p>A <b>search head</b> is a Splunk Enterprise instance that distributes searches to indexers (referred to as "search peers" in this context). Search heads can be either dedicated or not, depending on whether they also perform indexing. Dedicated search heads don't have any indexes of their own, other than the usual internal indexes. Instead, they consolidate and display results that originate from remote search peers. 
+</p><p>See "What is distributed search" in the <i>Distributed Search Manual</i> to configure a search head to search across a pool of indexers.
+</p>
+<h3> <a name="componentsofasplunkenterprisedeployment_forwarder"><span class="mw-headline" id="Forwarder"> Forwarder </span></a></h3>
+<p><b>Forwarders</b> are Splunk instances that forward data to remote indexers for data processing and storage. In most cases, they do not index data themselves. See the "About forwarding and receiving" topic in the <i>Forwarding Data</i> manual.
+</p>
+<h3> <a name="componentsofasplunkenterprisedeployment_deployment_server"><span class="mw-headline" id="Deployment_server"> Deployment server </span></a></h3>
+<p>A Splunk Enterprise instance can also serve as a <b>deployment server</b>. The deployment server is a tool for distributing configurations, apps, and content updates to groups of Splunk Enterprise instances. You can use it to distribute updates to most types of Splunk components: forwarders, non-clustered indexers, and non-clustered search heads. See "About deployment server and forwarder management" in the <i>Updating Splunk Enterprise Instances</i> manual.
+</p>
+<h3> <a name="componentsofasplunkenterprisedeployment_functions_at_a_glance"><span class="mw-headline" id="Functions_at_a_glance">Functions at a glance</span></a></h3>
+<table border="1" cellpadding="6"><tr><th bgcolor="#C0C0C0"> Functions
+</th><th bgcolor="#C0C0C0"> Indexer
+</th><th bgcolor="#C0C0C0"> Search head
+</th><th bgcolor="#C0C0C0"> Forwarder
+</th><th bgcolor="#C0C0C0"> Deployment server
+</th></tr><tr><td valign="center" align="left"> Indexing
+</td><td align="center" valign="center"> x
+</td><td valign="center" align="left">
+</td><td valign="center" align="left">
+</td><td valign="center" align="left">
+</td></tr><tr><td valign="center" align="left">Web
+</td><td valign="center" align="left">
+</td><td align="center" valign="center"> x
+</td><td valign="center" align="left">
+</td><td valign="center" align="left">
+</td></tr><tr><td valign="center" align="left">Direct search
+</td><td valign="center" align="left">
+</td><td align="center" valign="center"> x
+</td><td valign="center" align="left">
+</td><td valign="center" align="left">
+</td></tr><tr><td valign="center" align="left">Forward to indexer
+</td><td valign="center" align="left">
+</td><td valign="center" align="left">
+</td><td align="center" valign="center"> x
+</td><td valign="center" align="left">
+</td></tr><tr><td valign="center" align="left">Deploy configurations
+</td><td align="center" valign="center"> x
+</td><td valign="center" align="left">
+</td><td align="center" valign="center"> x
+</td><td align="center" valign="center"> x
+</td></tr></table><h3> <a name="componentsofasplunkenterprisedeployment_index_replication_and_indexer_clusters"><span class="mw-headline" id="Index_replication_and_indexer_clusters"> Index replication and indexer clusters </span></a></h3>
+<p>An <b>indexer cluster</b> is a group of indexers configured to replicate each others' data, so that the system keeps multiple copies of all data. This process is known as <b>index replication</b>. By maintaining multiple, identical copies of data, indexer clusters prevent data loss while promoting data availability for searching. 
+</p><p>Splunk Enterprise clusters feature automatic failover from one indexer to the next. This means that, if one or more indexers fail, incoming data continues to get indexed and indexed data continues to be searchable.
+</p><p>In addition to enhancing data availability, clusters have other features that you should consider when you are scaling a deployment, for example, a capability to coordinate configuration updates easily across all indexers in the cluster. 
+Clusters also include a built-in distributed search capability. See "About clusters and index replication" in the <i>Managing Indexers and Clusters of Indexers</i> manual.
+</p>
+<a name="dimensionsofasplunkenterprisedeployment"></a><h2> <a name="dimensionsofasplunkenterprisedeployment_dimensions_of_a_splunk_enterprise_deployment"><span class="mw-headline" id="Dimensions_of_a_Splunk_Enterprise_deployment"> Dimensions of a Splunk Enterprise deployment</span></a></h2>
+<p>A Splunk Enterprise deployment has many dimensions. These scenarios determine whether a single reference machine can handle indexing and search load. 
+</p><p>In some cases, a single reference machine can collect, store, and search data efficiently. In other cases, consider adding machines to your Splunk Enterprise deployment to increase performance. Below is a list of items that can have a significant impact on Splunk Enterprise performance.
+</p>
+<ul><li> <b><a href="#howincomingdataaffectssplunkenterpriseperformance" class="external text">Amount of incoming data.</a></b> The more data you send to Splunk Enterprise, the more time it needs to process the data into events that you can search, report, and generate alerts on. 
+</li></ul><ul><li> <b><a href="#howindexeddataaffectssplunkenterpriseperformance" class="external text">Amount of indexed data.</a></b> As the amount of data stored in a Splunk Enterprise index increases, so does the I/O bandwidth needed to store data and provide results for searches.
+</li></ul><ul><li> <b><a href="#howconcurrentusersaffectsplunkenterpriseperformance" class="external text">Number of concurrent users.</a></b> If more than one person at a time uses an instance of Splunk Enterprise, that instance requires more resources for those users to perform searches and create reports and dashboards.
+</li></ul><ul><li> <b><a href="#howsavedsearchesaffectsplunkenterpriseperformance" class="external text">Number of saved searches.</a></b> If you plan to invoke a lot of saved searches, Splunk Enterprise needs capacity to perform those searches promptly and efficiently. A higher search count over a given period of time requires more resources.
+</li></ul><ul><li> <b><a href="#howsearchtypesaffectsplunkenterpriseperformance" class="external text">Types of search you use.</a></b> Almost as important as the number of saved searches is the types of search that you run against a Splunk Enterprise instance. There are several types of search, each of which affects how the indexer responds to search requests.
+</li></ul><ul><li> <b><a href="#howsplunkappsaffectsplunkenterpriseperformance" class="external text">Whether or not you run Splunk apps.</a></b> Splunk <b>apps</b> and solutions can have unique performance, deployment, and configuration considerations. If you plan to run apps, consider the resource requirements of the apps the you are using. See the documentation for the app for more information.
+</li></ul><h3> <a name="dimensionsofasplunkenterprisedeployment_how_do_these_dimensions_impact_overall_performance.3f"><span class="mw-headline" id="How_do_these_dimensions_impact_overall_performance.3F">How do these dimensions impact overall performance?</span></a></h3>
+<p>While these factors have an impact on the basic sizing requirements of your Splunk Enterprise deployment, addressing each of them individually does not guarantee peak performance gain for the deployment. You must discover through trial how these factors correlate with one another in your specific application.
+</p><p>For example, if your Splunk Enterprise deployment calls for a low amount of indexing but has a high number of concurrent users, it has significantly different resource needs than a setup with a low number of concurrent users and a high amount of daily indexing volume. Additionally, as both user count and amount of indexed data rise, you must <a href="#distributeindexingandsearching" class="external text">distribute the environment across multiple servers</a> to maintain a similar performance level. Search types complicate matters, because some searches strain available CPU resources, while others depend on the speed of the disk subsystem.
+</p>
+<h3> <a name="dimensionsofasplunkenterprisedeployment_when_should_i_scale_my_splunk_enterprise_deployment.3f"><span class="mw-headline" id="When_should_I_scale_my_Splunk_Enterprise_deployment.3F"> When should I scale my Splunk Enterprise deployment?</span></a></h3>
+<p>You must understand how the deployment dimensions described in this topic apply to your specific use case. Answer the following questions, and then refer to the <a href="#performancechecklist" class="external text">performance checklist</a> in this manual to determine when you should add more hardware resources:
+</p>
+<ul><li> How much data do you expect to index daily?
+</li><li> How much data do you need to retain and for how long?
+</li><li> How many users do you expect to search through the data at any one time?
+</li><li> Do you plan to use certain specific searches more than once?
+</li><li> Do you want or need to use a Splunk app to present or manipulate your data?
+</li></ul><p>The key to a well-performing installation is to develop a plan early in the deployment cycle to account for both your initial outlay of hardware resources and the addition of resources when the deployment scales up.
+</p>
+<a name="howincomingdataaffectssplunkenterpriseperformance"></a><h2> <a name="howincomingdataaffectssplunkenterpriseperformance_how_incoming_data_affects_splunk_enterprise_performance"><span class="mw-headline" id="How_incoming_data_affects_Splunk_Enterprise_performance"> How incoming data affects Splunk Enterprise performance</span></a></h2>
+<p>A <a href="#referencehardware" class="external text">reference Splunk Enterprise indexer</a> can index a significant amount of data in a short period of time: over 20 megabytes of data per second or over 1.7 terabytes per day. This level of indexing occurs if the server is doing nothing else but consuming data. 
+</p><p>Because Splunk Enterprise instances do more than index, consider this figure the maximum throughput for an indexer. Performance changes depending on the size and amount of incoming data. Larger events slow down indexing performance. As events increase in size, the indexer uses more system memory to process and index them.
+</p><p>If you need more indexing capacity than a single indexer can provide, add indexers into the deployment to account for the increased demand.
+</p><p>See the topics in this chapter to learn how other factors impact this performance figure.
+</p>
+<a name="howindexeddataaffectssplunkenterpriseperformance"></a><h2> <a name="howindexeddataaffectssplunkenterpriseperformance_how_indexed_data_affects_splunk_enterprise_performance"><span class="mw-headline" id="How_indexed_data_affects_Splunk_Enterprise_performance"> How indexed data affects Splunk Enterprise performance</span></a></h2>
+<p>After Splunk Enterprise consumes data and places it into indexes, those indexes grow and take up disk space. As the indexes grow and available disk space decreases, Splunk Enterprise takes more time to index incoming data because the indexer's disk subsystem takes more time to find space to store the data.
+</p><p>This growth has an impact on search, as well. On a single indexer, disk throughput splits between indexing, which is ongoing, and search requests, which are interrupts based on requests scheduled by users. As indexes grow, search slows down because the disk subsystem needs to account for search requests, and it also needs to handle increasingly longer requests to store incoming data. Depending on the type of search, those kinds of requests can be I/O-intensive.
+</p>
+<a name="howconcurrentusersaffectsplunkenterpriseperformance"></a><h2> <a name="howconcurrentusersaffectsplunkenterpriseperformance_how_concurrent_users_affect_splunk_enterprise_performance"><span class="mw-headline" id="How_concurrent_users_affect_Splunk_Enterprise_performance"> How concurrent users affect Splunk Enterprise performance</span></a></h2>
+<p>A <a href="#referencehardware" class="external text">reference indexer</a> needs to dedicate one of its available CPU cores for every search that a user invokes for as long as the search is active. If multiple users are logged in and running searches, the number of available CPU cores can be exhausted quickly.
+</p><p>These figures assume that CPUs are idle when they receive a login or search request. This does not account for other system requests or CPU cores used by Splunk Enterprise to index data. If they are processing any other system requests, then the load splits across other available CPUs.
+</p><p>As CPU cores are used up, all activities on an indexer slow down as the computer splits processing time between indexing, search, and handling on-line users. Only additional indexers can increase capacity for all three functions of Splunk Enterprise operation.
+</p>
+<a name="howsavedsearchesaffectsplunkenterpriseperformance"></a><h2> <a name="howsavedsearchesaffectsplunkenterpriseperformance_how_saved_searches_.2f_reports_affect_splunk_enterprise_performance"><span class="mw-headline" id="How_saved_searches_.2F_reports_affect_Splunk_Enterprise_performance"> How saved searches / reports affect Splunk Enterprise performance</span></a></h2>
+<p>On a reference indexer, a <b>saved search</b> or report consumes about 1 CPU core and a specified amount of memory while it executes. It behaves like an ad-hoc search. A saved search also increases the amount of disk I/O temporarily as the disk subsystem looks through the <b>indexes</b> to fetch data.
+</p><p>Each additional saved search that executes at the same time consumes an additional CPU core. This consumption is separate from CPU usage from the operating system and Splunk Enterprise indexing and storage processes.
+</p><p>If more saved searches execute than can be accepted for processing, they wait in a queue until they can be serviced. Splunk Enterprise also warns you when the system reaches the maximum number of queued saved searches. When searches queue up, search results return more slowly.
+</p><p>Adding <b>search heads</b> provides additional CPU cores to run more concurrent searches. Adding indexers helps scale with the increased search load and concurrency that comes from adding search heads. Adding RAM to your existing machines helps with concurrent searches but does not give you additional search capacity.
+</p>
+<a name="howsearchtypesaffectsplunkenterpriseperformance"></a><h2> <a name="howsearchtypesaffectsplunkenterpriseperformance_how_search_types_affect_splunk_enterprise_performance"><span class="mw-headline" id="How_search_types_affect_Splunk_Enterprise_performance"> How search types affect Splunk Enterprise performance</span></a></h2>
+<p>You can invoke four types of searches against data stored in a Splunk Enterprise index. Each search type impacts the indexer in a different way. 
+</p><p>The following table summarizes the different search types. For dense and sparse searches, Splunk Enterprise measures performance based on number of matching events. With super-sparse and rare searches, performance is measured based on total indexed volume.
+</p>
+<table border="1" cellpadding="5" cellspacing="0"><tr bgcolor="#D9EAED"><th valign="top" bgcolor="#C0C0C0"> Search type
+</th><th valign="top" bgcolor="#C0C0C0"> Description
+</th><th valign="top" bgcolor="#C0C0C0"> Ref. indexer throughput
+</th><th valign="top" bgcolor="#C0C0C0"> Performance impact
+</th></tr><tr><td valign="top" align="left"> Dense
+</td><td valign="top" align="left"> Returns a large percentage (10% or more) of matching results for a given set of data in a given period of time. Dense searches usually tax a server's CPU first, because of the overhead required to decompress the raw data stored in a Splunk Enterprise index.
+</td><td valign="top" align="left"> Up to 50,000 matching events per second.
+</td><td valign="top" align="left"> CPU-bound
+</td></tr><tr><td valign="top" align="left"> Sparse
+</td><td valign="top" align="left"> Returns a smaller amount of results for a given set of data in a given period of time (anywhere from .01 to 1%) than do dense searches.
+</td><td valign="top" align="left"> Up to 5,000 matching events per second.
+</td><td valign="top" align="left"> CPU-bound
+</td></tr><tr><td valign="top" align="left"> Super-sparse
+</td><td valign="top" align="left"> Returns a small number of results from each index <b>bucket</b> that matches the search. A super-sparse search is I/O intensive because the indexer must look through all of the buckets of an index to find the results. If you have a large amount of data stored on your indexer, there are a lot of buckets, and a super-sparse search can take a long time to finish.
+</td><td valign="top" align="left"> Up to 2 seconds per index bucket.
+</td><td valign="top" align="left"> I/O bound
+</td></tr><tr><td valign="top" align="left"> Rare
+</td><td valign="top" align="left"> Similar to a super-sparse search, but receives assistance from <b>bloom filters</b>, which help eliminate index buckets that do not match the search request. Rare searches return results anywhere from 20 to 100 times faster than does a super-sparse search.
+</td><td valign="top" align="left"> From 10 to 50 index buckets per second.
+</td><td valign="top" align="left"> I/O bound
+</td></tr></table><a name="howsplunkappsaffectsplunkenterpriseperformance"></a><h2> <a name="howsplunkappsaffectsplunkenterpriseperformance_how_splunk_apps_affect_splunk_enterprise_performance"><span class="mw-headline" id="How_Splunk_apps_affect_Splunk_Enterprise_performance"> How Splunk apps affect Splunk Enterprise performance</span></a></h2>
+<p>A single Splunk Enterprise indexer can run multiple apps simultaneously. Splunk Enterprise includes several apps which it runs at the same time. 
+</p><p>However, the more complex apps offer advanced views that require the use of summarizing and accelerating searches that run in the background. The more background processing an app needs, the more likely you must distribute the processing load across multiple machines.
+</p><p>Many apps require a distributed Splunk Enterprise deployment by design. Whether it is a case of universal forwarders fetching data and sending it to a single central instance, or many indexers and search heads connected together and serving up reports, dashboards, or alerts, Splunk apps often need more than one server to realize both maximum performance and potential in the enterprise.
+</p>
+<h3> <a name="howsplunkappsaffectsplunkenterpriseperformance_how_splunk_apps_affect_resource_requirements"><span class="mw-headline" id="How_Splunk_apps_affect_resource_requirements">How Splunk apps affect resource requirements</span></a></h3>
+<p>If you use a Splunk app or solution that gets knowledge by executing a large number of saved searches, then you can overwhelm a single-server Splunk Enterprise instance. Multiple searches quickly exhaust available CPU resources on an indexer.
+See "<a href="#accommodatemanysimultaneoussearches" class="external text">Accommodate many simultaneous searches</a>" in this manual.
+</p><p>When you install an app or solution, read the system requirements outlined in that app or solution's documentation. If the information is not available, contact the authors of the app or solution to get information about what you need to run the app properly.
+</p>
+<a name="howsplunkcalculatesdiskstorage"></a><h2> <a name="howsplunkcalculatesdiskstorage_how_splunk_enterprise_calculates_disk_storage"><span class="mw-headline" id="How_Splunk_Enterprise_calculates_disk_storage"> How Splunk Enterprise calculates disk storage</span></a></h2>
+<p>At a high level, Splunk calculates total disk storage as follows: 
+</p>
+<code><font size="2"> ( Daily average indexing rate ) x ( retention policy ) x 1/2<br></font></code>
+<p>Splunk Enterprise stores raw data at up to approximately half its original size with compression. On a volume that contains 500GB of usable disk space, you can store nearly six months' worth of data at an indexing rate of 5GB/day or ten days' worth at a rate of 100GB/day. 
+</p><p>If you need additional storage, you can opt for either more local disks, which is required for frequent searching, or you can use attached or network storage, which is acceptable for occasional searching. Low-latency connections over NFS or SMB/CIFS (Server Message Block/Common Internet File System) are acceptable for searches over long time periods where instant search returns can be compromised to lower cost per GB. 
+</p><p><b>Important:</b> Shares mounted over a Wide Area Network (WAN) connection or on standby storage such as tape are never suitable storage choices for Splunk Enterprise operations.
+</p>
+<a name="estimateyourstoragerequirements"></a><h2> <a name="estimateyourstoragerequirements_estimate_your_storage_requirements"><span class="mw-headline" id="Estimate_your_storage_requirements"> Estimate your storage requirements </span></a></h2>
+<p>This topic describes how to estimate the size of your Splunk Enterprise index, so that you can plan your storage capacity requirements.
+</p><p>When Splunk Enterprise indexes your data, it creates two main types of files: the "rawdata" file that contains the original data in compressed form and the index files that point to this data. (It also creates a few metadata files, which don't consume much space.) With a little experimentation, you can estimate how much index disk space you will need for a given amount of incoming data. 
+</p><p>Typically, the compressed rawdata file is 10% the size of the incoming, pre-indexed raw data. The associated index files range in size from approximately 10% to 110% of the rawdata file. The number of unique terms in the data affect this value.
+</p><p>Depending on the data's characteristics, you might want to tune your segmentation settings, as described in "About segmentation" in the Getting Data In Manual. 
+</p><p>The best way to get an idea of your space needs is to experiment by indexing a representative sample of your data, and then checking the sizes of the resulting directories in <code><font size="2">$SPLUNK_HOME/var/lib/splunk/defaultdb</font></code>.  
+</p>
+<h3> <a name="estimateyourstoragerequirements_on_.2anix_systems.2c_follow_these_steps"><span class="mw-headline" id="On_.2Anix_systems.2C_follow_these_steps">On *nix systems, follow these steps</span></a></h3>
+<p>Once you've indexed your data sample:
+</p><p><b>1.</b> Go to <code><font size="2">$SPLUNK_HOME/var/lib/splunk/defaultdb/db</font></code>.
+</p><p><b>2.</b> Run <code><font size="2">du -ch hot_v*</font></code> and look at the last <code><font size="2">total</font></code> line to see the size of the index.
+</p>
+<h3> <a name="estimateyourstoragerequirements_on_windows_systems.2c_follow_these_steps"><span class="mw-headline" id="On_Windows_systems.2C_follow_these_steps">On Windows systems, follow these steps</span></a></h3>
+<p><b>1.</b> Download the du utility from Microsoft TechNet.
+</p><p><b>2.</b> Extract <code><font size="2">du.exe</font></code> from the downloaded ZIP file and place it into your <code><font size="2">%SYSTEMROOT%</font></code> or <code><font size="2">%WINDIR%</font></code> folder.
+</p><p><b>Note:</b> You can also place it anywhere in your <code><font size="2">%PATH%</font></code>.
+</p><p><b>3.</b> Open a command prompt.
+</p><p><b>4.</b> Once there, go to <code><font size="2">%SPLUNK_HOME%\var\lib\splunk\defaultdb\db</font></code>.
+</p><p><b>5.</b> Run <code><font size="2">del&nbsp;%TEMP%\du.txt &amp; for /d&nbsp;%i in (hot_v*) do du -q -u&nbsp;%i\rawdata | findstr /b "Size:" &gt;&gt;&nbsp;%TEMP%\du.txt</font></code>.
+</p><p><b>6.</b> Open the <code><font size="2">%TEMP%\du.txt file.</font></code> You will see <code><font size="2">Size: <i>n</i></font></code>, which is the size of each <code><font size="2">rawdata</font></code> directory found.
+</p><p><b>7.</b> Add these numbers together to find out how large the compressed persisted raw data is.
+</p><p><b>8.</b> Next, run <code><font size="2">for /d&nbsp;%i in (hot_v*) do dir /s&nbsp;%i</font></code>, the summary of which is the size of the index.
+</p><p><b>9.</b> Add this number to the total persistent raw data number.
+</p><p>This is the total size of the index and associated data for the sample you have indexed. You can now use this to extrapolate the size requirements of your Splunk Enterprise index and <code><font size="2">rawdata</font></code> directories over time.
+</p>
+<h3> <a name="estimateyourstoragerequirements_answers"><span class="mw-headline" id="Answers">Answers</span></a></h3>
+<p>Have questions? Visit Splunk Answers to see what questions and answers other Splunk users had about data sizing.
+</p>
+<h1>Scale your Splunk Enterprise Deployment</h1><a name="distributeindexingandsearching"></a><h2> <a name="distributeindexingandsearching_distribute_indexing_and_searching"><span class="mw-headline" id="Distribute_indexing_and_searching"> Distribute indexing and searching</span></a></h2>
+<p>This topic discusses the concepts and hardware requirements for distributing the indexing and searching components of your Splunk Enterprise deployment.
+</p>
+<h3> <a name="distributeindexingandsearching_concepts_of_distributed_indexing_and_searching"><span class="mw-headline" id="Concepts_of_distributed_indexing_and_searching">Concepts of distributed indexing and searching</span></a></h3>
+<p>Scale your Splunk Enterprise deployment by distributing searching and indexing across multiple machines. <b>Indexers</b> bring in, store, and search the data. <b>Search heads</b> manage search requests and present results. 
+</p><p>Because indexers require much more disk I/O throughput than search heads do, give your environment more indexing capacity by reducing the overhead required for searching. The key points are as follows:
+</p>
+<ul><li> When you add indexers to the deployment, the aggregate rate of data consumption and total available storage increases, which provides additional capacity to manage increased search loads.
+</li><li> When you add search heads, you increase the number of concurrent users that the deployment can handle, thus providing capacity for increased search load.
+</li></ul><p>The more search heads you add to the deployment, the faster you can find the data that you indexed.
+</p>
+<h3> <a name="distributeindexingandsearching_considerations_for_search_performance_versus_indexing_performance"><span class="mw-headline" id="Considerations_for_search_performance_versus_indexing_performance">Considerations for search performance versus indexing performance</span></a></h3>
+<p>While the two points in the previous section are best practice for improving indexing speed, some caveats apply, particularly when it comes to search speed.
+</p><p>As your indexers consume data, they store it in <b>buckets</b>, which are the individual elements of an index. As more data comes in, the number of buckets increases. A higher number of buckets can impact search speed because of the throughput required to navigate through those buckets for the data you want. This impact is noticeable for index buckets that hold smaller amounts of data.
+</p><p>As the number of buckets increases, the indexer must manage the buckets, which it does by "rolling" them to make room for new incoming data. This procedure takes up I/O cycles as well, which reduces the number of I/O cycles available to fetch events for search requests.
+</p><p>The key points to remember are:
+</p>
+<ul><li> Adding search heads to your distributed deployment does not guarantee improved search performance. A mix of search heads and indexers is vital for performance increases.
+</li><li> The number and types of search also impact indexer performance. Some search types tax an indexer's CPU, while others apply pressure to the disk subsystem.
+</li></ul><p>See "<a href="#accommodatemanysimultaneoussearches" class="external text">Accommodate concurrent users and searches</a>" in this manual for details on simultaneous searches.
+</p>
+<a name="accommodatemanysimultaneoussearches"></a><h2> <a name="accommodatemanysimultaneoussearches_accommodate_many_simultaneous_searches"><span class="mw-headline" id="Accommodate_many_simultaneous_searches"> Accommodate many simultaneous searches</span></a></h2>
+<p>This topic provides high-level guidance on how to accommodate many simultaneous searches, search types, and concurrent users with your distributed Splunk Enterprise deployment.
+</p>
+<h3> <a name="accommodatemanysimultaneoussearches_primary_search_performance_impacts"><span class="mw-headline" id="Primary_search_performance_impacts">Primary search performance impacts</span></a></h3>
+<p>The biggest performance impacts on a Splunk Enterprise deployment are: 
+</p>
+<ul><li> Number of concurrent users.
+</li><li> Number of concurrent searches.
+</li><li> Types of searches you use during the course of operation. 
+</li></ul><p>Each of these elements affects the deployment in different ways.
+</p>
+<h3> <a name="accommodatemanysimultaneoussearches_how_concurrent_users_and_searches_affect_performance"><span class="mw-headline" id="How_concurrent_users_and_searches_affect_performance">How concurrent users and searches affect performance</span></a></h3>
+<p>When a user submits a search request, the search request can take up to one CPU core on each indexer to process while it runs, by default. Any additional searches that the user submits also account for one CPU core. You can adjust the number of global concurrent searches that a machine can run. See "Expected performance and known limitations of real-time searches and reports" in the <i>Search Manual</i>.
+</p><p>The type of search the user invokes also impacts resource usage. The additional amount of CPU or disk usage varies depending on the search type. See "<a href="#howsearchtypesaffectsplunkenterpriseperformance" class="external text">How search types affect Splunk Enterprise performance</a>" in this manual.
+</p>
+<h3> <a name="accommodatemanysimultaneoussearches_how_to_maximize_search_performance"><span class="mw-headline" id="How_to_maximize_search_performance">How to maximize search performance</span></a></h3>
+<p>The best way to address the resource overhead for many concurrent searches is to configure the deployment to handle search requests completely within available physical machine memory. Do this by adding as much memory to systems as is feasible. While this is important for the machines that you designate as search heads, it is particularly important for indexers in your deployment, because indexers must index incoming data and search existing data.
+</p><p>For example, in a deployment that has up to 48 concurrent searches happening at a time, a single search that uses 200MB of memory translates to nearly 10GB of memory required to satisfy the 48 concurrent search requests. The amount of available memory is an important statistic.  While performance on an indexer declines gradually with increased CPU usage from concurrent search jobs, it drops dramatically when the machine exhausts all available physical memory. A single reference indexer cannot handle 48 concurrent searches. At the very least, the machine needs additional memory for satisfactory performance.
+</p>
+<h4><font size="3"><b><i> <a name="accommodatemanysimultaneoussearches_search_performance:_the_ideal"><span class="mw-headline" id="Search_performance:_The_ideal">Search performance: The ideal</span></a></i></b></font></h4>
+<p>Despite the memory constraints, the run time of a search increases proportionally as the number of free CPU cores on a machine decreases. For example, on an idle system with 8 available cores, the cores on the machine service the first 8 searches to arrive and finish within a short period of time, for this example, 10 seconds.
+</p><p>If 48 searches run concurrently, then completion time increases significantly as shown in the calculation.
+</p>
+<table border="1" cellpadding="5" cellspacing="0"><tr bgcolor="#D9EAED"><th valign="top" bgcolor="#C0C0C0"> No. of concurrent searches
+</th><th valign="top" bgcolor="#C0C0C0"> / No. of avail. cores
+</th><th valign="top" bgcolor="#C0C0C0"> = No. of searches per core
+</th><th valign="top" bgcolor="#C0C0C0"> x No. of sec. per individual search
+</th><th valign="top" bgcolor="#C0C0C0"> = Approx. time (sec.) per search
+</th></tr><tr><td valign="top" align="left"> 48
+</td><td valign="top" align="left"> 8
+</td><td valign="top" align="left"> 6
+</td><td valign="top" align="left"> 10
+</td><td valign="top" align="left"> 60
+</td></tr></table><p>Because indexers do the bulk of the work in search operations (reading data off disk, decompressing it, extracting knowledge and reporting), it is best practice to add indexers to decrease the amount of time per search. In the next example, to return to the performance level of 10-second searches, deploy 6 indexers with 8 cores each.
+</p><p><b>8 consecutive searches - 6 indexers with 8 cores per indexer:</b>
+</p>
+<table border="1" cellpadding="5" cellspacing="0"><tr bgcolor="#D9EAED"><th valign="top" bgcolor="#C0C0C0"> No. of concurrent searches
+</th><th valign="top" bgcolor="#C0C0C0"> / No. of avail. cores
+</th><th valign="top" bgcolor="#C0C0C0"> = No. of cores per search
+</th><th valign="top" bgcolor="#C0C0C0"> x No. of sec. per individual search
+</th><th valign="top" bgcolor="#C0C0C0"> = Approx. time (sec.) per search
+</th></tr><tr><td valign="top" align="left"> 8
+</td><td valign="top" align="left"> 48
+</td><td valign="top" align="left"> 6
+</td><td valign="top" align="left"> 10
+</td><td valign="top" align="left"> 1.6
+</td></tr></table><p><b>48 consecutive searches - 6 indexers with 8 cores per indexer:</b>
+</p>
+<table border="1" cellpadding="5" cellspacing="0"><tr bgcolor="#D9EAED"><th valign="top" bgcolor="#C0C0C0"> No. of concurrent searches
+</th><th valign="top" bgcolor="#C0C0C0"> / No. of avail. cores
+</th><th valign="top" bgcolor="#C0C0C0"> = No. of cores per search
+</th><th valign="top" bgcolor="#C0C0C0"> x No. of sec. per individual search
+</th><th valign="top" bgcolor="#C0C0C0"> = Approx. time (sec.) per search
+</th></tr><tr><td valign="top" align="left"> 48
+</td><td valign="top" align="left"> 48
+</td><td valign="top" align="left"> 1
+</td><td valign="top" align="left"> 10
+</td><td valign="top" align="left"> 10
+</td></tr></table><p>In the previous example, one search head to service search requests is acceptable. It might be appropriate to set aside a second search head to create <b>summary indexes</b>.
+</p>
+<h4><font size="3"><b><i> <a name="accommodatemanysimultaneoussearches_search_performance:_the_reality"><span class="mw-headline" id="Search_performance:_The_reality">Search performance: The reality</span></a></i></b></font></h4>
+<p>In many cases, the system is not idle before searches arrive. For example, if an indexer handles 150GB/day of data at peak times, then it can use up to 4 of the 8 available cores for indexing that data. In this case, search times increase significantly.
+</p><p><b>4 concurrent searches - one indexer with 4 of 8 cores available per indexer:</b>
+</p>
+<table border="1" cellpadding="5" cellspacing="0"><tr bgcolor="#D9EAED"><th valign="top" bgcolor="#C0C0C0"> No. of concurrent searches
+</th><th valign="top" bgcolor="#C0C0C0"> / No. of avail. cores
+</th><th valign="top" bgcolor="#C0C0C0"> = No. of cores per search
+</th><th valign="top" bgcolor="#C0C0C0"> x No. of sec. per individual search
+</th><th valign="top" bgcolor="#C0C0C0"> = Approx. time (sec.) per search
+</th></tr><tr><td valign="top" align="left"> 4
+</td><td valign="top" align="left"> 4
+</td><td valign="top" align="left"> 1
+</td><td valign="top" align="left"> 10
+</td><td valign="top" align="left"> 10
+</td></tr></table><p><b>48 concurrent searches - one indexer with 4 of 8 cores available per indexer:</b>
+</p>
+<table border="1" cellpadding="5" cellspacing="0"><tr bgcolor="#D9EAED"><th valign="top" bgcolor="#C0C0C0"> No. of concurrent searches
+</th><th valign="top" bgcolor="#C0C0C0"> / No. of avail. cores
+</th><th valign="top" bgcolor="#C0C0C0"> = No. of searches per core
+</th><th valign="top" bgcolor="#C0C0C0"> x No. of sec. per individual search
+</th><th valign="top" bgcolor="#C0C0C0"> = Approx. time (sec.) per search
+</th></tr><tr><td valign="top" align="left"> 48
+</td><td valign="top" align="left"> 4
+</td><td valign="top" align="left"> 12
+</td><td valign="top" align="left"> 10
+</td><td valign="top" align="left"> 120
+</td></tr></table><p>Increasing the number of cores per machine decreases the amount of time taken per search, but is not the most effective way to streamline search operations. One system with 16 cores has the following performance.
+</p><p><b>16 concurrent searches - one indexer with 12 of 16 cores available:</b>
+</p>
+<table border="1" cellpadding="5" cellspacing="0"><tr bgcolor="#D9EAED"><th valign="top" bgcolor="#C0C0C0"> No. of concurrent searches
+</th><th valign="top" bgcolor="#C0C0C0"> / No. of avail. cores
+</th><th valign="top" bgcolor="#C0C0C0"> = No. of searches per core
+</th><th valign="top" bgcolor="#C0C0C0"> x No. of sec. per individual search
+</th><th valign="top" bgcolor="#C0C0C0"> = Approx. time (sec.) per search
+</th></tr><tr><td valign="top" align="left"> 16
+</td><td valign="top" align="left"> 12
+</td><td valign="top" align="left"> 1.33
+</td><td valign="top" align="left"> 10
+</td><td valign="top" align="left"> 13.3
+</td></tr></table><p><b>48 concurrent searches - one indexer with 12 of 16 cores available:</b>
+</p>
+<table border="1" cellpadding="5" cellspacing="0"><tr bgcolor="#D9EAED"><th valign="top" bgcolor="#C0C0C0"> No. of concurrent searches
+</th><th valign="top" bgcolor="#C0C0C0"> / No. of avail. cores
+</th><th valign="top" bgcolor="#C0C0C0"> = No. of searches per core
+</th><th valign="top" bgcolor="#C0C0C0"> x No. of sec. per individual search
+</th><th valign="top" bgcolor="#C0C0C0"> = Approx. Total time (sec.) per search
+</th></tr><tr><td valign="top" align="left"> 48
+</td><td valign="top" align="left"> 12
+</td><td valign="top" align="left"> 4
+</td><td valign="top" align="left"> 10
+</td><td valign="top" align="left"> 40
+</td></tr></table><p>Two 8-core machines have the following performance profile.
+</p><p><b>8 concurrent searches - two indexers with 4 of 8 cores available per indexer:</b>
+</p>
+<table border="1" cellpadding="5" cellspacing="0"><tr bgcolor="#D9EAED"><th valign="top" bgcolor="#C0C0C0"> No. of concurrent searches
+</th><th valign="top" bgcolor="#C0C0C0"> / No. of avail. cores
+</th><th valign="top" bgcolor="#C0C0C0"> = No. of cores per search
+</th><th valign="top" bgcolor="#C0C0C0"> x No. of sec. per individual search
+</th><th valign="top" bgcolor="#C0C0C0"> = Approx. time (sec.) per search
+</th></tr><tr><td valign="top" align="left"> 8
+</td><td valign="top" align="left"> 8
+</td><td valign="top" align="left"> 1
+</td><td valign="top" align="left"> 10
+</td><td valign="top" align="left"> 10
+</td></tr></table><p><b>16 concurrent searches - two indexers with 4 of 8 cores available per indexer:</b>
+</p>
+<table border="1" cellpadding="5" cellspacing="0"><tr bgcolor="#D9EAED"><th valign="top" bgcolor="#C0C0C0"> No. of concurrent searches
+</th><th valign="top" bgcolor="#C0C0C0"> / No. of avail. cores
+</th><th valign="top" bgcolor="#C0C0C0"> = No. of searches per core
+</th><th valign="top" bgcolor="#C0C0C0"> x No. of sec. per individual search
+</th><th valign="top" bgcolor="#C0C0C0"> = Approx. time (sec.) per search
+</th></tr><tr><td valign="top" align="left"> 16
+</td><td valign="top" align="left"> 8
+</td><td valign="top" align="left"> 2
+</td><td valign="top" align="left"> 10
+</td><td valign="top" align="left"> 20
+</td></tr></table><p><b>48 concurrent searches - two indexers with 4 of 8 cores available per indexer:</b>
+</p>
+<table border="1" cellpadding="5" cellspacing="0"><tr bgcolor="#D9EAED"><th valign="top" bgcolor="#C0C0C0"> No. of concurrent searches
+</th><th valign="top" bgcolor="#C0C0C0"> / No. of avail. cores
+</th><th valign="top" bgcolor="#C0C0C0"> = No. of searches per core
+</th><th valign="top" bgcolor="#C0C0C0"> x No. of sec. per individual search
+</th><th valign="top" bgcolor="#C0C0C0"> = Approx. time (sec.) per search
+</th></tr><tr><td valign="top" align="left"> 48
+</td><td valign="top" align="left"> 8
+</td><td valign="top" align="left"> 6
+</td><td valign="top" align="left"> 10
+</td><td valign="top" align="left"> 60
+</td></tr></table><p>Two 8-core machines cost only slightly more than one 16-core machine. In addition, two 8-core machines provide significantly more available disk throughput than one 16-core machine does, based on hard disk spindle count. This is important for indexers because of the high disk bandwidth that they require.
+</p><p>Adding indexers reduces the indexing load on any system and frees CPU cores for searching. Also, because the performance of almost all types of search scales with the number of indexers, searches will be faster, which mitigates the effect of reduced performance from sharing resources amongst both indexing and searching. Increasing search speed reduces the chance of concurrent searches with concurrent users.
+</p><p>In real-world situations with hundreds of users, each user runs a search every few minutes, although not at the exact same time as other users. By adding indexers and reducing the search time, you reduce the concurrency factor and lower the resultant I/O and memory contention.
+</p>
+<h1>Performance Reference</h1><a name="referencehardware"></a><h2> <a name="referencehardware_reference_hardware"><span class="mw-headline" id="Reference_hardware"> Reference hardware</span></a></h2>
+<p>A reference machine helps you understand when to scale and distribute a Splunk Enterprise deployment. Refer to this configuration as the standard for the remainder of this chapter and whenever you need to size the hardware needs of your environment.
+</p>
+<h3> <a name="referencehardware_reference_machine_for_single-instance_deployments"><span class="mw-headline" id="Reference_machine_for_single-instance_deployments"> Reference machine for single-instance deployments </span></a></h3>
+<p>The following machine requirements represent the basic building block of a Splunk Enterprise deployment.
+</p>
+<ul><li> Intel x86 64-bit chip architecture
+</li><li> 2 CPUs, 6 cores per CPU (12 CPU cores total), at least 2Ghz per core
+</li><li> 12GB RAM
+</li><li> Standard 1Gb Ethernet NIC, optional second NIC for a management network
+</li><li> Standard 64-bit Linux or Windows distribution
+</li></ul><h4><font size="3"><b><i> <a name="referencehardware_disk_subsystem"><span class="mw-headline" id="Disk_subsystem">Disk subsystem</span></a></i></b></font></h4>
+<p>The disk subsystem for a reference machine should be capable of handling a high number of averaged <b>I</b>nput/Output <b>O</b>perations <b>P</b>er <b>S</b>econd (IOPS). 
+</p><p>IOPS are a measurement of how much data throughput a hard drive can produce. Because a hard drive reads and writes at different speeds, there are IOPS numbers for disk reads and writes. The average IOPS is the blend between those two figures.
+</p><p>The more average IOPS a hard drive can produce, the more data it can index and search in a given period of time. While many variable items factor into the amount of IOPS that a hard drive can produce, the following are three most important elements:
+</p>
+<ul><li> Its rotational speed in revolutions per minute. 
+</li><li> Its average latency, which is the amount of time it takes to spin its platters half a rotation.
+</li><li> Its average seek time, which is the amount of time it takes to retrieve a requested block of data. 
+</li></ul><p>To get the most IOPS out of a hard drive, choose drives that have high rotational speeds and low average latency and seek times. Every drive manufacturer provides this information, and some provide much more.
+</p><p>For information on IOPS and how to calculate them, see the following articles:
+</p>
+<ul><li> "Getting the hang of IOPS (http://www.symantec.com/connect/articles/getting-hang-iops-v13) on Symantec's Connect Community.
+</li><li> "Analyzing I/O performance in Linux (http://www.cmdln.org/2010/04/22/analyzing-io-performance-in-linux) on CMDLN.ORG (A sysadmin blog). 
+</li></ul><p>For this application, we use eight 146-gigabyte, 15,000 RPM serial-attached SCSI (SAS) HDs in a Redundant Array of Independent Disks (RAID) 1+0 fault tolerance scheme as the disk subsystem. Each hard drive is capable of about 200 average IOPS. The combined array produces a little over 800 IOPS.
+</p><p><b>Important:</b> Disk I/O often constrains Splunk Enterprise first, so always consider disk infrastructure first when specifying your hardware.
+</p>
+<h4><font size="3"><b><i> <a name="referencehardware_performance_capability"><span class="mw-headline" id="Performance_capability">Performance capability</span></a></i></b></font></h4>
+<p>The reference machine produces the following index and search performance metrics for a given sample of data.
+</p>
+<h5> <a name="referencehardware_indexing_performance"><span class="mw-headline" id="Indexing_performance">Indexing performance</span></a></h5>
+<ul><li> Up to 20MB per second (1700GB per day) of raw indexing performance, as long as no other Splunk Enterprise related activity occurs.
+</li></ul><h5> <a name="referencehardware_search_performance"><span class="mw-headline" id="Search_performance">Search performance</span></a></h5>
+<ul><li> Up to 50,000 events per second for dense searches.
+</li><li> Up to 5,000 events per second for sparse searches.
+</li><li> Up to 2 seconds per index bucket for super-sparse searches.
+</li><li> From 10 to 50 buckets per second for rare searches with bloom filters.
+</li></ul><p>To find out more about the types of searches and how they affect Splunk Enterprise performance, see "<a href="#howsearchtypesaffectsplunkenterpriseperformance" class="external text">How search types affect Splunk Enterprise performance</a>" in this manual.
+</p>
+<h3> <a name="referencehardware_reference_machine_for_distributed_deployments"><span class="mw-headline" id="Reference_machine_for_distributed_deployments">Reference machine for distributed deployments</span></a></h3>
+<p>At higher data indexing rates and user counts, consider the different needs of indexers and search heads. Dedicated search heads do not need extremely fast disk throughput, nor do they need much local storage. They require far more CPU resources than do indexers. 
+</p><p>The following recommendations are for both search heads and indexers in a distributed deployment.
+</p>
+<h4><font size="3"><b><i> <a name="referencehardware_dedicated_search_head"><span class="mw-headline" id="Dedicated_search_head">Dedicated search head</span></a></i></b></font></h4>
+<ul><li> Intel 64-bit chip architecture
+</li><li> 4 CPUs, 4 cores per CPU (16 CPU cores total), at least 2Ghz per core
+</li><li> 12GB RAM
+</li><li> 2 x 300GB, 10,000 RPM SAS hard disks, configured in RAID 1
+</li><li> Standard 1Gb Ethernet NIC, optional 2nd NIC for a management network 
+</li><li> Standard 64-bit Linux or Windows distribution
+</li></ul><p>Because search heads require raw computing power and are likely to become CPU-bound, add additional CPU cores to a search head for faster performance per server. If search workload dictates, a search head might require 4 CPUs with 6 cores per CPU. Regardless, the guideline of 1 core per active user applies. Additionally:
+</p>
+<ul><li> Account for scheduled searches in your CPU allowance. A typical search request requires 1 CPU core.
+</li><li> Depending on the type of search you use, you might need to add CPU cores to account for the increased load those search types cause.
+</li></ul><h4><font size="3"><b><i> <a name="referencehardware_indexer"><span class="mw-headline" id="Indexer">Indexer</span></a></i></b></font></h4>
+<p>Indexers in a distributed deployment configuration have equivalent disk I/O bandwidth requirements to indexers in a single-instance deployment. To compensate for the increase in search requests and higher data indexing volume in a distributed environment, distribute the work across many indexers.
+</p>
+<ul><li> Intel 64-bit chip architecture.
+</li><li> 2 CPUs, 6 cores per CPU (12 CPU cores total), at least 2Ghz per core.
+</li><li> 12GB RAM.
+</li><li> Disk subsystem capable of 800 average IOPS. See "<a href="#referencehardware_disk_subsystem" class="external text">Disk subsystem</a>."
+</li><li> Standard 1Gb Ethernet NIC, with optional second NIC for a management network. 
+</li><li> Standard 64-bit Linux or Windows distribution.
+</li></ul><p>At higher daily volumes, local disk does not provide cost-effective storage for the time frames where you want a fast search. In these cases, deploy fast attached storage or networked storage, such as storage area networks (SAN) over fiber, that can provide the required IOPS per indexer. While there are too many types of storage to recommend, consider these guidelines when you plan your storage infrastructure:
+</p>
+<ul><li> Indexers do many bulk reads.
+</li><li> Indexers do many disk seeks.
+</li></ul><p>Therefore:
+</p>
+<ul><li> More disks (specifically, more spindles) are better for indexing performance.
+</li><li> Total throughput of the entire system is important.
+</li><li> The ratio of disks to disk controllers in a particular system should be higher, similar to how you configure a database server.
+</li></ul><h4><font size="3"><b><i> <a name="referencehardware_ratio_of_indexers_to_search_heads"><span class="mw-headline" id="Ratio_of_indexers_to_search_heads">Ratio of indexers to search heads</span></a></i></b></font></h4>
+<p>Technically, there is no practical limitation on the number of search heads an indexer can support or on the number of indexers a search head can search against. However, systems limitations suggest a ratio of approximately 8 indexers to 1 search head as a rough guideline. If you have many searchers compared to your total data volume, then more search heads will increase search efficiency. In some cases, the best use of a separate search head is to populate <b>summary indexes</b>. This search head acts like an indexer to the primary search head that users log into.
+</p>
+<h3> <a name="referencehardware_virtual_hardware"><span class="mw-headline" id="Virtual_hardware"> Virtual hardware </span></a></h3>
+<p>Splunk Enterprise performs fastest when deployed directly on to bare-metal hardware. However, Splunk Enterprise can deliver on virtual equipment, and Splunk supports deploying it that way.
+</p><p>Using the bare-metal hardware as a baseline, Splunk Enterprise generally indexes data about 10-15% slower on a virtual machine than it does on a standard bare-metal machine. Search performance is on par with the real-world hardware. 
+</p><p>This is a best-case scenario that does not account for resource contention with other active virtual machines on the same physical server. It also does not account for certain vendor-specific I/O enhancement techniques, such as Direct I/O or Raw Device Mapping.
+</p><p>See this Tech Brief for recommendations for running Splunk on VMware.
+</p>
+<h4><font size="3"><b><i> <a name="referencehardware_splunk_enterprise.2c_self-managed_in_the_cloud"><span class="mw-headline" id="Splunk_Enterprise.2C_self-managed_in_the_cloud"> Splunk Enterprise, self-managed in the cloud </span></a></i></b></font></h4>
+<p>Running Splunk Enterprise in the cloud is a great alternative to running it on bare-metal hardware.
+</p><p>Given the hardware resources described earlier in this topic, Splunk Enterprise should deliver the same levels of performance on cloud infrastructure as it does on bare-metal hardware. That said, you should keep a close eye on what your cloud infrastructure actually delivers. 
+</p><p>For example, if you run Splunk Enterprise on an Amazon Web Services (AWS) instance, note that:
+</p>
+<ul><li> AWS measures CPU power on Elastic Compute Cloud (EC2) instances in virtual CPUs (vCPUs), not real CPUs.
+</li><li> Each vCPU is a hyper thread of an Intel Xeon core on most AWS instance types. See "AWS | Amazon EC2 | Instance Types" (http://aws.amazon.com/ec2/instance-types/) on the AWS site.
+</li><li> As a hyper thread of a core, a vCPU acts as a core, but the physical core must schedule its workload among other workloads of other vCPUs that the physical core handles.
+</li></ul><p>For indexing and data storage, note that:
+</p>
+<ul><li> If you choose to use Elastic Block Storage (EBS), the type of EBS volume you choose determines the amount of performance you get.
+</li><li> Not all EBS volume types have the necessary IOPS to handle Splunk Enterprise operations.
+</li><li> The "Provisioned IOPS" and "Magnetic" EBS volume types offer the best opportunity to get the required IOPS necessary for indexing and searching. See "EBS - Product Details" (http://aws.amazon.com/ebs/details/) on the AWS site.
+</li><li> Not every EC2 instance type offers the network throughput to the EBS volume that you need. To ensure that bandwidth you must either launch the instance4 as "EBS-optimized" or choose an instance type that provides a minimum of 10Gb of bandwidth. See "Amazon EC2 Instance Configuration" (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-ec2-config.html) on the AWS site.
+</li></ul><p>For forwarding, note that the proximity of your cloud infrastructure to your forwarders can have a major impact on performance of the whole environment.
+</p>
+<h4><font size="3"><b><i> <a name="referencehardware_splunk_cloud"><span class="mw-headline" id="Splunk_Cloud"> Splunk Cloud </span></a></i></b></font></h4>
+<p>Splunk offers its machine data platform and licensed software as a subscription service called Splunk Cloud. When you subscribe to the service, you purchase a capacity to index, store, and search your machine data. Splunk Cloud abstracts the infrastructure specification from you and delivers high performance on the capacity you have purchased.
+</p>
+<a name="performancechecklist"></a><h2> <a name="performancechecklist_performance_checklist"><span class="mw-headline" id="Performance_checklist"> Performance checklist</span></a></h2>
+<p>These guidelines help you decide when to distribute your Splunk Enterprise deployment.
+</p><p>This questionnaire assumes that you have a single-instance Splunk Enterprise deployment based on the reference architecture described in "<a href="#referencehardware" class="external text">Reference hardware</a>."
+</p>
+<h3> <a name="performancechecklist_determine_when_to_scale_your_splunk_enterprise_deployment"><span class="mw-headline" id="Determine_when_to_scale_your_Splunk_Enterprise_deployment">Determine when to scale your Splunk Enterprise deployment</span></a></h3>
+<p>Before you consider when to scale, estimate how much data you need to index and whether you need more than one concurrent Splunk Enterprise user to search that data. 
+</p><p>Depending on how much data you index and how many concurrent users you require, you might need to scale your environment to multiple machines. Even if your indexing amount and user count falls within the capabilities of a single server, you might have to distribute your deployment based on the types of searches you use and whether you use <b>summary indexes</b>. 
+</p><p>To run a Splunk app or solution in your Splunk environment, or to create elements that generate a large number of <b>saved searches</b>, you might have to distribute Splunk Enterprise components across a number of machines.
+</p>
+<h4><font size="3"><b><i> <a name="performancechecklist_question_1:_do_you_want_to_create_or_run_a_splunk_app.2c_alert.2c_or_solution_that_executes_a_large_number_.28more_than_8_concurrently.29_of_saved_searches.3f"><span class="mw-headline" id="Question_1:_Do_you_want_to_create_or_run_a_Splunk_app.2C_alert.2C_or_solution_that_executes_a_large_number_.28more_than_8_concurrently.29_of_saved_searches.3F">Question 1: Do you want to create or run a Splunk app, alert, or solution that executes a large number (more than 8 concurrently) of saved searches?</span></a></i></b></font></h4>
+<p>A saved search is a search that a user saves in Splunk Enterprise to make it available for later use. The number of saved searches, especially those that run concurrently, has  a direct impact on a Splunk server's performance. If you answer <b>No</b>, then go to Question 2. You don't yet need to consider scaling your Splunk Enterprise deployment to multiple machines.
+</p><p>If you answer <b>Yes</b>, then scale your Splunk Enterprise deployment to multiple machines. 
+</p>
+<h4><font size="3"><b><i> <a name="performancechecklist_question_2:_do_you_need_to_index_more_than_2gb_of_data_per_day.3f"><span class="mw-headline" id="Question_2:_Do_you_need_to_index_more_than_2GB_of_data_per_day.3F">Question 2: Do you need to index more than 2GB of data per day?</span></a></i></b></font></h4>
+<h4><font size="3"><b><i> <a name="performancechecklist_question_3:_do_you_need_more_than_two_users_signed_in_at_one_time.3f"><span class="mw-headline" id="Question_3:_Do_you_need_more_than_two_users_signed_in_at_one_time.3F">Question 3: Do you need more than two users signed in at one time?</span></a></i></b></font></h4>
+<p>If you answer <b>No</b> to questions 2 and 3, then your Splunk Enterprise instance can share one of the <a href="#referencehardware" class="external text">reference servers</a> with other services, with the caveat that Splunk Enterprise must have sufficient disk I/O bandwidth on the shared machine. 
+</p><p>If you answer <b>Yes</b> to question 2 or 3, then proceed to Question 4.
+</p><p><b>Caution</b> To deploy Splunk Enterprise on Windows, do not share full Splunk Enterprise services on servers that run Microsoft Exchange, Active Directory domain services, or machine virtualization software. Those services are often disk I/O intensive and can reduce indexing and search performance. Additionally, make sure that antivirus software installed on the server does not scan the Splunk Enterprise installation directory.
+</p>
+<h4><font size="3"><b><i> <a name="performancechecklist_question_4:_do_you_need_to_index_more_than_250gb_per_day.3f"><span class="mw-headline" id="Question_4:_Do_you_need_to_index_more_than_250GB_per_day.3F">Question 4: Do you need to index more than 250GB per day?</span></a></i></b></font></h4>
+<h4><font size="3"><b><i> <a name="performancechecklist_question_5:_do_you_need_more_than_four_concurrent_users.3f"><span class="mw-headline" id="Question_5:_Do_you_need_more_than_four_concurrent_users.3F">Question 5: Do you need more than four concurrent users?</span></a></i></b></font></h4>
+<p>If you answer <b>No</b> to questions 4 and 5, then a single dedicated Splunk Enterprise instance running on a reference machine should be able to handle indexing and search workload.
+</p><p>If you answer <b>Yes</b> to question 4 or 5, then go to Question 6.
+</p>
+<h4><font size="3"><b><i> <a name="performancechecklist_question_6:_do_you_need_more_than_500gb_of_total_storage.3f"><span class="mw-headline" id="Question_6:_Do_you_need_more_than_500GB_of_total_storage.3F">Question 6: Do you need more than 500GB of total storage?</span></a></i></b></font></h4>
+<p>See "<a href="#howsplunkcalculatesdiskstorage" class="external text">How Splunk Enterprise calculates disk storage</a>."
+</p><p>If you answer <b>No</b>,  then a single dedicated reference machine should be able to handle indexing and search workload, but you might need to add fast storage to the system to account for the increased disk usage.
+</p><p>If you answer <b>Yes</b>, then consider scaling your deployment to additional indexers to handle the increased demand of indexing and searching.
+</p>
+<h4><font size="3"><b><i> <a name="performancechecklist_question_7:_do_you_need_to_search_large_quantities_of_data_for_a_small_set_.28less_than_1_per_cent.29_of_results.3f"><span class="mw-headline" id="Question_7:_Do_you_need_to_search_large_quantities_of_data_for_a_small_set_.28less_than_1_per_cent.29_of_results.3F">Question 7: Do you need to search large quantities of data for a small set (less than 1 per cent) of results?</span></a></i></b></font></h4>
+<p>Searches that cover large quantities of data and return small sets of results are called super-sparse searches. These searches require lots of disk I/O, because the indexer must search a number of buckets to find the data you're looking for.
+</p><p>If you answer <b>No</b>, then you do not need to scale your deployment. However, adding additional indexers improves both indexing and search performance.
+</p><p>If you answer <b>Yes</b>, then consider scaling your deployment.
+</p>
+<a name="summaryofperformancerecommendations"></a><h2> <a name="summaryofperformancerecommendations_summary_of_performance_recommendations"><span class="mw-headline" id="Summary_of_performance_recommendations"> Summary of performance recommendations</span></a></h2>
+<p>The Daily Indexing Volume table summarizes the performance recommendations that were given in the performance checklist. The table shows the number of reference machines that you need to index and search data in Splunk Enterprise, depending on the number of concurrent users and the amounts of data that the instance indexes. 
+</p><p>See "<a href="#referencehardware" class="external text">Reference hardware</a>" in this manual for a reminder of what the current reference machine is.
+</p><p>The table shows approximate guidelines only. Modify these figures based on your use case. If you need help, contact Splunk. You might want to engage a member of Professional Services depending on the deployment's initial size. 
+</p><p><br></p>
+<table class="wikitable" style="text-align: center;" cellpadding="6"><tr><th colspan="1" bgcolor="#C0C0C0">
+</th><th colspan="8" style="text-align: center" bgcolor="#C0C0C0"> Daily Indexing Volume
+</th></tr><tr><td valign="center" align="left">
+</td><td valign="center" align="left">&lt; 2GB/day
+</td><td valign="center" align="left">2 to 250 GB/day
+</td><td valign="center" align="left">250 to 500 GB/day
+</td><td valign="center" align="left">500 to 750 GB/day
+</td><td valign="center" align="left">750GB to 1 TB/day
+</td><td valign="center" align="left">1 to 2TB/day
+</td><td valign="center" align="left">2 to 3TB/Day
+</td></tr><tr><td valign="center" align="left">Total Users: less than 4
+</td><td valign="center" align="left">1 combined instance
+</td><td valign="center" align="left">1 combined instance
+</td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 2 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 3 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 4 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 8 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 12 Indexers
+</td></tr></table></td></tr><tr><td valign="center" align="left">Total Users: up to 8
+</td><td valign="center" align="left">1 combined instance
+</td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 1 Indexer
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 2 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 4 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 5 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 10 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 15 Indexers
+</td></tr></table></td></tr><tr><td valign="center" align="left">Total Users: up to 16
+</td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 1 Indexer
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 1 Indexer
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 3 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 4 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 2 Search Heads
+</td></tr><tr><td valign="center" align="left"> 6 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 2 Search Heads
+</td></tr><tr><td valign="center" align="left"> 12 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 2 Search Heads
+</td></tr><tr><td valign="center" align="left"> 18 Indexers
+</td></tr></table></td></tr><tr><td valign="center" align="left">Total Users: up to 24
+</td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 1 Indexer
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 2 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 2 Search Heads
+</td></tr><tr><td valign="center" align="left"> 3 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 2 Search Heads
+</td></tr><tr><td valign="center" align="left"> 4 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 2 Search Heads
+</td></tr><tr><td valign="center" align="left"> 6 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 2 Search Heads
+</td></tr><tr><td valign="center" align="left"> 12 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 2 Search Heads
+</td></tr><tr><td valign="center" align="left"> 18 Indexers
+</td></tr></table></td></tr><tr><td valign="center" align="left">Total Users: up to 48
+</td><td valign="center" align="left">
+</td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 1 Search Head
+</td></tr><tr><td valign="center" align="left"> 2 Indexer
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 2 Search Heads
+</td></tr><tr><td valign="center" align="left"> 3 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 2 Search Heads
+</td></tr><tr><td valign="center" align="left"> 4 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 3 Search Heads
+</td></tr><tr><td valign="center" align="left"> 8 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 3 Search Heads
+</td></tr><tr><td valign="center" align="left"> 16 Indexers
+</td></tr></table></td><td valign="center" align="left">
+<table cellpadding="6"><tr><td valign="center" align="left"> 3 Search Heads
+</td></tr><tr><td valign="center" align="left"> 24 Indexers
+</td></tr></table></td></tr></table><h3> <a name="summaryofperformancerecommendations_answers"><span class="mw-headline" id="Answers">Answers</span></a></h3>
+<p>Have questions? Visit Splunk Answers to see what questions and answers other users had about hardware and Splunk Enterprise.
+</p>
+<a name="forwarder-to-indexerratios"></a><h2> <a name="forwarder-to-indexerratios_forwarder-to-indexer_ratios"><span class="mw-headline" id="Forwarder-to-indexer_ratios"> Forwarder-to-indexer ratios</span></a></h2>
+<p>Splunk Enterprise indexers are responsible for accepting data streams from internal and external sources, such as forwarders, and indexing that stream locally. Indexing the data requires lots of disk I/O bandwidth and some computing resources. Indexing capacity remains the top concern when you consider how many forwarders an indexer can handle.
+</p><p>The number of forwarders from which an indexer can accept data depends on several factors:
+</p>
+<ul><li> Number of CPUs on the machine. The number of spindles should meet or exceed the <a href="#referencehardware" class="external text">reference standard</a>.
+</li><li> Number of disk spindles on the machine. The number of spindles should meet or exceed the <a href="#referencehardware" class="external text">reference standard</a>.
+</li><li> Whether the indexer runs Windows or *nix.
+</li><li> Amount of data to be forwarded to the indexers.
+</li><li> Whether the indexer also acts as a deployment server.
+</li></ul><h3> <a name="forwarder-to-indexerratios_forwarder-to-indexer_ratios_for_a_.2anix_indexer"><span class="mw-headline" id="Forwarder-to-indexer_ratios_for_a_.2Anix_indexer">Forwarder-to-indexer ratios for a *nix indexer</span></a></h3>
+<p>Splunk Enterprise used the following setup to provide guidance for the number of forwarders that can connect to a *nix indexer:
+</p>
+<ul><li> An indexer with 8 cores and 7GB of RAM and 4 x 420GB disks in RAID 0, running a 64-bit Linux OS.
+</li><li> A high-speed local area network (LAN) operating at 100Mb/s or faster.
+</li><li> All universal forwarders sent data that was not processed beforehand.
+</li></ul><p>In these circumstances, an indexer was able to handle a minimum of 2000 forwarders and regularly handled as many as 5000 forwarders.
+</p><p>Performance was best when the server was configured to accept a high number of Unix file descriptors, typically three to four times the number of forwarders that the indexer could accept.
+</p><p><b>Note:</b> These numbers are for guidance only. Results vary depending on the configuration of the indexers,  forwarders, and network.
+</p>
+</body><script src='http://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js'></script>
+
+        <script src="js/index.js"></script></html>

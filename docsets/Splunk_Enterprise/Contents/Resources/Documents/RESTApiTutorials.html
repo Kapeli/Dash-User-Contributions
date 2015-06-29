@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:og="http://ogp.me/ns#" xmlns:fb="http://ogp.me/ns/fb#" charset="utf-8"><head><meta charset="UTF-8"><title></title>
+<link rel="stylesheet" href="css/normalize.css">
+<link rel="stylesheet" type="text/css" href="css/main.css">
+<link rel="stylesheet" href="css/style.css">
+<style>
+html,body {
+margin: 0px;
+padding: 10px;
+width: 210mm;
+max-width: 210mm;
+overflow-x: hidden;
+}
+pre {
+	width: 100%;
+	overflow-x: hidden;
+}
+</style></head><body><h1>REST API tutorials</h1><a name="restconfigurations"></a><div class="all-questions"><h2> <a name="restconfigurations_accessing_and_updating_splunk_enterprise_configurations"><span class="mw-headline" id="Accessing_and_updating_Splunk_Enterprise_configurations"> Accessing and updating Splunk Enterprise configurations</span></a></h2>
+<p>This section describes how to use the Splunk Enterprise REST API to access and update information contained in configuration files (*.conf files). For more information on configuration files, see About Configuration Files and Configuration File Precedence in the Splunk Admin manual.
+</p><p>Two sets of endpoints give access to configuration files:
+</p>
+<dl><dd>properties/
+</dd><dd>configs/conf-{file}/
+</dd></dl><p>These endpoints do the same task for updating configurations, but their implementation differs. In most cases, you can use <code><font size="2">properties</font></code> endpoints for updating configurations. But, there are times where you can use only the <code><font size="2">configs/conf-{file}</font></code> endpoints. For example, use the <code><font size="2">configs/conf-{file}</font></code> endpoints for,
+</p>
+<dl><dd>Setting permissions
+</dd><dd>Enabling or disabling a stanza in a configuration
+</dd><dd>Moving a resource
+</dd></dl><h3> <a name="restconfigurations_reading_configuration_files"><span class="mw-headline" id="Reading_configuration_files">Reading configuration files</span></a></h3>
+<p>The way you read configurations files differs between <code><font size="2">properties/</font></code> and <code><font size="2">configs/conf-{file}/</font></code> endpoints.
+</p>
+<h4><font size="3"><b><i> <a name="restconfigurations_properties_endpoints"><span class="mw-headline" id="properties_endpoints">properties endpoints</span></a></i></b></font></h4>
+<p>The properties set of endpoints give various options for listing configurations. GET operations are available to drill down from the list of configuration files to the key/value pairs. 
+</p>
+<dl><dd>GET properties
+</dd><dd>Returns the names of configuration files.
+</dd></dl><dl><dd>GET properties/{file_name}
+</dd><dd>Returns the stanza names in {file_name}.conf.
+</dd></dl><dl><dd>GET properties/{file_name}/{stanza_name}
+</dd><dd>Returns the key/value pairs for the named stanza.
+</dd></dl><dl><dd>GET properties/{file_name}/{stanza_name}/{key_name}
+</dd><dd>Returns the key value.
+</dd></dl><p>For example, the <code><font size="2">search/properties/props</font></code> GET operation returns all the stanza names for <code><font size="2">props.conf</font></code>:
+</p>
+<div class="samplecode">
+<code><font size="2"><br>curl -k -u admin:pass https://localhost:8089/servicesNS/nobody/search/properties/props<br></font></code>
+</div>
+<p>The response:
+</p>
+<div class="samplecode">
+<code><font size="2"><br>&lt;feed xmlns="http://www.w3.org/2005/Atom" xmlns:s="http://dev.splunk.com/ns/rest"&gt;<br>&nbsp;&nbsp;&lt;title&gt;props&lt;/title&gt;<br>&nbsp;&nbsp;&lt;id&gt;https://localhost:8089/servicesNS/nobody/search/properties/props/&lt;/id&gt;<br>&nbsp;&nbsp;. . .<br>&nbsp;&nbsp;&lt;entry&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;title&gt;ActiveDirectory&lt;/title&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;id&gt;https://localhost:8089/servicesNS/nobody/search/properties/props/ActiveDirectory&lt;/id&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;updated&gt;2011-09-14T15:48:40-07:00&lt;/updated&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;link href="/servicesNS/nobody/search/properties/props/ActiveDirectory" rel="alternate"/&gt;<br>&nbsp;&nbsp;&lt;/entry&gt;<br>&nbsp;&nbsp;&lt;entry&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;title&gt;PerformanceMonitor&lt;/title&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;id&gt;https://localhost:8089/servicesNS/nobody/search/properties/props/PerformanceMonitor&lt;/id&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;updated&gt;2011-09-14T15:48:40-07:00&lt;/updated&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;link href="/servicesNS/nobody/search/properties/props/PerformanceMonitor" rel="alternate"/&gt;<br>&nbsp;&nbsp;&lt;/entry&gt;<br>&nbsp;&nbsp;. . .<br>&nbsp;&nbsp;&lt;entry&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;title&gt;wmi&lt;/title&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;id&gt;https://localhost:8089/servicesNS/nobody/search/properties/props/wmi&lt;/id&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;updated&gt;2011-09-14T15:48:40-07:00&lt;/updated&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;link href="/servicesNS/nobody/search/properties/props/wmi" rel="alternate"/&gt;<br>&nbsp;&nbsp;&lt;/entry&gt;<br>&nbsp;&nbsp;&lt;entry&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;title&gt;wtmp&lt;/title&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;id&gt;https://localhost:8089/servicesNS/nobody/search/properties/props/wtmp&lt;/id&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;updated&gt;2011-09-14T15:48:40-07:00&lt;/updated&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;link href="/servicesNS/nobody/search/properties/props/wtmp" rel="alternate"/&gt;<br>&nbsp;&nbsp;&lt;/entry&gt;<br>&lt;/feed&gt;<br></font></code>
+</div>
+<p>The <code><font size="2">/search/properties/props/websphere_core</font></code> GET operation returns the key/value pairs for the <code><font size="2">props.conf</font></code> file webshpere_core stanza.
+</p>
+<div class="samplecode">
+<code><font size="2"><br>curl -k -u admin:pass https://localhost:8089/servicesNS/nobody/search/properties/props/websphere_core<br></font></code>
+</div>
+<p>The response:
+</p>
+<div class="samplecode">
+<code><font size="2"><br>&lt;feed xmlns="http://www.w3.org/2005/Atom" xmlns:s="http://dev.splunk.com/ns/rest"&gt;<br>&nbsp;&nbsp;&lt;title&gt;websphere_core&lt;/title&gt;<br>&nbsp;&nbsp;&lt;id&gt;https://localhost:8089/servicesNS/nobody/search/properties/props/websphere_core&lt;/id&gt;<br>&nbsp;&nbsp;. . .<br>&nbsp;&nbsp;&lt;entry&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;title&gt;ANNOTATE_PUNCT&lt;/title&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;id&gt;https://localhost:8089/servicesNS/nobody/search/properties/props/websphere_core/ANNOTATE_PUNCT&lt;/id&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;updated&gt;2011-09-14T15:55:01-07:00&lt;/updated&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;link href="/servicesNS/nobody/search/properties/props/websphere_core/ANNOTATE_PUNCT" rel="alternate"/&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;content type="text"&gt;True&lt;/content&gt;<br>&nbsp;&nbsp;&lt;/entry&gt;<br>&nbsp;&nbsp;&lt;entry&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;title&gt;BREAK_ONLY_BEFORE&lt;/title&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;id&gt;https://localhost:8089/servicesNS/nobody/search/properties/props/websphere_core/BREAK_ONLY_BEFORE&lt;/id&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;updated&gt;2011-09-14T15:55:01-07:00&lt;/updated&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;link href="/servicesNS/nobody/search/properties/props/websphere_core/BREAK_ONLY_BEFORE" rel="alternate"/&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;content type="text"&gt;^NULL\s&lt;/content&gt;<br>&nbsp;&nbsp;&lt;/entry&gt;<br>&nbsp;&nbsp;. . .<br>&nbsp;&nbsp;&lt;entry&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;title&gt;maxDist&lt;/title&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;id&gt;https://localhost:8089/servicesNS/nobody/search/properties/props/websphere_core/maxDist&lt;/id&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;updated&gt;2011-09-14T15:55:01-07:00&lt;/updated&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;link href="/servicesNS/nobody/search/properties/props/websphere_core/maxDist" rel="alternate"/&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;content type="text"&gt;70&lt;/content&gt;<br>&nbsp;&nbsp;&lt;/entry&gt;<br>&lt;/feed&gt;<br></font></code>
+</div>
+<h4><font size="3"><b><i> <a name="restconfigurations_configs.2fconf-.7bfile.7d_endpoints"><span class="mw-headline" id="configs.2Fconf-.7Bfile.7D_endpoints">configs/conf-{file} endpoints</span></a></i></b></font></h4>
+<p>GET operations for these endpoints return entries for the stanzas in the named configuration file, detailing the contents of the stanza as key/value pairs. 
+</p><p>For example, the <code><font size="2">/search/configs/conf-props</font></code> GET operation lists the <code><font size="2">props.conf</font></code> configuration for the default search application.
+</p>
+<div class="samplecode">
+<code><font size="2"><br>curl -k -u admin:pass https://localhost:8089/servicesNS/nobody/search/configs/conf-props<br></font></code>
+</div>
+<p>The response, showing elided fragments of a few stanzas in <code><font size="2">props.conf</font></code>.
+</p>
+<div class="samplecode">
+<code><font size="2"><br>&lt;feed xmlns="http://www.w3.org/2005/Atom" <br>&nbsp;&nbsp;xmlns:s="http://dev.splunk.com/ns/rest" <br>&nbsp;&nbsp;xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/"&gt;<br>&nbsp;&nbsp;&lt;title&gt;conf-props&lt;/title&gt;<br>&nbsp;&nbsp;&lt;id&gt;https://localhost:8089/servicesNS/nobody/search/configs/conf-props&lt;/id&gt;<br>&nbsp;&nbsp;&lt;updated&gt;2011-09-14T15:31:24-07:00&lt;/updated&gt;<br>&nbsp;&nbsp;. . .<br>&nbsp;&nbsp;&lt;entry&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;title&gt;access_combined&lt;/title&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;id&gt;https://localhost:8089/servicesNS/nobody/system/configs/conf-props/access_combined&lt;/id&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;. . .<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;content type="text/xml"&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;s:dict&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;s:key name="ANNOTATE_PUNCT"&gt;1&lt;/s:key&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;s:key name="BREAK_ONLY_BEFORE"&gt;&lt;/s:key&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;s:key name="BREAK_ONLY_BEFORE_DATE"&gt;1&lt;/s:key&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;. . .<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;s:key name="maxDist"&gt;28&lt;/s:key&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;s:key name="pulldown_type"&gt;1&lt;/s:key&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/s:dict&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/content&gt;<br>&nbsp;&nbsp;&lt;/entry&gt;<br>&nbsp;&nbsp;. . .<br>&nbsp;&nbsp;&lt;entry&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;title&gt;exchange&lt;/title&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;id&gt;https://localhost:8089/servicesNS/nobody/system/configs/conf-props/exchange&lt;/id&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;updated&gt;2011-09-14T15:31:24-07:00&lt;/updated&gt;<br>&nbsp;&nbsp;&nbsp;. . .<br>&nbsp;&nbsp;&nbsp;&lt;content type="text/xml"&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;s:dict&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;s:key name="ANNOTATE_PUNCT"&gt;1&lt;/s:key&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;s:key name="BREAK_ONLY_BEFORE"&gt;&lt;/s:key&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;s:key name="BREAK_ONLY_BEFORE_DATE"&gt;1&lt;/s:key&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;. . .<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;s:key name="eai:appName"&gt;search&lt;/s:key&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;s:key name="eai:userName"&gt;nobody&lt;/s:key&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;s:key name="maxDist"&gt;100&lt;/s:key&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/s:dict&gt;<br>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/content&gt;<br>&nbsp;&nbsp;&lt;/entry&gt;<br>&lt;/feed&gt;<br></font></code>
+</div>
+<h3> <a name="restconfigurations_updating_configuration_files"><span class="mw-headline" id="Updating_Configuration_Files">Updating Configuration Files</span></a></h3>
+<p>You update a configuration file by adding or editing stanzas to the file. How you do this differs between <code><font size="2">properties</font></code> and <code><font size="2">configs/conf-{file}</font></code> endpoints. Do DELETE operations from only the <code><font size="2">configs/conf-{file}</font></code> endpoints.
+</p><p>The DELETE operation is available from the <code><font size="2">properties</font></code> endpoint, but is deprecated. Instead, use the DELETE operations from <code><font size="2">configs/conf-{file}</font></code> endpoints.
+</p><p>When you update a configuration, updates are written to the local version of the file. The default version of configurations can be overwritten when you update Splunk to a new version.
+</p>
+<h4><font size="3"><b><i> <a name="restconfigurations_properties"><span class="mw-headline" id="properties">properties</span></a></i></b></font></h4>
+<p>Use the POST operation with various <code><font size="2">properties</font></code> endpoints to update configuration files. 
+</p><p>Use DELETE operations from the <code><font size="2">configs/conf-{file}</font></code> endpoints.
+</p>
+<h4><font size="3"><b><i> <a name="restconfigurations_configs.2fconf-.7bfile.7d"><span class="mw-headline" id="configs.2Fconf-.7Bfile.7D">configs/conf-{file}</span></a></i></b></font></h4>
+<p>Use the POST operation to add a stanza to the named configuration file. You can also specify key/value pairs for the newly added stanza. For example, the <code><font size="2">/search/configs/conf-props</font></code> POST operation creates a new stanza and key/value pairs in props.conf for the default search application.
+</p>
+<div class="samplecode">
+<code><font size="2"><br>curl -k -u admin:pass https://localhost:8089/servicesNS/nobody/search/configs/conf-props \<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-d name=myweblogs \<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-d CHARSET=UTF-8 \<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-d SHOULD_LINEMERGE=false<br></font></code>
+</div>
+<h4><font size="3"><b><i> <a name="restconfigurations_configs.2fconf-.7bfile.7d.2f.7bname.7d"><span class="mw-headline" id="configs.2Fconf-.7Bfile.7D.2F.7Bname.7D">configs/conf-{file}/{name}</span></a></i></b></font></h4>
+<p>Use the POST operation to create or update key/value pairs in the <code><font size="2">{name}</font></code> stanza.
+</p><p>Use the DELETE operation to remove a stanza from a configuration file.
+</p>
+<a name="restsearches"></a><h2> <a name="restsearches_creating_searches_using_the_rest_api"><span class="mw-headline" id="Creating_searches_using_the_REST_API">Creating searches using the REST API</span></a></h2>
+<p>Use the search/jobs endpoint to create a search job in Splunk. However, before creating searches you should be aware of how searches work and how to structure a search so you can easily access the results.
+</p>
+<h3> <a name="restsearches_learn_about_searches"><span class="mw-headline" id="Learn_about_searches">Learn about searches</span></a></h3>
+<p>The best place to learn about searches and how to write searches is the Search Manual.
+</p><p>Here are some highlights from the  Search Reference that can help you get started creating searches:
+</p>
+<ul><li> Search command cheat sheet Quick command reference complete with descriptions and examples.
+</li><li> Write better searches Provides some simple rules of thumb and best practices to help you write searches that run more efficiently.
+</li><li> Popular search commands A list describing the more frequently used search commands.
+</li><li> Execution costs Describes how to troubleshoot the efficiency of a search.
+</li><li> Search job properties Lists and defines the properties of a search job. 
+</li><li> Search Command Reference Complete syntax of Splunk search commands.
+</li></ul><h3> <a name="restsearches_rest_endpoints_for_searches"><span class="mw-headline" id="REST_endpoints_for_searches">REST endpoints for searches</span></a></h3>
+<p>Here is a brief description of some of the key endpoints for creating and accessing searches.
+</p><p><b>/search/jobs</b><br>
+Create or access the results of search jobs. Returns a search ID (sid) that you use when accessing the results of a search.
+</p><p><b>/search/jobs/export</b><br>
+Stream search results as they become available. Does not create a search ID for later access.
+</p><p><b>/search/jobs/{search_id}/control</b><br>
+Execute a job control command for a search, such as pause, setpriority, or finalize.
+</p><p><b>/search/jobs/{search_id}/events</b><br>
+Return untransformed events of a search.
+</p><p><b>/search/jobs/{search_id}/results</b><br>
+Return transformed events of a search.
+</p><p><b>/search/jobs/{search_id}/summary</b><br>
+Return summary information for fields of a search.
+</p><p><b>/search/jobs/{search_id}/timeline</b><br>
+Return event distribution over time of the so-far-read untransformed events.
+</p><p><b>/saved/searches</b><br>
+Create or access the configuration of saved searches.
+</p>
+<h3> <a name="restsearches_tips_on_creating_searches"><span class="mw-headline" id="Tips_on_creating_searches">Tips on creating searches</span></a></h3>
+<p>When creating a search (POST /search/jobs), consider the following properties of the search:
+</p><p><b>max_count</b> <br>
+Set this parameter for searches returning more than the default maximum of 10000 events. Otherwise you may not be able to retrieve results in excess of the default.
+</p><p><b>status_buckets</b> <br>
+To access summary and timeline information from a search job, specify a value for <code><font size="2">status_buckets</font></code>. The default value is zero. For example, searches spawned from the Splunk timeline specify <code><font size="2">status_buckets=300</font></code>.
+</p><p><b>rf</b> <br>
+Use the <code><font size="2">rf</font></code> parameter to add required fields to a search. Adding fields guarantees results for the endpoints that return events and a summary. (The <code><font size="2">required_fields</font></code> parameter has been deprecated in favor of the <code><font size="2">rf</font></code> parameter.)
+</p>
+<h3> <a name="restsearches_tips_on_accessing_searches"><span class="mw-headline" id="Tips_on_accessing_searches">Tips on accessing searches</span></a></h3>
+<p>When accessing the results of a search (GET /search/jobs/{search_id}), consider the following:
+</p><p><b>search, offset, and count parameters</b><br>
+Use these parameters to a GET operation to filter or limit the results returned.
+</p><p><b>dispatchState</b><br><code><font size="2">dispatchState</font></code> is one of the properties returned when accessing a search. It provides the state of a search, which can be any of the following:
+</p>
+<dl><dd>QUEUED
+</dd><dd>PARSING
+</dd><dd>RUNNING
+</dd><dd>PAUSED
+</dd><dd>FINALIZING
+</dd><dd>FAILED
+</dd><dd>DONE
+</dd></dl><p><b>search job properties</b><br>
+The GET operation for /search/jobs returns all the properties of a search. These properties are described in the parameters to the POST operation. Search job properties are also described in "View search job properties with the Search Job Inspector".
+</p><p><b>performance</b><br>
+The GET operation for /search/jobs returns information that helps you troubleshoot the efficiency of a search. Refer to "Execution costs" in "View search job properties with the Search Job Inspector" for more information.
+</p>
+<h3> <a name="restsearches_example:_create_a_search"><span class="mw-headline" id="Example:_Create_a_search">Example: Create a search </span></a></h3>
+<p>Many calls to Splunk's API involve running some kind of search. For example, you may wish to run a search within Splunk and POST the results to a third party application.  Use the endpoints located at the <tt>../services/search/<i>&lt;endpoint&gt;</i></tt> URIs.
+</p><p>When you run a search, Splunk launches a search process asynchronously.  This means that you must poll the jobs or events endpoint to see if your search has finished.
+</p>
+<h4><font size="3"><b><i> <a name="restsearches_create_a_search_job"><span class="mw-headline" id="Create_a_search_job"> Create a search job </span></a></i></b></font></h4>
+<p>Create a search job using the POST operation at search/jobs/.  Set your search as the POST payload.  For example:
+</p>
+<div class="samplecode">
+<code><font size="2">curl -u admin:changeme -k https://localhost:8089/services/search/jobs -d search="search *"<br></font></code></div>
+<p>This simple example runs the search for *.  It returns an XML response such as:
+</p>
+<div class="samplecode">
+<code><font size="2"><br>&lt;?xml version='1.0' encoding='UTF-8'?&gt;<br>&lt;response&gt;<br>&nbsp;&nbsp;&lt;sid&gt;1258421375.19&lt;/sid&gt;<br>&lt;/response&gt;<br></font></code></div>
+<p>You need the search ID to retrieve the search, which is returned within the <code><font size="2">&lt;sid&gt;</font></code> tags.  In the example above this is <code><font size="2">1258421375.19</font></code>.
+</p>
+<h4><font size="3"><b><i> <a name="restsearches_check_status_of_a_search"><span class="mw-headline" id="Check_status_of_a_search"> Check status of a search </span></a></i></b></font></h4>
+<p>Check the status of a search job by accessing the GET operation of search/jobs/.  If you know the search's ID, you can access search/jobs/{search_id} to get information about that search only:
+</p>
+<div class="samplecode"><code><font size="2"><br>curl -u admin:changeme -k https://localhost:8089/services/search/jobs/1258421375.19 <br></font></code></div>
+<p>If you're not sure what searches you're running, the GET operation at search/jobs endpoint returns a list of searches with their search IDs.
+</p>
+<div class="samplecode">
+<code><font size="2"><br>curl -u admin:changeme -k https://localhost:8089/services/search/jobs/ <br></font></code></div>
+<h4><font size="3"><b><i> <a name="restsearches_get_search_results"><span class="mw-headline" id="Get_search_results"> Get search results </span></a></i></b></font></h4>
+<p>Use the results endpoint located at /search/jobs/&lt;sid&gt;/results/ to retrieve your search results.  This endpoint returns results only when your search has completed.  You can also get output from the events endpoint located at /search/jobs/{search_id}/events/ while your search is still running. For complete search results, use the results endpoint.
+</p><p>You can return search results in JSON, CSV or XML by setting the <code><font size="2">output_mode</font></code> parameter.  By default, results are returned in XML format.
+</p><p>For example, to retrieve search results in CSV format, make the following call.
+</p><p><b>Note:</b> The curl listing includes <code><font size="2">--get</font></code> because you are passing a parameter to a GET operation.
+</p>
+<div class="samplecode">
+<code><font size="2"><br>curl -u admin:changeme \<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-k https://localhost:8089/services/search/jobs/1258421375.19/results/ \<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;--get -d output_mode=csv<br></font></code></div>
+<p><b>Note:</b> This is one method that you can use to export large numbers of search results out of Splunk Enterprise. For more information about exporting search results with the REST API, as well as information about the other export methods offered by Splunk Enterprise, see "Export search results" in the <i>Search Manual</i>.
+</p>
+<h4><font size="3"><b><i> <a name="restsearches_python_example"><span class="mw-headline" id="Python_example">Python example </span></a></i></b></font></h4>
+<p>Here's an example of authenticating against a Splunk server and running a search query in Python. After running the search, the script returns the search ID (sid).
+</p>
+<div class="samplecode">
+<code><font size="2"><br>#!/usr/bin/python -u<br><br>import urllib<br>import httplib2<br>from xml.dom import minidom<br><br>baseurl = 'https://localhost:8089'<br>userName = 'admin'<br>password = 'pass'<br><br>searchQuery = 'sourcetype=access_common | head 5'<br><br># Authenticate with server.<br># Disable SSL cert validation. Splunk certs are self-signed.<br>serverContent = httplib2.Http(disable_ssl_certificate_validation=True).request(baseurl + '/services/auth/login',<br>&nbsp;&nbsp;&nbsp;&nbsp;'POST', headers={}, body=urllib.urlencode({'username':userName, 'password':password}))[1]<br><br>sessionKey = minidom.parseString(serverContent).getElementsByTagName('sessionKey')[0].childNodes[0].nodeValue<br><br># check if the query has the search operator<br>if not searchQuery.startswith('search'):<br>&nbsp;&nbsp;&nbsp;&nbsp;searchQuery = 'search ' + searchQuery<br><br># Run the search.<br># Again, disable SSL cert validation. <br>print httplib2.Http(disable_ssl_certificate_validation=True).request(baseurl + '/services/search/jobs','POST',<br>&nbsp;&nbsp;&nbsp;&nbsp;headers={'Authorization': 'Splunk&nbsp;%s'&nbsp;% sessionKey},body=urllib.urlencode({'search': searchQuery}))[1]<br></font></code></div>
+<h4><font size="3"><b><i> <a name="restsearches_ruby_example"><span class="mw-headline" id="Ruby_example"> Ruby example </span></a></i></b></font></h4>
+<p>The following example shows how to use Ruby to authenticate against the Splunk REST API with a generic user name and password.  Then, run a search, delete a specific search job and list out available search jobs.  Note that the list is returned in XML and not parsed.  To parse the results from endpoints, use an XML parser such as libxml.  Also, you'll need to install the hpricot gem to get this to work.
+</p>
+<div class="samplecode">
+<code><font size="2"><br>require 'net/https'<br>require 'rubygems'<br>require 'hpricot'<br><br>class SplunkClient<br>&nbsp;&nbsp;HOST = 'localhost'<br>&nbsp;&nbsp;PORT = 8089<br>&nbsp;&nbsp;USER = 'admin'<br>&nbsp;&nbsp;PASSWORD = 'changeme'<br><br>&nbsp;&nbsp;def splunk_ssl_post_request(path, data = nil, headers = nil)<br>&nbsp;&nbsp;&nbsp;&nbsp;http = Net::HTTP.new(HOST, PORT)<br>&nbsp;&nbsp;&nbsp;&nbsp;http.use_ssl = true<br>&nbsp;&nbsp;&nbsp;&nbsp;http.verify_mode = OpenSSL::SSL::VERIFY_NONE<br>&nbsp;&nbsp;&nbsp;&nbsp;http.post(path, data, headers).body<br>&nbsp;&nbsp;end<br><br>&nbsp;&nbsp;def session_key<br>&nbsp;&nbsp;&nbsp;&nbsp;@session_key ||= load_session_key<br>&nbsp;&nbsp;end<br><br>&nbsp;&nbsp;def load_session_key<br>&nbsp;&nbsp;&nbsp;&nbsp;doc = Hpricot(splunk_ssl_post_request("/services/auth/login", "username=#{USER}&amp;password=#{PASSWORD}"))<br>&nbsp;&nbsp;&nbsp;&nbsp;(doc/"//sessionkey").inner_html<br>&nbsp;&nbsp;end<br><br>&nbsp;&nbsp;def create_job query<br>&nbsp;&nbsp;&nbsp;&nbsp;search = "search index=internetmail #{query}"<br>&nbsp;&nbsp;&nbsp;&nbsp;splunk_ssl_post_request("/services/search/jobs",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"search=#{CGI::escape(search)}",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ 'authorization' =&gt; "Splunk #{session_key}" })<br><br>&nbsp;&nbsp;end<br><br>&nbsp;&nbsp;def list_jobs<br>&nbsp;&nbsp;&nbsp;&nbsp;xml = splunk_ssl_post_request("/services/search/jobs/", nil, {'authorization' =&gt; "Splunk #{session_key}"})<br>&nbsp;&nbsp;&nbsp;&nbsp;puts xml<br>&nbsp;&nbsp;end<br><br>&nbsp;&nbsp;def search_results(sid)<br>&nbsp;&nbsp;&nbsp;&nbsp;doc = Hpricot(<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;splunk_ssl_post_request("/services/search/jobs/#{sid}/events",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nil,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'authorization' =&gt; "Splunk #{session_key}"}))<br>&nbsp;&nbsp;&nbsp;&nbsp;(doc/"/results/result").collect do | result |<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;log_text = (result/"field[@k='_raw']/v").inner_text<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Email.new log_text<br>&nbsp;&nbsp;&nbsp;&nbsp;end<br>&nbsp;&nbsp;end<br><br>&nbsp;&nbsp;def splunk_ssl_delete_request(path, headers = nil)<br>&nbsp;&nbsp;&nbsp;&nbsp;http = Net::HTTP.new(HOST, PORT)<br>&nbsp;&nbsp;&nbsp;&nbsp;http.use_ssl = true<br>&nbsp;&nbsp;&nbsp;&nbsp;http.verify_mode = OpenSSL::SSL::VERIFY_NONE<br>&nbsp;&nbsp;&nbsp;&nbsp;http.delete(path, headers).body<br>&nbsp;&nbsp;end<br>&nbsp;<br>&nbsp;&nbsp;def delete_job(sid)<br>&nbsp;&nbsp;&nbsp;&nbsp;splunk_ssl_delete_request("/services/search/jobs/#{sid}",<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ 'authorization' =&gt; "Splunk #{session_key}" })<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>&nbsp;&nbsp;end<br>end<br><br># Here's the actual operating code<br>client = SplunkClient.new<br>puts client.list_jobs<br></font></code></div>
+
+<a name="restbasicexamples"></a><h2> <a name="restbasicexamples_examples_using_the_splunk_rest_api"><span class="mw-headline" id="Examples_using_the_Splunk_REST_API"> Examples using the Splunk REST API</span></a></h2>
+<p>This section shows some typical use cases for the Splunk REST API. These examples show how to use the servicesNS endpoints to access resources within a user/app context. They also show some of the additional operations available, such as moving an object to a different app or changing the permissions of an object.
+</p><p><br></p>
+<h3> <a name="restbasicexamples_create_a_new_splunk_object_for_a_specific_context"><span class="mw-headline" id="Create_a_new_Splunk_object_for_a_specific_context">Create a new Splunk object for a specific context</span></a></h3>
+<p>Create a saved search for the user Alice that is available from the app, myapp. This saved search is private to Alice.
+</p>
+<table bgcolor="#D9EAED" cellpadding="8" width="100%"><tr><td valign="center" align="left"> <code><font size="2"><br>curl -k -u alice:pass https://localhost:8089/servicesNS/alice/myapp/saved/searches/ &nbsp;\<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-d name=mysearch \<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-d search=*<br></font></code>
+</td></tr></table><p><br><br></p>
+<h3> <a name="restbasicexamples_edit_a_splunk_object"><span class="mw-headline" id="Edit_a_Splunk_object">Edit a Splunk object</span></a></h3>
+<p>Change the above search created for Alice.
+</p><p>Because this search is private to Alice, she can edit the search.
+</p>
+<table bgcolor="#D9EAED" cellpadding="8" width="100%"><tr><td valign="center" align="left"> <code><font size="2"><br>curl -k -u alice:pass https://localhost:8089/servicesNS/alice/myapp/saved/searches/mysearch \<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-d search="index=mai*"<br></font></code>
+</td></tr></table><p><br><br></p>
+<h3> <a name="restbasicexamples_share_an_object_to_an_app.2c_modify_its_permissions.2c_and_edit_it"><span class="mw-headline" id="Share_an_object_to_an_app.2C_modify_its_permissions.2C_and_edit_it">Share an object to an app, modify its permissions, and edit it</span></a></h3>
+<p>Make Alice's saved search, mysearch, available through the app, myapp. Allow all users permissions to read the saved search.
+</p>
+<table bgcolor="#D9EAED" cellpadding="8" width="100%"><tr><td valign="center" align="left"> <code><font size="2"><br>curl -k -u admin:pass https://localhost:8089/servicesNS/alice/myapp/saved/searches/mysearch/acl &nbsp;\<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-d perms.read=* \<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-d owner=alice \<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-d sharing=app<br></font></code>
+</td></tr></table><p><br>
+Edit the search at the shared location. Because the search is now a shared resource, use &lt;nobody&gt; for the &lt;user&gt; context.
+</p>
+<table bgcolor="#D9EAED" cellpadding="8" width="100%"><tr><td valign="center" align="left"> <code><font size="2"><br>curl -k -u alice:pass https://localhost:8089/servicesNS/nobody/myapp/saved/searches/mysearch &nbsp;\<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-d search="index=main"<br></font></code>
+</td></tr></table><p><br><br></p>
+<h3> <a name="restbasicexamples_move_an_object_to_a_different_app"><span class="mw-headline" id="Move_an_object_to_a_different_app">Move an object to a different app</span></a></h3>
+<p>The saved search that was previously available to all in the context of myapp is now only available in the context of otherapp.
+</p>
+<table bgcolor="#D9EAED" cellpadding="8" width="100%"><tr><td valign="center" align="left"> <code><font size="2"><br>curl -k -u admin:pass https://localhost:8089/servicesNS/nobody/myapp/saved/searches/mysearch/move &nbsp;\<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-d user=nobody \<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-d app=otherapp<br></font></code>
+</td></tr></table><p><br></p>
+<h3> <a name="restbasicexamples_access_objects_available_in_all_user.2fapp_contexts"><span class="mw-headline" id="Access_objects_available_in_all_user.2Fapp_contexts">Access objects available in all user/app contexts</span></a></h3>
+<p>Using wildcards, access all saved searches that you have permission to view. 
+</p><p>For an admin user, this includes other user's private saved searches.
+</p><p>For a non-admin user, you retrieve only saved searches you have permission to view.
+</p>
+<table bgcolor="#D9EAED" cellpadding="8" width="100%"><tr><td valign="center" align="left"><code><font size="2"><br>curl -k -u admin:pass https://localhost:8089/servicesNS/-/-/saved/searches<br><br>curl -k -u alice:pw https://localhost:8089/servicesNS/-/-/saved/searches<br><br></font></code>
+</td></tr></table><p><br></p>
+</body><script src='http://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js'></script>
+
+        <script src="js/index.js"></script></html>

@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:og="http://ogp.me/ns#" xmlns:fb="http://ogp.me/ns/fb#" charset="utf-8"><head><meta charset="UTF-8"><title></title>
+<link rel="stylesheet" href="css/normalize.css">
+<link rel="stylesheet" type="text/css" href="css/main.css">
+<link rel="stylesheet" href="css/style.css">
+<style>
+html,body {
+margin: 0px;
+padding: 10px;
+width: 210mm;
+max-width: 210mm;
+overflow-x: hidden;
+}
+pre {
+	width: 100%;
+	overflow-x: hidden;
+}
+</style>
+ <script src="js/prefixfree.min.js"></script>
+</head><body><h1>Overview </h1><a name="distributedoverview"></a><div class="all-questions"><h2> <a name="distributedoverview_distributed_splunk_enterprise_overview"><span class="mw-headline" id="Distributed_Splunk_Enterprise_overview"> Distributed Splunk Enterprise overview </span></a></h2>
+<p>This manual describes how to distribute various components of Splunk Enterprise functionality across multiple machines. By distributing Splunk Enterprise, you can scale its functionality to handle the data needs for enterprises of any size and complexity.
+</p><p>In single-machine deployments, one instance of Splunk Enterprise handles the entire end-to-end process, from data input through indexing to search.  A single-machine deployment can be useful for testing and evaluation purposes and might serve the needs of department-sized environments. For larger environments, however, where data originates on many machines and where many users need to search the data, you'll want to distribute functionality across multiple Splunk Enterprise instances. This manual describes how to deploy and use Splunk Enterprise in such a distributed environment.
+</p>
+
+<h3> <a name="distributedoverview_how_splunk_enterprise_scales"><span class="mw-headline" id="How_Splunk_Enterprise_scales"> How Splunk Enterprise scales</span></a></h3>
+<p>Splunk Enterprise performs three key functions as it moves data through the <b>data pipeline</b>. First, it <b>consumes data</b> from files, the network, or elsewhere. Then it <b>indexes the data</b>. (Actually, it first parses and then indexes the data, but for purposes of this discussion, we consider parsing to be part of the indexing process.) Finally, it runs interactive or scheduled <b>searches on the indexed data</b>. 
+</p><p>You can split this functionality across multiple specialized instances of Splunk Enterprise, ranging in number from just a few to thousands, depending on the quantity of data you're dealing with and other variables in your environment. You might, for example, create a deployment with many instances that only consume data, several other instances that index the data, and one or more instances that handle search requests. These specialized instances are known collectively as <b>components</b>. There are several types of components.
+</p><p>For a typical mid-size deployment, for example, you can deploy lightweight versions of Splunk Enterprise, called <b>forwarders</b>, on the machines where the data originates. The forwarders consume data locally and then forward the data across the network to another Splunk Enterprise component, called the <b>indexer</b>. The indexer does the heavy lifting; it indexes the data and runs searches. It should reside on a machine by itself. The forwarders, on the other hand, can easily co-exist on the machines generating the data, because the data-consuming function has minimal impact on machine performance. This diagram shows several forwarders sending data to a single indexer:
+</p><p><img alt="30 admin13 forwardreceive-dataforward 60.png" src="images/7/70/30_admin13_forwardreceive-dataforward_60.png" width="700" height="552"></p>
+<code><font size="2"><br><br></font></code>
+<p>As you scale up, you can add more forwarders and indexers. For a larger deployment, you might have hundreds of forwarders sending data to a number of indexers. You can use load balancing on the forwarders, so that they distribute their data across some or all of the indexers. Not only does load balancing help with scaling, but it also provides a fail-over capability if one of the indexers goes down. The forwarders automatically switch to sending their data to any indexers that remain alive. In this diagram, each forwarder load-balances its data across two indexers:
+</p><p><img alt="30 admin13 forwardreceive-balance 60.png" src="images/3/35/30_admin13_forwardreceive-balance_60.png" width="700" height="554"></p>
+<code><font size="2"><br><br></font></code>
+<p>To coordinate and consolidate search activities across multiple indexers, you can also separate out the functions of indexing and searching.  In this type of deployment, called <b>distributed search</b>, each indexer just indexes data and performs searches across its own indexes. A Splunk Enterprise instance dedicated to <b>search management</b>, called the <b>search head</b>, coordinates searches across the set of indexers, consolidating the results and presenting them to the user: 
+</p><p><img alt="Horizontal scaling new2 60.png" src="images/e/e0/Horizontal_scaling_new2_60.png" width="700" height="552"></p>
+<code><font size="2"><br><br></font></code>
+<p>For larger environments, you can deploy a <b>search head cluster</b>, consisting of several search heads sharing configurations, job scheduling, and search artifacts.  Here is a diagram of a small search head cluster, with three search heads:
+</p><p><img alt="Searchhead cluster.png" src="images/9/96/Searchhead_cluster.png" width="700" height="447"></p><p>These diagrams illustrate a few basic deployment topologies. You can actually combine the functions of data input, indexing, and search in a great variety of ways. For example, you can set up the forwarders so that they route data to multiple indexers, based on specified criteria. You can also configure forwarders to process data locally before sending the data on to an indexer for storage. In another scenario, you can deploy a single instance that serves as both search head and indexer, searching across not only its own indexes but the indexes on other indexers as well. You can mix-and-match Splunk Enterprise components as needed. The possible scenarios are nearly limitless.
+</p><p>This manual describes how to scale a deployment to fit your exact needs, whether you're managing data for a single department or for a global enterprise... or for anything in between.
+</p>
+<h3> <a name="distributedoverview_use_indexer_clusters_for_data_availability"><span class="mw-headline" id="Use_indexer_clusters_for_data_availability"> Use indexer clusters for data availability </span></a></h3>
+<p><b>Indexer clusters</b> are groups of Splunk Enterprise indexers configured to replicate each others' data, so that the system keeps multiple copies of all data. This process is known as <b>index replication</b>. By maintaining multiple, identical copies of Splunk Enterprise data, clusters prevent data loss while promoting data availability for searching. 
+</p><p>Splunk Enterprise clusters feature automatic failover from one indexer to the next. This means that, if one or more indexers fail, incoming data continues to get indexed and indexed data continues to be searchable.
+</p><p>Besides enhancing data availability, clusters have other key features that you should consider when you're scaling a deployment. For example, they include a capability to coordinate configuration updates easily across all indexers in the cluster. They also include a built-in distributed search capability. For more information on indexer clusters, see "About clusters and index replication" in the <i>Managing Indexers and Clusters of Indexers</i> manual.
+</p>
+<h3> <a name="distributedoverview_manage_your_splunk_enterprise_deployment"><span class="mw-headline" id="Manage_your_Splunk_Enterprise_deployment"> Manage your Splunk Enterprise deployment </span></a></h3>
+<p>Splunk Enterprise provides a few key tools to help manage a distributed deployment:
+</p>
+<ul><li> <b>Deployment server</b>. This component provides a way to centrally manage configurations and content updates across your entire deployment. See "About deployment server" in the <i>Updating Splunk Enterprise Instances</i> manual.
+</li><li> <b>Distributed management console</b>. This feature can help you manage and troubleshoot your deployment. Read "Configure the distributed management console" in the <i>Admin Manual.</i>
+</li></ul><h3> <a name="distributedoverview_what_comes_next"><span class="mw-headline" id="What_comes_next">What comes next </span></a></h3>
+<p>The rest of this Overview section covers:
+</p>
+<ul><li> <a href="#datapipeline" class="external text">How data moves through Splunk Enterprise: the data pipeline</a>
+</li><li> <a href="#scaleyourdeployment" class="external text">Scale your deployment: Splunk Enterprise components</a>
+</li><li> <a href="#componentsofadistributedenvironment" class="external text">Components and roles</a>
+</li></ul><p>It starts by describing the data pipeline, from the point that the data enters Splunk Enterprise to when it becomes available for users to search on. Next, the overview describes how Splunk Enterprise functionality can be split into modular components. It then correlates the available Splunk Enterprise components with their roles in facilitating the data pipeline. 
+</p><p>The remaining sections of this manual describe the Splunk Enterprise components in detail, explaining how to use them to create a distributed Splunk Enterprise deployment.
+</p><p>For information on capacity planning based on the scale of your deployment, read the new Capacity Planning manual.
+</p>
+<a name="datapipeline"></a><h2> <a name="datapipeline_how_data_moves_through_splunk_enterprise:_the_data_pipeline"><span class="mw-headline" id="How_data_moves_through_Splunk_Enterprise:_the_data_pipeline">How data moves through Splunk Enterprise: the data pipeline</span></a></h2>
+<p>Data in Splunk Enterprise transitions through several phases, as it moves along the data pipeline from its origin in sources such as logfiles and network feeds to its transformation into searchable events that encapsulate valuable knowledge. The <b>data pipeline</b> includes these segments:
+</p>
+<ul><li> <b>Input</b> 
+</li><li> <b>Parsing</b>
+</li><li> <b>Indexing</b> 
+</li><li> <b>Search</b> 
+</li></ul><p>You can assign each of these segments to a different Splunk Enterprise instance, as described <a href="#componentsofadistributedenvironment" class="external text">here</a>.
+</p><p>This diagram outlines the data pipeline:
+</p><p><img alt="Datapipeline1 60.png" src="images/5/5e/Datapipeline1_60.png" width="700" height="924"></p><p>Splunk Enterprise instances participate in one or more segments of the data pipeline, as described in <a href="#scaleyourdeployment" class="external text">"Scale your deployment"</a>.
+</p><p><b>Note:</b> The diagram represents a simplified view of the indexing architecture.  It provides a functional view of the architecture and does not fully describe Splunk Enterprise internals. In particular, the parsing pipeline actually consists of three pipelines: <b>parsing</b>, <b>merging</b>, and <b>typing</b>, which together handle the parsing function. The distinction can matter during troubleshooting, but does not ordinarily affect how you configure or deploy Splunk Enterprise.
+</p>
+<h3> <a name="datapipeline_the_data_pipeline_and_structured_data"><span class="mw-headline" id="The_data_pipeline_and_structured_data">The data pipeline and structured data</span></a></h3>
+<p>For certain types of structured data - data that resides in a file that has headers and fields separated by specific characters - not all components of this pipeline apply. When you collect structured data, you must configure data collection so that it arrives at the indexer in the format that you want. In environments with forwarders, this must happen at the forwarder. See "Extract data from files with headers".
+</p>
+<h3> <a name="datapipeline_input"><span class="mw-headline" id="Input">Input</span></a></h3>
+<p>In the input segment, Splunk Enterprise consumes data. It acquires the raw data stream from its source, breaks it into 64K blocks, and annotates each block with some metadata keys. The keys apply to the entire input source overall. They include the <b>host</b>, <b>source</b>, and <b>source type</b> of the data. The keys can also include values that are used internally by Splunk Enterprise, such as the character encoding of the data stream, and values that control later processing of the data, such as the index into which the events should be stored.
+</p><p>During this phase, Splunk Enterprise does not look at the contents of the data stream, so the keys apply to the entire source, not to individual events. In fact, at this point, Splunk Enterprise has no notion of individual events at all, only of a stream of data with certain global properties.
+</p>
+<h3> <a name="datapipeline_parsing"><span class="mw-headline" id="Parsing">Parsing</span></a></h3>
+<p>During the parsing segment, Splunk Enterprise examines, analyzes, and transforms the data. This is also known as <b>event processing</b>. During this phase, Splunk Enterprise breaks the data stream into individual events. The parsing phase has many sub-phases:
+</p>
+<ul><li> Breaking the stream of data into individual lines.
+</li><li> Identifying, parsing, and setting timestamps.
+</li><li> Annotating individual events with metadata copied from the source-wide keys.
+</li><li> Transforming event data and metadata according to Splunk Enterprise regex transform rules.
+</li></ul><h3> <a name="datapipeline_indexing"><span class="mw-headline" id="Indexing">Indexing</span></a></h3>
+<p>During indexing, Splunk Enterprise takes the parsed events and writes them to the index on disk. It writes both compressed raw data and the corresponding index files.
+</p><p>For brevity, parsing and indexing are often referred together as the indexing process. At a high level, that's fine. But when you need to look more closely at the actual processing of data, it can be important to consider the two segments individually.
+</p><p>A detailed diagram that depicts the indexing pipelines and explains how indexing works can be found in "How Indexing Works" in the Community Wiki.
+</p>
+<h3> <a name="datapipeline_search"><span class="mw-headline" id="Search"> Search</span></a></h3>
+<p>Splunk Enterprise's search function manages all aspects of how the user sees and uses the indexed data, including interactive and scheduled searches, reports and charts, dashboards, and alerts. As part of its search function, Splunk Enterprise stores user-created <b>knowledge objects</b>, such as saved searches, event types, views, and field extractions. 
+</p><p>For more information on the various steps in the pipeline, see "How indexing works" in the <i>Managing Indexers and Clusters of Indexers</i> manual.
+</p>
+<a name="scaleyourdeployment"></a><h2> <a name="scaleyourdeployment_scale_your_deployment:_splunk_enterprise_components"><span class="mw-headline" id="Scale_your_deployment:_Splunk_Enterprise_components">Scale your deployment: Splunk Enterprise components </span></a></h2>
+<p>To accommodate your deployment topology and performance requirements, you can allocate the different Splunk Enterprise roles, such as data input and indexing, to separate Splunk Enterprise instances.  For example, you can have instances that just gather data inputs, which they then forward to another, central instance for indexing. Or you can distribute indexing across several instances that  coordinate with a separate instance that processes all search requests. To facilitate the distribution of roles, Splunk Enterprise can be configured into a range of separate <b>component</b> types, each mapping to one or more of the roles. You create most components by enabling or disabling specific functions of the full instance.
+</p><p>These are the component types available for use in a distributed environment:
+</p>
+<ul><li> <b>Indexer</b>
+</li><li> <b>Forwarder</b>
+</li><li> <b>Search head</b>
+</li><li> <b>Deployment server</b>
+</li><li> License Master
+</li><li> Cluster Master
+</li></ul><p>All components are variations of the full Splunk Enterprise instance, with certain features either enabled or disabled, except for the <b>universal forwarder</b>, which is its own executable.
+</p>
+<h3> <a name="scaleyourdeployment_indexers"><span class="mw-headline" id="Indexers">Indexers</span></a></h3>
+<p>The indexer is the Splunk Enterprise component that creates and manages indexes. The primary functions of an indexer are:
+</p>
+<ul><li> Indexing incoming data.
+</li><li> Searching the indexed data.
+</li></ul><p>In single-machine deployments consisting of just one Splunk Enterprise instance, the indexer also handles the <b>data input</b> and <b>search management</b> functions. 
+</p><p>For larger-scale needs, indexing is split out from the data input function and sometimes from the search management function as well. In these larger, distributed deployments, the indexer might reside on its own machine and handle only indexing (usually along with parsing), along with searching of its indexed data. In those cases, other Splunk Enterprise components take over the non-indexing/searching roles. <b>Forwarders</b> consume the data, indexers index and search the data, and <b>search heads</b> coordinate searches across the set of indexers.
+</p><p>For information on indexers, see the <i>Managing Indexers and Clusters of Indexers</i> manual, starting with the topic "About indexes and indexers".
+</p>
+<h3> <a name="scaleyourdeployment_forwarders"><span class="mw-headline" id="Forwarders">Forwarders</span></a></h3>
+<p>One role that's typically split off from the indexer is the data input function. For instance, you might have a group of Windows and Linux machines generating data that needs to go to a central Splunk Enterprise indexer for consolidation. Usually the best way to do this is to install a lightweight instance of Splunk Enterprise, known as a <b>forwarder</b>, on each of the data-generating machines. These forwarders manage the data input and send the resulting data streams across the network to a Splunk Enterprise indexer, which resides on its own machine. There are two types of forwarders:
+</p>
+<ul><li> <b>Universal forwarders.</b> These have a very light footprint and forward only unparsed data.
+</li><li> <b>Heavy forwarders.</b> These have a larger footprint but can parse, and even index, data before forwarding it. 
+</li></ul><p>For information on forwarders, start with the topic "About forwarding and receiving" in the Forwarding Data manual.
+</p>
+<h3> <a name="scaleyourdeployment_search_heads"><span class="mw-headline" id="Search_heads">Search heads </span></a></h3>
+<p>In situations where you have a large amount of indexed data and numerous users concurrently searching on it, it can make sense to distribute the indexing and search retrieval load across several indexers, while delegating the search management and presentation functions to a separate machine.  In this type of scenario, known as <b>distributed search</b>, one or more Splunk Enterprise components called <b>search heads</b> distribute search requests across multiple indexers.
+</p><p>For information on search heads, see "About distributed search" in the Distributed Search manual.
+</p>
+<h3> <a name="scaleyourdeployment_deployment_server"><span class="mw-headline" id="Deployment_server">Deployment server</span></a></h3>
+<p>To update a distributed deployment, you can use the Splunk Enterprise <b>deployment server</b>. The deployment server lets you push out configurations and content to sets of Splunk Enterprise instances (referred to, in this context, as <b>deployment clients</b>), grouped according to any useful criteria, such as OS, machine type, application area, location, and so on. The deployment clients are usually forwarders or indexers. For example, once you've made and tested an updated configuration on a local Linux forwarder, you can push the changes to all the Linux forwarders in your deployment. 
+</p><p>The deployment server can cohabit a Splunk Enterprise instance with another Splunk Enterprise component, either a search head or an indexer, if your deployment is small (less than around 50 deployment clients). It should run on its own Splunk Enterprise instance in larger deployments. For more information, see "Estimate deployment server performance" in the Updating Splunk Enterprise Instances manual.
+</p><p>For detailed information on the deployment server, see "About deployment server" in the Updating Splunk Enterprise Instances manual.
+</p>
+<h3> <a name="scaleyourdeployment_where_to_go_next"><span class="mw-headline" id="Where_to_go_next"> Where to go next </span></a></h3>
+<p>While the fundamental issues of indexing and <b>event processing</b> remain the same no matter what the size or nature of your distributed deployment, it is important to take into account deployment needs when planning your indexing strategy. To do that effectively, you must also understand <a href="#componentsofadistributedenvironment" class="external text">how components map to Splunk Enterprise roles</a>.
+</p><p>For information on hardware requirements for scaling your deployment, see the Capacity Planning manual.
+</p>
+<a name="componentsofadistributedenvironment"></a><h2> <a name="componentsofadistributedenvironment_components_and_roles"><span class="mw-headline" id="Components_and_roles"> Components and roles</span></a></h2>
+<p>Each segment of the <b>data pipeline</b> directly corresponds to a role that one or more Splunk Enterprise <b>components</b> can perform. For instance, data input is a Splunk Enterprise role. Either an indexer or a forwarder can perform the data input role. For more information on the data pipeline, look <a href="#datapipeline" class="external text">here</a>.
+</p>
+<h3> <a name="componentsofadistributedenvironment_how_components_support_the_data_pipeline"><span class="mw-headline" id="How_components_support_the_data_pipeline">How components support the data pipeline</span></a></h3>
+<p>This table correlates the pipeline segments and Splunk Enterprise roles with the components that can perform them:
+</p>
+<table cellpadding="5" cellspacing="0" border="1" width="100%"><tr><th bgcolor="#C0C0C0"> Data pipeline segment
+</th><th bgcolor="#C0C0C0"> Role
+</th><th bgcolor="#C0C0C0"> Components that can perform this role
+</th></tr><tr><td valign="center" align="left"> <b>Data input</b>
+</td><td valign="center" align="left"> Data input
+</td><td valign="center" align="left"> <b>indexer</b><br><b>universal forwarder</b><br><b>heavy forwarder</b>
+</td></tr><tr><td valign="center" align="left"> <b>Parsing</b>
+</td><td valign="center" align="left"> Parsing
+</td><td valign="center" align="left"> indexer<br>heavy forwarder
+</td></tr><tr><td valign="center" align="left"> <b>Indexing</b>
+</td><td valign="center" align="left"> Indexing
+</td><td valign="center" align="left"> indexer
+</td></tr><tr><td valign="center" align="left"> <b>Search</b>
+</td><td valign="center" align="left"> Search
+</td><td valign="center" align="left"> indexer<br><b>search head</b>
+</td></tr><tr><td valign="center" align="left"> n/a
+</td><td valign="center" align="left"> Managing distributed updates
+</td><td valign="center" align="left"> <b>deployment server</b>
+</td></tr></table><p>As the table indicates, some roles can be filled by diffferent components depending on the situation. For instance, data input can be handled by an indexer in single-machine deployments, or by a forwarder in larger deployments.
+</p><p>For more information on components, look <a href="#scaleyourdeployment" class="external text">here</a>.
+</p>
+<h3> <a name="componentsofadistributedenvironment_components_in_action"><span class="mw-headline" id="Components_in_action"> Components in action</span></a></h3>
+<p>These are some of the common ways in which Splunk Enterprise functionality is distributed and managed.
+</p>
+<h4><font size="3"><b><i> <a name="componentsofadistributedenvironment_forward_data_to_an_indexer"><span class="mw-headline" id="Forward_data_to_an_indexer"> Forward data to an indexer </span></a></i></b></font></h4>
+<p>In this deployment scenario, <b>forwarders</b> handle data input, collecting data and send it on to a Splunk Enterprise indexer. Forwarders come in two flavors:
+</p>
+<ul><li> <b>Universal forwarders.</b> These maintain a small footprint on their host machine. They perform minimal processing on the incoming data streams before forwarding them on to an indexer, also known as the <b>receiver</b>.
+</li><li> <b>Heavy forwarders.</b> These retain much of the functionality of a full Splunk Enterprise instance. They can parse data before forwarding it to the receiving indexer. (See <a href="#datapipeline" class="external text">"How data moves through Splunk Enterprise"</a> for the distinction between parsing and indexing.) 
+</li></ul><p>Both types of forwarders tag data with metadata such as host, source, and source type, before forwarding it on to the indexer.
+</p><p>Forwarders allow you to use resources efficiently while processing large quantities or disparate types of data. They also enable a number of interesting deployment topologies, by offering capabilities for <b>load balancing</b>, data <b>filtering</b>, and <b>routing</b>.
+</p><p>For an extended discussion of forwarders, including configuration and detailed use cases, see "About forwarding and receiving" in the Forwarding Data manual.
+</p>
+<h4><font size="3"><b><i> <a name="componentsofadistributedenvironment_search_across_multiple_indexers"><span class="mw-headline" id="Search_across_multiple_indexers">Search across multiple indexers</span></a></i></b></font></h4>
+<p>In <b>distributed search</b>, Splunk Enterprise instances send search requests to other Splunk Enterprise instances and merge the results back to the user. This is useful for a number of purposes, including horizontal scaling, access control, and managing geo-dispersed data.
+</p><p>The Splunk Enterprise instance that manages search requests is called the search head. The instances that maintain the indexes and perform the actual searching are indexers, called <b>search peers</b> in this context.
+</p><p>For an extended discussion of distributed search, including configuration and detailed use cases, see "About distributed search" in the Distributed Search manual.
+</p>
+<h4><font size="3"><b><i> <a name="componentsofadistributedenvironment_manage_distributed_updates"><span class="mw-headline" id="Manage_distributed_updates">Manage distributed updates</span></a></i></b></font></h4>
+<p>When dealing with distributed deployments consisting potentially of many forwarders, indexers, and search heads, the Splunk Enterprise deployment server simplifies the process of configuring and updating Splunk Enterprise components, mainly forwarders and indexers. Using the deployment server, you can group the components (referred to as <b>deployment clients</b> in this context) into <b>server classes</b>, making it possible to push updates based on common characteristics. 
+</p><p>A server class is a set of Splunk Enterprise instances that share configurations. Server classes are typically grouped by OS, machine type, application area, location, or other useful criteria. A single deployment client can belong to multiple server classes, so a Linux universal forwarder residing in the UK, for example, might belong to a Linux server class and a UK server class, and receive configuration settings appropriate to each.
+</p><p>For an extended discussion of deployment management, see "About deployment server" in the Updating Splunk Enterprise Instances manual.
+</p>
+<h3> <a name="componentsofadistributedenvironment_for_more_information"><span class="mw-headline" id="For_more_information">For more information</span></a></h3>
+<p>In summary, these are the fundamental components and features of a Splunk Enterprise distributed environment:
+</p>
+<ul><li> <b>Indexers.</b> See "About indexes and indexers" in the <i>Managing Indexers and Clusters of Indexers</i> manual.
+</li><li> <b>Forwarders.</b>  See "About forwarding and receiving" in the Forwarding Data manual.
+</li><li> <b>Search heads.</b> See "About distributed search" in the Distributed Search manual.
+</li><li> <b>Deployment server.</b> See "About deployment server" in the Updating Splunk Enterprise Instances manual.
+</li></ul><p>For guidance on where to configure various Splunk Enterprise settings, see "Configuration parameters and the data pipeline" in the Admin Manual. That topic lists key configuration settings and the data pipeline segments they act upon. If you know which components in your Splunk Enterprise topology handle which segments of the data pipeline, you can use that topic to determine where to configure the various settings. For example, if you use a search head to handle the search segment, you'll need to configure any search-related settings on the search head and not on your indexers.
+</p>
+<a name="implementadistributeddeployment"></a><h2> <a name="implementadistributeddeployment_implement_a_distributed_deployment"><span class="mw-headline" id="Implement_a_distributed_deployment"> Implement a distributed deployment</span></a></h2>
+<p>This topic provides a high-level framework for implementing a basic multi-tiered distributed environment such as this:
+</p><p><img alt="Horizontal scaling new2 60.png" src="images/e/e0/Horizontal_scaling_new2_60.png" width="700" height="552"></p><p>To implement this sort of distributed environment, you need to install and configure three types of components:
+</p>
+<ul><li> Indexers
+</li><li> Forwarders (typically, universal forwarders)
+</li><li> Search head(s)
+</li></ul><h4><font size="3"><b><i> <a name="implementadistributeddeployment_install_and_configure_the_indexers"><span class="mw-headline" id="Install_and_configure_the_indexers">Install and configure the indexers</span></a></i></b></font></h4>
+<p>By default, all full Splunk Enterprise instances serve as indexers. For horizontal scaling, you can install multiple indexers on separate machines. 
+</p><p>To learn how to install a Splunk Enterprise instance, read the <i>Installation Manual</i>.
+</p><p>Once you've installed the indexers, see the <i>Managing Indexers and Clusters of Indexers</i> manual for information on configuring each indexer to meet the needs of your specific deployment.
+</p><p>To prepare your indexers to receive data from forwarders, see "Enable a receiver" in the <i>Forwarding Data</i> manual. In addition, if the indexers will be consuming some data inputs directly, rather than through forwarders, see the <i>Getting Data In</i> manual for information on configuring data inputs. The diagram in this topic shows two direct inputs, one from a firewall and another from a data router.
+</p><p>If data availability, data fidelity, and data recovery are key issues for your deployment, you should consider deploying an indexer cluster, rather than a series of individual indexers. For further information, see "About indexer clusters and index replication" in the <i>Managing Indexers and Clusters of Indexers</i> manual.
+</p>
+<h4><font size="3"><b><i> <a name="implementadistributeddeployment_install_and_configure_the_forwarders"><span class="mw-headline" id="Install_and_configure_the_forwarders">Install and configure the forwarders</span></a></i></b></font></h4>
+<p>A typical distributed deployment has a large number of forwarders feeding data to a few indexers. For most forwarding purposes, the universal forwarder is the best choice. The universal forwarder is a separate downloadable from the full Splunk Enterprise instance. 
+</p><p>To learn how to install and configure forwarders, read the <i>Forwarding Data</i> manual.
+</p><p>Then read the <i>Getting Data In</i> manual for information on configuring each forwarder's data inputs.
+</p>
+<h4><font size="3"><b><i> <a name="implementadistributeddeployment_install_and_configure_the_search_heads"><span class="mw-headline" id="Install_and_configure_the_search_heads"> Install and configure the search heads</span></a></i></b></font></h4>
+<p>You can install one or more search heads to handle your distributed search needs. Search heads are full Splunk Enterprise instances that have been specially configured to managed searches across a set of indexers. Users run searches by connecting to the search head's Splunk Web.
+</p><p>To learn how to configure a search head, read the <i>Distributed Search</i> manual.
+</p>
+<h4><font size="3"><b><i> <a name="implementadistributeddeployment_other_deployment_tasks"><span class="mw-headline" id="Other_deployment_tasks">Other deployment tasks</span></a></i></b></font></h4>
+<p>You need to configure Splunk Enterprise licensing by designating a <b>license master</b>. See the chapter <b>Configure Splunk Enterprise licenses</b> in the <i>Admin Manual</i> for more information.
+</p><p>You can use the Splunk Enterprise <b>deployment server</b> to simplify the job of updating the deployment components. For details on how to configure a deployment server, see the <i>Updating Splunk Enterprise Instances</i> manual.
+</p>
+<h1>What happened to the rest of this manual?</h1><a name="aboutforwardingandreceivingdata"></a><h2> <a name="aboutforwardingandreceivingdata_forwarding_data"><span class="mw-headline" id="Forwarding_data"> Forwarding data</span></a></h2>
+<p>Starting with Splunk 6.0, the topics on forwarding and receiving, previously located in this manual, now reside in their own manual, <i>Forwarding Data</i>.
+</p>
+<a name="whatisdistributedsearch"></a><h2> <a name="whatisdistributedsearch_distributed_search"><span class="mw-headline" id="Distributed_search"> Distributed search </span></a></h2>
+<p>Starting with Splunk 6.0, the topics on distributed search and search heads, previously located in this manual, now reside in their own manual, <i>Distributed Search</i>.
+</p>
+<a name="hardwarecapacityplanning"></a><h2> <a name="hardwarecapacityplanning_hardware_capacity_planning"><span class="mw-headline" id="Hardware_capacity_planning"> Hardware capacity planning</span></a></h2>
+<p>Starting with Splunk 6.2, the topics on hardware capacity planning, previously located in this manual, now reside in their own manual, <i>Capacity Planning</i>.
+</p>
+<a name="aboutdeploymentserver"></a><h2> <a name="aboutdeploymentserver_upgrading_splunk_enterprise_instances"><span class="mw-headline" id="Upgrading_Splunk_Enterprise_Instances"> Upgrading Splunk Enterprise Instances</span></a></h2>
+<p>The deployment server is the Splunk Enterprise built-in capability for upgrading Splunk Enterprise instances.
+</p><p>Starting with Splunk 6.0, the topics on the deployment server, previously located in this manual, now reside in their own manual, <i>Upgrading Splunk Enterprise Instances</i>.
+</p>
+<h1>Common deployment architectures</h1><a name="architectureoverview"></a><h2> <a name="architectureoverview_common_deployment_architecture_overview"><span class="mw-headline" id="Common_deployment_architecture_overview"> Common deployment architecture overview</span></a></h2>
+<p>This chapter serves as a guide to the types of architectures common to deployments of various sizes. This material can help you better understand initial and future requirements. It is useful for scoping your needs for a new deployment, as well as preparing for the growth of an existing Splunk Enterprise deployment. It illustrates how Splunk Enterprise deployments typically evolve and scale, as the size and variety of use cases grow.
+</p><p>Splunk Enterprise deployments range from single-server departmental deployments, indexing a few gigabytes of data a day and servicing just a few users searching the data, to large enterprise deployments distributed across multiple data centers, with indexing requirements in the terabyte range and searches performed by hundreds of people.
+</p><p>This chapter describes several archetypal deployments (categorized by size) and covers:
+</p>
+<ul><li> Types and numbers of components
+</li><li> Types and numbers of users
+</li><li> Data size and input types
+</li><li> Design considerations
+</li><li> Fundamental administration issues such as availability, recoverability, accessibility, and configuration management
+</li><li> Staffing requirements
+</li></ul><a name="deploymenttoplogies"></a><h2> <a name="deploymenttoplogies_deployment_topologies"><span class="mw-headline" id="Deployment_topologies"> Deployment topologies</span></a></h2>
+<p>To help with your planning, this topic describes a scaled series of representative topologies:
+</p>
+<ul><li> Departmental
+</li><li> Small enterprise
+</li><li> Medium enterprise
+</li><li> Large enterprise
+</li></ul><p>These representations are just points on a continuous scale, ranging from single-server deployments to deployments that provide enterprise-wide coverage for a large number of use cases.
+</p><p>In addition, the topic includes a brief section on indexer cluster topologies. Indexer clusters can be implemented at any of the enterprise levels.
+</p><p><b>Note:</b> The terms "small enterprise", "medium enterprise", etc., do not specifically address the size of the enterprise using Splunk; rather, they are indicators of the breadth and depth of the functions Splunk supports in the enterprise. As awareness of the value Splunk can provide to an organization grows with continued success, the size of a deployment also typically grows. So, for example, a Fortune 500 company might start with a departmental-level, single-server Splunk installation for a very specific use case, and then, over time, transition through small enterprise and medium enterprise, to eventually adopt a large enterprise deployment providing key value to organizations and use cases distributed throughout the company.
+</p>
+<h3> <a name="deploymenttoplogies_departmental"><span class="mw-headline" id="Departmental"> Departmental </span></a></h3>
+<p>A departmental deployment is, as the term implies, designed to meet the relatively simple needs of a single department within an organization. These deployments typically consist of:
+</p>
+<ul><li> A single Splunk instance, combining the functionality of both an indexer and a search head.
+</li><li> Indexing volume of under 20GB/day.
+</li><li> A relatively small number of forwarders sending data to the instance, typically less than 10 and rarely exceeding 100.
+</li><li> Updates handled either manually or via a deployment server resident on the indexer.
+</li><li> A few users, typically less than 10.
+</li></ul><p>This diagram shows the components of a departmental deployment:
+</p><p><br><img alt="Archetypal Deployment - Departmental 60.png" src="images/c/c1/Archetypal_Deployment_-_Departmental_60.png" width="700" height="516"></p>
+<h3> <a name="deploymenttoplogies_small_enterprise"><span class="mw-headline" id="Small_enterprise"> Small enterprise </span></a></h3>
+<p>A small enterprise deployment is the next step in continuum of Splunk deployments, providing a small degree of horizontal scaling. These deployments typically consist of:
+</p>
+<ul><li> Several Splunk instances; for example, two or three indexers and a single search head that allows users to run combined searches across all the indexers.
+</li><li> Indexing volume between 20-100GB/day.
+</li><li> Up to several hundred forwarders feeding data to the indexers. The forwarders typically make use of load balancing to distribute the data across the indexers.
+</li><li> Updates handled either manually or via a deployment server resident on the search head.
+</li><li> A larger number of users, but generally well under 100.
+</li></ul><p>This diagram shows the components of a small enterprise deployment:
+</p><p><br><img alt="Archetypal Deployment - Enterprise Small 60.png" src="images/3/31/Archetypal_Deployment_-_Enterprise_Small_60.png" width="700" height="516"></p>
+<h3> <a name="deploymenttoplogies_medium_enterprise"><span class="mw-headline" id="Medium_enterprise"> Medium enterprise </span></a></h3>
+<p>A medium enterprise deployment is further along the growth curve in Splunk deployments, with a larger degree of horizontal scaling. These deployments might consist of:
+</p>
+<ul><li> A larger number of Splunk instances; for example, five or more indexers and a couple of search heads.
+</li><li> Indexing volume between 100-300GB/day.
+</li><li> Up to a few thousand forwarders feeding load-balanced data to the indexers. 
+</li><li> Updates handled by a separate configuration management tool, either a stand-alone deployment server or a third party tool like Puppet or Chef.
+</li><li> A larger number of users, possibly numbering a hundred or more.
+</li></ul><p>This diagram shows the components of a medium enterprise deployment:
+</p><p><br><img alt="Archetypal Deployment - Enterprise Medium 60.png" src="images/6/6b/Archetypal_Deployment_-_Enterprise_Medium_60.png" width="700" height="517"></p>
+<h3> <a name="deploymenttoplogies_large_enterprise"><span class="mw-headline" id="Large_enterprise"> Large enterprise </span></a></h3>
+<p>A large enterprise deployment handles functions across the enterprise, spanning multiple data centers. These deployments might consist of:
+</p>
+<ul><li> A large number of Splunk instances; for example, several dozen indexers and as many as 10 search heads.
+</li><li> Indexing volume ranging from 300GB to many TBs per day.
+</li><li> Many thousands of forwarders. 
+</li><li> Updates handled by a separate configuration management tool, either a stand-alone deployment server or a third party tool like Puppet or Chef.
+</li><li> A large number of users, potentially numbering in the several hundreds.
+</li></ul><p>This diagram shows the components of a large enterprise deployment:
+</p><p><br><img alt="Archetypal Deployment - Enterprise Large 60.png" src="images/5/57/Archetypal_Deployment_-_Enterprise_Large_60.png" width="700" height="518"></p>
+<h3> <a name="deploymenttoplogies_indexer_clusters"><span class="mw-headline" id="Indexer_clusters">Indexer clusters </span></a></h3>
+<p>Although the topologies described earlier do not address index replication, you can implement indexer clusters for any of the enterprise-level topologies, according to your availability requirements. Doing so will require an increase in the number of Splunk Enterprise instances beyond the numbers mentioned below.  For example, here is a representative indexer cluster topology for a small enterprise deployment:
+</p><p><br><img alt="Archetypal Deployment - Cluster 60.png" src="images/7/71/Archetypal_Deployment_-_Cluster_60.png" width="700" height="554"></p><p>This is an example of a small indexer cluster with three peer nodes (indexers) and a replication factor of 3. Since the replication factor of 3 means that all data will be replicated across all three peers, this scenario essentially replaces a very small enterprise with one to two indexers. Because of the way clusters store data, the cluster would not require fully three times as much storage as its non-cluster equivalent. 
+</p><p>As the diagram indicates, you can scale a cluster topology in the same way that you scale any non-cluster Splunk deployment, adding peers and forwarders as needed. You can also add additional search heads.
+</p><p>For more information, read "About indexer clusters and index replication" in the <i>Managing Indexers and Clusters of Indexers</i> manual.
+</p>
+<h3> <a name="deploymenttoplogies_search_head_clusters"><span class="mw-headline" id="Search_head_clusters"> Search head clusters </span></a></h3>
+<p>You can combine multiple search heads into a search head cluster.  This allows the search heads to share configurations, job scheduling, and search artifacts.  As with indexer clusters, you can employ search head clusters for any enterprise-level topology. Here is a relatively small-scale search head cluster:
+</p><p><img alt="Searchhead cluster.png" src="images/9/96/Searchhead_cluster.png" width="700" height="447"></p><p>This cluster consists of three search heads, with a load balancer to coordinate user requests and several search peers that hold the indexed data. See "About search head clustering" in the <i>Distributed Search</i> manual.
+</p><p>In place of multiple independent search peers, you can optionally deploy an indexer cluster.
+</p>
+<a name="deploymentcharacteristics"></a><h2> <a name="deploymentcharacteristics_how_deployments_scale"><span class="mw-headline" id="How_deployments_scale"> How deployments scale </span></a></h2>
+<p>The characteristics of a deployment vary according to the size. (Deployment size, for the purposes of this discussion, is based on daily indexing volume.) This topic attempts to identify, in broad terms, some key characteristics and considerations and indicate how they change as a deployment scales.  
+</p><p><b>Note:</b> Size is only one of many factors driving the needs and architecture of a deployment. The numbers presented in these tables are mere guidelines to help with planning. In addition, the scenarios described here are simply points on a size-based continuum. Actual numbers will vary considerably for each specific deployment.
+</p><p>For details on hardware capacity planning and deployment scaling, see the <i>Capacity Planning</i> manual.
+</p>
+<h3> <a name="deploymentcharacteristics_primary_characteristics"><span class="mw-headline" id="Primary_characteristics"> Primary characteristics </span></a></h3>
+<p>The characteristics of a deployment change as it grows in size.  This table gives you some idea of what to expect, with information on the Splunk components you'll need to deploy to meet the needs. 
+</p>
+<table width="100%" cellpadding="6"><tr><th bgcolor="#C0C0C0">
+</th><th bgcolor="#C0C0C0"> Departmental
+</th><th bgcolor="#C0C0C0"> Small enterprise
+</th><th bgcolor="#C0C0C0"> Medium enterprise
+</th><th bgcolor="#C0C0C0"> Large enterprise
+</th></tr><tr><td width="25%" valign="center" align="left"> <b>Indexing volume (daily)</b>
+</td><td width="17%" valign="center" align="left"> 0-20GB
+</td><td width="18%" valign="center" align="left"> 20-100GB
+</td><td width="21%" valign="center" align="left"> 100-300GB
+</td><td width="19%" valign="center" align="left">300GB-1TB+
+</td></tr><tr><td valign="center" align="left"> <b># of forwarders</b>
+</td><td valign="center" align="left"> Median &lt; 10; maximum 100
+</td><td valign="center" align="left"> Median in the 10's; maximum in the 100's
+</td><td valign="center" align="left"> Median in the 10's; maximum in the low 1000's
+</td><td valign="center" align="left"> Median in the 10's; maximum in the 1000's
+</td></tr><tr><td valign="center" align="left"> <b># of users</b>
+</td><td valign="center" align="left"> Median &lt; 10
+</td><td valign="center" align="left"> Median in the 10's
+</td><td valign="center" align="left"> Median in the 10's; maximum in the low 100's
+</td><td valign="center" align="left"> Median in the 10's; maximum 500+
+</td></tr><tr><td valign="center" align="left"> <b># of apps (pre-packaged and customer-developed, combined)</b>
+</td><td valign="center" align="left"> 1-10
+</td><td valign="center" align="left"> 1-10
+</td><td valign="center" align="left"> 1-20+
+</td><td valign="center" align="left"> 10-50
+</td></tr><tr><td valign="center" align="left"> <b>Indexer component</b>
+</td><td valign="center" align="left"> 1 indexer
+</td><td valign="center" align="left"> 2-3 indexers
+</td><td valign="center" align="left"> 4-9 indexers
+</td><td valign="center" align="left"> 10+ indexers
+</td></tr><tr><td valign="center" align="left"><b>Search head component</b>
+</td><td valign="center" align="left"> Combined with indexer
+</td><td valign="center" align="left"> 1 stand-alone search head
+</td><td valign="center" align="left"> 2 search heads
+</td><td valign="center" align="left"> 3+ search heads
+</td></tr><tr><td valign="center" align="left"><b>Configuration management function</b>
+</td><td valign="center" align="left"> Manual configuration or deployment server
+</td><td valign="center" align="left"> Manual configuration or deployment server
+</td><td valign="center" align="left"> Deployment server or 3rd party tool
+</td><td valign="center" align="left"> Deployment server or 3rd party tool
+</td></tr></table><h3> <a name="deploymentcharacteristics_design_considerations"><span class="mw-headline" id="Design_considerations">Design considerations </span></a></h3>
+<p>This table summarizes some of the issues you need to consider when designing your deployment.
+</p>
+<table width="100%" cellpadding="6"><tr><th bgcolor="#C0C0C0">
+</th><th bgcolor="#C0C0C0"> Departmental
+</th><th bgcolor="#C0C0C0"> Small enterprise
+</th><th bgcolor="#C0C0C0"> Medium enterprise
+</th><th bgcolor="#C0C0C0"> Large enterprise
+</th></tr><tr><td width="19%" valign="center" align="left"> <b>Forwarder issues</b>
+</td><td width="20%" valign="center" align="left"> Management, monitoring
+</td><td width="20%" valign="center" align="left"> Load balancing, management, monitoring
+</td><td width="21%" valign="center" align="left"> Load balancing, management, monitoring, intermediate forwarders
+</td><td width="20%" valign="center" align="left"> Load balancing, management, monitoring, intermediate forwarders
+</td></tr><tr><td valign="center" align="left"> <b>Search issues</b>
+</td><td valign="center" align="left"> User counts, alerts, apps
+</td><td valign="center" align="left"> Search head/indexer knowledge management, user counts
+</td><td valign="center" align="left"> Search head/indexer knowledge management, user counts, search head clustering, job servers
+</td><td valign="center" align="left"> Search head/indexer knowledge management, user counts, search head clustering, job servers
+</td></tr><tr><td valign="center" align="left"> <b>Scheduled search workload</b>
+</td><td valign="center" align="left"> Alerts, app/dashboard dependent, summary searches
+</td><td valign="center" align="left"> Alerts, app/dashboard dependent, summary searches
+</td><td valign="center" align="left"> Alerts, app/dashboard dependent, summary searches, job server
+</td><td valign="center" align="left"> Alerts, app/dashboard dependent, summary searches, job server, API/SDK
+</td></tr><tr><td valign="center" align="left"> <b>Input types</b>
+</td><td valign="center" align="left"> Network, scripted
+</td><td valign="center" align="left"> Network, scripted, batch, integrations
+</td><td valign="center" align="left"> Network, scripted, batch, integrations
+</td><td valign="center" align="left"> Network, scripted, batch, integrations
+</td></tr><tr><td valign="center" align="left"> <b>Availability</b>
+</td><td valign="center" align="left"> Platform-dependent (RAID, power supplies)
+</td><td valign="center" align="left"> Data fabric (forwarder load balancing, storage, index replication)
+</td><td valign="center" align="left"> User interface (search head clustering, load balancers); data fabric (forwarder load balancing, storage, index replication)
+</td><td valign="center" align="left"> User interface (search head clustering, load balancers); data fabric (forwarder load balancing, storage, index replication)
+</td></tr><tr><td valign="center" align="left"> <b>Recoverability</b>
+</td><td valign="center" align="left"> Backup, retention
+</td><td valign="center" align="left"> Backup, index replication, bucket/index restoration
+</td><td valign="center" align="left"> Backup, index replication, bucket/index restoration
+</td><td valign="center" align="left"> Backup, index replication, bucket/index restoration
+</td></tr><tr><td valign="center" align="left"> <b>Accessibility</b>
+</td><td valign="center" align="left"> Local vs. enterprise authentication
+</td><td valign="center" align="left"> Authentication method
+</td><td valign="center" align="left"> Authentication method
+</td><td valign="center" align="left"> Authentication method
+</td></tr><tr><td valign="center" align="left"> <b>Staffing</b>
+</td><td valign="center" align="left"> Admin: 0.5-1 person; search/dashboard/appdev/ knowledge manager: 0.25-1 person
+</td><td valign="center" align="left"> Admin: 0.5-1 person; search/dashboard/appdev/ knowledge manager: 0.5-1.5 persons
+</td><td valign="center" align="left"> Admin/architect: 1-2 persons; knowledge manager: 0.5-2 persons; search/dashboard/appdev: 1-3 persons; program/project manager: 1 person
+</td><td valign="center" align="left"> Admin: 2-4+ persons; architect: 1+ persons; knowledge manager: 2-5+ persons; search/dashboard/appdev: 2-6+ persons; program manager: 1 person; project manager: 0.5-2 persons
+</td></tr></table><p>For information regarding training opportunities and professional services offerings, contact your Splunk sales representative.
+</p>
+<h1>Upgrade your deployment</h1><a name="upgradeyourdistributedenvironment"></a><h2> <a name="upgradeyourdistributedenvironment_upgrade_your_distributed_environment"><span class="mw-headline" id="Upgrade_your_distributed_environment">Upgrade your distributed environment</span></a></h2>
+<p>This topic discusses the process of upgrading components of a distributed Splunk Enterprise deployment.
+</p><p>Upgrading a distributed Splunk Enterprise environment presents challenges over upgrading an a single-instance Splunk Enterprise installation. For the purposes of reducing downtime and ensuring no data is lost, we strongly recommend that you upgrade your components in a specific order. This order is described in the instructions below.
+</p><p><b>Note:</b> This is a high-level guidance on upgrading Splunk Enterprise in a distributed environment. Distributed environments can vary widely. Therefore, this topic cannot provide detailed step-by-step procedures. If you have additional questions about upgrading your distributed Splunk environment after reading this topic, you can log a case via the Splunk Support Portal.
+</p>
+<h3> <a name="upgradeyourdistributedenvironment_cross-version_compatibility_between_distributed_components"><span class="mw-headline" id="Cross-version_compatibility_between_distributed_components"> Cross-version compatibility between distributed components</span></a></h3>
+<p>For information on compatibility between differerent versions of <b>search heads</b> and <b>search peers</b> (indexers), see "System requirements and other deployment considerations for distributed search" in the <i>Distributed Search</i> manual.
+</p><p>For information on compatibility between indexers and forwarders, see "Compatibility between forwarders and indexers" in the <i>Forwarding Data</i> manual.
+</p>
+<h3> <a name="upgradeyourdistributedenvironment_test_your_apps_prior_to_the_upgrade"><span class="mw-headline" id="Test_your_apps_prior_to_the_upgrade">Test your apps prior to the upgrade</span></a></h3>
+<p>Before upgrading your distributed environment, make sure that all of your Splunk apps work on the version of Splunk Enterprise that you plan to upgrade to. 
+</p><p><b>Important:</b> This procedure is <b>required</b> if you are upgrading a distributed environment with a <b>search head pool</b>, because pooled search heads use shared storage space for apps and configurations. 
+</p><p>To ensure that your apps work on the desired upgraded version of Splunk Enterprise:
+</p><p><b>1.</b> On a reference machine, install the full version of Splunk Enterprise that you currently run.
+</p><p><b>Note:</b> You can also use an existing Splunk Enterprise instance, provided that it is not indexing relevant data and is at the same version level as the other instances in your environment.
+</p><p><b>2.</b> Install the apps on this instance.
+</p><p><b>3.</b> Confirm that the apps work as expected.
+</p><p><b>4.</b> Upgrade the instance to the desired version.
+</p><p><b>5.</b> Test the apps again to make sure they work as desired in the new version.
+</p><p>If the apps work as expected, you can move them to the appropriate location during the upgrade of your distributed environment:
+</p>
+<ul><li> If you use non-pooled search heads, move the apps to <code><font size="2">$SPLUNK_HOME/etc/apps</font></code> on each search head during the search head upgrade process.
+</li><li> If you use pooled search heads, move the apps to the shared storage location where the pooled search heads expect to find the apps.
+</li></ul><p><b>Caution:</b> The migration utility warns you of apps that need to be copied to shared storage for pooled search heads when you upgrade them. It does not, however, copy them for you. You must manually copy <b>all</b> updated apps - <b>including apps that ship with Splunk Enterprise (such as the Search app and the data preview feature, which is implemented as an app)</b> - to shared storage during the upgrade process. Failure to do so can cause problems with the user interface after the upgrade is complete.
+</p>
+<h3> <a name="upgradeyourdistributedenvironment_upgrade_a_distributed_environment_with_multiple_indexers_and_non-pooled_search_heads"><span class="mw-headline" id="Upgrade_a_distributed_environment_with_multiple_indexers_and_non-pooled_search_heads">Upgrade a distributed environment with multiple indexers and non-pooled search heads</span></a></h3>
+<p>To maintain availability, Splunk recommends that, when upgrading your distributed environment with multiple indexers and non-pooled
+search heads, that you upgrade the search heads first, then upgrade the indexing infrastructure that supports the search
+heads. If you have deployment servers in the environment, be sure to disable those prior to upgrading your search heads.
+</p><p>To upgrade a distributed environment with multiple indexers and non-pooled search heads:
+</p>
+<h4><font size="3"><b><i> <a name="upgradeyourdistributedenvironment_prepare_the_upgrade"><span class="mw-headline" id="Prepare_the_upgrade">Prepare the upgrade</span></a></i></b></font></h4>
+<p><b>1.</b> Confirm that any apps that the non-pooled search heads use will work on the upgraded version of Splunk, as described in "<a href="#upgradeyourdistributedenvironment_test_your_apps_prior_to_the_upgrade" class="external text">Test your apps prior to the upgrade</a>" in this topic.
+</p><p><b>2.</b> If you use a <b>deployment server</b> in your environment, disable it temporarily. This prevents the server from
+distributing invalid configurations to your other components.
+</p><p><b>3.</b> Upgrade your deployment server, but do not restart it.
+</p>
+<h4><font size="3"><b><i> <a name="upgradeyourdistributedenvironment_upgrade_the_search_heads"><span class="mw-headline" id="Upgrade_the_search_heads">Upgrade the search heads</span></a></i></b></font></h4>
+<p><b>4.</b> Disable and upgrade one of the search heads. Do not allow it to restart.
+</p><p><b>5.</b> After you upgrade the search head, place the confirmed working apps into the <code><font size="2">$SPLUNK_HOME/etc/apps</font></code> directory of the search head. 
+</p><p><b>6.</b> Restart this search head and test for operation and functionality.
+</p><p><b>7.</b> If there are no problems with the search head, then disable and upgrade the remaining search heads, one by one. Repeat this step until you have reached the last search head in your environment. Optionally, you can test each search head for operation and functionality after you bring it up.
+</p><p><b>8.</b> Once you have upgraded the last search head, test all of the search heads for operation and functionality.
+</p>
+<h4><font size="3"><b><i> <a name="upgradeyourdistributedenvironment_upgrade_the_indexers"><span class="mw-headline" id="Upgrade_the_indexers">Upgrade the indexers</span></a></i></b></font></h4>
+<p><b>9.</b> Disable and upgrade your indexers, one by one. You can restart the indexers immediately after you upgrade them.
+</p><p><b>10.</b> Test your search heads to ensure that they find data across all your indexers.
+</p><p><b>11.</b> After all indexers have been upgraded, restart your deployment server.
+</p>
+<h3> <a name="upgradeyourdistributedenvironment_upgrade_a_distributed_environment_with_multiple_indexers_and_pooled_search_heads"><span class="mw-headline" id="Upgrade_a_distributed_environment_with_multiple_indexers_and_pooled_search_heads">Upgrade a distributed environment with multiple indexers and pooled search heads</span></a></h3>
+<p>If your distributed environment has <b>pooled search heads</b>, the process to upgrade the environment becomes significantly more complex. If your organization has restrictions on downtime, this type of upgrade is best done within a maintenance window.
+</p><p>The key concepts to understand about upgrading this kind of environment are:
+</p>
+<ul><li> Pooled search heads must be enabled and disabled as a group.
+</li><li> The version of Splunk Enterprise on all pooled search heads must be the same.
+</li><li> Apps and configurations that the search heads use must be tested prior to upgrading the search head pool.
+</li></ul><p>If you have additional concerns about the guidance shown here, you can log a case via the Splunk Support Portal.
+</p><p>To upgrade a distributed Splunk environment with multiple indexers and pooled search heads:
+</p>
+<h4><font size="3"><b><i> <a name="upgradeyourdistributedenvironment_prepare_the_upgrade_2"><span class="mw-headline" id="Prepare_the_upgrade_2">Prepare the upgrade</span></a></i></b></font></h4>
+<p><b>1.</b> Confirm that any apps that the pooled search heads use will work on the upgraded version of Splunk Enterprise, as described in "<a href="#upgradeyourdistributedenvironment_test_your_apps_prior_to_the_upgrade" class="external text">Test your apps prior to the upgrade</a>" in this topic.
+</p><p><b>2.</b> If you use a <b>deployment server</b> in your environment, disable it temporarily. This prevents the server from distributing invalid configurations to your other components.
+</p><p><b>3.</b> Upgrade your deployment server, but do not restart it.
+</p>
+<h4><font size="3"><b><i> <a name="upgradeyourdistributedenvironment_upgrade_the_search_head_pool"><span class="mw-headline" id="Upgrade_the_search_head_pool"> Upgrade the search head pool</span></a></i></b></font></h4>
+<p><b>4.</b> Designate a search head (Search Head #1) in your search head pool to upgrade as a test for functionality and operation.
+</p><p><b>Note:</b> Search heads must be removed from the search head pool temporarily before you upgrade them. This must be done for several reasons:
+</p>
+<ul><li> To prevent changes to the apps and/or user objects hosted on the search head pool shared storage.
+</li><li> To stop the inadvertent migration of local apps and system settings to shared storage during the upgrade.
+</li><li> To ensure that you have a valid local configuration to use as a fallback, should a problem occur during the upgrade.
+</li></ul><p>If problems occur as a result of the upgrade, search heads can be temporarily used in a non-pooled configuration as a backup.
+</p><p><b>5.</b> Bring down all of the search heads in your environment.
+</p><p><b>Note:</b> Search capability will be unavailable at this time, and will remain unavailable until you restart all of the search heads after upgrading. 
+</p><p><b>6.</b> Place the confirmed working apps (as tested in Step 1) in the search head pool shared storage area.
+</p><p><b>7.</b> Remove Search Head #1 from the search head pool.
+</p><p><b>Note:</b> Review "Configure search head pooling" in the <i>Distributed Search</i> manual for instructions on how to enable and disable search head pooling on each search head.
+</p><p><b>8.</b> Upgrade Search Head #1.
+</p><p><b>9.</b> Restart Search Head #1 and test for operation and functionality.
+</p><p><b>Note</b>: In this case, 'operation and functionality' means that the instance starts and that you can log into it. It does not mean that you can use apps or objects hosted on shared storage. It also does not mean distributed searches will run correctly.
+</p><p><b>10.</b> If the upgraded Search Head #1 functions as desired:
+</p>
+<dl><dd><b>a.</b> Bring it down.
+</dd><dd><b>b.</b> Copy the apps and user preferences from the search head to the shared storage.
+</dd><dd><b>c.</b> Add it back to the search head pool.
+</dd><dd><b>d.</b> Restart the search head.
+</dd></dl><p><b>11.</b> Upgrade the remaining search heads in the pool, one by one, following Steps 7 through 10 above.
+</p><p><b>Caution:</b> Remove each search head from the search head pool before you upgrade, and add them back to the pool after you upgrade. While it is not necessary to confirm operation and functionality of each search head, only one search head at a time can be up during the upgrade phase. <b>Do not start any of the other search heads</b> until you have upgraded all of them.
+</p><p><b>12.</b> Once you have upgraded the last search head in the pool, then restart all of them.
+</p><p><b>13.</b> Test all search heads for operation and functionality across all of the apps and user objects that are hosted on the search head pool.
+</p><p><b>14.</b> Test distributed search across all of your indexers.
+</p>
+<h4><font size="3"><b><i> <a name="upgradeyourdistributedenvironment_upgrade_the_indexers_2"><span class="mw-headline" id="Upgrade_the_indexers_2">Upgrade the indexers</span></a></i></b></font></h4>
+<p><b>15.</b> Once you have confirmed that your search heads are functioning as desired, choose an indexer to keep the environment running (Indexer #1), and another to upgrade initially (Indexer #2).
+</p><p><b>Note:</b> If you do not have downtime concerns, you do not need to perform this step.
+</p><p><b>16.</b> Bring down all of the indexers except Indexer #1.
+</p><p><b>Note:</b> If you do not have downtime concerns, you can bring down all of the indexers.
+</p><p><b>17.</b> Upgrade Indexer #2.
+</p><p><b>18.</b> Bring up Indexer #2 and test for operation and functionality.
+</p><p><b>Note:</b> For information on version compatibility between search heads and indexers, see "System requirements and other deployment considerations for distributed search" in the <i>Distributed Search</i> manual.
+</p><p><b>19.</b> Once you have confirmed proper operation on Indexer #2, bring down Indexer #1.
+</p><p><b>20.</b> Upgrade Indexer #1 and all of the remaining indexers, one by one. You can restart the indexers immediately after you upgrade them.
+</p><p><b>21.</b> Confirm operation and functionality across all of your indexers.
+</p><p><b>22.</b> Restart your deployment server, and confirm its operation and functionality.
+</p>
+<h3> <a name="upgradeyourdistributedenvironment_upgrade_forwarders"><span class="mw-headline" id="Upgrade_forwarders">Upgrade forwarders</span></a></h3>
+<p>When upgrading your distributed environment, you can also upgrade any universal forwarders in that environment. This is not required, however, and you might want to consider whether or not you need to. Forwarders are always compatible with later version indexers, so you do not need to upgrade them just because you've upgraded the indexers they're sending data to.
+</p><p>To upgrade universal forwarders, review the following topics in this manual:
+</p>
+<ul><li> <a href="#upgradethewindowsuniversalforwarder" class="external text">Upgrade the Windows universal forwarder</a>
+</li><li> <a href="#upgradethenixuniversalforwarder" class="external text">Upgrade the universal forwarder on *nix systems</a>
+</li></ul><a name="upgradethewindowsuniversalforwarder"></a><h2> <a name="upgradethewindowsuniversalforwarder_upgrade_the_windows_universal_forwarder"><span class="mw-headline" id="Upgrade_the_Windows_universal_forwarder"> Upgrade the Windows universal forwarder</span></a></h2>
+<h3> <a name="upgradethewindowsuniversalforwarder_relocated_to_the_forwarding_data_manual"><span class="mw-headline" id="Relocated_to_the_Forwarding_Data_manual"> Relocated to the Forwarding Data manual </span></a></h3>
+<p>The instructions on how to upgrade the Windows universal forwarder have been moved to the Forwarding Data manual.
+</p><p>Read that topic to learn how to upgrade the universal forwarder on Windows.
+</p>
+<a name="upgradethenixuniversalforwarder"></a><h2> <a name="upgradethenixuniversalforwarder_upgrade_the_universal_forwarder_for_.2anix_systems"><span class="mw-headline" id="Upgrade_the_universal_forwarder_for_.2Anix_systems"> Upgrade the universal forwarder for *nix systems </span></a></h2>
+<h3> <a name="upgradethenixuniversalforwarder_relocated_to_the_forwarding_data_manual"><span class="mw-headline" id="Relocated_to_the_Forwarding_Data_manual"> Relocated to the Forwarding Data manual </span></a></h3>
+<p>The instructions on how to upgrade the Unix universal forwarder have been moved to the Forwarding Data manual.
+</p><p>Read that topic to learn how to upgrade the universal forwarder on *nix.
+</p>
+</body><script src='http://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js'></script>
+
+        <script src="js/index.js"></script></html>
