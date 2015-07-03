@@ -31,7 +31,3 @@ To contribute a docset, follow the steps below. If you get stuck at any point or
   * Edit the docset.json file. Make sure to follow the same naming rules as the sample (i.e. your docset name should be the same as the archive name, but replace whitespaces with underscores)
   * Edit the README.md
 * Submit a pull request
-
-### Job offer
-
-I'm looking to hire someone to expand Dash's docset collection. Check out [my blog post](https://blog.kapeli.com/hiring-chief-docset-maker) for details.
