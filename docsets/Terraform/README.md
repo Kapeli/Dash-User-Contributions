@@ -9,6 +9,7 @@ Contriubuted by [f440](https://github.com/f440)
 
     git clone https://github.com/f440/terraform.git
     cd terraform/website
+    git checkout docsets
     rake
 
 ## Old version (< 0.6.0)
