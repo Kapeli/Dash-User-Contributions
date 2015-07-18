@@ -3,7 +3,7 @@ Terraform Docset
 
 https://terraform.io/docs/
 
-Contriubuted by [f440](https://github.com/dazoakley)
+Contriubuted by [f440](https://github.com/f440)
 
 ## Building the docsets
 
