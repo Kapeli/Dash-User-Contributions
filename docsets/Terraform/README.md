@@ -3,14 +3,14 @@ Terraform Docset
 
 https://terraform.io/docs/
 
-Contriubuted by Darren Oakley
+Contriubuted by [f440](https://github.com/dazoakley)
 
-* github: [dazoakley](https://github.com/dazoakley)
-* twitter: [@dazoakley](https://twitter.com/dazoakley)
+## Building the docsets
 
-This docset is generated using the code in this repository:
+    git clone https://github.com/f440/terraform.git
+    cd terraform/website
+    rake
 
-https://github.com/dazoakley/terraform-docset
+## Old version (< 0.6.0)
 
-Building instructions can be found there.
-
+ref. [README.old.md](README.old.md)
