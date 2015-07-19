@@ -1,7 +1,7 @@
 Adobe Experience Manager Docset
 =======================
 
-This docset is maintained by Ignacio Bergmann (@nachocual). It was generated from the javadocs hosted by Adobe.
+This docset is maintained by Ignacio Bergmann (https://github.com/nachocual). It was generated from the javadocs hosted by Adobe.
 
 How it was generated:
 * Download the index-all from the online documentation using wget:
