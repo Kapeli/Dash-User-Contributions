@@ -5,7 +5,9 @@ PyMongo Dash Docset
 
 ### Author:
 
-Docset compiled by [Georg Barikin](https://github.com/gebrkn).
+Docset created by [Georg Barikin](https://github.com/gebrkn).
+
+Updated by [Yang Xu](https://github.com/xyoun).
 
 ### How to build:
 
