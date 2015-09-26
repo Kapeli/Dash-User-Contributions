@@ -19,6 +19,7 @@ libraries (usually recognizable by the <Eigen/*Support> header name). Of course
 you have to mind the license of the so-included library when using them.
 
 This docset for Dash is compiled by [Egor Larionov](https://github.com/elrnv)
+This docset for Dash is recompiled by [Zuogong Yue](https://github.com/oracleyue), with LaTeX enabled to fix formula pictures.
 
 # Generate docset
 
