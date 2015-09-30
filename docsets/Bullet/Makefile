@@ -14,6 +14,8 @@ docset: clean
 		doxygen && \
 		cd html && \
 		make && \
+		plutil -insert DashDocSetKeyword -string bullet \
+			org.bulletphysics.docset/Contents/Info.plist && \
 		tar --exclude=.DS_Store -czvf ../../org.bulletphysics.docset.tgz \
 			org.bulletphysics.docset
 	mkdir -p versions/$(VERSION)
