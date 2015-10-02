@@ -4,6 +4,7 @@ docset: clean
 	tar -xzvf source.tgz
 	mv bullet3-$(VERSION) source
 	printf "\n \
+		HAVE_DOT = NO \n \
 		GENERATE_DOCSET = YES\n \
 		DISABLE_INDEX = YES\n \
 		SEARCHENGINE = NO\n \
