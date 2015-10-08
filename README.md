@@ -31,3 +31,7 @@ To contribute a docset, follow the steps below. If you get stuck at any point or
   * Edit the docset.json file. Make sure to follow the same naming rules as the sample (i.e. your docset name should be the same as the archive name, but replace whitespaces with underscores)
   * Edit the README.md
 * Submit a pull request
+
+### How to use a user contributed docset you found here
+
+To use a user contributed docset, go to Dash, click downloads, and click "User Contributed" under "Other docsets".
