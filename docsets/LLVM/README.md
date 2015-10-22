@@ -18,5 +18,5 @@ LLVM Dash Docset
 	 (See: [llvm-to-dash.py](https://github.com/iamaziz/llvm-dash/blob/master/llvm-to-dash.py))
 
 	- Requirements:
-		- [httrack](http://www.httrack.com/) must be installed.
-		- Python package, [Beautiful Soup](https://pypi.python.org/pypi/beautifulsoup4/4.3.2).
+        - Python package, [Sphinx](http://sphinx-doc.org/).
+        - Python package, [Beautiful Soup](https://pypi.python.org/pypi/beautifulsoup4/4.3.2).
