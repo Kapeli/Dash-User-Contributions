@@ -14,5 +14,4 @@ Where to get the docs:
 
 Known Bugs:
 
-- Doesn't include API documentation yet (they will [change them soon](http://kotlinlang.org/docs/api/index.html)).
 - Some pages of the original Kotlin documentation are missing source code. Once they get this fixed we'll update the docset.
