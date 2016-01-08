@@ -1,14 +1,14 @@
-Eigen 3.2.4 Docset
+Eigen 3.2.7 Docset
 ==================
 
-Eigen 3.2.4 Docset for Dash (http://kapeli.com/dash)
+Eigen 3.2.7 Docset for Dash (http://kapeli.com/dash)
 
 # Information
 
-This is a compilation of the documentation available for the Eigen 3.2.4 library.
+This is a compilation of the documentation available for the Eigen 3.2.7 library.
 Please visit http://eigen.tuxfamily.org/ for more information about this project.
 
-The Eigen 3.2.4 library is Free Software. It is licenced under the [MPL2]
+The Eigen 3.2.7 library is Free Software. It is licenced under the [MPL2]
 (http://www.mozilla.org/MPL/2.0), which is a simple weak copyleft license.
 
 Note that currently, a few features rely on third-party code licensed under the
