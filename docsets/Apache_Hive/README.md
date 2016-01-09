@@ -1,4 +1,4 @@
-Apache Hive Docset
+Apache Hive
 =======================
 
 This docset is maintained by Wei Zhang(https://github.com/wezhang). It was generated from the Apache Hive Documents Website (https://cwiki.apache.org/confluence/display/Hive/).
