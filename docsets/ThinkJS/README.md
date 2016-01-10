@@ -26,4 +26,3 @@ If you have problems with this documentation set, or you would like to suggest i
 
 
 [1]: https://github.com/lizheming
-[2]: https://github.com/rvanmil/Docset-Generator-for-ABAP
