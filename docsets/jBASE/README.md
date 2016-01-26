@@ -1,4 +1,4 @@
-Sample Docset
+jBASE Docset
 =======================
 
 This Docset was created by [Lucian Fratila](https://www.bnksys.com) using contents from [a fork](https://github.com/lucianf/jbc-language) of the [jBASE Programmer's Guide](https://github.com/temenostech/jbc-language).
