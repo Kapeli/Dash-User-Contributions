@@ -12,4 +12,4 @@ In short, the process consists in:
 - extracting the Epub, removing the unneeded meta files, setting the correct TOC title and converting the tags into class attributes
 - using dashing to convert the HTML structure into a docset
 
-Detailed instructions on how to reassemble the data (markdown->epub->docset) along with the script I used will be provided in a separate repo (will update here).  Alternatively, please [contact me](https://github.com/lucianf).
+Detailed instructions on how to reassemble the data (markdown->epub->docset) along with the script I used are provided in [this repo](https://github.com/lucianf/dash-docset-jbase).  Alternatively, please [contact me](https://github.com/lucianf).
