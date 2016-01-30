@@ -6,4 +6,5 @@ Theano Dash Docset
 
 - Author:
     - [Aziz Alto](https://github.com/iamaziz)
-    - [Roy Xue](https://github.com/royxue) (Update the latest version)
+    - [Roy Xue](https://github.com/royxue) (Update the version 0.6)
+    - [Zihao Fu](https://github.com/maplewizard)(Update the latest version 0.7)
