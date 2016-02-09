@@ -24,6 +24,15 @@ This is the script file I use to generate this docset, including salient comment
     TARGET=/Volumes/Fasty/Projects/CRYSTAL/Dash-User-Contributions/docsets/Crystal
     
     dashing build crystal-lang
+    DB=crystal.docset/Contents/Resources/docSet.dsidx
+    newlined=$(echo "select id from searchIndex where name like '%
+    %';" | sqlite3 $DB)
+    for id in $newlined; do
+        name=$(echo "select name from searchIndex where id=${id};" | sqlite3 $DB)
+        newname=$(echo $name | awk '{ print $1 }')
+        echo "update searchIndex set name='${newname}' where id=${id};" | sqlite3 $DB
+    done
+    
     tar --exclude='.DS_Store' -cvzf Crystal.tgz crystal.docset
     mv Crystal.tgz "$TARGET/"
     cp crystallogo16x16.png "$TARGET/icon.png"
