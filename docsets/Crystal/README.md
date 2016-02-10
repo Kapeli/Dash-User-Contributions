@@ -24,6 +24,7 @@ This is the script file I use to generate this docset, including salient comment
     TARGET=/Volumes/Fasty/Projects/CRYSTAL/Dash-User-Contributions/docsets/Crystal
     
     dashing build crystal-lang
+    
     DB=crystal.docset/Contents/Resources/docSet.dsidx
     newlined=$(echo "select id from searchIndex where name like '%
     %';" | sqlite3 $DB)
@@ -32,6 +33,10 @@ This is the script file I use to generate this docset, including salient comment
         newname=$(echo $name | awk '{ print $1 }')
         echo "update searchIndex set name='${newname}' where id=${id};" | sqlite3 $DB
     done
+    
+    sed  -ibck -e 's/https*\:\/\/crystal-lang.org\///g' \
+        crystal.docset/Contents/Resources/Documents/api/index.html && \
+        rm -f crystal.docset/Contents/Resources/Documents/api/index.htmlbck
     
     tar --exclude='.DS_Store' -cvzf Crystal.tgz crystal.docset
     mv Crystal.tgz "$TARGET/"
