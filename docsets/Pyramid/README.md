@@ -34,6 +34,22 @@ Add the built Pyramid docs as a docset to the Dash application. `-f` forces an o
 cp /path/to/cloned/repo/Dash-User-Contributions/docsets/Pyramid/icon@2x.png /Users/USERNAME/Library/Application\ Support/doc2dash/DocSets/Pyramid.docset/icon@2x.png
 ```
 
+###Update the `docset.json` file to the current version of Pyramid
+
+```json
+{
+    "name": "Pyramid",
+    "version": "1.6.1",
+    "archive": "Pyramid.tgz",
+    "author": {
+        "name": "Steve Piercy",
+        "link": "https://twitter.com/steve_piercy"
+    },
+    "aliases": [],
+    "specific_versions": []
+}
+```
+
 ###tar up the docset for a pull request
 
 ```shell
