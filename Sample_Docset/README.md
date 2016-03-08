@@ -1,12 +1,8 @@
-Sample Docset
+Zimbra SOAP API
 =======================
+Made by Frederic Maussion (https://github.com/wolfyzvf / https://twitter.com/fred_maussion)
 
-When you contribute a docset, you need to edit this README to include the following:
-* Who are you (GitHub and/or Twitter username)
-* Complete instructions on how to generate the docset, including:
-  * List of any prerequisites (especially your docset generation script!)
-  * Where or how to download the initial HTML documentation for the docset
-  * How to run the generation script
-  * Any other notes that might be useful
-* List of any known bugs (links to GitHub issues)
-* Anything else you think is relevant
+Initial Documentation pulled from the official documentation repository (https://wiki.zimbra.com/wiki/SOAP_API_Reference_Material_Beginning_with_ZCS_8)
+This docset has been build using dashing.
+
+This provide the entire documentation and method for developing against SOAP Zimbra.
