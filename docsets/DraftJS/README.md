@@ -3,10 +3,10 @@ Draft.js Docset
 
 ## Author
 
-Remko Tronçon 
-Twitter: [@remko](https://twitter.com/remko) 
-GitHub: [remko](https://github.com/remko)
-Web: <http://el-tramo.be>
+Remko Tronçon  
+Twitter: [@remko](https://twitter.com/remko)  
+GitHub: [remko](https://github.com/remko)  
+Web: <https://el-tramo.be>
 
 
 ## Building the Docset
