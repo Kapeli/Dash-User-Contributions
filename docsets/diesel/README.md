@@ -31,7 +31,7 @@ configuration file:
     ],
     "icon32x32": "logo.png",
     "allowJS": false,
-    "ExternalURL": "http://sgrif.github.io/diesel/diesel/index.html"
+    "ExternalURL": "http://docs.diesel.rs/diesel/index.html"
 }
 ```
 
