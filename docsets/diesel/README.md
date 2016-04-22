@@ -31,9 +31,13 @@ configuration file:
     ],
     "icon32x32": "logo.png",
     "allowJS": false,
-    "ExternalURL": "http://sgrif.github.io/diesel/diesel/index.html"
+    "ExternalURL": "http://docs.diesel.rs/diesel/index.html"
 }
 ```
+
+To run it, go to Diesel's `gh-pages` branch and run `dashing build diesel`. Once
+you have the docset you should create a tgz version of it, update this repo and
+open a PR to it.
 
 The documentation came from the [official API
 documentation](http://sgrif.github.io/diesel/diesel/index.html).
