@@ -35,6 +35,10 @@ configuration file:
 }
 ```
 
+To run it, go to Diesel's `gh-pages` branch and run `dashing build diesel`. Once
+you have the docset you should create a tgz version of it, update this repo and
+open a PR to it.
+
 The documentation came from the [official API
 documentation](http://sgrif.github.io/diesel/diesel/index.html).
 
