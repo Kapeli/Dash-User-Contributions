@@ -3,7 +3,7 @@ Pythonista 3 Dash Docset [![Build Status](https://travis-ci.org/leesavide/python
 
 > **IMPORTANT:** This docset is only of the Python 3 documentation included with Pythonista 3. For the Python 2 documentation, use [leesavide/pythonista-docs2](https://github.com/leesavide/pythonista-docs2).
 > 
-> Also note that this is **only** the Pythonista 3 documentation. The Dash user docsets and main docsets provide the additional modules that Pythonista provides, and rather than take up 60+ MB of space, it'd be more useful for users of this docset to refer to those docsets when reading up on them.
+> Also note that this is **only** the Pythonista 3 documentation. The Dash user docsets and main docsets provide the additional modules that Pythonista includes, and rather than take up 60+ MB of space, it'd be more useful for users of this docset to refer to those docsets when reading up on them.
 
 [Pythonista](http://omz-software.com/pythonista/) is an integrated development environment for writing [Python™](http://python.org/) scripts on iOS.
 
