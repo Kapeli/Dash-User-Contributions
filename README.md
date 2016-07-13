@@ -7,7 +7,7 @@ When you contribute a docset, you need to edit this README to include the follow
 ##### Fire up the terminal and move to the unzipped folder for the Pelican docs.
 
 ##### Use the following commands to initiate and build the Docset using the **Dashing**
-##### https://github.com/technosophos/dashing#readme
+- https://github.com/technosophos/dashing#readme
 
 ##### Add the docset to the documentation reader tool of your choice
 
