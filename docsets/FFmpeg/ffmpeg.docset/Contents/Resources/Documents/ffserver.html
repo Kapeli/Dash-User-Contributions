@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>ffserver</title>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="style.min.css">
+
+<meta name="description" content="ffserver Documentation: ">
+<meta name="keywords" content="FFmpeg documentation : ffserver ">
+<meta name="Generator" content="texi2html 5.0">
+<!-- Created on August 11, 2016 by texi2html 5.0 -->
+<!--
+texi2html was written by: 
+            Lionel Cons <Lionel.Cons@cern.ch> (original author)
+            Karl Berry  <karl@freefriends.org>
+            Olaf Bachmann <obachman@mathematik.uni-kl.de>
+            and many others.
+Maintained by: Many creative people.
+Send bugs and suggestions to <texi2html-bug@nongnu.org>
+
+-->
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  </head>
+  <body>
+    <div style="width: 95%; margin: auto">
+
+<h1 class="titlefont">ffserver Documentation</h1>
+<hr>
+<a name="SEC_Top"></a>
+
+<a name="SEC_Contents"></a>
+<h1>Table of Contents</h1>
+
+<div class="contents">
+
+<ul class="no-bullet">
+  <li><a name="toc-Synopsis" href="#Synopsis">1 Synopsis</a></li>
+  <li><a name="toc-Description" href="#Description">2 Description</a></li>
+  <li>
+<a name="toc-Detailed-description" href="#Detailed-description">3 Detailed description</a>
+  <ul class="no-bullet">
+    <li><a name="toc-FFM_002c-FFM2-formats" href="#FFM_002c-FFM2-formats">3.1 FFM, FFM2 formats</a></li>
+    <li><a name="toc-Status-stream" href="#Status-stream">3.2 Status stream</a></li>
+    <li><a name="toc-How-do-I-make-it-work_003f" href="#How-do-I-make-it-work_003f">3.3 How do I make it work?</a></li>
+    <li><a name="toc-What-else-can-it-do_003f" href="#What-else-can-it-do_003f">3.4 What else can it do?</a></li>
+    <li><a name="toc-Tips" href="#Tips">3.5 Tips</a></li>
+    <li><a name="toc-Why-does-the-_003fbuffer-_002f-Preroll-stop-working-after-a-time_003f" href="#Why-does-the-_003fbuffer-_002f-Preroll-stop-working-after-a-time_003f">3.6 Why does the ?buffer / Preroll stop working after a time?</a></li>
+    <li><a name="toc-Does-the-_003fdate_003d-stuff-work_002e" href="#Does-the-_003fdate_003d-stuff-work_002e">3.7 Does the <code>?date=</code> stuff work.</a></li>
+  </ul>
+</li>
+  <li>
+<a name="toc-Options" href="#Options">4 Options</a>
+  <ul class="no-bullet">
+    <li><a name="toc-Stream-specifiers-1" href="#Stream-specifiers-1">4.1 Stream specifiers</a></li>
+    <li><a name="toc-Generic-options" href="#Generic-options">4.2 Generic options</a></li>
+    <li><a name="toc-AVOptions" href="#AVOptions">4.3 AVOptions</a></li>
+    <li><a name="toc-Main-options" href="#Main-options">4.4 Main options</a></li>
+  </ul>
+</li>
+  <li>
+<a name="toc-Configuration-file-syntax" href="#Configuration-file-syntax">5 Configuration file syntax</a>
+  <ul class="no-bullet">
+    <li><a name="toc-ACL-syntax" href="#ACL-syntax">5.1 ACL syntax</a></li>
+    <li><a name="toc-Global-options" href="#Global-options">5.2 Global options</a></li>
+    <li><a name="toc-Feed-section" href="#Feed-section">5.3 Feed section</a></li>
+    <li>
+<a name="toc-Stream-section" href="#Stream-section">5.4 Stream section</a>
+    <ul class="no-bullet">
+      <li><a name="toc-Server-status-stream" href="#Server-status-stream">5.4.1 Server status stream</a></li>
+    </ul>
+</li>
+    <li><a name="toc-Redirect-section" href="#Redirect-section">5.5 Redirect section</a></li>
+  </ul>
+</li>
+  <li><a name="toc-Stream-examples" href="#Stream-examples">6 Stream examples</a></li>
+  <li><a name="toc-See-Also" href="#See-Also">7 See Also</a></li>
+  <li><a name="toc-Authors" href="#Authors">8 Authors</a></li>
+</ul>
+</div>
+
+
+<hr size="6">
+<a name="Synopsis"></a>
+<a name="//apple_ref/cpp/Section/1%20Synopsis" class="dashAnchor"></a><h1 class="chapter"><a href="ffserver.html#toc-Synopsis">1 Synopsis</a></h1>
+
+<p>ffserver [<var>options</var>]
+</p>
+<a name="Description"></a>
+<a name="//apple_ref/cpp/Section/2%20Description" class="dashAnchor"></a><h1 class="chapter"><a href="ffserver.html#toc-Description">2 Description</a></h1>
+
+<p><code>ffserver</code> is a streaming server for both audio and video.
+It supports several live feeds, streaming from files and time shifting
+on live feeds. You can seek to positions in the past on each live
+feed, provided you specify a big enough feed storage.
+</p>
+<p><code>ffserver</code> is configured through a configuration file, which
+is read at startup. If not explicitly specified, it will read from
+‘<tt>/etc/ffserver.conf</tt>’.
+</p>
+<p><code>ffserver</code> receives prerecorded files or FFM streams from some
+<code>ffmpeg</code> instance as input, then streams them over
+RTP/RTSP/HTTP.
+</p>
+<p>An <code>ffserver</code> instance will listen on some port as specified
+in the configuration file. You can launch one or more instances of
+<code>ffmpeg</code> and send one or more FFM streams to the port where
+ffserver is expecting to receive them. Alternately, you can make
+<code>ffserver</code> launch such <code>ffmpeg</code> instances at startup.
+</p>
+<p>Input streams are called feeds, and each one is specified by a
+<code>&lt;Feed&gt;</code> section in the configuration file.
+</p>
+<p>For each feed you can have different output streams in various
+formats, each one specified by a <code>&lt;Stream&gt;</code> section in the
+configuration file.
+</p>
+<a name="Detailed-description"></a>
+<a name="//apple_ref/cpp/Section/3%20Det%61ile%64%20%64escription" class="dashAnchor"></a><h1 class="chapter"><a href="ffserver.html#toc-Detailed-description">3 Detailed description</a></h1>
+
+<p><code>ffserver</code> works by forwarding streams encoded by
+<code>ffmpeg</code>, or pre-recorded streams which are read from disk.
+</p>
+<p>Precisely, <code>ffserver</code> acts as an HTTP server, accepting POST
+requests from <code>ffmpeg</code> to acquire the stream to publish, and
+serving RTSP clients or HTTP clients GET requests with the stream
+media content.
+</p>
+<p>A feed is an <a href="#FFM">FFM</a> stream created by <code>ffmpeg</code>, and sent to
+a port where <code>ffserver</code> is listening.
+</p>
+<p>Each feed is identified by a unique name, corresponding to the name
+of the resource published on <code>ffserver</code>, and is configured by
+a dedicated <code>Feed</code> section in the configuration file.
+</p>
+<p>The feed publish URL is given by:
+</p>
+<div class="example">
+<pre class="example">http://<var>ffserver_ip_address</var>:<var>http_port</var>/<var>feed_name</var>
+</pre>
+</div>
+
+<p>where <var>ffserver_ip_address</var> is the IP address of the machine where
+<code>ffserver</code> is installed, <var>http_port</var> is the port number of
+the HTTP server (configured through the ‘<samp>HTTPPort</samp>’ option), and
+<var>feed_name</var> is the name of the corresponding feed defined in the
+configuration file.
+</p>
+<p>Each feed is associated to a file which is stored on disk. This stored
+file is used to send pre-recorded data to a player as fast as
+possible when new content is added in real-time to the stream.
+</p>
+<p>A "live-stream" or "stream" is a resource published by
+<code>ffserver</code>, and made accessible through the HTTP protocol to
+clients.
+</p>
+<p>A stream can be connected to a feed, or to a file. In the first case,
+the published stream is forwarded from the corresponding feed
+generated by a running instance of <code>ffmpeg</code>, in the second
+case the stream is read from a pre-recorded file.
+</p>
+<p>Each stream is identified by a unique name, corresponding to the name
+of the resource served by <code>ffserver</code>, and is configured by
+a dedicated <code>Stream</code> section in the configuration file.
+</p>
+<p>The stream access HTTP URL is given by:
+</p>
+<div class="example">
+<pre class="example">http://<var>ffserver_ip_address</var>:<var>http_port</var>/<var>stream_name</var>[<var>options</var>]
+</pre>
+</div>
+
+<p>The stream access RTSP URL is given by:
+</p>
+<div class="example">
+<pre class="example">http://<var>ffserver_ip_address</var>:<var>rtsp_port</var>/<var>stream_name</var>[<var>options</var>]
+</pre>
+</div>
+
+<p><var>stream_name</var> is the name of the corresponding stream defined in
+the configuration file. <var>options</var> is a list of options specified
+after the URL which affects how the stream is served by
+<code>ffserver</code>. <var>http_port</var> and <var>rtsp_port</var> are the HTTP
+and RTSP ports configured with the options <var>HTTPPort</var> and
+<var>RTSPPort</var> respectively.
+</p>
+<p>In case the stream is associated to a feed, the encoding parameters
+must be configured in the stream configuration. They are sent to
+<code>ffmpeg</code> when setting up the encoding. This allows
+<code>ffserver</code> to define the encoding parameters used by
+the <code>ffmpeg</code> encoders.
+</p>
+<p>The <code>ffmpeg</code> ‘<samp>override_ffserver</samp>’ commandline option
+allows one to override the encoding parameters set by the server.
+</p>
+<p>Multiple streams can be connected to the same feed.
+</p>
+<p>For example, you can have a situation described by the following
+graph:
+</p>
+<pre class="verbatim">               _________       __________
+              |         |     |          |
+ffmpeg 1 -----| feed 1  |-----| stream 1 |
+    \         |_________|\    |__________|
+     \                    \
+      \                    \   __________
+       \                    \ |          |
+        \                    \| stream 2 |
+         \                    |__________|
+          \
+           \   _________       __________
+            \ |         |     |          |
+             \| feed 2  |-----| stream 3 |
+              |_________|     |__________|
+
+               _________       __________
+              |         |     |          |
+ffmpeg 2 -----| feed 3  |-----| stream 4 |
+              |_________|     |__________|
+
+               _________       __________
+              |         |     |          |
+              | file 1  |-----| stream 5 |
+              |_________|     |__________|
+
+</pre>
+<p><a name="FFM"></a>
+</p>
+<a name="FFM_002c-FFM2-formats"></a>
+<a name="//apple_ref/cpp/Entry/FFM%2C%20FFM2%20form%61ts" class="dashAnchor"></a><h2 class="section"><a href="ffserver.html#toc-FFM_002c-FFM2-formats">3.1 FFM, FFM2 formats</a></h2>
+
+<p>FFM and FFM2 are formats used by ffserver. They allow storing a wide variety of
+video and audio streams and encoding options, and can store a moving time segment
+of an infinite movie or a whole movie.
+</p>
+<p>FFM is version specific, and there is limited compatibility of FFM files
+generated by one version of ffmpeg/ffserver and another version of
+ffmpeg/ffserver. It may work but it is not guaranteed to work.
+</p>
+<p>FFM2 is extensible while maintaining compatibility and should work between
+differing versions of tools. FFM2 is the default.
+</p>
+<a name="Status-stream"></a>
+<a name="//apple_ref/cpp/Entry/St%61tus%20stre%61m" class="dashAnchor"></a><h2 class="section"><a href="ffserver.html#toc-Status-stream">3.2 Status stream</a></h2>
+
+<p><code>ffserver</code> supports an HTTP interface which exposes the
+current status of the server.
+</p>
+<p>Simply point your browser to the address of the special status stream
+specified in the configuration file.
+</p>
+<p>For example if you have:
+</p>
+<div class="example">
+<pre class="example">&lt;Stream status.html&gt;
+Format status
+
+# Only allow local people to get the status
+ACL allow localhost
+ACL allow 192.168.0.0 192.168.255.255
+&lt;/Stream&gt;
+</pre>
+</div>
+
+<p>then the server will post a page with the status information when
+the special stream ‘<tt>status.html</tt>’ is requested.
+</p>
+<a name="How-do-I-make-it-work_003f"></a>
+<a name="//apple_ref/cpp/Entry/How%20%64o%20I%20m%61ke%20it%20work%3F" class="dashAnchor"></a><h2 class="section"><a href="ffserver.html#toc-How-do-I-make-it-work_003f">3.3 How do I make it work?</a></h2>
+
+<p>As a simple test, just run the following two command lines where INPUTFILE
+is some file which you can decode with ffmpeg:
+</p>
+<div class="example">
+<pre class="example">ffserver -f doc/ffserver.conf &amp;
+ffmpeg -i INPUTFILE http://localhost:8090/feed1.ffm
+</pre>
+</div>
+
+<p>At this point you should be able to go to your Windows machine and fire up
+Windows Media Player (WMP). Go to Open URL and enter
+</p>
+<div class="example">
+<pre class="example">    http://&lt;linuxbox&gt;:8090/test.asf
+</pre>
+</div>
+
+<p>You should (after a short delay) see video and hear audio.
+</p>
+<p>WARNING: trying to stream test1.mpg doesn’t work with WMP as it tries to
+transfer the entire file before starting to play.
+The same is true of AVI files.
+</p>
+<p>You should edit the ‘<tt>ffserver.conf</tt>’ file to suit your needs (in
+terms of frame rates etc). Then install <code>ffserver</code> and
+<code>ffmpeg</code>, write a script to start them up, and off you go.
+</p>
+<a name="What-else-can-it-do_003f"></a>
+<a name="//apple_ref/cpp/Entry/Wh%61t%20else%20c%61n%20it%20%64o%3F" class="dashAnchor"></a><h2 class="section"><a href="ffserver.html#toc-What-else-can-it-do_003f">3.4 What else can it do?</a></h2>
+
+<p>You can replay video from .ffm files that was recorded earlier.
+However, there are a number of caveats, including the fact that the
+ffserver parameters must match the original parameters used to record the
+file. If they do not, then ffserver deletes the file before recording into it.
+(Now that I write this, it seems broken).
+</p>
+<p>You can fiddle with many of the codec choices and encoding parameters, and
+there are a bunch more parameters that you cannot control. Post a message
+to the mailing list if there are some ’must have’ parameters. Look in
+ffserver.conf for a list of the currently available controls.
+</p>
+<p>It will automatically generate the ASX or RAM files that are often used
+in browsers. These files are actually redirections to the underlying ASF
+or RM file. The reason for this is that the browser often fetches the
+entire file before starting up the external viewer. The redirection files
+are very small and can be transferred quickly. [The stream itself is
+often ’infinite’ and thus the browser tries to download it and never
+finishes.]
+</p>
+<a name="Tips"></a>
+<a name="//apple_ref/cpp/Entry/Tips" class="dashAnchor"></a><h2 class="section"><a href="ffserver.html#toc-Tips">3.5 Tips</a></h2>
+
+<p>* When you connect to a live stream, most players (WMP, RA, etc) want to
+buffer a certain number of seconds of material so that they can display the
+signal continuously. However, ffserver (by default) starts sending data
+in realtime. This means that there is a pause of a few seconds while the
+buffering is being done by the player. The good news is that this can be
+cured by adding a ’?buffer=5’ to the end of the URL. This means that the
+stream should start 5 seconds in the past – and so the first 5 seconds
+of the stream are sent as fast as the network will allow. It will then
+slow down to real time. This noticeably improves the startup experience.
+</p>
+<p>You can also add a ’Preroll 15’ statement into the ffserver.conf that will
+add the 15 second prebuffering on all requests that do not otherwise
+specify a time. In addition, ffserver will skip frames until a key_frame
+is found. This further reduces the startup delay by not transferring data
+that will be discarded.
+</p>
+<a name="Why-does-the-_003fbuffer-_002f-Preroll-stop-working-after-a-time_003f"></a>
+<a name="//apple_ref/cpp/Entry/Why%20%64oes%20the%20%3Fbuffer%20%2F%20Preroll%20stop%20working%20%61fter%20%61%20time%3F" class="dashAnchor"></a><h2 class="section"><a href="ffserver.html#toc-Why-does-the-_003fbuffer-_002f-Preroll-stop-working-after-a-time_003f">3.6 Why does the ?buffer / Preroll stop working after a time?</a></h2>
+
+<p>It turns out that (on my machine at least) the number of frames successfully
+grabbed is marginally less than the number that ought to be grabbed. This
+means that the timestamp in the encoded data stream gets behind realtime.
+This means that if you say ’Preroll 10’, then when the stream gets 10
+or more seconds behind, there is no Preroll left.
+</p>
+<p>Fixing this requires a change in the internals of how timestamps are
+handled.
+</p>
+<a name="Does-the-_003fdate_003d-stuff-work_002e"></a>
+<a name="//apple_ref/cpp/Entry/Does%20the%20%3F%64%61te%3D%20stuff%20work%2E" class="dashAnchor"></a><h2 class="section"><a href="ffserver.html#toc-Does-the-_003fdate_003d-stuff-work_002e">3.7 Does the <code>?date=</code> stuff work.</a></h2>
+
+<p>Yes (subject to the limitation outlined above). Also note that whenever you
+start ffserver, it deletes the ffm file (if any parameters have changed),
+thus wiping out what you had recorded before.
+</p>
+<p>The format of the <code>?date=xxxxxx</code> is fairly flexible. You should use one
+of the following formats (the ’T’ is literal):
+</p>
+<div class="example">
+<pre class="example">* YYYY-MM-DDTHH:MM:SS     (localtime)
+* YYYY-MM-DDTHH:MM:SSZ    (UTC)
+</pre>
+</div>
+
+<p>You can omit the YYYY-MM-DD, and then it refers to the current day. However
+note that ‘<samp>?date=16:00:00</samp>’ refers to 16:00 on the current day – this
+may be in the future and so is unlikely to be useful.
+</p>
+<p>You use this by adding the ?date= to the end of the URL for the stream.
+For example:   ‘<samp>http://localhost:8080/test.asf?date=2002-07-26T23:05:00</samp>’.
+</p>
+<a name="Options"></a>
+<a name="//apple_ref/cpp/Section/4%20Options" class="dashAnchor"></a><h1 class="chapter"><a href="ffserver.html#toc-Options">4 Options</a></h1>
+
+<p>All the numerical options, if not specified otherwise, accept a string
+representing a number as input, which may be followed by one of the SI
+unit prefixes, for example: ’K’, ’M’, or ’G’.
+</p>
+<p>If ’i’ is appended to the SI unit prefix, the complete prefix will be
+interpreted as a unit prefix for binary multiples, which are based on
+powers of 1024 instead of powers of 1000. Appending ’B’ to the SI unit
+prefix multiplies the value by 8. This allows using, for example:
+’KB’, ’MiB’, ’G’ and ’B’ as number suffixes.
+</p>
+<p>Options which do not take arguments are boolean options, and set the
+corresponding value to true. They can be set to false by prefixing
+the option name with "no". For example using "-nofoo"
+will set the boolean option with name "foo" to false.
+</p>
+<p><a name="Stream-specifiers"></a>
+</p>
+<a name="Stream-specifiers-1"></a>
+<a name="//apple_ref/cpp/Entry/Stre%61m%20specifiers" class="dashAnchor"></a><h2 class="section"><a href="ffserver.html#toc-Stream-specifiers-1">4.1 Stream specifiers</a></h2>
+<p>Some options are applied per-stream, e.g. bitrate or codec. Stream specifiers
+are used to precisely specify which stream(s) a given option belongs to.
+</p>
+<p>A stream specifier is a string generally appended to the option name and
+separated from it by a colon. E.g. <code>-codec:a:1 ac3</code> contains the
+<code>a:1</code> stream specifier, which matches the second audio stream. Therefore, it
+would select the ac3 codec for the second audio stream.
+</p>
+<p>A stream specifier can match several streams, so that the option is applied to all
+of them. E.g. the stream specifier in <code>-b:a 128k</code> matches all audio
+streams.
+</p>
+<p>An empty stream specifier matches all streams. For example, <code>-codec copy</code>
+or <code>-codec: copy</code> would copy all the streams without reencoding.
+</p>
+<p>Possible forms of stream specifiers are:
+</p>
+<dl compact>
+<dt>‘<samp><var>stream_index</var></samp>’</dt>
+<dd><p>Matches the stream with this index. E.g. <code>-threads:1 4</code> would set the
+thread count for the second stream to 4.
+</p></dd>
+<dt>‘<samp><var>stream_type</var>[:<var>stream_index</var>]</samp>’</dt>
+<dd><p><var>stream_type</var> is one of following: ’v’ or ’V’ for video, ’a’ for audio, ’s’
+for subtitle, ’d’ for data, and ’t’ for attachments. ’v’ matches all video
+streams, ’V’ only matches video streams which are not attached pictures, video
+thumbnails or cover arts.  If <var>stream_index</var> is given, then it matches
+stream number <var>stream_index</var> of this type. Otherwise, it matches all
+streams of this type.
+</p></dd>
+<dt>‘<samp>p:<var>program_id</var>[:<var>stream_index</var>]</samp>’</dt>
+<dd><p>If <var>stream_index</var> is given, then it matches the stream with number <var>stream_index</var>
+in the program with the id <var>program_id</var>. Otherwise, it matches all streams in the
+program.
+</p></dd>
+<dt>‘<samp>#<var>stream_id</var> or i:<var>stream_id</var></samp>’</dt>
+<dd><p>Match the stream by stream id (e.g. PID in MPEG-TS container).
+</p></dd>
+<dt>‘<samp>m:<var>key</var>[:<var>value</var>]</samp>’</dt>
+<dd><p>Matches streams with the metadata tag <var>key</var> having the specified value. If
+<var>value</var> is not given, matches streams that contain the given tag with any
+value.
+</p></dd>
+<dt>‘<samp>u</samp>’</dt>
+<dd>
+<p>Matches streams with usable configuration, the codec must be defined and the
+essential information such as video dimension or audio sample rate must be present.
+</p>
+<p>Note that in <code>ffmpeg</code>, matching by metadata will only work properly for
+input files.
+</p>
+</dd>
+</dl>
+
+<a name="Generic-options"></a>
+<a name="//apple_ref/cpp/Entry/Generic%20options" class="dashAnchor"></a><h2 class="section"><a href="ffserver.html#toc-Generic-options">4.2 Generic options</a></h2>
+
+<p>These options are shared amongst the ff* tools.
+</p>
+<dl compact>
+<dt>‘<samp>-L</samp>’</dt>
+<dd>
+<p>Show license.
+</p>
+</dd>
+<dt>‘<samp>-h, -?, -help, --help [<var>arg</var>]</samp>’</dt>
+<dd>
+<p>Show help. An optional parameter may be specified to print help about a specific
+item. If no argument is specified, only basic (non advanced) tool
+options are shown.
+</p>
+<p>Possible values of <var>arg</var> are:
+</p>
+<dl compact>
+<dt>‘<samp>long</samp>’</dt>
+<dd>
+<p>Print advanced tool options in addition to the basic tool options.
+</p>
+</dd>
+<dt>‘<samp>full</samp>’</dt>
+<dd>
+<p>Print complete list of options, including shared and private options
+for encoders, decoders, demuxers, muxers, filters, etc.
+</p>
+</dd>
+<dt>‘<samp>decoder=<var>decoder_name</var></samp>’</dt>
+<dd>
+<p>Print detailed information about the decoder named <var>decoder_name</var>. Use the
+‘<samp>-decoders</samp>’ option to get a list of all decoders.
+</p>
+</dd>
+<dt>‘<samp>encoder=<var>encoder_name</var></samp>’</dt>
+<dd>
+<p>Print detailed information about the encoder named <var>encoder_name</var>. Use the
+‘<samp>-encoders</samp>’ option to get a list of all encoders.
+</p>
+</dd>
+<dt>‘<samp>demuxer=<var>demuxer_name</var></samp>’</dt>
+<dd>
+<p>Print detailed information about the demuxer named <var>demuxer_name</var>. Use the
+‘<samp>-formats</samp>’ option to get a list of all demuxers and muxers.
+</p>
+</dd>
+<dt>‘<samp>muxer=<var>muxer_name</var></samp>’</dt>
+<dd>
+<p>Print detailed information about the muxer named <var>muxer_name</var>. Use the
+‘<samp>-formats</samp>’ option to get a list of all muxers and demuxers.
+</p>
+</dd>
+<dt>‘<samp>filter=<var>filter_name</var></samp>’</dt>
+<dd><p>Print detailed information about the filter name <var>filter_name</var>. Use the
+‘<samp>-filters</samp>’ option to get a list of all filters.
+</p></dd>
+</dl>
+
+</dd>
+<dt>‘<samp>-version</samp>’</dt>
+<dd>
+<p>Show version.
+</p>
+</dd>
+<dt>‘<samp>-formats</samp>’</dt>
+<dd>
+<p>Show available formats (including devices).
+</p>
+</dd>
+<dt>‘<samp>-devices</samp>’</dt>
+<dd>
+<p>Show available devices.
+</p>
+</dd>
+<dt>‘<samp>-codecs</samp>’</dt>
+<dd>
+<p>Show all codecs known to libavcodec.
+</p>
+<p>Note that the term ’codec’ is used throughout this documentation as a shortcut
+for what is more correctly called a media bitstream format.
+</p>
+</dd>
+<dt>‘<samp>-decoders</samp>’</dt>
+<dd>
+<p>Show available decoders.
+</p>
+</dd>
+<dt>‘<samp>-encoders</samp>’</dt>
+<dd>
+<p>Show all available encoders.
+</p>
+</dd>
+<dt>‘<samp>-bsfs</samp>’</dt>
+<dd>
+<p>Show available bitstream filters.
+</p>
+</dd>
+<dt>‘<samp>-protocols</samp>’</dt>
+<dd>
+<p>Show available protocols.
+</p>
+</dd>
+<dt>‘<samp>-filters</samp>’</dt>
+<dd>
+<p>Show available libavfilter filters.
+</p>
+</dd>
+<dt>‘<samp>-pix_fmts</samp>’</dt>
+<dd>
+<p>Show available pixel formats.
+</p>
+</dd>
+<dt>‘<samp>-sample_fmts</samp>’</dt>
+<dd>
+<p>Show available sample formats.
+</p>
+</dd>
+<dt>‘<samp>-layouts</samp>’</dt>
+<dd>
+<p>Show channel names and standard channel layouts.
+</p>
+</dd>
+<dt>‘<samp>-colors</samp>’</dt>
+<dd>
+<p>Show recognized color names.
+</p>
+</dd>
+<dt>‘<samp>-sources <var>device</var>[,<var>opt1</var>=<var>val1</var>[,<var>opt2</var>=<var>val2</var>]...]</samp>’</dt>
+<dd>
+<p>Show autodetected sources of the intput device.
+Some devices may provide system-dependent source names that cannot be autodetected.
+The returned list cannot be assumed to be always complete.
+</p>
+<div class="example">
+<pre class="example">ffmpeg -sources pulse,server=192.168.0.4
+</pre>
+</div>
+
+</dd>
+<dt>‘<samp>-sinks <var>device</var>[,<var>opt1</var>=<var>val1</var>[,<var>opt2</var>=<var>val2</var>]...]</samp>’</dt>
+<dd>
+<p>Show autodetected sinks of the output device.
+Some devices may provide system-dependent sink names that cannot be autodetected.
+The returned list cannot be assumed to be always complete.
+</p>
+<div class="example">
+<pre class="example">ffmpeg -sinks pulse,server=192.168.0.4
+</pre>
+</div>
+
+</dd>
+<dt>‘<samp>-loglevel [repeat+]<var>loglevel</var> | -v [repeat+]<var>loglevel</var></samp>’</dt>
+<dd>
+<p>Set the logging level used by the library.
+Adding "repeat+" indicates that repeated log output should not be compressed
+to the first line and the "Last message repeated n times" line will be
+omitted. "repeat" can also be used alone.
+If "repeat" is used alone, and with no prior loglevel set, the default
+loglevel will be used. If multiple loglevel parameters are given, using
+’repeat’ will not change the loglevel.
+<var>loglevel</var> is a string or a number containing one of the following values:
+</p>
+<dl compact>
+<dt>‘<samp>quiet, -8</samp>’</dt>
+<dd><p>Show nothing at all; be silent.
+</p></dd>
+<dt>‘<samp>panic, 0</samp>’</dt>
+<dd><p>Only show fatal errors which could lead the process to crash, such as
+and assert failure. This is not currently used for anything.
+</p></dd>
+<dt>‘<samp>fatal, 8</samp>’</dt>
+<dd><p>Only show fatal errors. These are errors after which the process absolutely
+cannot continue after.
+</p></dd>
+<dt>‘<samp>error, 16</samp>’</dt>
+<dd><p>Show all errors, including ones which can be recovered from.
+</p></dd>
+<dt>‘<samp>warning, 24</samp>’</dt>
+<dd><p>Show all warnings and errors. Any message related to possibly
+incorrect or unexpected events will be shown.
+</p></dd>
+<dt>‘<samp>info, 32</samp>’</dt>
+<dd><p>Show informative messages during processing. This is in addition to
+warnings and errors. This is the default value.
+</p></dd>
+<dt>‘<samp>verbose, 40</samp>’</dt>
+<dd><p>Same as <code>info</code>, except more verbose.
+</p></dd>
+<dt>‘<samp>debug, 48</samp>’</dt>
+<dd><p>Show everything, including debugging information.
+</p></dd>
+<dt>‘<samp>trace, 56</samp>’</dt>
+</dl>
+
+<p>By default the program logs to stderr, if coloring is supported by the
+terminal, colors are used to mark errors and warnings. Log coloring
+can be disabled setting the environment variable
+<code>AV_LOG_FORCE_NOCOLOR</code> or <code>NO_COLOR</code>, or can be forced setting
+the environment variable <code>AV_LOG_FORCE_COLOR</code>.
+The use of the environment variable <code>NO_COLOR</code> is deprecated and
+will be dropped in a following FFmpeg version.
+</p>
+</dd>
+<dt>‘<samp>-report</samp>’</dt>
+<dd>
+<p>Dump full command line and console output to a file named
+<code><var>program</var>-<var>YYYYMMDD</var>-<var>HHMMSS</var>.log</code> in the current
+directory.
+This file can be useful for bug reports.
+It also implies <code>-loglevel verbose</code>.
+</p>
+<p>Setting the environment variable <code>FFREPORT</code> to any value has the
+same effect. If the value is a ’:’-separated key=value sequence, these
+options will affect the report; option values must be escaped if they
+contain special characters or the options delimiter ’:’ (see the
+“Quoting and escaping” section in the ffmpeg-utils manual).
+</p>
+<p>The following options are recognized:
+</p>
+<dl compact>
+<dt>‘<samp>file</samp>’</dt>
+<dd><p>set the file name to use for the report; <code>%p</code> is expanded to the name
+of the program, <code>%t</code> is expanded to a timestamp, <code>%%</code> is expanded
+to a plain <code>%</code>
+</p></dd>
+<dt>‘<samp>level</samp>’</dt>
+<dd><p>set the log verbosity level using a numerical value (see <code>-loglevel</code>).
+</p></dd>
+</dl>
+
+<p>For example, to output a report to a file named ‘<tt>ffreport.log</tt>’
+using a log level of <code>32</code> (alias for log level <code>info</code>):
+</p>
+<div class="example">
+<pre class="example">FFREPORT=file=ffreport.log:level=32 ffmpeg -i input output
+</pre>
+</div>
+
+<p>Errors in parsing the environment variable are not fatal, and will not
+appear in the report.
+</p>
+</dd>
+<dt>‘<samp>-hide_banner</samp>’</dt>
+<dd>
+<p>Suppress printing banner.
+</p>
+<p>All FFmpeg tools will normally show a copyright notice, build options
+and library versions. This option can be used to suppress printing
+this information.
+</p>
+</dd>
+<dt>‘<samp>-cpuflags flags (<em>global</em>)</samp>’</dt>
+<dd>
+<p>Allows setting and clearing cpu flags. This option is intended
+for testing. Do not use it unless you know what you’re doing.
+</p>
+<div class="example">
+<pre class="example">ffmpeg -cpuflags -sse+mmx ...
+ffmpeg -cpuflags mmx ...
+ffmpeg -cpuflags 0 ...
+</pre>
+</div>
+<p>Possible flags for this option are:
+</p>
+<dl compact>
+<dt>‘<samp>x86</samp>’</dt>
+<dd>
+<dl compact>
+<dt>‘<samp>mmx</samp>’</dt>
+<dt>‘<samp>mmxext</samp>’</dt>
+<dt>‘<samp>sse</samp>’</dt>
+<dt>‘<samp>sse2</samp>’</dt>
+<dt>‘<samp>sse2slow</samp>’</dt>
+<dt>‘<samp>sse3</samp>’</dt>
+<dt>‘<samp>sse3slow</samp>’</dt>
+<dt>‘<samp>ssse3</samp>’</dt>
+<dt>‘<samp>atom</samp>’</dt>
+<dt>‘<samp>sse4.1</samp>’</dt>
+<dt>‘<samp>sse4.2</samp>’</dt>
+<dt>‘<samp>avx</samp>’</dt>
+<dt>‘<samp>avx2</samp>’</dt>
+<dt>‘<samp>xop</samp>’</dt>
+<dt>‘<samp>fma3</samp>’</dt>
+<dt>‘<samp>fma4</samp>’</dt>
+<dt>‘<samp>3dnow</samp>’</dt>
+<dt>‘<samp>3dnowext</samp>’</dt>
+<dt>‘<samp>bmi1</samp>’</dt>
+<dt>‘<samp>bmi2</samp>’</dt>
+<dt>‘<samp>cmov</samp>’</dt>
+</dl>
+</dd>
+<dt>‘<samp>ARM</samp>’</dt>
+<dd>
+<dl compact>
+<dt>‘<samp>armv5te</samp>’</dt>
+<dt>‘<samp>armv6</samp>’</dt>
+<dt>‘<samp>armv6t2</samp>’</dt>
+<dt>‘<samp>vfp</samp>’</dt>
+<dt>‘<samp>vfpv3</samp>’</dt>
+<dt>‘<samp>neon</samp>’</dt>
+<dt>‘<samp>setend</samp>’</dt>
+</dl>
+</dd>
+<dt>‘<samp>AArch64</samp>’</dt>
+<dd>
+<dl compact>
+<dt>‘<samp>armv8</samp>’</dt>
+<dt>‘<samp>vfp</samp>’</dt>
+<dt>‘<samp>neon</samp>’</dt>
+</dl>
+</dd>
+<dt>‘<samp>PowerPC</samp>’</dt>
+<dd>
+<dl compact>
+<dt>‘<samp>altivec</samp>’</dt>
+</dl>
+</dd>
+<dt>‘<samp>Specific Processors</samp>’</dt>
+<dd>
+<dl compact>
+<dt>‘<samp>pentium2</samp>’</dt>
+<dt>‘<samp>pentium3</samp>’</dt>
+<dt>‘<samp>pentium4</samp>’</dt>
+<dt>‘<samp>k6</samp>’</dt>
+<dt>‘<samp>k62</samp>’</dt>
+<dt>‘<samp>athlon</samp>’</dt>
+<dt>‘<samp>athlonxp</samp>’</dt>
+<dt>‘<samp>k8</samp>’</dt>
+</dl>
+</dd>
+</dl>
+
+</dd>
+<dt>‘<samp>-opencl_bench</samp>’</dt>
+<dd>
+<p>This option is used to benchmark all available OpenCL devices and print the
+results. This option is only available when FFmpeg has been compiled with
+<code>--enable-opencl</code>.
+</p>
+<p>When FFmpeg is configured with <code>--enable-opencl</code>, the options for the
+global OpenCL context are set via ‘<samp>-opencl_options</samp>’. See the
+"OpenCL Options" section in the ffmpeg-utils manual for the complete list of
+supported options. Amongst others, these options include the ability to select
+a specific platform and device to run the OpenCL code on. By default, FFmpeg
+will run on the first device of the first platform. While the options for the
+global OpenCL context provide flexibility to the user in selecting the OpenCL
+device of their choice, most users would probably want to select the fastest
+OpenCL device for their system.
+</p>
+<p>This option assists the selection of the most efficient configuration by
+identifying the appropriate device for the user’s system. The built-in
+benchmark is run on all the OpenCL devices and the performance is measured for
+each device. The devices in the results list are sorted based on their
+performance with the fastest device listed first. The user can subsequently
+invoke <code>ffmpeg</code> using the device deemed most appropriate via
+‘<samp>-opencl_options</samp>’ to obtain the best performance for the OpenCL
+accelerated code.
+</p>
+<p>Typical usage to use the fastest OpenCL device involve the following steps.
+</p>
+<p>Run the command:
+</p>
+<div class="example">
+<pre class="example">ffmpeg -opencl_bench
+</pre>
+</div>
+<p>Note down the platform ID (<var>pidx</var>) and device ID (<var>didx</var>) of the first
+i.e. fastest device in the list.
+Select the platform and device using the command:
+</p>
+<div class="example">
+<pre class="example">ffmpeg -opencl_options platform_idx=<var>pidx</var>:device_idx=<var>didx</var> ...
+</pre>
+</div>
+
+</dd>
+<dt>‘<samp>-opencl_options options (<em>global</em>)</samp>’</dt>
+<dd>
+<p>Set OpenCL environment options. This option is only available when
+FFmpeg has been compiled with <code>--enable-opencl</code>.
+</p>
+<p><var>options</var> must be a list of <var>key</var>=<var>value</var> option pairs
+separated by ’:’. See the “OpenCL Options” section in the
+ffmpeg-utils manual for the list of supported options.
+</p>
+</dd>
+</dl>
+
+<a name="AVOptions"></a>
+<a name="//apple_ref/cpp/Entry/%41VOptions" class="dashAnchor"></a><h2 class="section"><a href="ffserver.html#toc-AVOptions">4.3 AVOptions</a></h2>
+
+<p>These options are provided directly by the libavformat, libavdevice and
+libavcodec libraries. To see the list of available AVOptions, use the
+‘<samp>-help</samp>’ option. They are separated into two categories:
+</p>
+<dl compact>
+<dt>‘<samp>generic</samp>’</dt>
+<dd><p>These options can be set for any container, codec or device. Generic options
+are listed under AVFormatContext options for containers/devices and under
+AVCodecContext options for codecs.
+</p></dd>
+<dt>‘<samp>private</samp>’</dt>
+<dd><p>These options are specific to the given container, device or codec. Private
+options are listed under their corresponding containers/devices/codecs.
+</p></dd>
+</dl>
+
+<p>For example to write an ID3v2.3 header instead of a default ID3v2.4 to
+an MP3 file, use the ‘<samp>id3v2_version</samp>’ private option of the MP3
+muxer:
+</p>
+<div class="example">
+<pre class="example">ffmpeg -i input.flac -id3v2_version 3 out.mp3
+</pre>
+</div>
+
+<p>All codec AVOptions are per-stream, and thus a stream specifier
+should be attached to them.
+</p>
+<p>Note: the ‘<samp>-nooption</samp>’ syntax cannot be used for boolean
+AVOptions, use ‘<samp>-option 0</samp>’/‘<samp>-option 1</samp>’.
+</p>
+<p>Note: the old undocumented way of specifying per-stream AVOptions by
+prepending v/a/s to the options name is now obsolete and will be
+removed soon.
+</p>
+<a name="Main-options"></a>
+<a name="//apple_ref/cpp/Entry/M%61in%20options" class="dashAnchor"></a><h2 class="section"><a href="ffserver.html#toc-Main-options">4.4 Main options</a></h2>
+
+<dl compact>
+<dt>‘<samp>-f <var>configfile</var></samp>’</dt>
+<dd>
+<p>Read configuration file ‘<tt>configfile</tt>’. If not specified it will
+read by default from ‘<tt>/etc/ffserver.conf</tt>’.
+</p>
+</dd>
+<dt>‘<samp>-n</samp>’</dt>
+<dd>
+<p>Enable no-launch mode. This option disables all the <code>Launch</code>
+directives within the various <code>&lt;Feed&gt;</code> sections. Since
+<code>ffserver</code> will not launch any <code>ffmpeg</code> instances, you
+will have to launch them manually.
+</p>
+</dd>
+<dt>‘<samp>-d</samp>’</dt>
+<dd><p>Enable debug mode. This option increases log verbosity, and directs
+log messages to stdout. When specified, the ‘<samp>CustomLog</samp>’ option
+is ignored.
+</p></dd>
+</dl>
+
+<a name="Configuration-file-syntax"></a>
+<a name="//apple_ref/cpp/Section/5%20Configur%61tion%20file%20synt%61x" class="dashAnchor"></a><h1 class="chapter"><a href="ffserver.html#toc-Configuration-file-syntax">5 Configuration file syntax</a></h1>
+
+<p><code>ffserver</code> reads a configuration file containing global
+options and settings for each stream and feed.
+</p>
+<p>The configuration file consists of global options and dedicated
+sections, which must be introduced by "&lt;<var>SECTION_NAME</var>
+<var>ARGS</var>&gt;" on a separate line and must be terminated by a line in
+the form "&lt;/<var>SECTION_NAME</var>&gt;". <var>ARGS</var> is optional.
+</p>
+<p>Currently the following sections are recognized: ‘<samp>Feed</samp>’,
+‘<samp>Stream</samp>’, ‘<samp>Redirect</samp>’.
+</p>
+<p>A line starting with <code>#</code> is ignored and treated as a comment.
+</p>
+<p>Name of options and sections are case-insensitive.
+</p>
+<a name="ACL-syntax"></a>
+<a name="//apple_ref/cpp/Entry/%41CL%20synt%61x" class="dashAnchor"></a><h2 class="section"><a href="ffserver.html#toc-ACL-syntax">5.1 ACL syntax</a></h2>
+<p>An ACL (Access Control List) specifies the address which are allowed
+to access a given stream, or to write a given feed.
+</p>
+<p>It accepts the folling forms
+</p>
+<ul>
+<li>
+Allow/deny access to <var>address</var>.
+<div class="example">
+<pre class="example">ACL ALLOW &lt;address&gt;
+ACL DENY &lt;address&gt;
+</pre>
+</div>
+
+</li>
+<li>
+Allow/deny access to ranges of addresses from <var>first_address</var> to
+<var>last_address</var>.
+<div class="example">
+<pre class="example">ACL ALLOW &lt;first_address&gt; &lt;last_address&gt;
+ACL DENY &lt;first_address&gt; &lt;last_address&gt;
+</pre>
+</div>
+</li>
+</ul>
+
+<p>You can repeat the ACL allow/deny as often as you like. It is on a per
+stream basis. The first match defines the action. If there are no matches,
+then the default is the inverse of the last ACL statement.
+</p>
+<p>Thus ’ACL allow localhost’ only allows access from localhost.
+’ACL deny 1.0.0.0 1.255.255.255’ would deny the whole of network 1 and
+allow everybody else.
+</p>
+<a name="Global-options"></a>
+<a name="//apple_ref/cpp/Entry/Glob%61l%20options" class="dashAnchor"></a><h2 class="section"><a href="ffserver.html#toc-Global-options">5.2 Global options</a></h2>
+<dl compact>
+<dt>‘<samp>HTTPPort <var>port_number</var></samp>’</dt>
+<dt>‘<samp>Port <var>port_number</var></samp>’</dt>
+<dt>‘<samp>RTSPPort <var>port_number</var></samp>’</dt>
+<dd>
+<p><var>HTTPPort</var> sets the HTTP server listening TCP port number,
+<var>RTSPPort</var> sets the RTSP server listening TCP port number.
+</p>
+<p><var>Port</var> is the equivalent of <var>HTTPPort</var> and is deprecated.
+</p>
+<p>You must select a different port from your standard HTTP web server if
+it is running on the same computer.
+</p>
+<p>If not specified, no corresponding server will be created.
+</p>
+</dd>
+<dt>‘<samp>HTTPBindAddress <var>ip_address</var></samp>’</dt>
+<dt>‘<samp>BindAddress <var>ip_address</var></samp>’</dt>
+<dt>‘<samp>RTSPBindAddress <var>ip_address</var></samp>’</dt>
+<dd>
+<p>Set address on which the HTTP/RTSP server is bound. Only useful if you
+have several network interfaces.
+</p>
+<p><var>BindAddress</var> is the equivalent of <var>HTTPBindAddress</var> and is
+deprecated.
+</p>
+</dd>
+<dt>‘<samp>MaxHTTPConnections <var>n</var></samp>’</dt>
+<dd>
+<p>Set number of simultaneous HTTP connections that can be handled. It
+has to be defined <em>before</em> the ‘<samp>MaxClients</samp>’ parameter,
+since it defines the ‘<samp>MaxClients</samp>’ maximum limit.
+</p>
+<p>Default value is 2000.
+</p>
+</dd>
+<dt>‘<samp>MaxClients <var>n</var></samp>’</dt>
+<dd>
+<p>Set number of simultaneous requests that can be handled. Since
+<code>ffserver</code> is very fast, it is more likely that you will want
+to leave this high and use ‘<samp>MaxBandwidth</samp>’.
+</p>
+<p>Default value is 5.
+</p>
+</dd>
+<dt>‘<samp>MaxBandwidth <var>kbps</var></samp>’</dt>
+<dd>
+<p>Set the maximum amount of kbit/sec that you are prepared to consume
+when streaming to clients.
+</p>
+<p>Default value is 1000.
+</p>
+</dd>
+<dt>‘<samp>CustomLog <var>filename</var></samp>’</dt>
+<dd>
+<p>Set access log file (uses standard Apache log file format). ’-’ is the
+standard output.
+</p>
+<p>If not specified <code>ffserver</code> will produce no log.
+</p>
+<p>In case the commandline option ‘<samp>-d</samp>’ is specified this option is
+ignored, and the log is written to standard output.
+</p>
+</dd>
+<dt>‘<samp>NoDaemon</samp>’</dt>
+<dd>
+<p>Set no-daemon mode. This option is currently ignored since now
+<code>ffserver</code> will always work in no-daemon mode, and is
+deprecated.
+</p>
+</dd>
+<dt>‘<samp>UseDefaults</samp>’</dt>
+<dt>‘<samp>NoDefaults</samp>’</dt>
+<dd><p>Control whether default codec options are used for the all streams or not.
+Each stream may overwrite this setting for its own. Default is <var>UseDefaults</var>.
+The lastest occurrence overrides previous if multiple definitions.
+</p></dd>
+</dl>
+
+<a name="Feed-section"></a>
+<a name="//apple_ref/cpp/Entry/Fee%64%20section" class="dashAnchor"></a><h2 class="section"><a href="ffserver.html#toc-Feed-section">5.3 Feed section</a></h2>
+
+<p>A Feed section defines a feed provided to <code>ffserver</code>.
+</p>
+<p>Each live feed contains one video and/or audio sequence coming from an
+<code>ffmpeg</code> encoder or another <code>ffserver</code>. This sequence
+may be encoded simultaneously with several codecs at several
+resolutions.
+</p>
+<p>A feed instance specification is introduced by a line in the form:
+</p>
+<div class="example">
+<pre class="example">&lt;Feed FEED_FILENAME&gt;
+</pre>
+</div>
+
+<p>where <var>FEED_FILENAME</var> specifies the unique name of the FFM stream.
+</p>
+<p>The following options are recognized within a Feed section.
+</p>
+<dl compact>
+<dt>‘<samp>File <var>filename</var></samp>’</dt>
+<dt>‘<samp>ReadOnlyFile <var>filename</var></samp>’</dt>
+<dd>
+<p>Set the path where the feed file is stored on disk.
+</p>
+<p>If not specified, the ‘<tt>/tmp/FEED.ffm</tt>’ is assumed, where
+<var>FEED</var> is the feed name.
+</p>
+<p>If ‘<samp>ReadOnlyFile</samp>’ is used the file is marked as read-only and
+it will not be deleted or updated.
+</p>
+</dd>
+<dt>‘<samp>Truncate</samp>’</dt>
+<dd>
+<p>Truncate the feed file, rather than appending to it. By default
+<code>ffserver</code> will append data to the file, until the maximum
+file size value is reached (see ‘<samp>FileMaxSize</samp>’ option).
+</p>
+</dd>
+<dt>‘<samp>FileMaxSize <var>size</var></samp>’</dt>
+<dd>
+<p>Set maximum size of the feed file in bytes. 0 means unlimited. The
+postfixes <code>K</code> (2^10), <code>M</code> (2^20), and <code>G</code> (2^30) are
+recognized.
+</p>
+<p>Default value is 5M.
+</p>
+</dd>
+<dt>‘<samp>Launch <var>args</var></samp>’</dt>
+<dd>
+<p>Launch an <code>ffmpeg</code> command when creating <code>ffserver</code>.
+</p>
+<p><var>args</var> must be a sequence of arguments to be provided to an
+<code>ffmpeg</code> instance. The first provided argument is ignored, and
+it is replaced by a path with the same dirname of the <code>ffserver</code>
+instance, followed by the remaining argument and terminated with a
+path corresponding to the feed.
+</p>
+<p>When the launched process exits, <code>ffserver</code> will launch
+another program instance.
+</p>
+<p>In case you need a more complex <code>ffmpeg</code> configuration,
+e.g. if you need to generate multiple FFM feeds with a single
+<code>ffmpeg</code> instance, you should launch <code>ffmpeg</code> by hand.
+</p>
+<p>This option is ignored in case the commandline option ‘<samp>-n</samp>’ is
+specified.
+</p>
+</dd>
+<dt>‘<samp>ACL <var>spec</var></samp>’</dt>
+<dd><p>Specify the list of IP address which are allowed or denied to write
+the feed. Multiple ACL options can be specified.
+</p></dd>
+</dl>
+
+<a name="Stream-section"></a>
+<a name="//apple_ref/cpp/Entry/Stre%61m%20section" class="dashAnchor"></a><h2 class="section"><a href="ffserver.html#toc-Stream-section">5.4 Stream section</a></h2>
+
+<p>A Stream section defines a stream provided by <code>ffserver</code>, and
+identified by a single name.
+</p>
+<p>The stream is sent when answering a request containing the stream
+name.
+</p>
+<p>A stream section must be introduced by the line:
+</p>
+<div class="example">
+<pre class="example">&lt;Stream STREAM_NAME&gt;
+</pre>
+</div>
+
+<p>where <var>STREAM_NAME</var> specifies the unique name of the stream.
+</p>
+<p>The following options are recognized within a Stream section.
+</p>
+<p>Encoding options are marked with the <em>encoding</em> tag, and they are
+used to set the encoding parameters, and are mapped to libavcodec
+encoding options. Not all encoding options are supported, in
+particular it is not possible to set encoder private options. In order
+to override the encoding options specified by <code>ffserver</code>, you
+can use the <code>ffmpeg</code> ‘<samp>override_ffserver</samp>’ commandline
+option.
+</p>
+<p>Only one of the ‘<samp>Feed</samp>’ and ‘<samp>File</samp>’ options should be set.
+</p>
+<dl compact>
+<dt>‘<samp>Feed <var>feed_name</var></samp>’</dt>
+<dd>
+<p>Set the input feed. <var>feed_name</var> must correspond to an existing
+feed defined in a <code>Feed</code> section.
+</p>
+<p>When this option is set, encoding options are used to setup the
+encoding operated by the remote <code>ffmpeg</code> process.
+</p>
+</dd>
+<dt>‘<samp>File <var>filename</var></samp>’</dt>
+<dd>
+<p>Set the filename of the pre-recorded input file to stream.
+</p>
+<p>When this option is set, encoding options are ignored and the input
+file content is re-streamed as is.
+</p>
+</dd>
+<dt>‘<samp>Format <var>format_name</var></samp>’</dt>
+<dd>
+<p>Set the format of the output stream.
+</p>
+<p>Must be the name of a format recognized by FFmpeg. If set to
+‘<samp>status</samp>’, it is treated as a status stream.
+</p>
+</dd>
+<dt>‘<samp>InputFormat <var>format_name</var></samp>’</dt>
+<dd>
+<p>Set input format. If not specified, it is automatically guessed.
+</p>
+</dd>
+<dt>‘<samp>Preroll <var>n</var></samp>’</dt>
+<dd>
+<p>Set this to the number of seconds backwards in time to start. Note that
+most players will buffer 5-10 seconds of video, and also you need to allow
+for a keyframe to appear in the data stream.
+</p>
+<p>Default value is 0.
+</p>
+</dd>
+<dt>‘<samp>StartSendOnKey</samp>’</dt>
+<dd>
+<p>Do not send stream until it gets the first key frame. By default
+<code>ffserver</code> will send data immediately.
+</p>
+</dd>
+<dt>‘<samp>MaxTime <var>n</var></samp>’</dt>
+<dd>
+<p>Set the number of seconds to run. This value set the maximum duration
+of the stream a client will be able to receive.
+</p>
+<p>A value of 0 means that no limit is set on the stream duration.
+</p>
+</dd>
+<dt>‘<samp>ACL <var>spec</var></samp>’</dt>
+<dd>
+<p>Set ACL for the stream.
+</p>
+</dd>
+<dt>‘<samp>DynamicACL <var>spec</var></samp>’</dt>
+<dt>‘<samp>RTSPOption <var>option</var></samp>’</dt>
+<dt>‘<samp>MulticastAddress <var>address</var></samp>’</dt>
+<dt>‘<samp>MulticastPort <var>port</var></samp>’</dt>
+<dt>‘<samp>MulticastTTL <var>integer</var></samp>’</dt>
+<dt>‘<samp>NoLoop</samp>’</dt>
+<dt>‘<samp>FaviconURL <var>url</var></samp>’</dt>
+<dd>
+<p>Set favicon (favourite icon) for the server status page. It is ignored
+for regular streams.
+</p>
+</dd>
+<dt>‘<samp>Author <var>value</var></samp>’</dt>
+<dt>‘<samp>Comment <var>value</var></samp>’</dt>
+<dt>‘<samp>Copyright <var>value</var></samp>’</dt>
+<dt>‘<samp>Title <var>value</var></samp>’</dt>
+<dd>
+<p>Set metadata corresponding to the option. All these options are
+deprecated in favor of ‘<samp>Metadata</samp>’.
+</p>
+</dd>
+<dt>‘<samp>Metadata <var>key</var> <var>value</var></samp>’</dt>
+<dd>
+<p>Set metadata value on the output stream.
+</p>
+</dd>
+<dt>‘<samp>UseDefaults</samp>’</dt>
+<dt>‘<samp>NoDefaults</samp>’</dt>
+<dd>
+<p>Control whether default codec options are used for the stream or not.
+Default is <var>UseDefaults</var> unless disabled globally.
+</p>
+</dd>
+<dt>‘<samp>NoAudio</samp>’</dt>
+<dt>‘<samp>NoVideo</samp>’</dt>
+<dd>
+<p>Suppress audio/video.
+</p>
+</dd>
+<dt>‘<samp>AudioCodec <var>codec_name</var> (<em>encoding,audio</em>)</samp>’</dt>
+<dd>
+<p>Set audio codec.
+</p>
+</dd>
+<dt>‘<samp>AudioBitRate <var>rate</var> (<em>encoding,audio</em>)</samp>’</dt>
+<dd>
+<p>Set bitrate for the audio stream in kbits per second.
+</p>
+</dd>
+<dt>‘<samp>AudioChannels <var>n</var> (<em>encoding,audio</em>)</samp>’</dt>
+<dd>
+<p>Set number of audio channels.
+</p>
+</dd>
+<dt>‘<samp>AudioSampleRate <var>n</var> (<em>encoding,audio</em>)</samp>’</dt>
+<dd>
+<p>Set sampling frequency for audio. When using low bitrates, you should
+lower this frequency to 22050 or 11025. The supported frequencies
+depend on the selected audio codec.
+</p>
+</dd>
+<dt>‘<samp>AVOptionAudio [<var>codec</var>:]<var>option</var> <var>value</var> (<em>encoding,audio</em>)</samp>’</dt>
+<dd>
+<p>Set generic or private option for audio stream.
+Private option must be prefixed with codec name or codec must be defined before.
+</p>
+</dd>
+<dt>‘<samp>AVPresetAudio <var>preset</var> (<em>encoding,audio</em>)</samp>’</dt>
+<dd>
+<p>Set preset for audio stream.
+</p>
+</dd>
+<dt>‘<samp>VideoCodec <var>codec_name</var> (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set video codec.
+</p>
+</dd>
+<dt>‘<samp>VideoBitRate <var>n</var> (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set bitrate for the video stream in kbits per second.
+</p>
+</dd>
+<dt>‘<samp>VideoBitRateRange <var>range</var> (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set video bitrate range.
+</p>
+<p>A range must be specified in the form <var>minrate</var>-<var>maxrate</var>, and
+specifies the ‘<samp>minrate</samp>’ and ‘<samp>maxrate</samp>’ encoding options
+expressed in kbits per second.
+</p>
+</dd>
+<dt>‘<samp>VideoBitRateRangeTolerance <var>n</var> (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set video bitrate tolerance in kbits per second.
+</p>
+</dd>
+<dt>‘<samp>PixelFormat <var>pixel_format</var> (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set video pixel format.
+</p>
+</dd>
+<dt>‘<samp>Debug <var>integer</var> (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set video ‘<samp>debug</samp>’ encoding option.
+</p>
+</dd>
+<dt>‘<samp>Strict <var>integer</var> (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set video ‘<samp>strict</samp>’ encoding option.
+</p>
+</dd>
+<dt>‘<samp>VideoBufferSize <var>n</var> (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set ratecontrol buffer size, expressed in KB.
+</p>
+</dd>
+<dt>‘<samp>VideoFrameRate <var>n</var> (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set number of video frames per second.
+</p>
+</dd>
+<dt>‘<samp>VideoSize (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set size of the video frame, must be an abbreviation or in the form
+<var>W</var>x<var>H</var>.  See <a href="ffmpeg-utils.html#video-size-syntax">(ffmpeg-utils)the Video size section in the ffmpeg-utils(1) manual</a>.
+</p>
+<p>Default value is <code>160x128</code>.
+</p>
+</dd>
+<dt>‘<samp>VideoIntraOnly (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Transmit only intra frames (useful for low bitrates, but kills frame rate).
+</p>
+</dd>
+<dt>‘<samp>VideoGopSize <var>n</var> (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>If non-intra only, an intra frame is transmitted every VideoGopSize
+frames. Video synchronization can only begin at an intra frame.
+</p>
+</dd>
+<dt>‘<samp>VideoTag <var>tag</var> (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set video tag.
+</p>
+</dd>
+<dt>‘<samp>VideoHighQuality (<em>encoding,video</em>)</samp>’</dt>
+<dt>‘<samp>Video4MotionVector (<em>encoding,video</em>)</samp>’</dt>
+<dt>‘<samp>BitExact (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set bitexact encoding flag.
+</p>
+</dd>
+<dt>‘<samp>IdctSimple (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set simple IDCT algorithm.
+</p>
+</dd>
+<dt>‘<samp>Qscale <var>n</var> (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Enable constant quality encoding, and set video qscale (quantization
+scale) value, expressed in <var>n</var> QP units.
+</p>
+</dd>
+<dt>‘<samp>VideoQMin <var>n</var> (<em>encoding,video</em>)</samp>’</dt>
+<dt>‘<samp>VideoQMax <var>n</var> (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set video qmin/qmax.
+</p>
+</dd>
+<dt>‘<samp>VideoQDiff <var>integer</var> (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set video ‘<samp>qdiff</samp>’ encoding option.
+</p>
+</dd>
+<dt>‘<samp>LumiMask <var>float</var> (<em>encoding,video</em>)</samp>’</dt>
+<dt>‘<samp>DarkMask <var>float</var> (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set ‘<samp>lumi_mask</samp>’/‘<samp>dark_mask</samp>’ encoding options.
+</p>
+</dd>
+<dt>‘<samp>AVOptionVideo [<var>codec</var>:]<var>option</var> <var>value</var> (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set generic or private option for video stream.
+Private option must be prefixed with codec name or codec must be defined before.
+</p>
+</dd>
+<dt>‘<samp>AVPresetVideo <var>preset</var> (<em>encoding,video</em>)</samp>’</dt>
+<dd>
+<p>Set preset for video stream.
+</p>
+<p><var>preset</var> must be the path of a preset file.
+</p>
+</dd>
+</dl>
+
+<a name="Server-status-stream"></a>
+<h3 class="subsection"><a href="ffserver.html#toc-Server-status-stream">5.4.1 Server status stream</a></h3>
+
+<p>A server status stream is a special stream which is used to show
+statistics about the <code>ffserver</code> operations.
+</p>
+<p>It must be specified setting the option ‘<samp>Format</samp>’ to
+‘<samp>status</samp>’.
+</p>
+<a name="Redirect-section"></a>
+<a name="//apple_ref/cpp/Entry/Re%64irect%20section" class="dashAnchor"></a><h2 class="section"><a href="ffserver.html#toc-Redirect-section">5.5 Redirect section</a></h2>
+
+<p>A redirect section specifies where to redirect the requested URL to
+another page.
+</p>
+<p>A redirect section must be introduced by the line:
+</p>
+<div class="example">
+<pre class="example">&lt;Redirect NAME&gt;
+</pre>
+</div>
+
+<p>where <var>NAME</var> is the name of the page which should be redirected.
+</p>
+<p>It only accepts the option ‘<samp>URL</samp>’, which specify the redirection
+URL.
+</p>
+<a name="Stream-examples"></a>
+<a name="//apple_ref/cpp/Section/6%20Stre%61m%20ex%61mples" class="dashAnchor"></a><h1 class="chapter"><a href="ffserver.html#toc-Stream-examples">6 Stream examples</a></h1>
+
+<ul>
+<li>
+Multipart JPEG
+<div class="example">
+<pre class="example">&lt;Stream test.mjpg&gt;
+Feed feed1.ffm
+Format mpjpeg
+VideoFrameRate 2
+VideoIntraOnly
+NoAudio
+Strict -1
+&lt;/Stream&gt;
+</pre>
+</div>
+
+</li>
+<li>
+Single JPEG
+<div class="example">
+<pre class="example">&lt;Stream test.jpg&gt;
+Feed feed1.ffm
+Format jpeg
+VideoFrameRate 2
+VideoIntraOnly
+VideoSize 352x240
+NoAudio
+Strict -1
+&lt;/Stream&gt;
+</pre>
+</div>
+
+</li>
+<li>
+Flash
+<div class="example">
+<pre class="example">&lt;Stream test.swf&gt;
+Feed feed1.ffm
+Format swf
+VideoFrameRate 2
+VideoIntraOnly
+NoAudio
+&lt;/Stream&gt;
+</pre>
+</div>
+
+</li>
+<li>
+ASF compatible
+<div class="example">
+<pre class="example">&lt;Stream test.asf&gt;
+Feed feed1.ffm
+Format asf
+VideoFrameRate 15
+VideoSize 352x240
+VideoBitRate 256
+VideoBufferSize 40
+VideoGopSize 30
+AudioBitRate 64
+StartSendOnKey
+&lt;/Stream&gt;
+</pre>
+</div>
+
+</li>
+<li>
+MP3 audio
+<div class="example">
+<pre class="example">&lt;Stream test.mp3&gt;
+Feed feed1.ffm
+Format mp2
+AudioCodec mp3
+AudioBitRate 64
+AudioChannels 1
+AudioSampleRate 44100
+NoVideo
+&lt;/Stream&gt;
+</pre>
+</div>
+
+</li>
+<li>
+Ogg Vorbis audio
+<div class="example">
+<pre class="example">&lt;Stream test.ogg&gt;
+Feed feed1.ffm
+Metadata title "Stream title"
+AudioBitRate 64
+AudioChannels 2
+AudioSampleRate 44100
+NoVideo
+&lt;/Stream&gt;
+</pre>
+</div>
+
+</li>
+<li>
+Real with audio only at 32 kbits
+<div class="example">
+<pre class="example">&lt;Stream test.ra&gt;
+Feed feed1.ffm
+Format rm
+AudioBitRate 32
+NoVideo
+&lt;/Stream&gt;
+</pre>
+</div>
+
+</li>
+<li>
+Real with audio and video at 64 kbits
+<div class="example">
+<pre class="example">&lt;Stream test.rm&gt;
+Feed feed1.ffm
+Format rm
+AudioBitRate 32
+VideoBitRate 128
+VideoFrameRate 25
+VideoGopSize 25
+&lt;/Stream&gt;
+</pre>
+</div>
+
+</li>
+<li>
+For stream coming from a file: you only need to set the input filename
+and optionally a new format.
+
+<div class="example">
+<pre class="example">&lt;Stream file.rm&gt;
+File "/usr/local/httpd/htdocs/tlive.rm"
+NoAudio
+&lt;/Stream&gt;
+</pre>
+</div>
+
+<div class="example">
+<pre class="example">&lt;Stream file.asf&gt;
+File "/usr/local/httpd/htdocs/test.asf"
+NoAudio
+Metadata author "Me"
+Metadata copyright "Super MegaCorp"
+Metadata title "Test stream from disk"
+Metadata comment "Test comment"
+&lt;/Stream&gt;
+</pre>
+</div>
+</li>
+</ul>
+
+
+
+<a name="See-Also"></a>
+<a name="//apple_ref/cpp/Section/7%20See%20%41lso" class="dashAnchor"></a><h1 class="chapter"><a href="ffserver.html#toc-See-Also">7 See Also</a></h1>
+
+<p><a href="ffserver-all.html">ffserver-all</a>,
+the ‘<tt>doc/ffserver.conf</tt>’ example,
+<a href="ffmpeg.html">ffmpeg</a>, <a href="ffplay.html">ffplay</a>, <a href="ffprobe.html">ffprobe</a>,
+<a href="ffmpeg-utils.html">ffmpeg-utils</a>,
+<a href="ffmpeg-scaler.html">ffmpeg-scaler</a>,
+<a href="ffmpeg-resampler.html">ffmpeg-resampler</a>,
+<a href="ffmpeg-codecs.html">ffmpeg-codecs</a>,
+<a href="ffmpeg-bitstream-filters.html">ffmpeg-bitstream-filters</a>,
+<a href="ffmpeg-formats.html">ffmpeg-formats</a>,
+<a href="ffmpeg-devices.html">ffmpeg-devices</a>,
+<a href="ffmpeg-protocols.html">ffmpeg-protocols</a>,
+<a href="ffmpeg-filters.html">ffmpeg-filters</a>
+</p>
+
+<a name="Authors"></a>
+<a name="//apple_ref/cpp/Section/8%20%41uthors" class="dashAnchor"></a><h1 class="chapter"><a href="ffserver.html#toc-Authors">8 Authors</a></h1>
+
+<p>The FFmpeg developers.
+</p>
+<p>For details about the authorship, see the Git history of the project
+(git://source.ffmpeg.org/ffmpeg), e.g. by typing the command
+<code>git log</code> in the FFmpeg source directory, or browsing the
+online repository at <a href="http://source.ffmpeg.org">http://source.ffmpeg.org</a>.
+</p>
+<p>Maintainers for the specific components are listed in the file
+‘<tt>MAINTAINERS</tt>’ in the source code tree.
+</p>
+
+    </div>
+  </body>
+</html>
