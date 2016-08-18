@@ -174,7 +174,8 @@ def archive_docset():
 	if os.path.exists("Defold.tgz"):
 		os.remove("Defold.tgz")
 
-	call(["tar", "--exclude='.DS_Store'", "-cvzf", "Defold.tgz", "defold.docset"])
+	call(["tar", "--exclude='.DS_Store'", "-cvzf", "Defold.tgz", docset_path])
+	shutil.rmtree(docset_path)
 
 	print("Creating docset.json")
 	with open("docset.json", "w") as out:
