@@ -1,0 +1,174 @@
+<h1><a name='//apple_ref/cpp/Property/angular_damping' class='dashAnchor'></a><a name='angular_damping'>angular_damping</a></h1><p>collision object angular damping (number)</p><p>The angular damping value for the collision object. Setting this value alters the damping of
+angular motion of the object (rotation). Valid values are between 0 (no damping) and 1 (full damping).</p><h3>EXAMPLES</h3><p><p>
+How to decrease a collision object component's angular damping:
+</p>
+<pre>
+-- get angular damping from collision object "collisionobject" in gameobject "floater"
+local target = "floater#collisionobject"
+local damping = go.get(target, "angular_damping")
+-- decrease it by 10%
+go.set(target, "angular_damping", damping * 0.9)
+</pre></p><h1><a name='//apple_ref/cpp/Property/angular_velocity' class='dashAnchor'></a><a name='angular_velocity'>angular_velocity</a></h1><p>collision object angular velocity (vector3)</p><p>[READ ONLY] Returns the current linear velocity of the collision object component as a vector3.
+The velocity is measured as a rotation around the vector with a speed equivalent to the vector length
+in radians/s.</p><h3>EXAMPLES</h3><p><p>
+How to query a collision object component's angular velocity:
+</p>
+<pre>
+-- get angular velocity from collision object "collisionobject" in gameobject "boulder"
+-- this is a 2d game so rotation around z is the only one available.
+local velocity = go.get("boulder#collisionobject", "angular_velocity.z")
+-- do something interesting
+if velocity < 0 then
+    -- clockwise rotation
+    ...
+else
+    -- counter clockwise rotation
+    ...
+end
+</pre></p><h1><a name='//apple_ref/cpp/Command/apply_force' class='dashAnchor'></a><a name='apply_force'>apply_force</a></h1><p>applies a force on a collision object</p><p>Post this message to a collision-object-component to apply the specified force on the collision object.
+The collision object must be dynamic.</p><h3>PARAMETERS</h3><p>force - the force to be applied on the collision object, measured in Newton (vector3)</p><p>position - the position where the force should be applied (vector3)</p><h3>EXAMPLES</h3><p><p>
+Assuming the instance of the script has a collision-object-component with id "co":
+</p>
+<pre>
+-- apply a force of 1 Newton towards world-x at the center of the game object instance
+msg.post("#co", "apply_force", {force = vmath.vector3(1, 0, 0), position = go.get_world_position()})
+</pre></p><h1><a name='//apple_ref/cpp/Command/collision_response' class='dashAnchor'></a><a name='collision_response'>collision_response</a></h1><p>reports a collision between two collision objects</p><p><p>
+This message is broadcasted to every component of an instance that has a collision object, when the collision
+object collides with another collision object. For a script to take action when such a collision happens, it
+should check for this message in its <code>on_message</code> callback function.
+</p>
+<p>
+This message only reports that a collision actually happened and will only be sent once per colliding pair and frame.
+To retrieve more detailed information, check for the <code>contact_point_response</code> instead.
+</p></p><h3>PARAMETERS</h3><p>other_id - the id of the instance the collision object collided with (hash)</p><p>other_position - the world position of the instance the collision object collided with (vec3)</p><p>group - the collision group of the other collision object (hash)</p><h3>EXAMPLES</h3><p><p>
+How to take action when a collision occurs:
+</p>
+<pre>
+function on_message(self, message_id, message, sender)
+    -- check for the message
+    if message_id == hash("collision_response") then
+        -- take action
+    end
+end
+</pre></p><h1><a name='//apple_ref/cpp/Command/contact_point_response' class='dashAnchor'></a><a name='contact_point_response'>contact_point_response</a></h1><p>reports a contact point between two collision objects</p><p><p>
+This message is broadcasted to every component of an instance that has a collision object, when the collision
+object has contact points with respect to another collision object. For a script to take action when
+such contact points occur, it should check for this message in its <code>on_message</code> callback function.
+</p>
+<p>
+Since multiple contact points can occur for two colliding objects, this message can be sent multiple times in
+the same frame for the same two colliding objects. To only be notified once when the collision occurs, check
+for the <code>collision_response</code> message instead.
+</p></p><h3>PARAMETERS</h3><p>position - world position of the contact point (vector3)</p><p>normal - normal in world space of the contact point, which points from the other object towards the current object (vector3)</p><p>relative_velocity - the relative velocity of the collision object as observed from the other object (vector3)</p><p>distance - the penetration distance between the objects, which is always positive (number)</p><p>applied_impulse - the impulse the contact resulted in (number)</p><p>life_time - life time of the contact, <b>not currently used</b> (number)</p><p>mass - the mass of the current collision object in kg (number)</p><p>other_mass - the mass of the other collision object in kg (number)</p><p>other_id - the id of the instance the collision object is in contact with (hash)</p><p>other_position - the world position of the other collision object (vector3)</p><p>group - the collision group of the other collision object (hash)</p><h3>EXAMPLES</h3><p><p>
+How to take action when a contact point occurs:
+</p>
+<pre>
+function on_message(self, message_id, message, sender)
+    -- check for the message
+    if message_id == hash("contact_point_response") then
+        -- take action
+    end
+end
+</pre></p><h1><a name='//apple_ref/cpp/Property/linear_damping' class='dashAnchor'></a><a name='linear_damping'>linear_damping</a></h1><p>collision object linear damping (number)</p><p>The linear damping value for the collision object. Setting this value alters the damping of
+linear motion of the object. Valid values are between 0 (no damping) and 1 (full damping).</p><h3>EXAMPLES</h3><p><p>
+How to increase a collision object component's linear damping:
+</p>
+<pre>
+-- get linear damping from collision object "collisionobject" in gameobject "floater"
+local target = "floater#collisionobject"
+local damping = go.get(target, "linear_damping")
+-- increase it by 10% if it's below 0.9
+if damping <= 0.9 then
+    go.set(target, "linear_damping", damping * 1.1)
+end
+</pre></p><h1><a name='//apple_ref/cpp/Property/linear_velocity' class='dashAnchor'></a><a name='linear_velocity'>linear_velocity</a></h1><p>collision object linear velocity (vector3)</p><p>[READ ONLY] Returns the current linear velocity of the collision object component as a vector3.
+The velocity is measured in units/s (pixels/s).</p><h3>EXAMPLES</h3><p><p>
+How to query a collision object component's linear velocity:
+</p>
+<pre>
+-- get linear velocity from collision object "collisionobject" in gameobject "ship"
+local source = "ship#collisionobject"
+local velocity = go.get(source, "linear_velocity")
+-- apply the velocity on target game object "boulder"'s collision object as a force
+local target = "boulder#collisionobject"
+local pos = go.get_position(target)
+msg.post(target, "apply_force", { force = velocity, position = pos })
+</pre></p><h1><a name='//apple_ref/cpp/Property/mass' class='dashAnchor'></a><a name='mass'>mass</a></h1><p>collision object mass (number)</p><p>[READ ONLY] Returns the defined physical mass of the collision object component as a number.</p><h3>EXAMPLES</h3><p><p>
+How to query a collision object component's mass:
+</p>
+<pre>
+-- get mass from collision object component "boulder"
+local mass = go.get("#boulder", "mass")
+-- do something useful
+assert(mass > 1)
+</pre></p><h1><a name='//apple_ref/cpp/Function/physics.ray_cast' class='dashAnchor'></a><a name='physics.ray_cast'>physics.ray_cast()</a></h1><p>requests a ray cast to be performed</p><p>Ray casts are used to test for intersections against collision objects in the physics world.
+Which collision objects to hit is filtered by their collision groups and can be configured through <code>groups</code>.
+The actual ray cast will be performed during the physics-update.
+If an object is hit, the result will be reported via a <code>ray_cast_response</code> message.</p><h3>PARAMETERS</h3><p>from - the world position of the start of the ray (vector3)</p><p>to - the world position of the end of the ray (vector3)</p><p>groups - a lua table containing the hashed groups for which to test collisions against (table)</p><p>[request_id] - a number between 0-255 that will be sent back in the response for identification, 0 by default (number)</p><h3>EXAMPLES</h3><p><p>
+How to perform a ray cast:
+</p>
+<pre>
+function init(self)
+    self.my_interesting_groups = {hash("my_group1"), hash("my_group2")}
+end
+
+function update(self, dt)
+    -- request ray cast
+    physics.ray_cast(interesting_start, interesting_end, self.my_interesting_groups)
+end
+
+function on_message(self, message_id, message, sender)
+    -- check for the response
+    if message_id == hash("ray_cast_response") then
+        -- act on the hit
+    end
+end
+</pre></p><h1><a name='//apple_ref/cpp/Command/ray_cast_response' class='dashAnchor'></a><a name='ray_cast_response'>ray_cast_response</a></h1><p>reports a ray cast hit</p><p>This message is sent back to the sender of a <code>ray_cast_request</code>, if the ray hit a collision object.
+See <code>request_ray_cast</code> for examples of how to use it.</p><h3>PARAMETERS</h3><p>fraction - the fraction of the hit measured along the ray, where 0 is the start of the ray and 1 is the end (number)</p><p>position - the world position of the hit</p><p>normal - the normal of the surface of the collision object where it was hit</p><p>id - the instance id of the hit collision object</p><p>group - the collision group of the hit collision object as a hashed name</p><p>request_id - id supplied when the ray cast was requested</p><h1><a name='//apple_ref/cpp/Command/request_velocity' class='dashAnchor'></a><a name='request_velocity'>request_velocity</a></h1><p>(DEPRECATED) requests the velocity of a collision object</p><p><b>DEPRECATED!</b> Post this message to a collision-object-component to retrieve its velocity.
+
+Read properties <code>linear_velocity</code> and <code>angular_velocity</code>
+with <code>go.get()</code> instead.</p><h3>EXAMPLES</h3><p><p>
+How to retrieve the velocity of a collision object, assuming the collision-object-component has id "co" and belongs to the same instance as the script:
+</p>
+<pre>
+function update(self, dt)
+    -- request velocity
+    msg.post("#co", "request_velocity")
+end
+
+function on_message(self, message_id, message, sender)
+    -- check for the response
+    if message_id == hash("velocity_response") then
+        -- do something with the velocity, e.g:
+        self.velocity = message.linear_velocity
+    end
+end
+</pre></p><h1><a name='//apple_ref/cpp/Command/trigger_response' class='dashAnchor'></a><a name='trigger_response'>trigger_response</a></h1><p>reports interaction (enter/exit) between a trigger collision object and another collision object</p><p><p>
+This message is broadcasted to every component of an instance that has a collision object, when the collision
+object interacts with another collision object and one of them is a trigger.
+For a script to take action when such an interaction happens, it
+should check for this message in its <code>on_message</code> callback function.
+</p>
+<p>
+This message only reports that an interaction actually happened and will only be sent once per colliding pair and frame.
+To retrieve more detailed information, check for the <code>contact_point_response</code> instead.
+</p></p><h3>PARAMETERS</h3><p>other_id - the id of the instance the collision object collided with (hash)</p><p>enter - if the interaction was an entry or not (exit)</p><p>group - the collision group of the triggering object as a hashed name</p><h3>EXAMPLES</h3><p><p>
+How to take action when a trigger interaction occurs:
+</p>
+<pre>
+function on_message(self, message_id, message, sender)
+    -- check for the message
+    if message_id == hash("trigger_response") then
+        if message.enter then
+            -- take action for entry
+        else
+            -- take action for exit
+        end
+    end
+end
+</pre></p><h1><a name='//apple_ref/cpp/Command/velocity_response' class='dashAnchor'></a><a name='velocity_response'>velocity_response</a></h1><p>(DEPRECATED) reports the velocity of a collision object</p><p><b>DEPRECATED!</b> This message is sent back to the sender of a <code>request_velocity</code> message.
+See <code>request_velocity</code> for examples on how to use it.
+
+Read properties <code>linear_velocity</code> and <code>angular_velocity</code>
+with <code>go.get()</code> instead.</p><h3>PARAMETERS</h3><p>linear_velocity - the linear velocity, i.e. translation, of the collision object in units/s (pixels/s (vector3)</p><p>angular_velocity - the angular velocity, i.e. rotation, of the collision object in radians/s.
+The velocity is measured as a rotation around the vector with a speed equivalent to the vector length (vector3)</p>
