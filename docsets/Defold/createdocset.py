@@ -151,9 +151,10 @@ def create_docset():
 									class_doc = class_doc + "<h3>PARAMETERS</h3>"
 									for parameter in element["parameters"]:
 										class_doc = class_doc + "<p>" + parameter["name"] + " - "  + parameter["doc"] + "</p>"
-								if element["return_"] != "":
+								if len(element["returnvalues"]) > 0:
 									class_doc = class_doc + "<h3>RETURN</h3>"
-									class_doc = class_doc + "<p>" + element["return_"] + "</p>"
+									for returnvalue in element["returnvalues"]:
+										class_doc = class_doc + "<p>" + returnvalue["name"] + " - " + returnvalue["doc"] + "</p>"
 								if element["examples"] != "":
 									class_doc = class_doc + "<h3>EXAMPLES</h3>"
 									class_doc = class_doc + "<p>" + element["examples"] + "</p>"
