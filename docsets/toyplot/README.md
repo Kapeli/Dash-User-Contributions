@@ -10,8 +10,8 @@
 * Build document with sphinx
   * `cd toyplot-xxx/docs && make html`
 * Build docset with [doc2dash](https://pypi.python.org/pypi/doc2dash)
-  * `cd toyplot-xxx/docs && doc2dash _build/html`
-  * Find `html.docset` at `toyplot-xxx/docs`
+  * `cd toyplot-xxx/docs && doc2dash -n toyplot _build/html`
+  * Find `toyplot.docset` at `toyplot-xxx/docs`
 
 ## Prerequesties
 
