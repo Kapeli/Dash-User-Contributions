@@ -12,6 +12,9 @@
 * Build docset with [doc2dash](https://pypi.python.org/pypi/doc2dash)
   * `cd toyplot-xxx/docs && doc2dash -n toyplot _build/html`
   * Find `toyplot.docset` at `toyplot-xxx/docs`
+* Fix index page
+  * Add `<key>dashIndexFilePath</key>\n<string>index.html</string>` in
+    Info.plist.
 
 ## Prerequesties
 
