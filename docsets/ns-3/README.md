@@ -13,5 +13,5 @@ To generate the docset:
   6. enter the `./doc/html` dir and run `make`.
   7. copy the icons to the docset folder (`cp /path/to/icon* org.nsnam.ns3.docset`).
   8. copy the `Info.plist` to the docset's contents folder (`cp /path/to/Info.plist org.nsnam.ns3.docset/Contents/`).
-  9. rename the docset `mv /path/to/org.nsnam.ns3.docset ns-3.docset`
+  9. rename the docset `mv /path/to/org.nsnam.ns3.docset ns-3.docset`.
   10. pack the docset via `tar --exclude='.DS_Store' -cvzf ns-3.tgz ns-3.docset`.
