@@ -17,7 +17,3 @@ __How to generate the docset:__
 - Requirements:
 	- [httrack](http://www.httrack.com/) must be installed.
 	- Python package, [Beautiful Soup](https://pypi.python.org/pypi/beautifulsoup4/4.3.2).
-
-
-doc2dash doesn't support scikit documentation format, so I had to make scikit-to-dash.py script (tested on Mac OS).
-> Documentation size is 55,42MiB so it may take a while to download after you run the script (if you don't want to download html files, comment line 11 in scikit-to-dash.py).
