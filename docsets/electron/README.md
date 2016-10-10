@@ -12,6 +12,10 @@ github: [pirafrank](http://github.com/pirafrank)
 
 website: [fpira.com](http://fpira.com)
 
+### Contributors
+
+sidneys: [sidneys.github.io](https://sidneys.github.io)
+
 ### Documentation source
 
 Just the electron.atom.io website.
