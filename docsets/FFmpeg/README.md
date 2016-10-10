@@ -7,7 +7,6 @@
 #### Steve Yin
 
 - GitHub: [Steve Yin](https://github.com/steve3d)
-Thanks [klausbadelt](https://github.com/klausbadelt) for the idea.
 
 ## Building the Docset
 
