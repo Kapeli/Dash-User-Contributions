@@ -1,3 +1,14 @@
-# Draft.js, A rich text editor framework for React, by facebook, Dash Documentation
+Draft.js Docset
+===================
 
-The single script for generating and bundling up this docset can be found [here](https://github.com/epitaphmike/draft-js-dash). Please file an issue there if you want to update the docs! Thanks.
+## Author
+
+Remko Tronçon  
+Twitter: [@remko](https://twitter.com/remko)  
+GitHub: [remko](https://github.com/remko)  
+Web: <https://el-tramo.be>
+
+
+## Building the Docset
+
+Follow the instructions at <https://github.com/remko/draftjs-dash-generator>

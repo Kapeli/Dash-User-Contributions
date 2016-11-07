@@ -1,7 +1,11 @@
-Pythonista Dash Docset
+Pythonista 3 Dash Docset [![Build Status](https://travis-ci.org/leesavide/pythonista-docs3.svg?branch=master)](https://travis-ci.org/leesavide/pythonista-docs3)
 =======================
 
-[Pythonista](http://omz-software.com/editorial/) is an integrated development environment for writing [Python™](http://python.org/) scripts on iOS.
+> **IMPORTANT:** This docset is only of the Python 3 documentation included with Pythonista 3. For the Python 2 documentation, use [leesavide/pythonista-docs2](https://github.com/leesavide/pythonista-docs2).
+> 
+> Also note that this is **only** the Pythonista 3 documentation. The Dash user docsets and main docsets provide the additional modules that Pythonista includes, and rather than take up 60+ MB of space, it'd be more useful for users of this docset to refer to those docsets when reading up on them.
+
+[Pythonista](http://omz-software.com/pythonista/) is an integrated development environment for writing [Python™](http://python.org/) scripts on iOS.
 
 Read into [Pythonista Documentation](http://omz-software.com/pythonista/docs/) and [Pythonista Tools](http://pythonista-tools.github.io/Pythonista-Tools/) for the online docs and examples of Pythonista projects.
 
@@ -26,11 +30,11 @@ Updated by [Ole Zorn](https://github.com/omz).
 #### Option 1:
 
 - Install [doc2dash](https://pypi.python.org/pypi/doc2dash)
-- Buy [Pythonista](http://itunes.apple.com/us/app/pythonista/id528579881) (yes you do have to buy it, it's completely worth the $6.99)
+- Buy [Pythonista 3](https://itunes.apple.com/us/app/pythonista-3/id1085978097) (yes you do have to buy it, it's completely worth the $6.99)
 - Go to your Mobile Applications folder (`C:\Users\<username>\Music\iTunes\iTunes Media\Mobile Applications` for Windows, `~/Music/iTunes/iTunes Media/Mobile Applications` on Mac OS X)
 - Copy `Pythonista x.x.x.ipa` to another folder, where `x.x.x` is the version number
 - Rename to `Pythonista x.x.x.zip`, and decompress the archive
-- Move `Payload/Pythonista.app/Documentation` to some where more accessible
+- Move `Payload/Pythonista.app/Documentation.zip` to some where more accessible & decompress the archive
 - Rename `Documentation` to `pythonista-docs` or somthing similar.
 - Copy `pythonista-docs/_static/pythonista_icon.png` to `pythonista-docs` (Replace `pythonista-docs` with the name of the documentation folder, if you didn't use `pythonista-docs` as the name)
 - Build the docset:

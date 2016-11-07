@@ -25,5 +25,4 @@ Prerequisite(OSX):
 * Terminal: doc2dash Blender
 * That's all!
 
-No known bugs, works fine.
-
+Updated to add the latest version currently, 2.77.1
