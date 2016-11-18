@@ -45,5 +45,5 @@ cd docs/
 ```sh
 make html
 cd ..
-doc2dash -n "Google App Engine - Python" -i docs/_static/images/gcp-logo-32x32.png -j -u https://googlecloudplatform.github.io/google-cloud-python/stable/ -f docs/_build/html/
+doc2dash -n "GAE-Python" -i docs/_static/images/gcp-logo-32x32.png -j -u https://googlecloudplatform.github.io/google-cloud-python/stable/ -f docs/_build/html/
 ```
