@@ -2,6 +2,7 @@ Android Gradle Plug-in DSL Reference
 ====================================
 
 Created by [Tarek Belkahia](https://github.com/tokou)
+Updated by [Jordan Bondo](https://github.com/faithfracture)
 
 ## Generation
 
