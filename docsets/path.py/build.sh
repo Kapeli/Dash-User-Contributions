@@ -48,10 +48,10 @@ pip install -q -e .
 
 echo "Building HTML documentation…"
 
-cd "${SRC_DIR}"
+cd "${SRC_DIR}/docs"
 
 # Use Sphinx to build the docs using the "readable" theme
-sphinx-build -Q -a -E -D html_theme="readable" -D html_theme_path="${THEME_PATH}" docs "${BUILD_DIR}"
+sphinx-build -Q -a -E -D html_theme="readable" -D html_theme_path="${THEME_PATH}" . "${BUILD_DIR}"
 
 # Return to the master branch
 git checkout -q master
@@ -62,7 +62,7 @@ git checkout -q master
 
 echo "Preparing documentation for docset conversion…"
 
-cd ${BUILD_DIR}
+cd "${BUILD_DIR}"
 
 # Don't need any images
 rm _static/*.png _static/*.gif
