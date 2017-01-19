@@ -1,0 +1,184 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Python 3 FAQ &mdash; PyMongo 3.4.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/pydoctheme.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '3.4.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/sidebar.js"></script>
+    <link rel="top" title="PyMongo 3.4.0 documentation" href="index.html" />
+    <link rel="up" title="Changelog" href="changelog.html" />
+    <link rel="next" title="PyMongo 3 Migration Guide" href="migrate-to-pymongo3.html" />
+    <link rel="prev" title="Changelog" href="changelog.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="migrate-to-pymongo3.html" title="PyMongo 3 Migration Guide"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="changelog.html" title="Changelog"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyMongo 3.4.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="changelog.html" accesskey="U">Changelog</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="python-3-faq">
+<h1><a class="toc-backref" href="#id1">Python 3 FAQ</a><a class="headerlink" href="#python-3-faq" title="Permalink to this headline">¶</a></h1>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="simple">
+<li><a class="reference internal" href="#python-3-faq" id="id1">Python 3 FAQ</a><ul>
+<li><a class="reference internal" href="#what-python-3-versions-are-supported" id="id2">What Python 3 versions are supported?</a></li>
+<li><a class="reference internal" href="#are-there-any-pymongo-behavior-changes-with-python-3" id="id3">Are there any PyMongo behavior changes with Python 3?</a></li>
+<li><a class="reference internal" href="#why-can-t-i-share-pickled-objectids-between-some-versions-of-python-2-and-3" id="id4">Why can&#8217;t I share pickled ObjectIds between some versions of Python 2 and 3?</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="what-python-3-versions-are-supported">
+<h2><a class="toc-backref" href="#id2">What Python 3 versions are supported?</a><a class="headerlink" href="#what-python-3-versions-are-supported" title="Permalink to this headline">¶</a></h2>
+<p>PyMongo supports CPython 3.3+ and PyPy3.</p>
+</div>
+<div class="section" id="are-there-any-pymongo-behavior-changes-with-python-3">
+<h2><a class="toc-backref" href="#id3">Are there any PyMongo behavior changes with Python 3?</a><a class="headerlink" href="#are-there-any-pymongo-behavior-changes-with-python-3" title="Permalink to this headline">¶</a></h2>
+<p>Only one intentional change. Instances of <code class="xref py py-class docutils literal"><span class="pre">bytes</span></code>
+are encoded as BSON type 5 (Binary data) with subtype 0.
+In Python 3 they are decoded back to <code class="xref py py-class docutils literal"><span class="pre">bytes</span></code>. In
+Python 2 they will be decoded to <a class="reference internal" href="api/bson/binary.html#bson.binary.Binary" title="bson.binary.Binary"><code class="xref py py-class docutils literal"><span class="pre">Binary</span></code></a>
+with subtype 0.</p>
+<p>For example, let&#8217;s insert a <code class="xref py py-class docutils literal"><span class="pre">bytes</span></code> instance using Python 3 then
+read it back. Notice the byte string is decoded back to <code class="xref py py-class docutils literal"><span class="pre">bytes</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre>Python 3.3.5 (default, Apr 29 2016, 11:04:32)
+[GCC 4.9.3] on linux
+Type &quot;help&quot;, &quot;copyright&quot;, &quot;credits&quot; or &quot;license&quot; for more information.
+&gt;&gt;&gt; import pymongo
+&gt;&gt;&gt; c = pymongo.MongoClient()
+&gt;&gt;&gt; c.test.bintest.insert_one({&#39;binary&#39;: b&#39;this is a byte string&#39;}).inserted_id
+ObjectId(&#39;4f9086b1fba5222021000000&#39;)
+&gt;&gt;&gt; c.test.bintest.find_one()
+{&#39;binary&#39;: b&#39;this is a byte string&#39;, &#39;_id&#39;: ObjectId(&#39;4f9086b1fba5222021000000&#39;)}
+</pre></div>
+</div>
+<p>Now retrieve the same document in Python 2. Notice the byte string is decoded
+to <a class="reference internal" href="api/bson/binary.html#bson.binary.Binary" title="bson.binary.Binary"><code class="xref py py-class docutils literal"><span class="pre">Binary</span></code></a>:</p>
+<div class="highlight-python"><div class="highlight"><pre>Python 2.7.6 (default, Feb 26 2014, 10:36:22)
+[GCC 4.7.3] on linux2
+Type &quot;help&quot;, &quot;copyright&quot;, &quot;credits&quot; or &quot;license&quot; for more information.
+&gt;&gt;&gt; import pymongo
+&gt;&gt;&gt; c = pymongo.MongoClient()
+&gt;&gt;&gt; c.test.bintest.find_one()
+{u&#39;binary&#39;: Binary(&#39;this is a byte string&#39;, 0), u&#39;_id&#39;: ObjectId(&#39;4f9086b1fba5222021000000&#39;)}
+</pre></div>
+</div>
+</div>
+<div class="section" id="why-can-t-i-share-pickled-objectids-between-some-versions-of-python-2-and-3">
+<h2><a class="toc-backref" href="#id4">Why can&#8217;t I share pickled ObjectIds between some versions of Python 2 and 3?</a><a class="headerlink" href="#why-can-t-i-share-pickled-objectids-between-some-versions-of-python-2-and-3" title="Permalink to this headline">¶</a></h2>
+<p>Instances of <a class="reference internal" href="api/bson/objectid.html#bson.objectid.ObjectId" title="bson.objectid.ObjectId"><code class="xref py py-class docutils literal"><span class="pre">ObjectId</span></code></a> pickled using Python 2
+can always be unpickled using Python 3.</p>
+<p>If you pickled an ObjectId using Python 2 and want to unpickle it using
+Python 3 you must pass <code class="docutils literal"><span class="pre">encoding='latin-1'</span></code> to pickle.loads:</p>
+<div class="highlight-python"><div class="highlight"><pre>Python 2.7.6 (default, Feb 26 2014, 10:36:22)
+[GCC 4.7.3] on linux2
+Type &quot;help&quot;, &quot;copyright&quot;, &quot;credits&quot; or &quot;license&quot; for more information.
+&gt;&gt;&gt; import pickle
+&gt;&gt;&gt; from bson.objectid import ObjectId
+&gt;&gt;&gt; oid = ObjectId()
+&gt;&gt;&gt; oid
+ObjectId(&#39;4f919ba2fba5225b84000000&#39;)
+&gt;&gt;&gt; pickle.dumps(oid)
+&#39;ccopy_reg\n_reconstructor\np0\n(cbson.objectid\...&#39;
+
+Python 3.3.5 (default, Apr 29 2016, 11:04:32)
+[GCC 4.9.3] on linux
+Type &quot;help&quot;, &quot;copyright&quot;, &quot;credits&quot; or &quot;license&quot; for more information.
+&gt;&gt;&gt; import pickle
+&gt;&gt;&gt; pickle.loads(b&#39;ccopy_reg\n_reconstructor\np0\n(cbson.objectid\...&#39;, encoding=&#39;latin-1&#39;)
+ObjectId(&#39;4f919ba2fba5225b84000000&#39;)
+</pre></div>
+</div>
+<p>If you need to pickle ObjectIds using Python 3 and unpickle them using Python 2
+you must use <code class="docutils literal"><span class="pre">protocol</span> <span class="pre">&lt;=</span> <span class="pre">2</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre>Python 3.3.5 (default, Apr 29 2016, 11:04:32)
+[GCC 4.9.3] on linux
+Type &quot;help&quot;, &quot;copyright&quot;, &quot;credits&quot; or &quot;license&quot; for more information.
+&gt;&gt;&gt; import pickle
+&gt;&gt;&gt; from bson.objectid import ObjectId
+&gt;&gt;&gt; oid = ObjectId()
+&gt;&gt;&gt; oid
+ObjectId(&#39;4f96f20c430ee6bd06000000&#39;)
+&gt;&gt;&gt; pickle.dumps(oid, protocol=2)
+b&#39;\x80\x02cbson.objectid\nObjectId\nq\x00)\x81q\x01c_codecs\nencode\...&#39;
+
+Python 2.6.9 (unknown, Feb 26 2014, 12:39:10)
+[GCC 4.7.3] on linux2
+Type &quot;help&quot;, &quot;copyright&quot;, &quot;credits&quot; or &quot;license&quot; for more information.
+&gt;&gt;&gt; import pickle
+&gt;&gt;&gt; pickle.loads(&#39;\x80\x02cbson.objectid\nObjectId\nq\x00)\x81q\x01c_codecs\nencode\...&#39;)
+ObjectId(&#39;4f96f20c430ee6bd06000000&#39;)
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="migrate-to-pymongo3.html" title="PyMongo 3 Migration Guide"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="changelog.html" title="Changelog"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyMongo 3.4.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="changelog.html" >Changelog</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2008 - 2015, MongoDB, Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.5.
+    </div>
+  </body>
+</html>

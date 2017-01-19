@@ -1,0 +1,669 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
+<title>cursor – Tools for iterating over MongoDB query results — PyMongo 3.4.0 documentation</title>
+<link href="../../_static/pydoctheme.css" rel="stylesheet" type="text/css"/>
+<link href="../../_static/pygments.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '3.4.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+<script src="../../_static/jquery.js" type="text/javascript"></script>
+<script src="../../_static/underscore.js" type="text/javascript"></script>
+<script src="../../_static/doctools.js" type="text/javascript"></script>
+<script src="../../_static/sidebar.js" type="text/javascript"></script>
+<link href="../../index.html" rel="top" title="PyMongo 3.4.0 documentation"/>
+<link href="index.html" rel="up" title="pymongo – Python driver for MongoDB"/>
+<link href="bulk.html" rel="next" title="bulk – The bulk write operations interface"/>
+<link href="command_cursor.html" rel="prev" title="command_cursor – Tools for iterating over MongoDB command results"/>
+</head>
+<body role="document">
+<div aria-label="related navigation" class="related" role="navigation">
+<h3>Navigation</h3>
+<ul>
+<li class="right" style="margin-right: 10px">
+<a accesskey="I" href="../../genindex.html" title="General Index">index</a></li>
+<li class="right">
+<a href="../../py-modindex.html" title="Python Module Index">modules</a> |</li>
+<li class="right">
+<a accesskey="N" href="bulk.html" title="bulk – The bulk write operations interface">next</a> |</li>
+<li class="right">
+<a accesskey="P" href="command_cursor.html" title="command_cursor – Tools for iterating over MongoDB command results">previous</a> |</li>
+<li class="nav-item nav-item-0"><a href="../../index.html">PyMongo 3.4.0 documentation</a> »</li>
+<li class="nav-item nav-item-1"><a href="../index.html">API Documentation</a> »</li>
+<li class="nav-item nav-item-2"><a accesskey="U" href="index.html"><code class="docutils literal"><span class="pre">pymongo</span></code> – Python driver for MongoDB</a> »</li>
+</ul>
+</div>
+<div class="document">
+<div class="documentwrapper">
+<div class="body" role="main">
+<div class="section" id="module-pymongo.cursor">
+<span id="cursor-tools-for-iterating-over-mongodb-query-results"></span><h1><a name="//apple_ref/cpp/Module/pymongo.cursor"></a><code class="xref py py-mod docutils literal"><span class="pre">cursor</span></code> – Tools for iterating over MongoDB query results<a class="headerlink" href="#module-pymongo.cursor" title="Permalink to this headline">¶</a></h1>
+<p>Cursor class to iterate over Mongo query results.</p>
+<dl class="class">
+<dt id="pymongo.cursor.CursorType"><a name="//apple_ref/cpp/Class/pymongo.cursor.CursorType"></a>
+<em class="property">class </em><code class="descclassname">pymongo.cursor.</code><code class="descname">CursorType</code><a class="headerlink" href="#pymongo.cursor.CursorType" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="attribute">
+<dt id="pymongo.cursor.CursorType.NON_TAILABLE"><a name="//apple_ref/cpp/Attribute/pymongo.cursor.CursorType.NON_TAILABLE"></a>
+<code class="descname">NON_TAILABLE</code><a class="headerlink" href="#pymongo.cursor.CursorType.NON_TAILABLE" title="Permalink to this definition">¶</a></dt>
+<dd><p>The standard cursor type.</p>
+</dd></dl>
+<dl class="attribute">
+<dt id="pymongo.cursor.CursorType.TAILABLE"><a name="//apple_ref/cpp/Attribute/pymongo.cursor.CursorType.TAILABLE"></a>
+<code class="descname">TAILABLE</code><a class="headerlink" href="#pymongo.cursor.CursorType.TAILABLE" title="Permalink to this definition">¶</a></dt>
+<dd><p>The tailable cursor type.</p>
+<p>Tailable cursors are only for use with capped collections. They are not
+closed when the last data is retrieved but are kept open and the cursor
+location marks the final document position. If more data is received
+iteration of the cursor will continue from the last document received.</p>
+</dd></dl>
+<dl class="attribute">
+<dt id="pymongo.cursor.CursorType.TAILABLE_AWAIT"><a name="//apple_ref/cpp/Attribute/pymongo.cursor.CursorType.TAILABLE_AWAIT"></a>
+<code class="descname">TAILABLE_AWAIT</code><a class="headerlink" href="#pymongo.cursor.CursorType.TAILABLE_AWAIT" title="Permalink to this definition">¶</a></dt>
+<dd><p>A tailable cursor with the await option set.</p>
+<p>Creates a tailable cursor that will wait for a few seconds after returning
+the full result set so that it can capture and return additional data added
+during the query.</p>
+</dd></dl>
+<dl class="attribute">
+<dt id="pymongo.cursor.CursorType.EXHAUST"><a name="//apple_ref/cpp/Attribute/pymongo.cursor.CursorType.EXHAUST"></a>
+<code class="descname">EXHAUST</code><a class="headerlink" href="#pymongo.cursor.CursorType.EXHAUST" title="Permalink to this definition">¶</a></dt>
+<dd><p>An exhaust cursor.</p>
+<p>MongoDB will stream batched results to the client without waiting for the
+client to request each batch, reducing latency.</p>
+</dd></dl>
+</dd></dl>
+<dl class="class">
+<dt id="pymongo.cursor.Cursor"><a name="//apple_ref/cpp/Class/pymongo.cursor.Cursor"></a>
+<em class="property">class </em><code class="descclassname">pymongo.cursor.</code><code class="descname">Cursor</code><span class="sig-paren">(</span><em>collection</em>, <em>filter=None</em>, <em>projection=None</em>, <em>skip=0</em>, <em>limit=0</em>, <em>no_cursor_timeout=False</em>, <em>cursor_type=CursorType.NON_TAILABLE</em>, <em>sort=None</em>, <em>allow_partial_results=False</em>, <em>oplog_replay=False</em>, <em>modifiers=None</em>, <em>manipulate=True</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new cursor.</p>
+<p>Should not be called directly by application developers - see
+<a class="reference internal" href="collection.html#pymongo.collection.Collection.find" title="pymongo.collection.Collection.find"><code class="xref py py-meth docutils literal"><span class="pre">find()</span></code></a> instead.</p>
+<div class="admonition-see-general-mongodb-documentation admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="admonition-title">See general MongoDB documentation</p>
+<p class="last"><a class="reference external" href="http://dochub.mongodb.org/core/cursors" name="pymongo.cursor.Cursor"><em>cursors</em></a></p>
+</div>
+<dl class="describe">
+<dt>
+<code class="descname">c[index]</code></dt>
+<dd><p>See <a class="reference internal" href="#pymongo.cursor.Cursor.__getitem__" title="pymongo.cursor.Cursor.__getitem__"><code class="xref py py-meth docutils literal"><span class="pre">__getitem__()</span></code></a>.</p>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.__getitem__"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.__getitem__"></a>
+<code class="descname">__getitem__</code><span class="sig-paren">(</span><em>index</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.__getitem__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a single document or a slice of documents from this cursor.</p>
+<p>Raises <a class="reference internal" href="errors.html#pymongo.errors.InvalidOperation" title="pymongo.errors.InvalidOperation"><code class="xref py py-class docutils literal"><span class="pre">InvalidOperation</span></code></a> if this
+cursor has already been used.</p>
+<p>To get a single document use an integral index, e.g.:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">test</span><span class="o">.</span><span class="n">find</span><span class="p">()[</span><span class="mi">50</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>An <code class="xref py py-class docutils literal"><span class="pre">IndexError</span></code> will be raised if the index is negative
+or greater than the amount of documents in this cursor. Any
+limit previously applied to this cursor will be ignored.</p>
+<p>To get a slice of documents use a slice index, e.g.:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">test</span><span class="o">.</span><span class="n">find</span><span class="p">()[</span><span class="mi">20</span><span class="p">:</span><span class="mi">25</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>This will return this cursor with a limit of <code class="docutils literal"><span class="pre">5</span></code> and skip of
+<code class="docutils literal"><span class="pre">20</span></code> applied.  Using a slice index will override any prior
+limits or skips applied to this cursor (including those
+applied through previous calls to this method). Raises
+<code class="xref py py-class docutils literal"><span class="pre">IndexError</span></code> when the slice has a step, a negative
+start value, or a stop value less than or equal to the start
+value.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>index</cite>: An integer or slice index to be applied to this cursor</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.add_option"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.add_option"></a>
+<code class="descname">add_option</code><span class="sig-paren">(</span><em>mask</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.add_option" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set arbitrary query flags using a bitmask.</p>
+<p>To set the tailable flag:
+cursor.add_option(2)</p>
+</dd></dl>
+<dl class="attribute">
+<dt id="pymongo.cursor.Cursor.address"><a name="//apple_ref/cpp/Attribute/pymongo.cursor.Cursor.address"></a>
+<code class="descname">address</code><a class="headerlink" href="#pymongo.cursor.Cursor.address" title="Permalink to this definition">¶</a></dt>
+<dd><p>The (host, port) of the server used, or None.</p>
+<div class="versionchanged">
+<p><span class="versionmodified">Changed in version 3.0: </span>Renamed from “conn_id”.</p>
+</div>
+</dd></dl>
+<dl class="attribute">
+<dt id="pymongo.cursor.Cursor.alive"><a name="//apple_ref/cpp/Attribute/pymongo.cursor.Cursor.alive"></a>
+<code class="descname">alive</code><a class="headerlink" href="#pymongo.cursor.Cursor.alive" title="Permalink to this definition">¶</a></dt>
+<dd><p>Does this cursor have the potential to return more data?</p>
+<p>This is mostly useful with <a class="reference external" href="http://www.mongodb.org/display/DOCS/Tailable+Cursors">tailable cursors</a>
+since they will stop iterating even though they <em>may</em> return more
+results in the future.</p>
+<p>With regular cursors, simply use a for loop instead of <a class="reference internal" href="#pymongo.cursor.Cursor.alive" title="pymongo.cursor.Cursor.alive"><code class="xref py py-attr docutils literal"><span class="pre">alive</span></code></a>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">collection</span><span class="o">.</span><span class="n">find</span><span class="p">():</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Even if <a class="reference internal" href="#pymongo.cursor.Cursor.alive" title="pymongo.cursor.Cursor.alive"><code class="xref py py-attr docutils literal"><span class="pre">alive</span></code></a> is True, <a class="reference internal" href="#pymongo.cursor.Cursor.next" title="pymongo.cursor.Cursor.next"><code class="xref py py-meth docutils literal"><span class="pre">next()</span></code></a> can raise
+<code class="xref py py-exc docutils literal"><span class="pre">StopIteration</span></code>. <a class="reference internal" href="#pymongo.cursor.Cursor.alive" title="pymongo.cursor.Cursor.alive"><code class="xref py py-attr docutils literal"><span class="pre">alive</span></code></a> can also be True while iterating
+a cursor from a failed server. In this case <a class="reference internal" href="#pymongo.cursor.Cursor.alive" title="pymongo.cursor.Cursor.alive"><code class="xref py py-attr docutils literal"><span class="pre">alive</span></code></a> will
+return False after <a class="reference internal" href="#pymongo.cursor.Cursor.next" title="pymongo.cursor.Cursor.next"><code class="xref py py-meth docutils literal"><span class="pre">next()</span></code></a> fails to retrieve the next batch
+of results from the server.</p>
+</div>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.batch_size"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.batch_size"></a>
+<code class="descname">batch_size</code><span class="sig-paren">(</span><em>batch_size</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.batch_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>Limits the number of documents returned in one batch. Each batch
+requires a round trip to the server. It can be adjusted to optimize
+performance and limit data transfer.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">batch_size can not override MongoDB’s internal limits on the
+amount of data it will return to the client in a single batch (i.e
+if you set batch size to 1,000,000,000, MongoDB will currently only
+return 4-16MB of results per batch).</p>
+</div>
+<p>Raises <code class="xref py py-exc docutils literal"><span class="pre">TypeError</span></code> if <cite>batch_size</cite> is not an integer.
+Raises <code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code> if <cite>batch_size</cite> is less than <code class="docutils literal"><span class="pre">0</span></code>.
+Raises <a class="reference internal" href="errors.html#pymongo.errors.InvalidOperation" title="pymongo.errors.InvalidOperation"><code class="xref py py-exc docutils literal"><span class="pre">InvalidOperation</span></code></a> if this
+<a class="reference internal" href="#pymongo.cursor.Cursor" title="pymongo.cursor.Cursor"><code class="xref py py-class docutils literal"><span class="pre">Cursor</span></code></a> has already been used. The last <cite>batch_size</cite>
+applied to this cursor takes precedence.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>batch_size</cite>: The size of each batch of results requested.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.clone"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.clone"></a>
+<code class="descname">clone</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.clone" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a clone of this cursor.</p>
+<p>Returns a new Cursor instance with options matching those that have
+been set on the current instance. The clone will be completely
+unevaluated, even if the current instance has been partially or
+completely evaluated.</p>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.close"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.close"></a>
+<code class="descname">close</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.close" title="Permalink to this definition">¶</a></dt>
+<dd><p>Explicitly close / kill this cursor. Required for PyPy, Jython and
+other Python implementations that don’t use reference counting
+garbage collection.</p>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.collation"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.collation"></a>
+<code class="descname">collation</code><span class="sig-paren">(</span><em>collation</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.collation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a <a class="reference internal" href="collation.html#pymongo.collation.Collation" title="pymongo.collation.Collation"><code class="xref py py-class docutils literal"><span class="pre">Collation</span></code></a> to this query.</p>
+<p>This option is only supported on MongoDB 3.4 and above.</p>
+<p>Raises <code class="xref py py-exc docutils literal"><span class="pre">TypeError</span></code> if <cite>collation</cite> is not an instance of
+<a class="reference internal" href="collation.html#pymongo.collation.Collation" title="pymongo.collation.Collation"><code class="xref py py-class docutils literal"><span class="pre">Collation</span></code></a> or a <code class="docutils literal"><span class="pre">dict</span></code>. Raises
+<a class="reference internal" href="errors.html#pymongo.errors.InvalidOperation" title="pymongo.errors.InvalidOperation"><code class="xref py py-exc docutils literal"><span class="pre">InvalidOperation</span></code></a> if this <a class="reference internal" href="#pymongo.cursor.Cursor" title="pymongo.cursor.Cursor"><code class="xref py py-class docutils literal"><span class="pre">Cursor</span></code></a> has
+already been used. Only the last collation applied to this cursor has
+any effect.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>collation</cite>: An instance of <a class="reference internal" href="collation.html#pymongo.collation.Collation" title="pymongo.collation.Collation"><code class="xref py py-class docutils literal"><span class="pre">Collation</span></code></a>.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<dl class="attribute">
+<dt id="pymongo.cursor.Cursor.collection"><a name="//apple_ref/cpp/Attribute/pymongo.cursor.Cursor.collection"></a>
+<code class="descname">collection</code><a class="headerlink" href="#pymongo.cursor.Cursor.collection" title="Permalink to this definition">¶</a></dt>
+<dd><p>The <a class="reference internal" href="collection.html#pymongo.collection.Collection" title="pymongo.collection.Collection"><code class="xref py py-class docutils literal"><span class="pre">Collection</span></code></a> that this
+<a class="reference internal" href="#pymongo.cursor.Cursor" title="pymongo.cursor.Cursor"><code class="xref py py-class docutils literal"><span class="pre">Cursor</span></code></a> is iterating.</p>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.comment"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.comment"></a>
+<code class="descname">comment</code><span class="sig-paren">(</span><em>comment</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.comment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a ‘comment’ to the cursor.</p>
+<p><a class="reference external" href="http://docs.mongodb.org/manual/reference/operator/comment/">http://docs.mongodb.org/manual/reference/operator/comment/</a></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>comment</cite>: A string or document</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 2.7.</span></p>
+</div>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.count"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.count"></a>
+<code class="descname">count</code><span class="sig-paren">(</span><em>with_limit_and_skip=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.count" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the size of the results set for this query.</p>
+<p>Returns the number of documents in the results set for this query. Does
+not take <a class="reference internal" href="#pymongo.cursor.Cursor.limit" title="pymongo.cursor.Cursor.limit"><code class="xref py py-meth docutils literal"><span class="pre">limit()</span></code></a> and <a class="reference internal" href="#pymongo.cursor.Cursor.skip" title="pymongo.cursor.Cursor.skip"><code class="xref py py-meth docutils literal"><span class="pre">skip()</span></code></a> into account by default - set
+<cite>with_limit_and_skip</cite> to <code class="docutils literal"><span class="pre">True</span></code> if that is the desired behavior.
+Raises <a class="reference internal" href="errors.html#pymongo.errors.OperationFailure" title="pymongo.errors.OperationFailure"><code class="xref py py-class docutils literal"><span class="pre">OperationFailure</span></code></a> on a database error.</p>
+<p>When used with MongoDB &gt;= 2.6, <a class="reference internal" href="#pymongo.cursor.Cursor.count" title="pymongo.cursor.Cursor.count"><code class="xref py py-meth docutils literal"><span class="pre">count()</span></code></a> uses any <a class="reference internal" href="#pymongo.cursor.Cursor.hint" title="pymongo.cursor.Cursor.hint"><code class="xref py py-meth docutils literal"><span class="pre">hint()</span></code></a>
+applied to the query. In the following example the hint is passed to
+the count command:</p>
+<blockquote>
+<div>collection.find({‘field’: ‘value’}).hint(‘field_1’).count()</div></blockquote>
+<p>The <a class="reference internal" href="#pymongo.cursor.Cursor.count" title="pymongo.cursor.Cursor.count"><code class="xref py py-meth docutils literal"><span class="pre">count()</span></code></a> method obeys the
+<a class="reference internal" href="collection.html#pymongo.collection.Collection.read_preference" title="pymongo.collection.Collection.read_preference"><code class="xref py py-attr docutils literal"><span class="pre">read_preference</span></code></a> of the
+<a class="reference internal" href="collection.html#pymongo.collection.Collection" title="pymongo.collection.Collection"><code class="xref py py-class docutils literal"><span class="pre">Collection</span></code></a> instance on which
+<a class="reference internal" href="collection.html#pymongo.collection.Collection.find" title="pymongo.collection.Collection.find"><code class="xref py py-meth docutils literal"><span class="pre">find()</span></code></a> was called.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>with_limit_and_skip</cite> (optional): take any <a class="reference internal" href="#pymongo.cursor.Cursor.limit" title="pymongo.cursor.Cursor.limit"><code class="xref py py-meth docutils literal"><span class="pre">limit()</span></code></a> or
+<a class="reference internal" href="#pymongo.cursor.Cursor.skip" title="pymongo.cursor.Cursor.skip"><code class="xref py py-meth docutils literal"><span class="pre">skip()</span></code></a> that has been applied to this cursor into account when
+getting the count</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The <cite>with_limit_and_skip</cite> parameter requires server
+version <strong>&gt;= 1.1.4-</strong></p>
+</div>
+<div class="versionchanged">
+<p><span class="versionmodified">Changed in version 2.8: </span>The <a class="reference internal" href="#pymongo.cursor.Cursor.count" title="pymongo.cursor.Cursor.count"><code class="xref py py-meth docutils literal"><span class="pre">count()</span></code></a> method now supports <a class="reference internal" href="#pymongo.cursor.Cursor.hint" title="pymongo.cursor.Cursor.hint"><code class="xref py py-meth docutils literal"><span class="pre">hint()</span></code></a>.</p>
+</div>
+</dd></dl>
+<dl class="attribute">
+<dt id="pymongo.cursor.Cursor.cursor_id"><a name="//apple_ref/cpp/Attribute/pymongo.cursor.Cursor.cursor_id"></a>
+<code class="descname">cursor_id</code><a class="headerlink" href="#pymongo.cursor.Cursor.cursor_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the id of the cursor</p>
+<p>Useful if you need to manage cursor ids and want to handle killing
+cursors manually using
+<a class="reference internal" href="mongo_client.html#pymongo.mongo_client.MongoClient.kill_cursors" title="pymongo.mongo_client.MongoClient.kill_cursors"><code class="xref py py-meth docutils literal"><span class="pre">kill_cursors()</span></code></a></p>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 2.2.</span></p>
+</div>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.distinct"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.distinct"></a>
+<code class="descname">distinct</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.distinct" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a list of distinct values for <cite>key</cite> among all documents
+in the result set of this query.</p>
+<p>Raises <code class="xref py py-class docutils literal"><span class="pre">TypeError</span></code> if <cite>key</cite> is not an instance of
+<code class="xref py py-class docutils literal"><span class="pre">basestring</span></code> (<code class="xref py py-class docutils literal"><span class="pre">str</span></code> in python 3).</p>
+<p>The <a class="reference internal" href="#pymongo.cursor.Cursor.distinct" title="pymongo.cursor.Cursor.distinct"><code class="xref py py-meth docutils literal"><span class="pre">distinct()</span></code></a> method obeys the
+<a class="reference internal" href="collection.html#pymongo.collection.Collection.read_preference" title="pymongo.collection.Collection.read_preference"><code class="xref py py-attr docutils literal"><span class="pre">read_preference</span></code></a> of the
+<a class="reference internal" href="collection.html#pymongo.collection.Collection" title="pymongo.collection.Collection"><code class="xref py py-class docutils literal"><span class="pre">Collection</span></code></a> instance on which
+<a class="reference internal" href="collection.html#pymongo.collection.Collection.find" title="pymongo.collection.Collection.find"><code class="xref py py-meth docutils literal"><span class="pre">find()</span></code></a> was called.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>key</cite>: name of key for which we want to get the distinct values</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="collection.html#pymongo.collection.Collection.distinct" title="pymongo.collection.Collection.distinct"><code class="xref py py-meth docutils literal"><span class="pre">pymongo.collection.Collection.distinct()</span></code></a></p>
+</div>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.explain"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.explain"></a>
+<code class="descname">explain</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.explain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an explain plan record for this cursor.</p>
+<div class="admonition-see-general-mongodb-documentation admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="admonition-title">See general MongoDB documentation</p>
+<p class="last"><a class="reference external" href="http://dochub.mongodb.org/core/explain" name="pymongo.cursor.Cursor.explain"><em>explain</em></a></p>
+</div>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.hint"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.hint"></a>
+<code class="descname">hint</code><span class="sig-paren">(</span><em>index</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.hint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a ‘hint’, telling Mongo the proper index to use for the query.</p>
+<p>Judicious use of hints can greatly improve query
+performance. When doing a query on multiple fields (at least
+one of which is indexed) pass the indexed field as a hint to
+the query. Hinting will not do anything if the corresponding
+index does not exist. Raises
+<a class="reference internal" href="errors.html#pymongo.errors.InvalidOperation" title="pymongo.errors.InvalidOperation"><code class="xref py py-class docutils literal"><span class="pre">InvalidOperation</span></code></a> if this cursor has
+already been used.</p>
+<p><cite>index</cite> should be an index as passed to
+<a class="reference internal" href="collection.html#pymongo.collection.Collection.create_index" title="pymongo.collection.Collection.create_index"><code class="xref py py-meth docutils literal"><span class="pre">create_index()</span></code></a>
+(e.g. <code class="docutils literal"><span class="pre">[('field',</span> <span class="pre">ASCENDING)]</span></code>) or the name of the index.
+If <cite>index</cite> is <code class="docutils literal"><span class="pre">None</span></code> any existing hint for this query is
+cleared. The last hint applied to this cursor takes precedence
+over all others.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>index</cite>: index to hint on (as an index specifier)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="versionchanged">
+<p><span class="versionmodified">Changed in version 2.8: </span>The <a class="reference internal" href="#pymongo.cursor.Cursor.hint" title="pymongo.cursor.Cursor.hint"><code class="xref py py-meth docutils literal"><span class="pre">hint()</span></code></a> method accepts the name of the index.</p>
+</div>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.limit"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.limit"></a>
+<code class="descname">limit</code><span class="sig-paren">(</span><em>limit</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.limit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Limits the number of results to be returned by this cursor.</p>
+<p>Raises <code class="xref py py-exc docutils literal"><span class="pre">TypeError</span></code> if <cite>limit</cite> is not an integer. Raises
+<a class="reference internal" href="errors.html#pymongo.errors.InvalidOperation" title="pymongo.errors.InvalidOperation"><code class="xref py py-exc docutils literal"><span class="pre">InvalidOperation</span></code></a> if this <a class="reference internal" href="#pymongo.cursor.Cursor" title="pymongo.cursor.Cursor"><code class="xref py py-class docutils literal"><span class="pre">Cursor</span></code></a>
+has already been used. The last <cite>limit</cite> applied to this cursor
+takes precedence. A limit of <code class="docutils literal"><span class="pre">0</span></code> is equivalent to no limit.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>limit</cite>: the number of results to return</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition-see-general-mongodb-documentation admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="admonition-title">See general MongoDB documentation</p>
+<p class="last"><a class="reference external" href="http://dochub.mongodb.org/core/limit" name="pymongo.cursor.Cursor.limit"><em>limit</em></a></p>
+</div>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.max"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.max"></a>
+<code class="descname">max</code><span class="sig-paren">(</span><em>spec</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.max" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds <cite>max</cite> operator that specifies upper bound for specific index.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>spec</cite>: a list of field, limit pairs specifying the exclusive
+upper bound for all keys of a specific index in order.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 2.7.</span></p>
+</div>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.max_await_time_ms"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.max_await_time_ms"></a>
+<code class="descname">max_await_time_ms</code><span class="sig-paren">(</span><em>max_await_time_ms</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.max_await_time_ms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specifies a time limit for a getMore operation on a
+<a class="reference internal" href="#pymongo.cursor.CursorType.TAILABLE_AWAIT" title="pymongo.cursor.CursorType.TAILABLE_AWAIT"><code class="xref py py-attr docutils literal"><span class="pre">TAILABLE_AWAIT</span></code></a> cursor. For all other
+types of cursor max_await_time_ms is ignored.</p>
+<p>Raises <code class="xref py py-exc docutils literal"><span class="pre">TypeError</span></code> if <cite>max_await_time_ms</cite> is not an integer or
+<code class="docutils literal"><span class="pre">None</span></code>. Raises <a class="reference internal" href="errors.html#pymongo.errors.InvalidOperation" title="pymongo.errors.InvalidOperation"><code class="xref py py-exc docutils literal"><span class="pre">InvalidOperation</span></code></a> if this
+<a class="reference internal" href="#pymongo.cursor.Cursor" title="pymongo.cursor.Cursor"><code class="xref py py-class docutils literal"><span class="pre">Cursor</span></code></a> has already been used.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last"><cite>max_await_time_ms</cite> requires server version <strong>&gt;= 3.2</strong></p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>max_await_time_ms</cite>: the time limit after which the operation is
+aborted</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 3.2.</span></p>
+</div>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.max_scan"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.max_scan"></a>
+<code class="descname">max_scan</code><span class="sig-paren">(</span><em>max_scan</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.max_scan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Limit the number of documents to scan when performing the query.</p>
+<p>Raises <a class="reference internal" href="errors.html#pymongo.errors.InvalidOperation" title="pymongo.errors.InvalidOperation"><code class="xref py py-class docutils literal"><span class="pre">InvalidOperation</span></code></a> if this
+cursor has already been used. Only the last <a class="reference internal" href="#pymongo.cursor.Cursor.max_scan" title="pymongo.cursor.Cursor.max_scan"><code class="xref py py-meth docutils literal"><span class="pre">max_scan()</span></code></a>
+applied to this cursor has any effect.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>max_scan</cite>: the maximum number of documents to scan</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.max_time_ms"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.max_time_ms"></a>
+<code class="descname">max_time_ms</code><span class="sig-paren">(</span><em>max_time_ms</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.max_time_ms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specifies a time limit for a query operation. If the specified
+time is exceeded, the operation will be aborted and
+<a class="reference internal" href="errors.html#pymongo.errors.ExecutionTimeout" title="pymongo.errors.ExecutionTimeout"><code class="xref py py-exc docutils literal"><span class="pre">ExecutionTimeout</span></code></a> is raised. If <cite>max_time_ms</cite>
+is <code class="docutils literal"><span class="pre">None</span></code> no limit is applied.</p>
+<p>Raises <code class="xref py py-exc docutils literal"><span class="pre">TypeError</span></code> if <cite>max_time_ms</cite> is not an integer or <code class="docutils literal"><span class="pre">None</span></code>.
+Raises <a class="reference internal" href="errors.html#pymongo.errors.InvalidOperation" title="pymongo.errors.InvalidOperation"><code class="xref py py-exc docutils literal"><span class="pre">InvalidOperation</span></code></a> if this <a class="reference internal" href="#pymongo.cursor.Cursor" title="pymongo.cursor.Cursor"><code class="xref py py-class docutils literal"><span class="pre">Cursor</span></code></a>
+has already been used.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>max_time_ms</cite>: the time limit after which the operation is aborted</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.min"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.min"></a>
+<code class="descname">min</code><span class="sig-paren">(</span><em>spec</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.min" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds <cite>min</cite> operator that specifies lower bound for specific index.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>spec</cite>: a list of field, limit pairs specifying the inclusive
+lower bound for all keys of a specific index in order.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="versionadded">
+<p><span class="versionmodified">New in version 2.7.</span></p>
+</div>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.next"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.next"></a>
+<code class="descname">next</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.next" title="Permalink to this definition">¶</a></dt>
+<dd><p>Advance the cursor.</p>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.remove_option"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.remove_option"></a>
+<code class="descname">remove_option</code><span class="sig-paren">(</span><em>mask</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.remove_option" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unset arbitrary query flags using a bitmask.</p>
+<p>To unset the tailable flag:
+cursor.remove_option(2)</p>
+</dd></dl>
+<dl class="attribute">
+<dt id="pymongo.cursor.Cursor.retrieved"><a name="//apple_ref/cpp/Attribute/pymongo.cursor.Cursor.retrieved"></a>
+<code class="descname">retrieved</code><a class="headerlink" href="#pymongo.cursor.Cursor.retrieved" title="Permalink to this definition">¶</a></dt>
+<dd><p>The number of documents retrieved so far.</p>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.rewind"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.rewind"></a>
+<code class="descname">rewind</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.rewind" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rewind this cursor to its unevaluated state.</p>
+<p>Reset this cursor if it has been partially or completely evaluated.
+Any options that are present on the cursor will remain in effect.
+Future iterating performed on this cursor will cause new queries to
+be sent to the server, even if the resultant data has already been
+retrieved by this cursor.</p>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.skip"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.skip"></a>
+<code class="descname">skip</code><span class="sig-paren">(</span><em>skip</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.skip" title="Permalink to this definition">¶</a></dt>
+<dd><p>Skips the first <cite>skip</cite> results of this cursor.</p>
+<p>Raises <code class="xref py py-exc docutils literal"><span class="pre">TypeError</span></code> if <cite>skip</cite> is not an integer. Raises
+<code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code> if <cite>skip</cite> is less than <code class="docutils literal"><span class="pre">0</span></code>. Raises
+<a class="reference internal" href="errors.html#pymongo.errors.InvalidOperation" title="pymongo.errors.InvalidOperation"><code class="xref py py-exc docutils literal"><span class="pre">InvalidOperation</span></code></a> if this <a class="reference internal" href="#pymongo.cursor.Cursor" title="pymongo.cursor.Cursor"><code class="xref py py-class docutils literal"><span class="pre">Cursor</span></code></a> has
+already been used. The last <cite>skip</cite> applied to this cursor takes
+precedence.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>skip</cite>: the number of results to skip</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.sort"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.sort"></a>
+<code class="descname">sort</code><span class="sig-paren">(</span><em>key_or_list</em>, <em>direction=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.sort" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sorts this cursor’s results.</p>
+<p>Pass a field name and a direction, either
+<a class="reference internal" href="collection.html#pymongo.ASCENDING" title="pymongo.ASCENDING"><code class="xref py py-data docutils literal"><span class="pre">ASCENDING</span></code></a> or <a class="reference internal" href="collection.html#pymongo.DESCENDING" title="pymongo.DESCENDING"><code class="xref py py-data docutils literal"><span class="pre">DESCENDING</span></code></a>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">collection</span><span class="o">.</span><span class="n">find</span><span class="p">()</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="s">'field'</span><span class="p">,</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">ASCENDING</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>To sort by multiple fields, pass a list of (key, direction) pairs:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">collection</span><span class="o">.</span><span class="n">find</span><span class="p">()</span><span class="o">.</span><span class="n">sort</span><span class="p">([</span>
+        <span class="p">(</span><span class="s">'field1'</span><span class="p">,</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">ASCENDING</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">'field2'</span><span class="p">,</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">DESCENDING</span><span class="p">)]):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Beginning with MongoDB version 2.6, text search results can be
+sorted by relevance:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">cursor</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">test</span><span class="o">.</span><span class="n">find</span><span class="p">(</span>
+    <span class="p">{</span><span class="s">'$text'</span><span class="p">:</span> <span class="p">{</span><span class="s">'$search'</span><span class="p">:</span> <span class="s">'some words'</span><span class="p">}},</span>
+    <span class="p">{</span><span class="s">'score'</span><span class="p">:</span> <span class="p">{</span><span class="s">'$meta'</span><span class="p">:</span> <span class="s">'textScore'</span><span class="p">}})</span>
+
+<span class="c"># Sort by 'score' field.</span>
+<span class="n">cursor</span><span class="o">.</span><span class="n">sort</span><span class="p">([(</span><span class="s">'score'</span><span class="p">,</span> <span class="p">{</span><span class="s">'$meta'</span><span class="p">:</span> <span class="s">'textScore'</span><span class="p">})])</span>
+
+<span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">cursor</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Raises <a class="reference internal" href="errors.html#pymongo.errors.InvalidOperation" title="pymongo.errors.InvalidOperation"><code class="xref py py-class docutils literal"><span class="pre">InvalidOperation</span></code></a> if this cursor has
+already been used. Only the last <a class="reference internal" href="#pymongo.cursor.Cursor.sort" title="pymongo.cursor.Cursor.sort"><code class="xref py py-meth docutils literal"><span class="pre">sort()</span></code></a> applied to this
+cursor has any effect.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>key_or_list</cite>: a single key or a list of (key, direction)
+pairs specifying the keys to sort on</li>
+<li><cite>direction</cite> (optional): only used if <cite>key_or_list</cite> is a single
+key, if not given <a class="reference internal" href="collection.html#pymongo.ASCENDING" title="pymongo.ASCENDING"><code class="xref py py-data docutils literal"><span class="pre">ASCENDING</span></code></a> is assumed</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.cursor.Cursor.where"><a name="//apple_ref/cpp/Method/pymongo.cursor.Cursor.where"></a>
+<code class="descname">where</code><span class="sig-paren">(</span><em>code</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.cursor.Cursor.where" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a $where clause to this query.</p>
+<p>The <cite>code</cite> argument must be an instance of <code class="xref py py-class docutils literal"><span class="pre">basestring</span></code>
+(<code class="xref py py-class docutils literal"><span class="pre">str</span></code> in python 3) or <a class="reference internal" href="../bson/code.html#bson.code.Code" title="bson.code.Code"><code class="xref py py-class docutils literal"><span class="pre">Code</span></code></a>
+containing a JavaScript expression. This expression will be
+evaluated for each document scanned. Only those documents
+for which the expression evaluates to <em>true</em> will be returned
+as results. The keyword <em>this</em> refers to the object currently
+being scanned.</p>
+<p>Raises <code class="xref py py-class docutils literal"><span class="pre">TypeError</span></code> if <cite>code</cite> is not an instance of
+<code class="xref py py-class docutils literal"><span class="pre">basestring</span></code> (<code class="xref py py-class docutils literal"><span class="pre">str</span></code> in python 3). Raises
+<a class="reference internal" href="errors.html#pymongo.errors.InvalidOperation" title="pymongo.errors.InvalidOperation"><code class="xref py py-class docutils literal"><span class="pre">InvalidOperation</span></code></a> if this
+<a class="reference internal" href="#pymongo.cursor.Cursor" title="pymongo.cursor.Cursor"><code class="xref py py-class docutils literal"><span class="pre">Cursor</span></code></a> has already been used. Only the last call to
+<a class="reference internal" href="#pymongo.cursor.Cursor.where" title="pymongo.cursor.Cursor.where"><code class="xref py py-meth docutils literal"><span class="pre">where()</span></code></a> applied to a <a class="reference internal" href="#pymongo.cursor.Cursor" title="pymongo.cursor.Cursor"><code class="xref py py-class docutils literal"><span class="pre">Cursor</span></code></a> has any effect.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>code</cite>: JavaScript expression to use as a filter</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+</dd></dl>
+</div>
+</div>
+</div>
+<div class="clearer"></div>
+</div>
+<div aria-label="related navigation" class="related" role="navigation">
+<h3>Navigation</h3>
+<ul>
+<li class="right" style="margin-right: 10px">
+<a href="../../genindex.html" title="General Index">index</a></li>
+<li class="right">
+<a href="../../py-modindex.html" title="Python Module Index">modules</a> |</li>
+<li class="right">
+<a href="bulk.html" title="bulk – The bulk write operations interface">next</a> |</li>
+<li class="right">
+<a href="command_cursor.html" title="command_cursor – Tools for iterating over MongoDB command results">previous</a> |</li>
+<li class="nav-item nav-item-0"><a href="../../index.html">PyMongo 3.4.0 documentation</a> »</li>
+<li class="nav-item nav-item-1"><a href="../index.html">API Documentation</a> »</li>
+<li class="nav-item nav-item-2"><a href="index.html"><code class="docutils literal"><span class="pre">pymongo</span></code> – Python driver for MongoDB</a> »</li>
+</ul>
+</div>
+<div class="footer" role="contentinfo">
+        © Copyright 2008 - 2015, MongoDB, Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.5.
+    </div>
+</body>
+</html>

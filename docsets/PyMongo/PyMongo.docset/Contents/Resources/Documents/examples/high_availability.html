@@ -1,0 +1,421 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>High Availability and PyMongo &mdash; PyMongo 3.4.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/pydoctheme.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '3.4.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/sidebar.js"></script>
+    <link rel="top" title="PyMongo 3.4.0 documentation" href="../index.html" />
+    <link rel="up" title="Examples" href="index.html" />
+    <link rel="next" title="PyMongo and mod_wsgi" href="mod_wsgi.html" />
+    <link rel="prev" title="GridFS Example" href="gridfs.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="mod_wsgi.html" title="PyMongo and mod_wsgi"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="gridfs.html" title="GridFS Example"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PyMongo 3.4.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Examples</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="high-availability-and-pymongo">
+<h1>High Availability and PyMongo<a class="headerlink" href="#high-availability-and-pymongo" title="Permalink to this headline">¶</a></h1>
+<p>PyMongo makes it easy to write highly available applications whether
+you use a <a class="reference external" href="http://dochub.mongodb.org/core/rs">single replica set</a>
+or a <a class="reference external" href="http://www.mongodb.org/display/DOCS/Sharding+Introduction">large sharded cluster</a>.</p>
+<div class="section" id="connecting-to-a-replica-set">
+<h2>Connecting to a Replica Set<a class="headerlink" href="#connecting-to-a-replica-set" title="Permalink to this headline">¶</a></h2>
+<p>PyMongo makes working with <a class="reference external" href="http://dochub.mongodb.org/core/rs">replica sets</a> easy. Here we&#8217;ll launch a new
+replica set and show how to handle both initialization and normal
+connections with PyMongo.</p>
+<div class="admonition-see-general-mongodb-documentation admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="admonition-title">See general MongoDB documentation</p>
+<p class="last"><a class="reference external" href="http://dochub.mongodb.org/core/rs" name="connecting-to-a-replica-set"><em>rs</em></a></p>
+</div>
+<div class="section" id="starting-a-replica-set">
+<h3>Starting a Replica Set<a class="headerlink" href="#starting-a-replica-set" title="Permalink to this headline">¶</a></h3>
+<p>The main <a class="reference external" href="http://dochub.mongodb.org/core/rs">replica set documentation</a> contains extensive information
+about setting up a new replica set or migrating an existing MongoDB
+setup, be sure to check that out. Here, we&#8217;ll just do the bare minimum
+to get a three node replica set setup locally.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Replica sets should always use multiple nodes in
+production - putting all set members on the same physical node is
+only recommended for testing and development.</p>
+</div>
+<p>We start three <code class="docutils literal"><span class="pre">mongod</span></code> processes, each on a different port and with
+a different dbpath, but all using the same replica set name &#8220;foo&#8221;.</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>mkdir -p /data/db0 /data/db1 /data/db2
+<span class="nv">$ </span>mongod --port <span class="m">27017</span> --dbpath /data/db0 --replSet foo
+</pre></div>
+</div>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>mongod --port <span class="m">27018</span> --dbpath /data/db1 --replSet foo
+</pre></div>
+</div>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>mongod --port <span class="m">27019</span> --dbpath /data/db2 --replSet foo
+</pre></div>
+</div>
+</div>
+<div class="section" id="initializing-the-set">
+<h3>Initializing the Set<a class="headerlink" href="#initializing-the-set" title="Permalink to this headline">¶</a></h3>
+<p>At this point all of our nodes are up and running, but the set has yet
+to be initialized. Until the set is initialized no node will become
+the primary, and things are essentially &#8220;offline&#8221;.</p>
+<p>To initialize the set we need to connect to a single node and run the
+initiate command:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pymongo</span> <span class="kn">import</span> <span class="n">MongoClient</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">MongoClient</span><span class="p">(</span><span class="s">&#39;localhost&#39;</span><span class="p">,</span> <span class="mi">27017</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">We could have connected to any of the other nodes instead,
+but only the node we initiate from is allowed to contain any
+initial data.</p>
+</div>
+<p>After connecting, we run the initiate command to get things started:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">config</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;_id&#39;</span><span class="p">:</span> <span class="s">&#39;foo&#39;</span><span class="p">,</span> <span class="s">&#39;members&#39;</span><span class="p">:</span> <span class="p">[</span>
+<span class="gp">... </span>    <span class="p">{</span><span class="s">&#39;_id&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#39;host&#39;</span><span class="p">:</span> <span class="s">&#39;localhost:27017&#39;</span><span class="p">},</span>
+<span class="gp">... </span>    <span class="p">{</span><span class="s">&#39;_id&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&#39;host&#39;</span><span class="p">:</span> <span class="s">&#39;localhost:27018&#39;</span><span class="p">},</span>
+<span class="gp">... </span>    <span class="p">{</span><span class="s">&#39;_id&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s">&#39;host&#39;</span><span class="p">:</span> <span class="s">&#39;localhost:27019&#39;</span><span class="p">}]}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span><span class="o">.</span><span class="n">admin</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s">&quot;replSetInitiate&quot;</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+<span class="go">{&#39;ok&#39;: 1.0, ...}</span>
+</pre></div>
+</div>
+<p>The three <code class="docutils literal"><span class="pre">mongod</span></code> servers we started earlier will now coordinate
+and come online as a replica set.</p>
+</div>
+<div class="section" id="id1">
+<h3>Connecting to a Replica Set<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<p>The initial connection as made above is a special case for an
+uninitialized replica set. Normally we&#8217;ll want to connect
+differently. A connection to a replica set can be made using the
+<a class="reference internal" href="../api/pymongo/mongo_client.html#pymongo.mongo_client.MongoClient" title="pymongo.mongo_client.MongoClient"><code class="xref py py-meth docutils literal"><span class="pre">MongoClient()</span></code></a> constructor, specifying
+one or more members of the set, along with the replica set name. Any of
+the following connects to the replica set we just created:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">MongoClient</span><span class="p">(</span><span class="s">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">replicaset</span><span class="o">=</span><span class="s">&#39;foo&#39;</span><span class="p">)</span>
+<span class="go">MongoClient(host=[&#39;localhost:27017&#39;], replicaset=&#39;foo&#39;, ...)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">MongoClient</span><span class="p">(</span><span class="s">&#39;localhost:27018&#39;</span><span class="p">,</span> <span class="n">replicaset</span><span class="o">=</span><span class="s">&#39;foo&#39;</span><span class="p">)</span>
+<span class="go">MongoClient([&#39;localhost:27018&#39;], replicaset=&#39;foo&#39;, ...)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">MongoClient</span><span class="p">(</span><span class="s">&#39;localhost&#39;</span><span class="p">,</span> <span class="mi">27019</span><span class="p">,</span> <span class="n">replicaset</span><span class="o">=</span><span class="s">&#39;foo&#39;</span><span class="p">)</span>
+<span class="go">MongoClient([&#39;localhost:27019&#39;], replicaset=&#39;foo&#39;, ...)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">MongoClient</span><span class="p">(</span><span class="s">&#39;mongodb://localhost:27017,localhost:27018/?replicaSet=foo&#39;</span><span class="p">)</span>
+<span class="go">MongoClient([&#39;localhost:27017&#39;, &#39;localhost:27018&#39;], replicaset=&#39;foo&#39;, ...)</span>
+</pre></div>
+</div>
+<p>The addresses passed to <a class="reference internal" href="../api/pymongo/mongo_client.html#pymongo.mongo_client.MongoClient" title="pymongo.mongo_client.MongoClient"><code class="xref py py-meth docutils literal"><span class="pre">MongoClient()</span></code></a> are called
+the <em>seeds</em>. As long as at least one of the seeds is online, MongoClient
+discovers all the members in the replica set, and determines which is the
+current primary and which are secondaries or arbiters. Each seed must be the
+address of a single mongod. Multihomed and round robin DNS addresses are
+<strong>not</strong> supported.</p>
+<p>The <a class="reference internal" href="../api/pymongo/mongo_client.html#pymongo.mongo_client.MongoClient" title="pymongo.mongo_client.MongoClient"><code class="xref py py-class docutils literal"><span class="pre">MongoClient</span></code></a> constructor is non-blocking:
+the constructor returns immediately while the client connects to the replica
+set using background threads. Note how, if you create a client and immediately
+print the string representation of its
+<a class="reference internal" href="../api/pymongo/mongo_client.html#pymongo.mongo_client.MongoClient.nodes" title="pymongo.mongo_client.MongoClient.nodes"><code class="xref py py-attr docutils literal"><span class="pre">nodes</span></code></a> attribute, the list may be
+empty initially. If you wait a moment, MongoClient discovers the whole replica
+set:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">time</span> <span class="kn">import</span> <span class="n">sleep</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">MongoClient</span><span class="p">(</span><span class="n">replicaset</span><span class="o">=</span><span class="s">&#39;foo&#39;</span><span class="p">);</span> <span class="k">print</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">nodes</span><span class="p">);</span> <span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">);</span> <span class="k">print</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
+<span class="go">frozenset([])</span>
+<span class="go">frozenset([(u&#39;localhost&#39;, 27019), (u&#39;localhost&#39;, 27017), (u&#39;localhost&#39;, 27018)])</span>
+</pre></div>
+</div>
+<p>You need not wait for replica set discovery in your application, however.
+If you need to do any operation with a MongoClient, such as a
+<a class="reference internal" href="../api/pymongo/collection.html#pymongo.collection.Collection.find" title="pymongo.collection.Collection.find"><code class="xref py py-meth docutils literal"><span class="pre">find()</span></code></a> or an
+<a class="reference internal" href="../api/pymongo/collection.html#pymongo.collection.Collection.insert_one" title="pymongo.collection.Collection.insert_one"><code class="xref py py-meth docutils literal"><span class="pre">insert_one()</span></code></a>, the client waits to discover
+a suitable member before it attempts the operation.</p>
+</div>
+<div class="section" id="handling-failover">
+<h3>Handling Failover<a class="headerlink" href="#handling-failover" title="Permalink to this headline">¶</a></h3>
+<p>When a failover occurs, PyMongo will automatically attempt to find the
+new primary node and perform subsequent operations on that node. This
+can&#8217;t happen completely transparently, however. Here we&#8217;ll perform an
+example failover to illustrate how everything behaves. First, we&#8217;ll
+connect to the replica set and perform a couple of basic operations:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span> <span class="o">=</span> <span class="n">MongoClient</span><span class="p">(</span><span class="s">&quot;localhost&quot;</span><span class="p">,</span> <span class="n">replicaSet</span><span class="o">=</span><span class="s">&#39;foo&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">test</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">test</span><span class="o">.</span><span class="n">insert_one</span><span class="p">({</span><span class="s">&quot;x&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">})</span><span class="o">.</span><span class="n">inserted_id</span>
+<span class="go">ObjectId(&#39;...&#39;)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">test</span><span class="o">.</span><span class="n">find_one</span><span class="p">()</span>
+<span class="go">{u&#39;x&#39;: 1, u&#39;_id&#39;: ObjectId(&#39;...&#39;)}</span>
+</pre></div>
+</div>
+<p>By checking the host and port, we can see that we&#8217;re connected to
+<em>localhost:27017</em>, which is the current primary:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">address</span>
+<span class="go">(&#39;localhost&#39;, 27017)</span>
+</pre></div>
+</div>
+<p>Now let&#8217;s bring down that node and see what happens when we run our
+query again:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">test</span><span class="o">.</span><span class="n">find_one</span><span class="p">()</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="gr">pymongo.errors.AutoReconnect</span>: <span class="n">...</span>
+</pre></div>
+</div>
+<p>We get an <a class="reference internal" href="../api/pymongo/errors.html#pymongo.errors.AutoReconnect" title="pymongo.errors.AutoReconnect"><code class="xref py py-class docutils literal"><span class="pre">AutoReconnect</span></code></a> exception. This means
+that the driver was not able to connect to the old primary (which
+makes sense, as we killed the server), but that it will attempt to
+automatically reconnect on subsequent operations. When this exception
+is raised our application code needs to decide whether to retry the
+operation or to simply continue, accepting the fact that the operation
+might have failed.</p>
+<p>On subsequent attempts to run the query we might continue to see this
+exception. Eventually, however, the replica set will failover and
+elect a new primary (this should take no more than a couple of seconds in
+general). At that point the driver will connect to the new primary and
+the operation will succeed:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">test</span><span class="o">.</span><span class="n">find_one</span><span class="p">()</span>
+<span class="go">{u&#39;x&#39;: 1, u&#39;_id&#39;: ObjectId(&#39;...&#39;)}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">address</span>
+<span class="go">(&#39;localhost&#39;, 27018)</span>
+</pre></div>
+</div>
+<p>Bring the former primary back up. It will rejoin the set as a secondary.
+Now we can move to the next section: distributing reads to secondaries.</p>
+</div>
+<div class="section" id="secondary-reads">
+<span id="id2"></span><h3>Secondary Reads<a class="headerlink" href="#secondary-reads" title="Permalink to this headline">¶</a></h3>
+<p>By default an instance of MongoClient sends queries to
+the primary member of the replica set. To use secondaries for queries
+we have to change the read preference:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">MongoClient</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="s">&#39;localhost:27017&#39;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">replicaSet</span><span class="o">=</span><span class="s">&#39;foo&#39;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">readPreference</span><span class="o">=</span><span class="s">&#39;secondaryPreferred&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">read_preference</span>
+<span class="go">SecondaryPreferred(tag_sets=None)</span>
+</pre></div>
+</div>
+<p>Now all queries will be sent to the secondary members of the set. If there are
+no secondary members the primary will be used as a fallback. If you have
+queries you would prefer to never send to the primary you can specify that
+using the <code class="docutils literal"><span class="pre">secondary</span></code> read preference.</p>
+<p>By default the read preference of a <a class="reference internal" href="../api/pymongo/database.html#pymongo.database.Database" title="pymongo.database.Database"><code class="xref py py-class docutils literal"><span class="pre">Database</span></code></a> is
+inherited from its MongoClient, and the read preference of a
+<a class="reference internal" href="../api/pymongo/collection.html#pymongo.collection.Collection" title="pymongo.collection.Collection"><code class="xref py py-class docutils literal"><span class="pre">Collection</span></code></a> is inherited from its Database. To use
+a different read preference use the
+<a class="reference internal" href="../api/pymongo/mongo_client.html#pymongo.mongo_client.MongoClient.get_database" title="pymongo.mongo_client.MongoClient.get_database"><code class="xref py py-meth docutils literal"><span class="pre">get_database()</span></code></a> method, or the
+<a class="reference internal" href="../api/pymongo/database.html#pymongo.database.Database.get_collection" title="pymongo.database.Database.get_collection"><code class="xref py py-meth docutils literal"><span class="pre">get_collection()</span></code></a> method:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pymongo</span> <span class="kn">import</span> <span class="n">ReadPreference</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">read_preference</span>
+<span class="go">SecondaryPreferred(tag_sets=None)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get_database</span><span class="p">(</span><span class="s">&#39;test&#39;</span><span class="p">,</span> <span class="n">read_preference</span><span class="o">=</span><span class="n">ReadPreference</span><span class="o">.</span><span class="n">SECONDARY</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">read_preference</span>
+<span class="go">Secondary(tag_sets=None)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">coll</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">get_collection</span><span class="p">(</span><span class="s">&#39;test&#39;</span><span class="p">,</span> <span class="n">read_preference</span><span class="o">=</span><span class="n">ReadPreference</span><span class="o">.</span><span class="n">PRIMARY</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">coll</span><span class="o">.</span><span class="n">read_preference</span>
+<span class="go">Primary()</span>
+</pre></div>
+</div>
+<p>You can also change the read preference of an existing
+<a class="reference internal" href="../api/pymongo/collection.html#pymongo.collection.Collection" title="pymongo.collection.Collection"><code class="xref py py-class docutils literal"><span class="pre">Collection</span></code></a> with the
+<a class="reference internal" href="../api/pymongo/collection.html#pymongo.collection.Collection.with_options" title="pymongo.collection.Collection.with_options"><code class="xref py py-meth docutils literal"><span class="pre">with_options()</span></code></a> method:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">coll2</span> <span class="o">=</span> <span class="n">coll</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">read_preference</span><span class="o">=</span><span class="n">ReadPreference</span><span class="o">.</span><span class="n">NEAREST</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">coll</span><span class="o">.</span><span class="n">read_preference</span>
+<span class="go">Primary()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">coll2</span><span class="o">.</span><span class="n">read_preference</span>
+<span class="go">Nearest(tag_sets=None)</span>
+</pre></div>
+</div>
+<p>Note that since most database commands can only be sent to the primary of a
+replica set, the <a class="reference internal" href="../api/pymongo/database.html#pymongo.database.Database.command" title="pymongo.database.Database.command"><code class="xref py py-meth docutils literal"><span class="pre">command()</span></code></a> method does not obey
+the Database&#8217;s <a class="reference internal" href="../api/pymongo/database.html#pymongo.database.Database.read_preference" title="pymongo.database.Database.read_preference"><code class="xref py py-attr docutils literal"><span class="pre">read_preference</span></code></a>, but you can
+pass an explicit read preference to the method:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">command</span><span class="p">(</span><span class="s">&#39;dbstats&#39;</span><span class="p">,</span> <span class="n">read_preference</span><span class="o">=</span><span class="n">ReadPreference</span><span class="o">.</span><span class="n">NEAREST</span><span class="p">)</span>
+<span class="go">{...}</span>
+</pre></div>
+</div>
+<p>Reads are configured using three options: <strong>read preference</strong>, <strong>tag sets</strong>,
+and <strong>local threshold</strong>.</p>
+<p><strong>Read preference</strong>:</p>
+<p>Read preference is configured using one of the classes from
+<a class="reference internal" href="../api/pymongo/read_preferences.html#module-pymongo.read_preferences" title="pymongo.read_preferences: Utilities for choosing which member of a replica set to read from."><code class="xref py py-mod docutils literal"><span class="pre">read_preferences</span></code></a> (<a class="reference internal" href="../api/pymongo/read_preferences.html#pymongo.read_preferences.Primary" title="pymongo.read_preferences.Primary"><code class="xref py py-class docutils literal"><span class="pre">Primary</span></code></a>,
+<a class="reference internal" href="../api/pymongo/read_preferences.html#pymongo.read_preferences.PrimaryPreferred" title="pymongo.read_preferences.PrimaryPreferred"><code class="xref py py-class docutils literal"><span class="pre">PrimaryPreferred</span></code></a>,
+<a class="reference internal" href="../api/pymongo/read_preferences.html#pymongo.read_preferences.Secondary" title="pymongo.read_preferences.Secondary"><code class="xref py py-class docutils literal"><span class="pre">Secondary</span></code></a>,
+<a class="reference internal" href="../api/pymongo/read_preferences.html#pymongo.read_preferences.SecondaryPreferred" title="pymongo.read_preferences.SecondaryPreferred"><code class="xref py py-class docutils literal"><span class="pre">SecondaryPreferred</span></code></a>, or
+<a class="reference internal" href="../api/pymongo/read_preferences.html#pymongo.read_preferences.Nearest" title="pymongo.read_preferences.Nearest"><code class="xref py py-class docutils literal"><span class="pre">Nearest</span></code></a>). For convenience, we also provide
+<a class="reference internal" href="../api/pymongo/read_preferences.html#pymongo.read_preferences.ReadPreference" title="pymongo.read_preferences.ReadPreference"><code class="xref py py-class docutils literal"><span class="pre">ReadPreference</span></code></a> with the following
+attributes:</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">PRIMARY</span></code>: Read from the primary. This is the default read preference,
+and provides the strongest consistency. If no primary is available, raise
+<a class="reference internal" href="../api/pymongo/errors.html#pymongo.errors.AutoReconnect" title="pymongo.errors.AutoReconnect"><code class="xref py py-class docutils literal"><span class="pre">AutoReconnect</span></code></a>.</li>
+<li><code class="docutils literal"><span class="pre">PRIMARY_PREFERRED</span></code>: Read from the primary if available, otherwise read
+from a secondary.</li>
+<li><code class="docutils literal"><span class="pre">SECONDARY</span></code>: Read from a secondary. If no matching secondary is available,
+raise <a class="reference internal" href="../api/pymongo/errors.html#pymongo.errors.AutoReconnect" title="pymongo.errors.AutoReconnect"><code class="xref py py-class docutils literal"><span class="pre">AutoReconnect</span></code></a>.</li>
+<li><code class="docutils literal"><span class="pre">SECONDARY_PREFERRED</span></code>: Read from a secondary if available, otherwise
+from the primary.</li>
+<li><code class="docutils literal"><span class="pre">NEAREST</span></code>: Read from any available member.</li>
+</ul>
+<p><strong>Tag sets</strong>:</p>
+<p>Replica-set members can be <a class="reference external" href="http://www.mongodb.org/display/DOCS/Data+Center+Awareness">tagged</a> according to any
+criteria you choose. By default, PyMongo ignores tags when
+choosing a member to read from, but your read preference can be configured with
+a <code class="docutils literal"><span class="pre">tag_sets</span></code> parameter. <code class="docutils literal"><span class="pre">tag_sets</span></code> must be a list of dictionaries, each
+dict providing tag values that the replica set member must match.
+PyMongo tries each set of tags in turn until it finds a set of
+tags with at least one matching member. For example, to prefer reads from the
+New York data center, but fall back to the San Francisco data center, tag your
+replica set members according to their location and create a
+MongoClient like so:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pymongo.read_preferences</span> <span class="kn">import</span> <span class="n">Secondary</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get_database</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="s">&#39;test&#39;</span><span class="p">,</span> <span class="n">read_preference</span><span class="o">=</span><span class="n">Secondary</span><span class="p">([{</span><span class="s">&#39;dc&#39;</span><span class="p">:</span> <span class="s">&#39;ny&#39;</span><span class="p">},</span> <span class="p">{</span><span class="s">&#39;dc&#39;</span><span class="p">:</span> <span class="s">&#39;sf&#39;</span><span class="p">}]))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">read_preference</span>
+<span class="go">Secondary(tag_sets=[{&#39;dc&#39;: &#39;ny&#39;}, {&#39;dc&#39;: &#39;sf&#39;}])</span>
+</pre></div>
+</div>
+<p>MongoClient tries to find secondaries in New York, then San Francisco,
+and raises <a class="reference internal" href="../api/pymongo/errors.html#pymongo.errors.AutoReconnect" title="pymongo.errors.AutoReconnect"><code class="xref py py-class docutils literal"><span class="pre">AutoReconnect</span></code></a> if none are available. As an
+additional fallback, specify a final, empty tag set, <code class="docutils literal"><span class="pre">{}</span></code>, which means &#8220;read
+from any member that matches the mode, ignoring tags.&#8221;</p>
+<p>See <a class="reference internal" href="../api/pymongo/read_preferences.html#module-pymongo.read_preferences" title="pymongo.read_preferences: Utilities for choosing which member of a replica set to read from."><code class="xref py py-mod docutils literal"><span class="pre">read_preferences</span></code></a> for more information.</p>
+<p id="distributes-reads-to-secondaries"><strong>Local threshold</strong>:</p>
+<p>If multiple members match the read preference and tag sets, PyMongo reads
+from among the nearest members, chosen according to ping time. By default,
+only members whose ping times are within 15 milliseconds of the nearest
+are used for queries. You can choose to distribute reads among members with
+higher latencies by setting <code class="docutils literal"><span class="pre">localThresholdMS</span></code> to a larger
+number:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">MongoClient</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">replicaSet</span><span class="o">=</span><span class="s">&#39;repl0&#39;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">readPreference</span><span class="o">=</span><span class="s">&#39;secondaryPreferred&#39;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">localThresholdMS</span><span class="o">=</span><span class="mi">35</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In this case, PyMongo distributes reads among matching members within 35
+milliseconds of the closest member&#8217;s ping time.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last"><code class="docutils literal"><span class="pre">localThresholdMS</span></code> is ignored when talking to a
+replica set <em>through</em> a mongos. The equivalent is the <a class="reference external" href="http://docs.mongodb.org/manual/reference/mongos/#cmdoption--localThreshold">localThreshold</a> command
+line option.</p>
+</div>
+<div class="section" id="health-monitoring">
+<span id="id3"></span><h4>Health Monitoring<a class="headerlink" href="#health-monitoring" title="Permalink to this headline">¶</a></h4>
+<p>When MongoClient is initialized it launches background threads to
+monitor the replica set for changes in:</p>
+<ul class="simple">
+<li>Health: detect when a member goes down or comes up, or if a different member
+becomes primary</li>
+<li>Configuration: detect when members are added or removed, and detect changes
+in members&#8217; tags</li>
+<li>Latency: track a moving average of each member&#8217;s ping time</li>
+</ul>
+<p>Replica-set monitoring ensures queries are continually routed to the proper
+members as the state of the replica set changes.</p>
+</div>
+</div>
+</div>
+<div class="section" id="mongos-load-balancing">
+<span id="id4"></span><h2>mongos Load Balancing<a class="headerlink" href="#mongos-load-balancing" title="Permalink to this headline">¶</a></h2>
+<p>An instance of <a class="reference internal" href="../api/pymongo/mongo_client.html#pymongo.mongo_client.MongoClient" title="pymongo.mongo_client.MongoClient"><code class="xref py py-class docutils literal"><span class="pre">MongoClient</span></code></a> can be configured
+with a list of addresses of mongos servers:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">MongoClient</span><span class="p">(</span><span class="s">&#39;mongodb://host1,host2,host3&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Each member of the list must be a single mongos server. Multihomed and round
+robin DNS addresses are <strong>not</strong> supported. The client continuously
+monitors all the mongoses&#8217; availability, and its network latency to each.</p>
+<p>PyMongo distributes operations evenly among the set of mongoses within its
+<code class="docutils literal"><span class="pre">localThresholdMS</span></code> (similar to how it <a class="reference internal" href="#distributes-reads-to-secondaries">distributes reads to secondaries</a>
+in a replica set). By default the threshold is 15 ms.</p>
+<p>The lowest-latency server, and all servers with latencies no more than
+<code class="docutils literal"><span class="pre">localThresholdMS</span></code> beyond the lowest-latency server&#8217;s, receive
+operations equally. For example, if we have three mongoses:</p>
+<blockquote>
+<div><ul class="simple">
+<li>host1: 20 ms</li>
+<li>host2: 35 ms</li>
+<li>host3: 40 ms</li>
+</ul>
+</div></blockquote>
+<p>By default the <code class="docutils literal"><span class="pre">localThresholdMS</span></code> is 15 ms, so PyMongo uses host1 and host2
+evenly. It uses host1 because its network latency to the driver is shortest. It
+uses host2 because its latency is within 15 ms of the lowest-latency server&#8217;s.
+But it excuses host3: host3 is 20ms beyond the lowest-latency server.</p>
+<p>If we set <code class="docutils literal"><span class="pre">localThresholdMS</span></code> to 30 ms all servers are within the threshold:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">MongoClient</span><span class="p">(</span><span class="s">&#39;mongodb://host1,host2,host3/?localThresholdMS=30&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">Do <strong>not</strong> connect PyMongo to a pool of mongos instances through a
+load balancer. A single socket connection must always be routed to the same
+mongos instance for proper cursor support.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="mod_wsgi.html" title="PyMongo and mod_wsgi"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="gridfs.html" title="GridFS Example"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PyMongo 3.4.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Examples</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2008 - 2015, MongoDB, Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.5.
+    </div>
+  </body>
+</html>

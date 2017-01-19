@@ -1,0 +1,156 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>GridFS Example &mdash; PyMongo 3.4.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/pydoctheme.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '3.4.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/sidebar.js"></script>
+    <link rel="top" title="PyMongo 3.4.0 documentation" href="../index.html" />
+    <link rel="up" title="Examples" href="index.html" />
+    <link rel="next" title="High Availability and PyMongo" href="high_availability.html" />
+    <link rel="prev" title="Gevent" href="gevent.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="high_availability.html" title="High Availability and PyMongo"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="gevent.html" title="Gevent"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PyMongo 3.4.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Examples</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="gridfs-example">
+<h1>GridFS Example<a class="headerlink" href="#gridfs-example" title="Permalink to this headline">¶</a></h1>
+<p>This example shows how to use <a class="reference internal" href="../api/gridfs/index.html#module-gridfs" title="gridfs: Tools for working with GridFS"><code class="xref py py-mod docutils literal"><span class="pre">gridfs</span></code></a> to store large binary
+objects (e.g. files) in MongoDB.</p>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last">The API docs for <a class="reference internal" href="../api/gridfs/index.html#module-gridfs" title="gridfs: Tools for working with GridFS"><code class="xref py py-mod docutils literal"><span class="pre">gridfs</span></code></a>.</p>
+</div>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference external" href="http://dirolf.com/2010/03/29/new-gridfs-implementation-for-pymongo.html">This blog post</a>
+for some motivation behind this API.</p>
+</div>
+<div class="section" id="setup">
+<h2>Setup<a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h2>
+<p>We start by creating a <a class="reference internal" href="../api/gridfs/index.html#gridfs.GridFS" title="gridfs.GridFS"><code class="xref py py-class docutils literal"><span class="pre">GridFS</span></code></a> instance to use:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pymongo</span> <span class="kn">import</span> <span class="n">MongoClient</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">gridfs</span>
+<span class="go">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span> <span class="o">=</span> <span class="n">MongoClient</span><span class="p">()</span><span class="o">.</span><span class="n">gridfs_example</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fs</span> <span class="o">=</span> <span class="n">gridfs</span><span class="o">.</span><span class="n">GridFS</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Every <a class="reference internal" href="../api/gridfs/index.html#gridfs.GridFS" title="gridfs.GridFS"><code class="xref py py-class docutils literal"><span class="pre">GridFS</span></code></a> instance is created with and will
+operate on a specific <a class="reference internal" href="../api/pymongo/database.html#pymongo.database.Database" title="pymongo.database.Database"><code class="xref py py-class docutils literal"><span class="pre">Database</span></code></a> instance.</p>
+</div>
+<div class="section" id="saving-and-retrieving-data">
+<h2>Saving and Retrieving Data<a class="headerlink" href="#saving-and-retrieving-data" title="Permalink to this headline">¶</a></h2>
+<p>The simplest way to work with <a class="reference internal" href="../api/gridfs/index.html#module-gridfs" title="gridfs: Tools for working with GridFS"><code class="xref py py-mod docutils literal"><span class="pre">gridfs</span></code></a> is to use its key/value
+interface (the <a class="reference internal" href="../api/gridfs/index.html#gridfs.GridFS.put" title="gridfs.GridFS.put"><code class="xref py py-meth docutils literal"><span class="pre">put()</span></code></a> and
+<a class="reference internal" href="../api/gridfs/index.html#gridfs.GridFS.get" title="gridfs.GridFS.get"><code class="xref py py-meth docutils literal"><span class="pre">get()</span></code></a> methods). To write data to GridFS, use
+<a class="reference internal" href="../api/gridfs/index.html#gridfs.GridFS.put" title="gridfs.GridFS.put"><code class="xref py py-meth docutils literal"><span class="pre">put()</span></code></a>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">a</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">b</span><span class="s">&quot;hello world&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><a class="reference internal" href="../api/gridfs/index.html#gridfs.GridFS.put" title="gridfs.GridFS.put"><code class="xref py py-meth docutils literal"><span class="pre">put()</span></code></a> creates a new file in GridFS, and returns
+the value of the file document&#8217;s <code class="docutils literal"><span class="pre">&quot;_id&quot;</span></code> key. Given that <code class="docutils literal"><span class="pre">&quot;_id&quot;</span></code>
+we can use <a class="reference internal" href="../api/gridfs/index.html#gridfs.GridFS.get" title="gridfs.GridFS.get"><code class="xref py py-meth docutils literal"><span class="pre">get()</span></code></a> to get back the contents of the
+file:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">fs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="go">&#39;hello world&#39;</span>
+</pre></div>
+</div>
+<p><a class="reference internal" href="../api/gridfs/index.html#gridfs.GridFS.get" title="gridfs.GridFS.get"><code class="xref py py-meth docutils literal"><span class="pre">get()</span></code></a> returns a file-like object, so we get the
+file&#8217;s contents by calling <a class="reference internal" href="../api/gridfs/grid_file.html#gridfs.grid_file.GridOut.read" title="gridfs.grid_file.GridOut.read"><code class="xref py py-meth docutils literal"><span class="pre">read()</span></code></a>.</p>
+<p>In addition to putting a <code class="xref py py-class docutils literal"><span class="pre">str</span></code> as a GridFS file, we can also
+put any file-like object (an object with a <code class="xref py py-meth docutils literal"><span class="pre">read()</span></code>
+method). GridFS will handle reading the file in chunk-sized segments
+automatically. We can also add additional attributes to the file as
+keyword arguments:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">b</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">fs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">a</span><span class="p">),</span> <span class="n">filename</span><span class="o">=</span><span class="s">&quot;foo&quot;</span><span class="p">,</span> <span class="n">bar</span><span class="o">=</span><span class="s">&quot;baz&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">out</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">out</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="go">&#39;hello world&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">out</span><span class="o">.</span><span class="n">filename</span>
+<span class="go">u&#39;foo&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">out</span><span class="o">.</span><span class="n">bar</span>
+<span class="go">u&#39;baz&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">out</span><span class="o">.</span><span class="n">upload_date</span>
+<span class="go">datetime.datetime(...)</span>
+</pre></div>
+</div>
+<p>The attributes we set in <a class="reference internal" href="../api/gridfs/index.html#gridfs.GridFS.put" title="gridfs.GridFS.put"><code class="xref py py-meth docutils literal"><span class="pre">put()</span></code></a> are stored in the
+file document, and retrievable after calling
+<a class="reference internal" href="../api/gridfs/index.html#gridfs.GridFS.get" title="gridfs.GridFS.get"><code class="xref py py-meth docutils literal"><span class="pre">get()</span></code></a>. Some attributes (like <code class="docutils literal"><span class="pre">&quot;filename&quot;</span></code>) are
+special and are defined in the GridFS specification - see that
+document for more details.</p>
+</div>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="high_availability.html" title="High Availability and PyMongo"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="gevent.html" title="Gevent"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PyMongo 3.4.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Examples</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2008 - 2015, MongoDB, Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.5.
+    </div>
+  </body>
+</html>

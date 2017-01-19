@@ -1,0 +1,213 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>TLS/SSL and PyMongo &mdash; PyMongo 3.4.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/pydoctheme.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '3.4.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/sidebar.js"></script>
+    <link rel="top" title="PyMongo 3.4.0 documentation" href="../index.html" />
+    <link rel="up" title="Examples" href="index.html" />
+    <link rel="next" title="Frequently Asked Questions" href="../faq.html" />
+    <link rel="prev" title="Tailable Cursors" href="tailable.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../faq.html" title="Frequently Asked Questions"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="tailable.html" title="Tailable Cursors"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PyMongo 3.4.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Examples</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="tls-ssl-and-pymongo">
+<h1>TLS/SSL and PyMongo<a class="headerlink" href="#tls-ssl-and-pymongo" title="Permalink to this headline">¶</a></h1>
+<p>PyMongo supports connecting to MongoDB over TLS/SSL. This guide covers the
+configuration options supported by PyMongo. See <a class="reference external" href="http://docs.mongodb.org/manual/tutorial/configure-ssl/">the server documentation</a> to configure
+MongoDB.</p>
+<div class="section" id="dependencies">
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline">¶</a></h2>
+<p>For connections using TLS/SSL, PyMongo may require third party dependencies as
+determined by your version of Python. With PyMongo 3.3+, you can install
+PyMongo 3.3+ and any TLS/SSL-related dependencies using the following pip
+command:</p>
+<div class="highlight-python"><div class="highlight"><pre>$ python -m pip install pymongo[tls]
+</pre></div>
+</div>
+<p>Earlier versions of PyMongo require you to manually install the dependencies
+listed below.</p>
+<div class="section" id="python-2-x">
+<h3>Python 2.x<a class="headerlink" href="#python-2-x" title="Permalink to this headline">¶</a></h3>
+<p>The <a class="reference external" href="https://pypi.python.org/pypi/ipaddress">ipaddress</a> module is required on all platforms.</p>
+<p>When using CPython &lt; 2.7.9 or PyPy &lt; 2.5.1:</p>
+<ul class="simple">
+<li>On Windows, the <a class="reference external" href="https://pypi.python.org/pypi/wincertstore">wincertstore</a> module is required.</li>
+<li>On all other platforms, the <a class="reference external" href="https://pypi.python.org/pypi/certifi">certifi</a> module is required.</li>
+</ul>
+</div>
+<div class="section" id="python-3-x">
+<h3>Python 3.x<a class="headerlink" href="#python-3-x" title="Permalink to this headline">¶</a></h3>
+<p>On Windows, the <a class="reference external" href="https://pypi.python.org/pypi/wincertstore">wincertstore</a> module is required when using CPython &lt; 3.4.0
+or any version of PyPy3.</p>
+</div>
+</div>
+<div class="section" id="basic-configuration">
+<h2>Basic configuration<a class="headerlink" href="#basic-configuration" title="Permalink to this headline">¶</a></h2>
+<p>In many cases connecting to MongoDB over TLS/SSL requires nothing more than
+passing <code class="docutils literal"><span class="pre">ssl=True</span></code> as a keyword argument to
+<a class="reference internal" href="../api/pymongo/mongo_client.html#pymongo.mongo_client.MongoClient" title="pymongo.mongo_client.MongoClient"><code class="xref py py-class docutils literal"><span class="pre">MongoClient</span></code></a>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">MongoClient</span><span class="p">(</span><span class="s">&#39;example.com&#39;</span><span class="p">,</span> <span class="n">ssl</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Or passing <code class="docutils literal"><span class="pre">ssl=true</span></code> in the URI:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">MongoClient</span><span class="p">(</span><span class="s">&#39;mongodb://example.com/?ssl=true&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This configures PyMongo to connect to the server using TLS, verify the server&#8217;s
+certificate and verify that the host you are attempting to connect to is listed
+by that certificate.</p>
+</div>
+<div class="section" id="certificate-verification-policy">
+<h2>Certificate verification policy<a class="headerlink" href="#certificate-verification-policy" title="Permalink to this headline">¶</a></h2>
+<p>By default, PyMongo is configured to require a certificate from the server when
+TLS is enabled. This is configurable using the <cite>ssl_cert_reqs</cite> option. To
+disable this requirement pass <code class="docutils literal"><span class="pre">ssl.CERT_NONE</span></code> as a keyword parameter:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">ssl</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">MongoClient</span><span class="p">(</span><span class="s">&#39;example.com&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                             <span class="n">ssl</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+<span class="gp">... </span>                             <span class="n">ssl_cert_reqs</span><span class="o">=</span><span class="n">ssl</span><span class="o">.</span><span class="n">CERT_NONE</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Or, in the URI:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">uri</span> <span class="o">=</span> <span class="s">&#39;mongodb://example.com/?ssl=true&amp;ssl_cert_reqs=CERT_NONE&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">MongoClient</span><span class="p">(</span><span class="n">uri</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="specifying-a-ca-file">
+<h2>Specifying a CA file<a class="headerlink" href="#specifying-a-ca-file" title="Permalink to this headline">¶</a></h2>
+<p>In some cases you may want to configure PyMongo to use a specific set of CA
+certificates. This is most often the case when using &#8220;self-signed&#8221; server
+certificates. The <cite>ssl_ca_certs</cite> option takes a path to a CA file. It can be
+passed as a keyword argument:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">MongoClient</span><span class="p">(</span><span class="s">&#39;example.com&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                             <span class="n">ssl</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+<span class="gp">... </span>                             <span class="n">ssl_ca_certs</span><span class="o">=</span><span class="s">&#39;/path/to/ca.pem&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Or, in the URI:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">uri</span> <span class="o">=</span> <span class="s">&#39;mongodb://example.com/?ssl=true&amp;ssl_ca_certs=/path/to/ca.pem&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">MongoClient</span><span class="p">(</span><span class="n">uri</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="specifying-a-certificate-revocation-list">
+<h2>Specifying a certificate revocation list<a class="headerlink" href="#specifying-a-certificate-revocation-list" title="Permalink to this headline">¶</a></h2>
+<p>Python 2.7.9+ (pypy 2.5.1+) and 3.4+ provide support for certificate revocation
+lists. The <cite>ssl_crlfile</cite> option takes a path to a CRL file. It can be passed as
+a keyword argument:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">MongoClient</span><span class="p">(</span><span class="s">&#39;example.com&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                             <span class="n">ssl</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+<span class="gp">... </span>                             <span class="n">ssl_crlfile</span><span class="o">=</span><span class="s">&#39;/path/to/crl.pem&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Or, in the URI:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">uri</span> <span class="o">=</span> <span class="s">&#39;mongodb://example.com/?ssl=true&amp;ssl_crlfile=/path/to/crl.pem&#39;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">MongoClient</span><span class="p">(</span><span class="n">uri</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="client-certificates">
+<h2>Client certificates<a class="headerlink" href="#client-certificates" title="Permalink to this headline">¶</a></h2>
+<p>PyMongo can be configured to present a client certificate using the
+<cite>ssl_certfile</cite> option:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">MongoClient</span><span class="p">(</span><span class="s">&#39;example.com&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                             <span class="n">ssl</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+<span class="gp">... </span>                             <span class="n">ssl_certfile</span><span class="o">=</span><span class="s">&#39;/path/to/client.pem&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If the private key for the client certificate is stored in a separate file use
+the <cite>ssl_keyfile</cite> option:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">MongoClient</span><span class="p">(</span><span class="s">&#39;example.com&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                             <span class="n">ssl</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+<span class="gp">... </span>                             <span class="n">ssl_certfile</span><span class="o">=</span><span class="s">&#39;/path/to/client.pem&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                             <span class="n">ssl_keyfile</span><span class="o">=</span><span class="s">&#39;/path/to/key.pem&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Python 2.7.9+ (pypy 2.5.1+) and 3.3+ support providing a password or passphrase
+to decrypt encrypted private keys. Use the <cite>ssl_pem_passphrase</cite> option:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">MongoClient</span><span class="p">(</span><span class="s">&#39;example.com&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                             <span class="n">ssl</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+<span class="gp">... </span>                             <span class="n">ssl_certfile</span><span class="o">=</span><span class="s">&#39;/path/to/client.pem&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                             <span class="n">ssl_keyfile</span><span class="o">=</span><span class="s">&#39;/path/to/key.pem&#39;</span><span class="p">,</span>
+<span class="gp">... </span>                             <span class="n">ssl_pem_passphrase</span><span class="o">=&lt;</span><span class="n">passphrase</span><span class="o">&gt;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>These options can also be passed as part of the MongoDB URI.</p>
+</div>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../faq.html" title="Frequently Asked Questions"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="tailable.html" title="Tailable Cursors"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PyMongo 3.4.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Examples</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2008 - 2015, MongoDB, Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.5.
+    </div>
+  </body>
+</html>

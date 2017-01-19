@@ -1,0 +1,193 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type"/>
+<title>son_manipulator – Manipulators that can edit SON documents as they are saved or retrieved — PyMongo 3.4.0 documentation</title>
+<link href="../../_static/pydoctheme.css" rel="stylesheet" type="text/css"/>
+<link href="../../_static/pygments.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '3.4.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+<script src="../../_static/jquery.js" type="text/javascript"></script>
+<script src="../../_static/underscore.js" type="text/javascript"></script>
+<script src="../../_static/doctools.js" type="text/javascript"></script>
+<script src="../../_static/sidebar.js" type="text/javascript"></script>
+<link href="../../index.html" rel="top" title="PyMongo 3.4.0 documentation"/>
+<link href="index.html" rel="up" title="pymongo – Python driver for MongoDB"/>
+<link href="cursor_manager.html" rel="next" title="cursor_manager – Managers to handle when cursors are killed after being closed"/>
+<link href="results.html" rel="prev" title="results – Result class definitions"/>
+</head>
+<body role="document">
+<div aria-label="related navigation" class="related" role="navigation">
+<h3>Navigation</h3>
+<ul>
+<li class="right" style="margin-right: 10px">
+<a accesskey="I" href="../../genindex.html" title="General Index">index</a></li>
+<li class="right">
+<a href="../../py-modindex.html" title="Python Module Index">modules</a> |</li>
+<li class="right">
+<a accesskey="N" href="cursor_manager.html" title="cursor_manager – Managers to handle when cursors are killed after being closed">next</a> |</li>
+<li class="right">
+<a accesskey="P" href="results.html" title="results – Result class definitions">previous</a> |</li>
+<li class="nav-item nav-item-0"><a href="../../index.html">PyMongo 3.4.0 documentation</a> »</li>
+<li class="nav-item nav-item-1"><a href="../index.html">API Documentation</a> »</li>
+<li class="nav-item nav-item-2"><a accesskey="U" href="index.html"><code class="docutils literal"><span class="pre">pymongo</span></code> – Python driver for MongoDB</a> »</li>
+</ul>
+</div>
+<div class="document">
+<div class="documentwrapper">
+<div class="body" role="main">
+<div class="section" id="module-pymongo.son_manipulator">
+<span id="son-manipulator-manipulators-that-can-edit-son-documents-as-they-are-saved-or-retrieved"></span><h1><a name="//apple_ref/cpp/Module/pymongo.son_manipulator"></a><code class="xref py py-mod docutils literal"><span class="pre">son_manipulator</span></code> – Manipulators that can edit SON documents as they are saved or retrieved<a class="headerlink" href="#module-pymongo.son_manipulator" title="Permalink to this headline">¶</a></h1>
+<p>Manipulators that can edit SON objects as they enter and exit a database.</p>
+<p>New manipulators should be defined as subclasses of SONManipulator and can be
+installed on a database by calling
+<cite>pymongo.database.Database.add_son_manipulator</cite>.</p>
+<dl class="class">
+<dt id="pymongo.son_manipulator.AutoReference"><a name="//apple_ref/cpp/Class/pymongo.son_manipulator.AutoReference"></a>
+<em class="property">class </em><code class="descclassname">pymongo.son_manipulator.</code><code class="descname">AutoReference</code><span class="sig-paren">(</span><em>db</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.son_manipulator.AutoReference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transparently reference and de-reference already saved embedded objects.</p>
+<p>This manipulator should probably only be used when the NamespaceInjector is
+also being used, otherwise it doesn’t make too much sense - documents can
+only be auto-referenced if they have an <em>_ns</em> field.</p>
+<p>NOTE: this will behave poorly if you have a circular reference.</p>
+<p>TODO: this only works for documents that are in the same database. To fix
+this we’ll need to add a DatabaseInjector that adds <em>_db</em> and then make
+use of the optional <em>database</em> support for DBRefs.</p>
+<dl class="method">
+<dt id="pymongo.son_manipulator.AutoReference.transform_incoming"><a name="//apple_ref/cpp/Method/pymongo.son_manipulator.AutoReference.transform_incoming"></a>
+<code class="descname">transform_incoming</code><span class="sig-paren">(</span><em>son</em>, <em>collection</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.son_manipulator.AutoReference.transform_incoming" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace embedded documents with DBRefs.</p>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.son_manipulator.AutoReference.transform_outgoing"><a name="//apple_ref/cpp/Method/pymongo.son_manipulator.AutoReference.transform_outgoing"></a>
+<code class="descname">transform_outgoing</code><span class="sig-paren">(</span><em>son</em>, <em>collection</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.son_manipulator.AutoReference.transform_outgoing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace DBRefs with embedded documents.</p>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.son_manipulator.AutoReference.will_copy"><a name="//apple_ref/cpp/Method/pymongo.son_manipulator.AutoReference.will_copy"></a>
+<code class="descname">will_copy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.son_manipulator.AutoReference.will_copy" title="Permalink to this definition">¶</a></dt>
+<dd><p>We need to copy so the user’s document doesn’t get transformed refs.</p>
+</dd></dl>
+</dd></dl>
+<dl class="class">
+<dt id="pymongo.son_manipulator.NamespaceInjector"><a name="//apple_ref/cpp/Class/pymongo.son_manipulator.NamespaceInjector"></a>
+<em class="property">class </em><code class="descclassname">pymongo.son_manipulator.</code><code class="descname">NamespaceInjector</code><a class="headerlink" href="#pymongo.son_manipulator.NamespaceInjector" title="Permalink to this definition">¶</a></dt>
+<dd><p>A son manipulator that adds the _ns field.</p>
+<dl class="method">
+<dt id="pymongo.son_manipulator.NamespaceInjector.transform_incoming"><a name="//apple_ref/cpp/Method/pymongo.son_manipulator.NamespaceInjector.transform_incoming"></a>
+<code class="descname">transform_incoming</code><span class="sig-paren">(</span><em>son</em>, <em>collection</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.son_manipulator.NamespaceInjector.transform_incoming" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add the _ns field to the incoming object</p>
+</dd></dl>
+</dd></dl>
+<dl class="class">
+<dt id="pymongo.son_manipulator.ObjectIdInjector"><a name="//apple_ref/cpp/Class/pymongo.son_manipulator.ObjectIdInjector"></a>
+<em class="property">class </em><code class="descclassname">pymongo.son_manipulator.</code><code class="descname">ObjectIdInjector</code><a class="headerlink" href="#pymongo.son_manipulator.ObjectIdInjector" title="Permalink to this definition">¶</a></dt>
+<dd><p>A son manipulator that adds the _id field if it is missing.</p>
+<div class="versionchanged">
+<p><span class="versionmodified">Changed in version 2.7: </span>ObjectIdInjector is no longer used by PyMongo, but remains in this
+module for backwards compatibility.</p>
+</div>
+<dl class="method">
+<dt id="pymongo.son_manipulator.ObjectIdInjector.transform_incoming"><a name="//apple_ref/cpp/Method/pymongo.son_manipulator.ObjectIdInjector.transform_incoming"></a>
+<code class="descname">transform_incoming</code><span class="sig-paren">(</span><em>son</em>, <em>collection</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.son_manipulator.ObjectIdInjector.transform_incoming" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add an _id field if it is missing.</p>
+</dd></dl>
+</dd></dl>
+<dl class="class">
+<dt id="pymongo.son_manipulator.ObjectIdShuffler"><a name="//apple_ref/cpp/Class/pymongo.son_manipulator.ObjectIdShuffler"></a>
+<em class="property">class </em><code class="descclassname">pymongo.son_manipulator.</code><code class="descname">ObjectIdShuffler</code><a class="headerlink" href="#pymongo.son_manipulator.ObjectIdShuffler" title="Permalink to this definition">¶</a></dt>
+<dd><p>A son manipulator that moves _id to the first position.</p>
+<dl class="method">
+<dt id="pymongo.son_manipulator.ObjectIdShuffler.transform_incoming"><a name="//apple_ref/cpp/Method/pymongo.son_manipulator.ObjectIdShuffler.transform_incoming"></a>
+<code class="descname">transform_incoming</code><span class="sig-paren">(</span><em>son</em>, <em>collection</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.son_manipulator.ObjectIdShuffler.transform_incoming" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move _id to the front if it’s there.</p>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.son_manipulator.ObjectIdShuffler.will_copy"><a name="//apple_ref/cpp/Method/pymongo.son_manipulator.ObjectIdShuffler.will_copy"></a>
+<code class="descname">will_copy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.son_manipulator.ObjectIdShuffler.will_copy" title="Permalink to this definition">¶</a></dt>
+<dd><p>We need to copy to be sure that we are dealing with SON, not a dict.</p>
+</dd></dl>
+</dd></dl>
+<dl class="class">
+<dt id="pymongo.son_manipulator.SONManipulator"><a name="//apple_ref/cpp/Class/pymongo.son_manipulator.SONManipulator"></a>
+<em class="property">class </em><code class="descclassname">pymongo.son_manipulator.</code><code class="descname">SONManipulator</code><a class="headerlink" href="#pymongo.son_manipulator.SONManipulator" title="Permalink to this definition">¶</a></dt>
+<dd><p>A base son manipulator.</p>
+<p>This manipulator just saves and restores objects without changing them.</p>
+<dl class="method">
+<dt id="pymongo.son_manipulator.SONManipulator.transform_incoming"><a name="//apple_ref/cpp/Method/pymongo.son_manipulator.SONManipulator.transform_incoming"></a>
+<code class="descname">transform_incoming</code><span class="sig-paren">(</span><em>son</em>, <em>collection</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.son_manipulator.SONManipulator.transform_incoming" title="Permalink to this definition">¶</a></dt>
+<dd><p>Manipulate an incoming SON object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>son</cite>: the SON object to be inserted into the database</li>
+<li><cite>collection</cite>: the collection the object is being inserted into</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.son_manipulator.SONManipulator.transform_outgoing"><a name="//apple_ref/cpp/Method/pymongo.son_manipulator.SONManipulator.transform_outgoing"></a>
+<code class="descname">transform_outgoing</code><span class="sig-paren">(</span><em>son</em>, <em>collection</em><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.son_manipulator.SONManipulator.transform_outgoing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Manipulate an outgoing SON object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name"></col>
+<col class="field-body"></col>
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><cite>son</cite>: the SON object being retrieved from the database</li>
+<li><cite>collection</cite>: the collection this object was stored in</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+<dl class="method">
+<dt id="pymongo.son_manipulator.SONManipulator.will_copy"><a name="//apple_ref/cpp/Method/pymongo.son_manipulator.SONManipulator.will_copy"></a>
+<code class="descname">will_copy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pymongo.son_manipulator.SONManipulator.will_copy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Will this SON manipulator make a copy of the incoming document?</p>
+<p>Derived classes that do need to make a copy should override this
+method, returning True instead of False. All non-copying manipulators
+will be applied first (so that the user’s document will be updated
+appropriately), followed by copying manipulators.</p>
+</dd></dl>
+</dd></dl>
+</div>
+</div>
+</div>
+<div class="clearer"></div>
+</div>
+<div aria-label="related navigation" class="related" role="navigation">
+<h3>Navigation</h3>
+<ul>
+<li class="right" style="margin-right: 10px">
+<a href="../../genindex.html" title="General Index">index</a></li>
+<li class="right">
+<a href="../../py-modindex.html" title="Python Module Index">modules</a> |</li>
+<li class="right">
+<a href="cursor_manager.html" title="cursor_manager – Managers to handle when cursors are killed after being closed">next</a> |</li>
+<li class="right">
+<a href="results.html" title="results – Result class definitions">previous</a> |</li>
+<li class="nav-item nav-item-0"><a href="../../index.html">PyMongo 3.4.0 documentation</a> »</li>
+<li class="nav-item nav-item-1"><a href="../index.html">API Documentation</a> »</li>
+<li class="nav-item nav-item-2"><a href="index.html"><code class="docutils literal"><span class="pre">pymongo</span></code> – Python driver for MongoDB</a> »</li>
+</ul>
+</div>
+<div class="footer" role="contentinfo">
+        © Copyright 2008 - 2015, MongoDB, Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.5.
+    </div>
+</body>
+</html>

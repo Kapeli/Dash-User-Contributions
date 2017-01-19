@@ -1,0 +1,208 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Collations &mdash; PyMongo 3.4.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/pydoctheme.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '3.4.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/sidebar.js"></script>
+    <link rel="top" title="PyMongo 3.4.0 documentation" href="../index.html" />
+    <link rel="up" title="Examples" href="index.html" />
+    <link rel="next" title="Copying a Database" href="copydb.html" />
+    <link rel="prev" title="Authentication Examples" href="authentication.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="copydb.html" title="Copying a Database"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="authentication.html" title="Authentication Examples"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PyMongo 3.4.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Examples</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="collations">
+<h1>Collations<a class="headerlink" href="#collations" title="Permalink to this headline">¶</a></h1>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last">The API docs for <a class="reference internal" href="../api/pymongo/collation.html#module-pymongo.collation" title="pymongo.collation: Tools for working with collations."><code class="xref py py-mod docutils literal"><span class="pre">collation</span></code></a>.</p>
+</div>
+<p>Collations are a new feature in MongoDB version 3.4. They provide a set of rules
+to use when comparing strings that comply with the conventions of a particular
+language, such as Spanish or German. If no collation is specified, the server
+sorts strings based on a binary comparison. Many languages have specific
+ordering rules, and collations allow users to build applications that adhere to
+language-specific comparison rules.</p>
+<p>In French, for example, the last accent in a given word determines the sorting
+order. The correct sorting order for the following four words in French is:</p>
+<div class="highlight-python"><div class="highlight"><pre>cote &lt; côte &lt; coté &lt; côté
+</pre></div>
+</div>
+<p>Specifying a French collation allows users to sort string fields using the
+French sort order.</p>
+<div class="section" id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<p>Users can specify a collation for a
+<a class="reference internal" href="#collation-on-collection"><span>collection</span></a>, an
+<a class="reference internal" href="#collation-on-index"><span>index</span></a>, or a
+<a class="reference internal" href="#collation-on-operation"><span>CRUD command</span></a>.</p>
+<div class="section" id="collation-parameters">
+<h3>Collation Parameters:<a class="headerlink" href="#collation-parameters" title="Permalink to this headline">¶</a></h3>
+<p>Collations can be specified with the <a class="reference internal" href="../api/pymongo/collation.html#pymongo.collation.Collation" title="pymongo.collation.Collation"><code class="xref py py-class docutils literal"><span class="pre">Collation</span></code></a> model
+or with plain Python dictionaries. The structure is the same:</p>
+<div class="highlight-python"><div class="highlight"><pre>Collation(locale=&lt;string&gt;,
+          caseLevel=&lt;bool&gt;,
+          caseFirst=&lt;string&gt;,
+          strength=&lt;int&gt;,
+          numericOrdering=&lt;bool&gt;,
+          alternate=&lt;string&gt;,
+          maxVariable=&lt;string&gt;,
+          backwards=&lt;bool&gt;)
+</pre></div>
+</div>
+<p>The only required parameter is <code class="docutils literal"><span class="pre">locale</span></code>, which the server parses as
+an <a class="reference external" href="http://userguide.icu-project.org/locale">ICU format locale ID</a>.
+For example, set <code class="docutils literal"><span class="pre">locale</span></code> to <code class="docutils literal"><span class="pre">en_US</span></code> to represent US English
+or <code class="docutils literal"><span class="pre">fr_CA</span></code> to represent Canadian French.</p>
+<p>For a complete description of the available parameters, see the MongoDB <a class="reference external" href="/">manual</a>.</p>
+</div>
+<div class="section" id="assign-a-default-collation-to-a-collection">
+<span id="collation-on-collection"></span><h3>Assign a Default Collation to a Collection<a class="headerlink" href="#assign-a-default-collation-to-a-collection" title="Permalink to this headline">¶</a></h3>
+<p>The following example demonstrates how to create a new collection called
+<code class="docutils literal"><span class="pre">contacts</span></code> and assign a default collation with the <code class="docutils literal"><span class="pre">fr_CA</span></code> locale. This
+operation ensures that all queries that are run against the <code class="docutils literal"><span class="pre">contacts</span></code>
+collection use the <code class="docutils literal"><span class="pre">fr_CA</span></code> collation unless another collation is explicitly
+specified:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pymongo</span> <span class="kn">import</span> <span class="n">MongoClient</span>
+<span class="kn">from</span> <span class="nn">pymongo.collation</span> <span class="kn">import</span> <span class="n">Collation</span>
+
+<span class="n">db</span> <span class="o">=</span> <span class="n">MongoClient</span><span class="p">()</span><span class="o">.</span><span class="n">test</span>
+<span class="n">collection</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">create_collection</span><span class="p">(</span><span class="s">&#39;contacts&#39;</span><span class="p">,</span>
+                                  <span class="n">collation</span><span class="o">=</span><span class="n">Collation</span><span class="p">(</span><span class="n">locale</span><span class="o">=</span><span class="s">&#39;fr_CA&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="assign-a-default-collation-to-an-index">
+<span id="collation-on-index"></span><h3>Assign a Default Collation to an Index<a class="headerlink" href="#assign-a-default-collation-to-an-index" title="Permalink to this headline">¶</a></h3>
+<p>When creating a new index, you can specify a default collation.</p>
+<p>The following example shows how to create an index on the <code class="docutils literal"><span class="pre">name</span></code>
+field of the <code class="docutils literal"><span class="pre">contacts</span></code> collection, with the <code class="docutils literal"><span class="pre">unique</span></code> parameter
+enabled and a default collation with <code class="docutils literal"><span class="pre">locale</span></code> set to <code class="docutils literal"><span class="pre">fr_CA</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pymongo</span> <span class="kn">import</span> <span class="n">MongoClient</span>
+<span class="kn">from</span> <span class="nn">pymongo.collation</span> <span class="kn">import</span> <span class="n">Collation</span>
+
+<span class="n">contacts</span> <span class="o">=</span> <span class="n">MongoClient</span><span class="p">()</span><span class="o">.</span><span class="n">test</span><span class="o">.</span><span class="n">contacts</span>
+<span class="n">contacts</span><span class="o">.</span><span class="n">create_index</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">,</span>
+                      <span class="n">unique</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                      <span class="n">collation</span><span class="o">=</span><span class="n">Collation</span><span class="p">(</span><span class="n">locale</span><span class="o">=</span><span class="s">&#39;fr_CA&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="specify-a-collation-for-a-query">
+<span id="collation-on-operation"></span><h3>Specify a Collation for a Query<a class="headerlink" href="#specify-a-collation-for-a-query" title="Permalink to this headline">¶</a></h3>
+<p>Individual queries can specify a collation to use when sorting
+results. The following example demonstrates a query that runs on the
+<code class="docutils literal"><span class="pre">contacts</span></code> collection in database <code class="docutils literal"><span class="pre">test</span></code>. It matches on
+documents that contain <code class="docutils literal"><span class="pre">New</span> <span class="pre">York</span></code> in the <code class="docutils literal"><span class="pre">city</span></code> field,
+and sorts on the <code class="docutils literal"><span class="pre">name</span></code> field with the <code class="docutils literal"><span class="pre">fr_CA</span></code> collation:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pymongo</span> <span class="kn">import</span> <span class="n">MongoClient</span>
+<span class="kn">from</span> <span class="nn">pymongo.collation</span> <span class="kn">import</span> <span class="n">Collation</span>
+
+<span class="n">collection</span> <span class="o">=</span> <span class="n">MongoClient</span><span class="p">()</span><span class="o">.</span><span class="n">test</span><span class="o">.</span><span class="n">contacts</span>
+<span class="n">docs</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s">&#39;city&#39;</span><span class="p">:</span> <span class="s">&#39;New York&#39;</span><span class="p">})</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">collation</span><span class="p">(</span>
+    <span class="n">Collation</span><span class="p">(</span><span class="n">locale</span><span class="o">=</span><span class="s">&#39;fr_CA&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="other-query-types">
+<h3>Other Query Types<a class="headerlink" href="#other-query-types" title="Permalink to this headline">¶</a></h3>
+<p>You can use collations to control document matching rules for several different
+types of queries. All the various update and delete methods
+(<a class="reference internal" href="../api/pymongo/collection.html#pymongo.collection.Collection.update_one" title="pymongo.collection.Collection.update_one"><code class="xref py py-meth docutils literal"><span class="pre">update_one()</span></code></a>,
+<a class="reference internal" href="../api/pymongo/collection.html#pymongo.collection.Collection.update_many" title="pymongo.collection.Collection.update_many"><code class="xref py py-meth docutils literal"><span class="pre">update_many()</span></code></a>,
+<a class="reference internal" href="../api/pymongo/collection.html#pymongo.collection.Collection.delete_one" title="pymongo.collection.Collection.delete_one"><code class="xref py py-meth docutils literal"><span class="pre">delete_one()</span></code></a>, etc.) support collation, and
+you can create query filters which employ collations to comply with any of the
+languages and variants available to the <code class="docutils literal"><span class="pre">locale</span></code> parameter.</p>
+<p>The following example uses a collation with <code class="docutils literal"><span class="pre">strength</span></code> set to
+<a class="reference internal" href="../api/pymongo/collation.html#pymongo.collation.CollationStrength.SECONDARY" title="pymongo.collation.CollationStrength.SECONDARY"><code class="xref py py-const docutils literal"><span class="pre">SECONDARY</span></code></a>, which considers only
+the base character and character accents in string comparisons, but not case
+sensitivity, for example. All documents in the <code class="docutils literal"><span class="pre">contacts</span></code> collection with
+<code class="docutils literal"><span class="pre">jürgen</span></code> (case-insensitive) in the <code class="docutils literal"><span class="pre">first_name</span></code> field are updated:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pymongo</span> <span class="kn">import</span> <span class="n">MongoClient</span>
+<span class="kn">from</span> <span class="nn">pymongo.collation</span> <span class="kn">import</span> <span class="n">Collation</span><span class="p">,</span> <span class="n">CollationStrength</span>
+
+<span class="n">contacts</span> <span class="o">=</span> <span class="n">MongoClient</span><span class="p">()</span><span class="o">.</span><span class="n">test</span><span class="o">.</span><span class="n">contacts</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">contacts</span><span class="o">.</span><span class="n">update_many</span><span class="p">(</span>
+    <span class="p">{</span><span class="s">&#39;first_name&#39;</span><span class="p">:</span> <span class="s">&#39;jürgen&#39;</span><span class="p">},</span>
+    <span class="p">{</span><span class="s">&#39;$set&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;verified&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}},</span>
+    <span class="n">collation</span><span class="o">=</span><span class="n">Collation</span><span class="p">(</span><span class="n">locale</span><span class="o">=</span><span class="s">&#39;de&#39;</span><span class="p">,</span>
+                        <span class="n">strength</span><span class="o">=</span><span class="n">CollationStrength</span><span class="o">.</span><span class="n">SECONDARY</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="copydb.html" title="Copying a Database"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="authentication.html" title="Authentication Examples"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PyMongo 3.4.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Examples</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2008 - 2015, MongoDB, Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.5.
+    </div>
+  </body>
+</html>

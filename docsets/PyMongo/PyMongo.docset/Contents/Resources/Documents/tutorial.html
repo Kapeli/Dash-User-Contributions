@@ -1,0 +1,450 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Tutorial &mdash; PyMongo 3.4.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/pydoctheme.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '3.4.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/sidebar.js"></script>
+    <link rel="top" title="PyMongo 3.4.0 documentation" href="index.html" />
+    <link rel="next" title="Examples" href="examples/index.html" />
+    <link rel="prev" title="Installing / Upgrading" href="installation.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="examples/index.html" title="Examples"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="installation.html" title="Installing / Upgrading"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyMongo 3.4.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="tutorial">
+<h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
+<p>This tutorial is intended as an introduction to working with
+<strong>MongoDB</strong> and <strong>PyMongo</strong>.</p>
+<div class="section" id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this headline">¶</a></h2>
+<p>Before we start, make sure that you have the <strong>PyMongo</strong> distribution
+<a class="reference internal" href="installation.html"><em>installed</em></a>. In the Python shell, the following
+should run without raising an exception:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pymongo</span>
+</pre></div>
+</div>
+<p>This tutorial also assumes that a MongoDB instance is running on the
+default host and port. Assuming you have <a class="reference external" href="http://www.mongodb.org/display/DOCS/Getting+Started">downloaded and installed</a> MongoDB, you
+can start it like so:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nv">$ </span>mongod
+</pre></div>
+</div>
+</div>
+<div class="section" id="making-a-connection-with-mongoclient">
+<h2>Making a Connection with MongoClient<a class="headerlink" href="#making-a-connection-with-mongoclient" title="Permalink to this headline">¶</a></h2>
+<p>The first step when working with <strong>PyMongo</strong> is to create a
+<a class="reference internal" href="api/pymongo/mongo_client.html#pymongo.mongo_client.MongoClient" title="pymongo.mongo_client.MongoClient"><code class="xref py py-class docutils literal"><span class="pre">MongoClient</span></code></a> to the running <strong>mongod</strong>
+instance. Doing so is easy:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pymongo</span> <span class="kn">import</span> <span class="n">MongoClient</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">MongoClient</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The above code will connect on the default host and port. We can also
+specify the host and port explicitly, as follows:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">MongoClient</span><span class="p">(</span><span class="s">&#39;localhost&#39;</span><span class="p">,</span> <span class="mi">27017</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Or use the MongoDB URI format:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">MongoClient</span><span class="p">(</span><span class="s">&#39;mongodb://localhost:27017/&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="getting-a-database">
+<h2>Getting a Database<a class="headerlink" href="#getting-a-database" title="Permalink to this headline">¶</a></h2>
+<p>A single instance of MongoDB can support multiple independent
+<a class="reference external" href="http://www.mongodb.org/display/DOCS/Databases">databases</a>. When
+working with PyMongo you access databases using attribute style access
+on <a class="reference internal" href="api/pymongo/mongo_client.html#pymongo.mongo_client.MongoClient" title="pymongo.mongo_client.MongoClient"><code class="xref py py-class docutils literal"><span class="pre">MongoClient</span></code></a> instances:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">test_database</span>
+</pre></div>
+</div>
+<p>If your database name is such that using attribute style access won&#8217;t
+work (like <code class="docutils literal"><span class="pre">test-database</span></code>), you can use dictionary style access
+instead:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span> <span class="o">=</span> <span class="n">client</span><span class="p">[</span><span class="s">&#39;test-database&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="getting-a-collection">
+<h2>Getting a Collection<a class="headerlink" href="#getting-a-collection" title="Permalink to this headline">¶</a></h2>
+<p>A <a class="reference external" href="http://www.mongodb.org/display/DOCS/Collections">collection</a> is a
+group of documents stored in MongoDB, and can be thought of as roughly
+the equivalent of a table in a relational database. Getting a
+collection in PyMongo works the same as getting a database:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">collection</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">test_collection</span>
+</pre></div>
+</div>
+<p>or (using dictionary style access):</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">collection</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="s">&#39;test-collection&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>An important note about collections (and databases) in MongoDB is that
+they are created lazily - none of the above commands have actually
+performed any operations on the MongoDB server. Collections and
+databases are created when the first document is inserted into them.</p>
+</div>
+<div class="section" id="documents">
+<h2>Documents<a class="headerlink" href="#documents" title="Permalink to this headline">¶</a></h2>
+<p>Data in MongoDB is represented (and stored) using JSON-style
+documents. In PyMongo we use dictionaries to represent documents. As
+an example, the following dictionary might be used to represent a blog
+post:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">datetime</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">post</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;author&quot;</span><span class="p">:</span> <span class="s">&quot;Mike&quot;</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="s">&quot;text&quot;</span><span class="p">:</span> <span class="s">&quot;My first blog post!&quot;</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="s">&quot;tags&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s">&quot;mongodb&quot;</span><span class="p">,</span> <span class="s">&quot;python&quot;</span><span class="p">,</span> <span class="s">&quot;pymongo&quot;</span><span class="p">],</span>
+<span class="gp">... </span>        <span class="s">&quot;date&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()}</span>
+</pre></div>
+</div>
+<p>Note that documents can contain native Python types (like
+<code class="xref py py-class docutils literal"><span class="pre">datetime.datetime</span></code> instances) which will be automatically
+converted to and from the appropriate <a class="reference external" href="http://www.mongodb.org/display/DOCS/BSON">BSON</a> types.</p>
+</div>
+<div class="section" id="inserting-a-document">
+<h2>Inserting a Document<a class="headerlink" href="#inserting-a-document" title="Permalink to this headline">¶</a></h2>
+<p>To insert a document into a collection we can use the
+<a class="reference internal" href="api/pymongo/collection.html#pymongo.collection.Collection.insert_one" title="pymongo.collection.Collection.insert_one"><code class="xref py py-meth docutils literal"><span class="pre">insert_one()</span></code></a> method:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">posts</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">posts</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">post_id</span> <span class="o">=</span> <span class="n">posts</span><span class="o">.</span><span class="n">insert_one</span><span class="p">(</span><span class="n">post</span><span class="p">)</span><span class="o">.</span><span class="n">inserted_id</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">post_id</span>
+<span class="go">ObjectId(&#39;...&#39;)</span>
+</pre></div>
+</div>
+<p>When a document is inserted a special key, <code class="docutils literal"><span class="pre">&quot;_id&quot;</span></code>, is automatically
+added if the document doesn&#8217;t already contain an <code class="docutils literal"><span class="pre">&quot;_id&quot;</span></code> key. The value
+of <code class="docutils literal"><span class="pre">&quot;_id&quot;</span></code> must be unique across the
+collection. <a class="reference internal" href="api/pymongo/collection.html#pymongo.collection.Collection.insert_one" title="pymongo.collection.Collection.insert_one"><code class="xref py py-meth docutils literal"><span class="pre">insert_one()</span></code></a> returns an
+instance of <a class="reference internal" href="api/pymongo/results.html#pymongo.results.InsertOneResult" title="pymongo.results.InsertOneResult"><code class="xref py py-class docutils literal"><span class="pre">InsertOneResult</span></code></a>. For more information
+on <code class="docutils literal"><span class="pre">&quot;_id&quot;</span></code>, see the <a class="reference external" href="http://www.mongodb.org/display/DOCS/Object+IDs">documentation on _id</a>.</p>
+<p>After inserting the first document, the <em>posts</em> collection has
+actually been created on the server. We can verify this by listing all
+of the collections in our database:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">collection_names</span><span class="p">(</span><span class="n">include_system_collections</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="go">[u&#39;posts&#39;]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="getting-a-single-document-with-find-one">
+<h2>Getting a Single Document With <a class="reference internal" href="api/pymongo/collection.html#pymongo.collection.Collection.find_one" title="pymongo.collection.Collection.find_one"><code class="xref py py-meth docutils literal"><span class="pre">find_one()</span></code></a><a class="headerlink" href="#getting-a-single-document-with-find-one" title="Permalink to this headline">¶</a></h2>
+<p>The most basic type of query that can be performed in MongoDB is
+<a class="reference internal" href="api/pymongo/collection.html#pymongo.collection.Collection.find_one" title="pymongo.collection.Collection.find_one"><code class="xref py py-meth docutils literal"><span class="pre">find_one()</span></code></a>. This method returns a
+single document matching a query (or <code class="docutils literal"><span class="pre">None</span></code> if there are no
+matches). It is useful when you know there is only one matching
+document, or are only interested in the first match. Here we use
+<a class="reference internal" href="api/pymongo/collection.html#pymongo.collection.Collection.find_one" title="pymongo.collection.Collection.find_one"><code class="xref py py-meth docutils literal"><span class="pre">find_one()</span></code></a> to get the first
+document from the posts collection:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pprint</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pprint</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="n">posts</span><span class="o">.</span><span class="n">find_one</span><span class="p">())</span>
+<span class="go">{u&#39;_id&#39;: ObjectId(&#39;...&#39;),</span>
+<span class="go"> u&#39;author&#39;: u&#39;Mike&#39;,</span>
+<span class="go"> u&#39;date&#39;: datetime.datetime(...),</span>
+<span class="go"> u&#39;tags&#39;: [u&#39;mongodb&#39;, u&#39;python&#39;, u&#39;pymongo&#39;],</span>
+<span class="go"> u&#39;text&#39;: u&#39;My first blog post!&#39;}</span>
+</pre></div>
+</div>
+<p>The result is a dictionary matching the one that we inserted previously.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The returned document contains an <code class="docutils literal"><span class="pre">&quot;_id&quot;</span></code>, which was
+automatically added on insert.</p>
+</div>
+<p><a class="reference internal" href="api/pymongo/collection.html#pymongo.collection.Collection.find_one" title="pymongo.collection.Collection.find_one"><code class="xref py py-meth docutils literal"><span class="pre">find_one()</span></code></a> also supports querying
+on specific elements that the resulting document must match. To limit
+our results to a document with author &#8220;Mike&#8221; we do:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">pprint</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="n">posts</span><span class="o">.</span><span class="n">find_one</span><span class="p">({</span><span class="s">&quot;author&quot;</span><span class="p">:</span> <span class="s">&quot;Mike&quot;</span><span class="p">}))</span>
+<span class="go">{u&#39;_id&#39;: ObjectId(&#39;...&#39;),</span>
+<span class="go"> u&#39;author&#39;: u&#39;Mike&#39;,</span>
+<span class="go"> u&#39;date&#39;: datetime.datetime(...),</span>
+<span class="go"> u&#39;tags&#39;: [u&#39;mongodb&#39;, u&#39;python&#39;, u&#39;pymongo&#39;],</span>
+<span class="go"> u&#39;text&#39;: u&#39;My first blog post!&#39;}</span>
+</pre></div>
+</div>
+<p>If we try with a different author, like &#8220;Eliot&#8221;, we&#8217;ll get no result:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">posts</span><span class="o">.</span><span class="n">find_one</span><span class="p">({</span><span class="s">&quot;author&quot;</span><span class="p">:</span> <span class="s">&quot;Eliot&quot;</span><span class="p">})</span>
+<span class="go">&gt;&gt;&gt;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="querying-by-objectid">
+<span id="id1"></span><h2>Querying By ObjectId<a class="headerlink" href="#querying-by-objectid" title="Permalink to this headline">¶</a></h2>
+<p>We can also find a post by its <code class="docutils literal"><span class="pre">_id</span></code>, which in our example is an ObjectId:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">post_id</span>
+<span class="go">ObjectId(...)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pprint</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="n">posts</span><span class="o">.</span><span class="n">find_one</span><span class="p">({</span><span class="s">&quot;_id&quot;</span><span class="p">:</span> <span class="n">post_id</span><span class="p">}))</span>
+<span class="go">{u&#39;_id&#39;: ObjectId(&#39;...&#39;),</span>
+<span class="go"> u&#39;author&#39;: u&#39;Mike&#39;,</span>
+<span class="go"> u&#39;date&#39;: datetime.datetime(...),</span>
+<span class="go"> u&#39;tags&#39;: [u&#39;mongodb&#39;, u&#39;python&#39;, u&#39;pymongo&#39;],</span>
+<span class="go"> u&#39;text&#39;: u&#39;My first blog post!&#39;}</span>
+</pre></div>
+</div>
+<p>Note that an ObjectId is not the same as its string representation:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">post_id_as_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">post_id</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">posts</span><span class="o">.</span><span class="n">find_one</span><span class="p">({</span><span class="s">&quot;_id&quot;</span><span class="p">:</span> <span class="n">post_id_as_str</span><span class="p">})</span> <span class="c"># No result</span>
+<span class="go">&gt;&gt;&gt;</span>
+</pre></div>
+</div>
+<p>A common task in web applications is to get an ObjectId from the
+request URL and find the matching document. It&#8217;s necessary in this
+case to <strong>convert the ObjectId from a string</strong> before passing it to
+<code class="docutils literal"><span class="pre">find_one</span></code>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">bson.objectid</span> <span class="kn">import</span> <span class="n">ObjectId</span>
+
+<span class="c"># The web framework gets post_id from the URL and passes it as a string</span>
+<span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="n">post_id</span><span class="p">):</span>
+    <span class="c"># Convert from string to ObjectId:</span>
+    <span class="n">document</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">collection</span><span class="o">.</span><span class="n">find_one</span><span class="p">({</span><span class="s">&#39;_id&#39;</span><span class="p">:</span> <span class="n">ObjectId</span><span class="p">(</span><span class="n">post_id</span><span class="p">)})</span>
+</pre></div>
+</div>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><a class="reference internal" href="faq.html#web-application-querying-by-objectid"><span>When I query for a document by ObjectId in my web application I get no result</span></a></p>
+</div>
+</div>
+<div class="section" id="a-note-on-unicode-strings">
+<h2>A Note On Unicode Strings<a class="headerlink" href="#a-note-on-unicode-strings" title="Permalink to this headline">¶</a></h2>
+<p>You probably noticed that the regular Python strings we stored earlier look
+different when retrieved from the server (e.g. u&#8217;Mike&#8217; instead of &#8216;Mike&#8217;).
+A short explanation is in order.</p>
+<p>MongoDB stores data in <a class="reference external" href="http://bsonspec.org">BSON format</a>. BSON strings are
+UTF-8 encoded so PyMongo must ensure that any strings it stores contain only
+valid UTF-8 data. Regular strings (&lt;type &#8216;str&#8217;&gt;) are validated and stored
+unaltered. Unicode strings (&lt;type &#8216;unicode&#8217;&gt;) are encoded UTF-8 first. The
+reason our example string is represented in the Python shell as u&#8217;Mike&#8217; instead
+of &#8216;Mike&#8217; is that PyMongo decodes each BSON string to a Python unicode string,
+not a regular str.</p>
+<p><a class="reference external" href="http://docs.python.org/howto/unicode.html">You can read more about Python unicode strings here</a>.</p>
+</div>
+<div class="section" id="bulk-inserts">
+<h2>Bulk Inserts<a class="headerlink" href="#bulk-inserts" title="Permalink to this headline">¶</a></h2>
+<p>In order to make querying a little more interesting, let&#8217;s insert a
+few more documents. In addition to inserting a single document, we can
+also perform <em>bulk insert</em> operations, by passing a list as the
+first argument to <a class="reference internal" href="api/pymongo/collection.html#pymongo.collection.Collection.insert_many" title="pymongo.collection.Collection.insert_many"><code class="xref py py-meth docutils literal"><span class="pre">insert_many()</span></code></a>.
+This will insert each document in the list, sending only a single
+command to the server:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">new_posts</span> <span class="o">=</span> <span class="p">[{</span><span class="s">&quot;author&quot;</span><span class="p">:</span> <span class="s">&quot;Mike&quot;</span><span class="p">,</span>
+<span class="gp">... </span>              <span class="s">&quot;text&quot;</span><span class="p">:</span> <span class="s">&quot;Another post!&quot;</span><span class="p">,</span>
+<span class="gp">... </span>              <span class="s">&quot;tags&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s">&quot;bulk&quot;</span><span class="p">,</span> <span class="s">&quot;insert&quot;</span><span class="p">],</span>
+<span class="gp">... </span>              <span class="s">&quot;date&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2009</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">14</span><span class="p">)},</span>
+<span class="gp">... </span>             <span class="p">{</span><span class="s">&quot;author&quot;</span><span class="p">:</span> <span class="s">&quot;Eliot&quot;</span><span class="p">,</span>
+<span class="gp">... </span>              <span class="s">&quot;title&quot;</span><span class="p">:</span> <span class="s">&quot;MongoDB is fun&quot;</span><span class="p">,</span>
+<span class="gp">... </span>              <span class="s">&quot;text&quot;</span><span class="p">:</span> <span class="s">&quot;and pretty easy too!&quot;</span><span class="p">,</span>
+<span class="gp">... </span>              <span class="s">&quot;date&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2009</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">45</span><span class="p">)}]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">posts</span><span class="o">.</span><span class="n">insert_many</span><span class="p">(</span><span class="n">new_posts</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span><span class="o">.</span><span class="n">inserted_ids</span>
+<span class="go">[ObjectId(&#39;...&#39;), ObjectId(&#39;...&#39;)]</span>
+</pre></div>
+</div>
+<p>There are a couple of interesting things to note about this example:</p>
+<blockquote>
+<div><ul class="simple">
+<li>The result from <a class="reference internal" href="api/pymongo/collection.html#pymongo.collection.Collection.insert_many" title="pymongo.collection.Collection.insert_many"><code class="xref py py-meth docutils literal"><span class="pre">insert_many()</span></code></a> now
+returns two <a class="reference internal" href="api/bson/objectid.html#bson.objectid.ObjectId" title="bson.objectid.ObjectId"><code class="xref py py-class docutils literal"><span class="pre">ObjectId</span></code></a> instances, one for
+each inserted document.</li>
+<li><code class="docutils literal"><span class="pre">new_posts[1]</span></code> has a different &#8220;shape&#8221; than the other posts -
+there is no <code class="docutils literal"><span class="pre">&quot;tags&quot;</span></code> field and we&#8217;ve added a new field,
+<code class="docutils literal"><span class="pre">&quot;title&quot;</span></code>. This is what we mean when we say that MongoDB is
+<em>schema-free</em>.</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="querying-for-more-than-one-document">
+<h2>Querying for More Than One Document<a class="headerlink" href="#querying-for-more-than-one-document" title="Permalink to this headline">¶</a></h2>
+<p>To get more than a single document as the result of a query we use the
+<a class="reference internal" href="api/pymongo/collection.html#pymongo.collection.Collection.find" title="pymongo.collection.Collection.find"><code class="xref py py-meth docutils literal"><span class="pre">find()</span></code></a>
+method. <a class="reference internal" href="api/pymongo/collection.html#pymongo.collection.Collection.find" title="pymongo.collection.Collection.find"><code class="xref py py-meth docutils literal"><span class="pre">find()</span></code></a> returns a
+<a class="reference internal" href="api/pymongo/cursor.html#pymongo.cursor.Cursor" title="pymongo.cursor.Cursor"><code class="xref py py-class docutils literal"><span class="pre">Cursor</span></code></a> instance, which allows us to iterate
+over all matching documents. For example, we can iterate over every
+document in the <code class="docutils literal"><span class="pre">posts</span></code> collection:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">post</span> <span class="ow">in</span> <span class="n">posts</span><span class="o">.</span><span class="n">find</span><span class="p">():</span>
+<span class="gp">... </span>  <span class="n">pprint</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="n">post</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="go">{u&#39;_id&#39;: ObjectId(&#39;...&#39;),</span>
+<span class="go"> u&#39;author&#39;: u&#39;Mike&#39;,</span>
+<span class="go"> u&#39;date&#39;: datetime.datetime(...),</span>
+<span class="go"> u&#39;tags&#39;: [u&#39;mongodb&#39;, u&#39;python&#39;, u&#39;pymongo&#39;],</span>
+<span class="go"> u&#39;text&#39;: u&#39;My first blog post!&#39;}</span>
+<span class="go">{u&#39;_id&#39;: ObjectId(&#39;...&#39;),</span>
+<span class="go"> u&#39;author&#39;: u&#39;Mike&#39;,</span>
+<span class="go"> u&#39;date&#39;: datetime.datetime(...),</span>
+<span class="go"> u&#39;tags&#39;: [u&#39;bulk&#39;, u&#39;insert&#39;],</span>
+<span class="go"> u&#39;text&#39;: u&#39;Another post!&#39;}</span>
+<span class="go">{u&#39;_id&#39;: ObjectId(&#39;...&#39;),</span>
+<span class="go"> u&#39;author&#39;: u&#39;Eliot&#39;,</span>
+<span class="go"> u&#39;date&#39;: datetime.datetime(...),</span>
+<span class="go"> u&#39;text&#39;: u&#39;and pretty easy too!&#39;,</span>
+<span class="go"> u&#39;title&#39;: u&#39;MongoDB is fun&#39;}</span>
+</pre></div>
+</div>
+<p>Just like we did with <a class="reference internal" href="api/pymongo/collection.html#pymongo.collection.Collection.find_one" title="pymongo.collection.Collection.find_one"><code class="xref py py-meth docutils literal"><span class="pre">find_one()</span></code></a>,
+we can pass a document to <a class="reference internal" href="api/pymongo/collection.html#pymongo.collection.Collection.find" title="pymongo.collection.Collection.find"><code class="xref py py-meth docutils literal"><span class="pre">find()</span></code></a>
+to limit the returned results. Here, we get only those documents whose
+author is &#8220;Mike&#8221;:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">post</span> <span class="ow">in</span> <span class="n">posts</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s">&quot;author&quot;</span><span class="p">:</span> <span class="s">&quot;Mike&quot;</span><span class="p">}):</span>
+<span class="gp">... </span>  <span class="n">pprint</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="n">post</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="go">{u&#39;_id&#39;: ObjectId(&#39;...&#39;),</span>
+<span class="go"> u&#39;author&#39;: u&#39;Mike&#39;,</span>
+<span class="go"> u&#39;date&#39;: datetime.datetime(...),</span>
+<span class="go"> u&#39;tags&#39;: [u&#39;mongodb&#39;, u&#39;python&#39;, u&#39;pymongo&#39;],</span>
+<span class="go"> u&#39;text&#39;: u&#39;My first blog post!&#39;}</span>
+<span class="go">{u&#39;_id&#39;: ObjectId(&#39;...&#39;),</span>
+<span class="go"> u&#39;author&#39;: u&#39;Mike&#39;,</span>
+<span class="go"> u&#39;date&#39;: datetime.datetime(...),</span>
+<span class="go"> u&#39;tags&#39;: [u&#39;bulk&#39;, u&#39;insert&#39;],</span>
+<span class="go"> u&#39;text&#39;: u&#39;Another post!&#39;}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="counting">
+<h2>Counting<a class="headerlink" href="#counting" title="Permalink to this headline">¶</a></h2>
+<p>If we just want to know how many documents match a query we can
+perform a <a class="reference internal" href="api/pymongo/cursor.html#pymongo.cursor.Cursor.count" title="pymongo.cursor.Cursor.count"><code class="xref py py-meth docutils literal"><span class="pre">count()</span></code></a> operation instead of a
+full query. We can get a count of all of the documents in a
+collection:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">posts</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+<span class="go">3</span>
+</pre></div>
+</div>
+<p>or just of those documents that match a specific query:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">posts</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s">&quot;author&quot;</span><span class="p">:</span> <span class="s">&quot;Mike&quot;</span><span class="p">})</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+<span class="go">2</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="range-queries">
+<h2>Range Queries<a class="headerlink" href="#range-queries" title="Permalink to this headline">¶</a></h2>
+<p>MongoDB supports many different types of <a class="reference external" href="http://www.mongodb.org/display/DOCS/Advanced+Queries">advanced queries</a>. As an
+example, lets perform a query where we limit results to posts older
+than a certain date, but also sort the results by author:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">d</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2009</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">12</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">post</span> <span class="ow">in</span> <span class="n">posts</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s">&quot;date&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s">&quot;$lt&quot;</span><span class="p">:</span> <span class="n">d</span><span class="p">}})</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="s">&quot;author&quot;</span><span class="p">):</span>
+<span class="gp">... </span>  <span class="n">pprint</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="n">post</span><span class="p">)</span>
+<span class="gp">...</span>
+<span class="go">{u&#39;_id&#39;: ObjectId(&#39;...&#39;),</span>
+<span class="go"> u&#39;author&#39;: u&#39;Eliot&#39;,</span>
+<span class="go"> u&#39;date&#39;: datetime.datetime(...),</span>
+<span class="go"> u&#39;text&#39;: u&#39;and pretty easy too!&#39;,</span>
+<span class="go"> u&#39;title&#39;: u&#39;MongoDB is fun&#39;}</span>
+<span class="go">{u&#39;_id&#39;: ObjectId(&#39;...&#39;),</span>
+<span class="go"> u&#39;author&#39;: u&#39;Mike&#39;,</span>
+<span class="go"> u&#39;date&#39;: datetime.datetime(...),</span>
+<span class="go"> u&#39;tags&#39;: [u&#39;bulk&#39;, u&#39;insert&#39;],</span>
+<span class="go"> u&#39;text&#39;: u&#39;Another post!&#39;}</span>
+</pre></div>
+</div>
+<p>Here we use the special <code class="docutils literal"><span class="pre">&quot;$lt&quot;</span></code> operator to do a range query, and
+also call <a class="reference internal" href="api/pymongo/cursor.html#pymongo.cursor.Cursor.sort" title="pymongo.cursor.Cursor.sort"><code class="xref py py-meth docutils literal"><span class="pre">sort()</span></code></a> to sort the results
+by author.</p>
+</div>
+<div class="section" id="indexing">
+<h2>Indexing<a class="headerlink" href="#indexing" title="Permalink to this headline">¶</a></h2>
+<p>Adding indexes can help accelerate certain queries and can also add additional
+functionality to querying and storing documents. In this example, we&#8217;ll
+demonstrate how to create a <a class="reference external" href="http://docs.mongodb.org/manual/core/index-unique/">unique index</a> on a key that rejects
+documents whose value for that key already exists in the index.</p>
+<p>First, we&#8217;ll need to create the index:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">profiles</span><span class="o">.</span><span class="n">create_index</span><span class="p">([(</span><span class="s">&#39;user_id&#39;</span><span class="p">,</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">ASCENDING</span><span class="p">)],</span>
+<span class="gp">... </span>                                  <span class="n">unique</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">db</span><span class="o">.</span><span class="n">profiles</span><span class="o">.</span><span class="n">index_information</span><span class="p">()))</span>
+<span class="go">[u&#39;_id_&#39;, u&#39;user_id_1&#39;]</span>
+</pre></div>
+</div>
+<p>Notice that we have two indexes now: one is the index on <code class="docutils literal"><span class="pre">_id</span></code> that MongoDB
+creates automatically, and the other is the index on <code class="docutils literal"><span class="pre">user_id</span></code> we just
+created.</p>
+<p>Now let&#8217;s set up some user profiles:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">user_profiles</span> <span class="o">=</span> <span class="p">[</span>
+<span class="gp">... </span>    <span class="p">{</span><span class="s">&#39;user_id&#39;</span><span class="p">:</span> <span class="mi">211</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;Luke&#39;</span><span class="p">},</span>
+<span class="gp">... </span>    <span class="p">{</span><span class="s">&#39;user_id&#39;</span><span class="p">:</span> <span class="mi">212</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;Ziltoid&#39;</span><span class="p">}]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">profiles</span><span class="o">.</span><span class="n">insert_many</span><span class="p">(</span><span class="n">user_profiles</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The index prevents us from inserting a document whose <code class="docutils literal"><span class="pre">user_id</span></code> is already in
+the collection:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">new_profile</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;user_id&#39;</span><span class="p">:</span> <span class="mi">213</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;Drew&#39;</span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">duplicate_profile</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;user_id&#39;</span><span class="p">:</span> <span class="mi">212</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">:</span> <span class="s">&#39;Tommy&#39;</span><span class="p">}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">profiles</span><span class="o">.</span><span class="n">insert_one</span><span class="p">(</span><span class="n">new_profile</span><span class="p">)</span>  <span class="c"># This is fine.</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">profiles</span><span class="o">.</span><span class="n">insert_one</span><span class="p">(</span><span class="n">duplicate_profile</span><span class="p">)</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="gr">DuplicateKeyError</span>: <span class="n">E11000 duplicate key error index: test_database.profiles.$user_id_1 dup key: { : 212 }</span>
+</pre></div>
+</div>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last">The MongoDB documentation on <a class="reference external" href="http://www.mongodb.org/display/DOCS/Indexes">indexes</a></p>
+</div>
+</div>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="examples/index.html" title="Examples"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="installation.html" title="Installing / Upgrading"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">PyMongo 3.4.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2008 - 2015, MongoDB, Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.5.
+    </div>
+  </body>
+</html>

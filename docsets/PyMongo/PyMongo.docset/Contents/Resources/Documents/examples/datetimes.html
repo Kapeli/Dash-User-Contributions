@@ -1,0 +1,171 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Datetimes and Timezones &mdash; PyMongo 3.4.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/pydoctheme.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '3.4.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/sidebar.js"></script>
+    <link rel="top" title="PyMongo 3.4.0 documentation" href="../index.html" />
+    <link rel="up" title="Examples" href="index.html" />
+    <link rel="next" title="Geospatial Indexing Example" href="geo.html" />
+    <link rel="prev" title="Custom Type Example" href="custom_type.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="geo.html" title="Geospatial Indexing Example"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="custom_type.html" title="Custom Type Example"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PyMongo 3.4.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Examples</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="datetimes-and-timezones">
+<h1>Datetimes and Timezones<a class="headerlink" href="#datetimes-and-timezones" title="Permalink to this headline">¶</a></h1>
+<p>These examples show how to handle Python <code class="xref py py-class docutils literal"><span class="pre">datetime.datetime</span></code> objects
+correctly in PyMongo.</p>
+<div class="section" id="basic-usage">
+<h2>Basic Usage<a class="headerlink" href="#basic-usage" title="Permalink to this headline">¶</a></h2>
+<p>PyMongo uses <code class="xref py py-class docutils literal"><span class="pre">datetime.datetime</span></code> objects for representing dates and times
+in MongoDB documents. Because MongoDB assumes that dates and times are in UTC,
+care should be taken to ensure that dates and times written to the database
+reflect UTC. For example, the following code stores the current UTC date and
+time into MongoDB:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">insert_one</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="p">{</span><span class="s">&quot;last_modified&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()})</span>
+</pre></div>
+</div>
+<p>Always use <code class="xref py py-meth docutils literal"><span class="pre">datetime.datetime.utcnow()</span></code>, which returns the current time in
+UTC, instead of <code class="xref py py-meth docutils literal"><span class="pre">datetime.datetime.now()</span></code>, which returns the current local
+time. Avoid doing this:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">insert_one</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="p">{</span><span class="s">&quot;last_modified&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()})</span>
+</pre></div>
+</div>
+<p>The value for <cite>last_modified</cite> is very different between these two examples, even
+though both documents were stored at around the same local time. This will be
+confusing to the application that reads them:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="p">[</span><span class="n">doc</span><span class="p">[</span><span class="s">&#39;last_modified&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">db</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">find</span><span class="p">()]</span>  
+<span class="go">[datetime.datetime(2015, 7, 8, 18, 17, 28, 324000),</span>
+<span class="go"> datetime.datetime(2015, 7, 8, 11, 17, 42, 911000)]</span>
+</pre></div>
+</div>
+<p><a class="reference internal" href="../api/bson/codec_options.html#bson.codec_options.CodecOptions" title="bson.codec_options.CodecOptions"><code class="xref py py-class docutils literal"><span class="pre">bson.codec_options.CodecOptions</span></code></a> has a <cite>tz_aware</cite> option that enables
+&#8220;aware&#8221; <code class="xref py py-class docutils literal"><span class="pre">datetime.datetime</span></code> objects, i.e., datetimes that know what
+timezone they&#8217;re in. By default, PyMongo retrieves naive datetimes:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">tzdemo</span><span class="o">.</span><span class="n">insert_one</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="p">{</span><span class="s">&#39;date&#39;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2002</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">27</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">tzdemo</span><span class="o">.</span><span class="n">find_one</span><span class="p">()[</span><span class="s">&#39;date&#39;</span><span class="p">]</span>
+<span class="go">datetime.datetime(2002, 10, 27, 6, 0)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">options</span> <span class="o">=</span> <span class="n">CodecOptions</span><span class="p">(</span><span class="n">tz_aware</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">get_collection</span><span class="p">(</span><span class="s">&#39;tzdemo&#39;</span><span class="p">,</span> <span class="n">codec_options</span><span class="o">=</span><span class="n">options</span><span class="p">)</span><span class="o">.</span><span class="n">find_one</span><span class="p">()[</span><span class="s">&#39;date&#39;</span><span class="p">]</span>  
+<span class="go">datetime.datetime(2002, 10, 27, 6, 0,</span>
+<span class="go">                  tzinfo=&lt;bson.tz_util.FixedOffset object at 0x10583a050&gt;)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="saving-datetimes-with-timezones">
+<h2>Saving Datetimes with Timezones<a class="headerlink" href="#saving-datetimes-with-timezones" title="Permalink to this headline">¶</a></h2>
+<p>When storing <code class="xref py py-class docutils literal"><span class="pre">datetime.datetime</span></code> objects that specify a timezone
+(i.e. they have a <cite>tzinfo</cite> property that isn&#8217;t <code class="docutils literal"><span class="pre">None</span></code>), PyMongo will convert
+those datetimes to UTC automatically:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pytz</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pacific</span> <span class="o">=</span> <span class="n">pytz</span><span class="o">.</span><span class="n">timezone</span><span class="p">(</span><span class="s">&#39;US/Pacific&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">aware_datetime</span> <span class="o">=</span> <span class="n">pacific</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2002</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">27</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">insert_one</span><span class="p">({</span><span class="s">&quot;date&quot;</span><span class="p">:</span> <span class="n">aware_datetime</span><span class="p">})</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">find_one</span><span class="p">()[</span><span class="s">&#39;date&#39;</span><span class="p">]</span>
+<span class="go">datetime.datetime(2002, 10, 27, 14, 0)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="reading-time">
+<h2>Reading Time<a class="headerlink" href="#reading-time" title="Permalink to this headline">¶</a></h2>
+<p>As previously mentioned, by default all <code class="xref py py-class docutils literal"><span class="pre">datetime.datetime</span></code> objects
+returned by PyMongo will be naive but reflect UTC (i.e. the time as stored in
+MongoDB). By setting the <cite>tz_aware</cite> option on
+<a class="reference internal" href="../api/bson/codec_options.html#bson.codec_options.CodecOptions" title="bson.codec_options.CodecOptions"><code class="xref py py-class docutils literal"><span class="pre">CodecOptions</span></code></a>, <code class="xref py py-class docutils literal"><span class="pre">datetime.datetime</span></code> objects
+will be timezone-aware and have a <cite>tzinfo</cite> property that reflects the UTC
+timezone.</p>
+<p>PyMongo 3.1 introduced a <cite>tzinfo</cite> property that can be set on
+<a class="reference internal" href="../api/bson/codec_options.html#bson.codec_options.CodecOptions" title="bson.codec_options.CodecOptions"><code class="xref py py-class docutils literal"><span class="pre">CodecOptions</span></code></a> to convert <code class="xref py py-class docutils literal"><span class="pre">datetime.datetime</span></code>
+objects to local time automatically. For example, if we wanted to read all times
+out of MongoDB in US/Pacific time:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">bson.codec_options</span> <span class="kn">import</span> <span class="n">CodecOptions</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">db</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">find_one</span><span class="p">()[</span><span class="s">&#39;date&#39;</span><span class="p">]</span>
+<span class="go">datetime.datetime(2002, 10, 27, 14, 0)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">aware_times</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">with_options</span><span class="p">(</span><span class="n">codec_options</span><span class="o">=</span><span class="n">CodecOptions</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">tz_aware</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">tzinfo</span><span class="o">=</span><span class="n">pytz</span><span class="o">.</span><span class="n">timezone</span><span class="p">(</span><span class="s">&#39;US/Pacific&#39;</span><span class="p">)))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">aware_times</span><span class="o">.</span><span class="n">find_one</span><span class="p">()</span>
+<span class="go">datetime.datetime(2002, 10, 27, 6, 0,  </span>
+<span class="go">                  tzinfo=&lt;DstTzInfo &#39;US/Pacific&#39; PST-1 day, 16:00:00 STD&gt;)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="geo.html" title="Geospatial Indexing Example"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="custom_type.html" title="Custom Type Example"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PyMongo 3.4.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Examples</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2008 - 2015, MongoDB, Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.5.
+    </div>
+  </body>
+</html>
