@@ -1,8 +1,8 @@
-# Soot Docset
+# Automaton Docset
 
 ## Author
 
-(note: I'm not the author of the Soot documentation, I just generated the Soot docset.)
+(note: I'm not the author of the Automaton documentation, I just generated the Automaton docset.)
 
 - GitHub: [pengzhendong](https://github.com/pengzhendong)
 
@@ -10,7 +10,7 @@
 
 Here is how I built the docset.
 
-* I downloaded the jar file on [nightly/soot/lib](https://ssebuild.cased.de/nightly/soot/lib/)
+* I downloaded the source code from [automaton/download](http://www.brics.dk/automaton/download.html)
 
 * I used `./javadocset <any docset name you want> <path to Javadoc-generated API folder>` to generated the docset file
 
