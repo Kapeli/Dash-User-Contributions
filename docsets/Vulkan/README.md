@@ -23,10 +23,13 @@ git clone https://github.com/KhronosGroup/Vulkan-Docs
 cd Vulkan-Docs/doc/specs/vulkan
 
 # Build the specifation:
-./makeKHR chunked
+./makeKHR html
 
 # Use dashing to generate
-# dashing.json is at https://github.com/antiagainst/dashing/blob/vulkan/examples/vulkan/dashing.json
+git clone -b vulkan git@github.com:antiagainst/dashing.git
+# The above has modifications for parsing Vulkan spec.
+# Build it and use the dashing.json at examples/vulkan/dashing.json
+# for building the docset.
 /path/to/dashing build
 ```
 
