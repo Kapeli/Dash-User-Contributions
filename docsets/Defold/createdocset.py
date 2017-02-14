@@ -180,7 +180,8 @@ def create_docset():
 						cursor.execute('INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES (?,?,?)', (class_name, 'Module', "ref/" + class_path))
 
 		with open(os.path.join(documents_path, "index.html"), "w") as out:
-			out.write("<html><head><link rel='stylesheet' type='text/css' href='defold.css'></head><body>")
+			out.write("<html><head><link rel='stylesheet' type='text/css' href='defold.css'></head>")
+			out.write("<body><p>Welcome to the documentation for <a href='http://www.defold.com'>Defold</a>, the free game engine by <a href='http://www.king.com'>King</a>.</p>")
 			out.write(index_html)
 			out.write("</body></html>")
 
