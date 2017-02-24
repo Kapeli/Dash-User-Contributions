@@ -186,7 +186,6 @@ def create_docset():
 									class_doc = class_doc + "<div class='examples'>"
 									class_doc = class_doc + "<p>" + element["examples"] + "</p>"
 									class_doc = class_doc + "</div>"
-									
 
 								class_doc = class_doc + "<hr/>"
 								cursor.execute('INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES (?,?,?)', (function_name, entry_type, "ref/" + function_path))
