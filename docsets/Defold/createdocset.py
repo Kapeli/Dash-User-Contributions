@@ -31,15 +31,15 @@ INFO_PLIST = """<!DOCTYPE plist SYSTEM "http://www.apple.com/DTDs/PropertyList-1
 """
 
 DOCSET_JSON = """{{
-    "name": "Defold",
-    "version": "{0}",
-    "archive": "Defold.tgz",
-    "author": {{
-        "name": "Bjorn Ritzl",
-        "link": "https://github.com/britzl"
-    }},
-    "aliases": [],
-    "specific_versions": []
+	"name": "Defold",
+	"version": "{0}",
+	"archive": "Defold.tgz",
+	"author": {{
+		"name": "Bjorn Ritzl",
+		"link": "https://github.com/britzl"
+	}},
+	"aliases": [],
+	"specific_versions": []
 }}"""
 
 # path definitions
@@ -134,27 +134,46 @@ def create_docset():
 						class_name = file.replace("_doc.json", "")
 						class_path = class_name + ".html"
 						class_doc = ""
-						for element in json.load(fh)["elements"]:
+						parsed_json = json.load(fh)
+						info = parsed_json["info"]
+						class_doc = class_doc + "<h1>" + info["name"] + "</h1>\n"
+						class_doc = class_doc + "<p>" + info["description"] + "</p>\n"
+						index_html = index_html + "<a class='index' href='ref/" + class_path + "'>" + class_name + "</a>" + info["brief"] + "</br>"
+						for element in parsed_json["elements"]:
 							function_name = element["name"]
 							if function_name != "":
 								entry_type = "Function"
 								if element["type"] == "VARIABLE":
-									entry_type = "Field"
+									entry_type = "Variable"
 								elif element["type"] == "MESSAGE":
 									entry_type = "Command"
 								elif element["type"] == "PROPERTY":
 									entry_type = "Property"
+								elif element["type"] == "MACRO":
+									entry_type = "Macro"
+								elif element["type"] == "TYPEDEF":
+									entry_type = "Type"
+								elif element["type"] == "ENUM":
+									entry_type = "Enum"
 
 								function_path = class_path + "#" + function_name
 								class_doc = class_doc + "<h1><a name='//apple_ref/cpp/" + entry_type + "/" + function_name + "' class='dashAnchor'></a><a class='entry' name='" + function_name + "'>" + function_name + ("()" if entry_type == "Function" else "") + "</a></h1>"
 								class_doc = class_doc + "<div class='brief'>" + element["brief"] + "</div>"
 								if element["description"] != "":
 									class_doc = class_doc + "<p>" + element["description"] + "</p>"
+								if element["note"] != "":
+									class_doc = class_doc + "<p>Note: " + element["note"] + "</p>"
 								if len(element["parameters"]) > 0:
 									class_doc = class_doc + "<h3>PARAMETERS</h3>"
 									class_doc = class_doc + "<div class='params'>"
 									for parameter in element["parameters"]:
 										class_doc = class_doc + "<p class='param'>" + parameter["name"] + " - "  + parameter["doc"] + "</p>"
+									class_doc = class_doc + "</div>"
+								if len(element["members"]) > 0:
+									class_doc = class_doc + "<h3>MEMBERS</h3>"
+									class_doc = class_doc + "<div class='params'>"
+									for member in element["members"]:
+										class_doc = class_doc + "<p class='param'>" + member["name"] + " - "  + member["doc"] + "</p>"
 									class_doc = class_doc + "</div>"
 								if len(element["returnvalues"]) > 0:
 									class_doc = class_doc + "<h3>RETURN</h3>"
@@ -171,7 +190,6 @@ def create_docset():
 								class_doc = class_doc + "<hr/>"
 								cursor.execute('INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES (?,?,?)', (function_name, entry_type, "ref/" + function_path))
 
-						index_html = index_html + "<a class='index' href='ref/" + class_path + "'>" + class_name + "</a></br>"
 						with open(os.path.join(ref_path, class_path), "w") as out:
 							out.write("<html><head><link rel='stylesheet' type='text/css' href='../defold.css'></head><body>")
 							out.write(convert_hrefs(class_doc))
@@ -180,7 +198,8 @@ def create_docset():
 						cursor.execute('INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES (?,?,?)', (class_name, 'Module', "ref/" + class_path))
 
 		with open(os.path.join(documents_path, "index.html"), "w") as out:
-			out.write("<html><head><link rel='stylesheet' type='text/css' href='defold.css'></head><body>")
+			out.write("<html><head><link rel='stylesheet' type='text/css' href='defold.css'></head>")
+			out.write("<body><p>Welcome to the documentation for <a href='http://www.defold.com'>Defold</a>, the free game engine by <a href='http://www.king.com'>King</a>.</p>")
 			out.write(index_html)
 			out.write("</body></html>")
 
