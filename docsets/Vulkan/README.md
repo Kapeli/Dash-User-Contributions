@@ -16,14 +16,8 @@ How to Generate
 ---------------
 
 ```sh
-# Checkout Vukan specification source code:
-git clone https://github.com/KhronosGroup/Vulkan-Docs
-
-# Go to directory:
-cd Vulkan-Docs/doc/specs/vulkan
-
-# Build the specifation:
-./makeKHR html
+# Download the Vulkan spec
+wget https://www.khronos.org/registry/vulkan/specs/1.0-wsi_extensions/html/vkspec.html
 
 # Use dashing to generate
 git clone -b vulkan git@github.com:antiagainst/dashing.git
