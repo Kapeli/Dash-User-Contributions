@@ -1,6 +1,6 @@
 # Love2d
 
-[Love2d homepage](http://love2d.org)
+[Love2d homepage](http://love2d.org)  
 [Love2d documentation](https://love2d.org/wiki/Main_Page)
 
 ## Author
