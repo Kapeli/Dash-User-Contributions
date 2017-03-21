@@ -19,6 +19,14 @@ This Dash docset was compiled by [Eric W. Wallace](https://twitter.com/ewall) an
 
 ### Available Versions
 
+* 8.0.3
+* 8.0.2
+* 8.0.1
+* 8.0.0
+* 7.7.7
+* 7.7.6
+* 7.7.5
+* 7.7.4
 * 7.7.3
 * 7.7.2
 * 7.7.1
