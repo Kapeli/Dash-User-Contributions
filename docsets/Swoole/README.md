@@ -5,5 +5,9 @@ Swoole Docset
 
 HTML SOURCE: http://swoole.com/
 
+![demo](https://github.com/halfstring/swoole-docset/blob/master/demo.gif)
+![dash-demo](https://github.com/halfstring/swoole-docset/blob/master/dash-demo.png)
+
+
 * http://github.com/halfstring/swoole-docset.git
 
