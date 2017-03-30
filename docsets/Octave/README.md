@@ -2,7 +2,7 @@
 
 Author: Hans-Helge Buerger ([GitHub](https://github.com/obstschale/) | [Twitter](https://twitter.com/obstschale))
 Date: 30. March 2017
-Version: v4.8.0
+Version: v4.2.1
 GitHub Repo: [obstschale/octave-docset](https://github.com/obstschale/octave-docset)
 
 
