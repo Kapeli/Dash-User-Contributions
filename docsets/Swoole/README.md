@@ -5,5 +5,5 @@ Swoole Docset
 
 HTML SOURCE: http://swoole.com/
 
-* http://github.com/halfstring/
+* http://github.com/halfstring/swoole-docset.git
 
