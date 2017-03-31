@@ -1,4 +1,4 @@
-Swoole
+Swoole Chinese
 =======================
 This is the Dash Docset for Swoole Chinese,  maintained by [halfstring](https://github.com/halfstring)
 
