@@ -4,8 +4,6 @@
 
 (note: I'm not the author of the Soot documentation, I just generated the Soot docset.)
 
-#### François Massart
-
 - GitHub: [pengzhendong](https://github.com/pengzhendong)
 
 ## Building the Docset
