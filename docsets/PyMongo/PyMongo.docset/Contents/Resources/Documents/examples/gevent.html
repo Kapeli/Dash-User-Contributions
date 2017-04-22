@@ -1,0 +1,129 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Gevent &mdash; PyMongo 3.4.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/pydoctheme.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '3.4.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/sidebar.js"></script>
+    <link rel="top" title="PyMongo 3.4.0 documentation" href="../index.html" />
+    <link rel="up" title="Examples" href="index.html" />
+    <link rel="next" title="GridFS Example" href="gridfs.html" />
+    <link rel="prev" title="Geospatial Indexing Example" href="geo.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="gridfs.html" title="GridFS Example"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="geo.html" title="Geospatial Indexing Example"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PyMongo 3.4.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Examples</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="gevent">
+<h1>Gevent<a class="headerlink" href="#gevent" title="Permalink to this headline">¶</a></h1>
+<p>PyMongo supports <a class="reference external" href="http://www.gevent.org/">Gevent</a>. Simply call Gevent&#8217;s
+<code class="docutils literal"><span class="pre">monkey.patch_all()</span></code> before loading any other modules:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="c"># You must call patch_all() *before* importing any other modules</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">gevent</span> <span class="kn">import</span> <span class="n">monkey</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">monkey</span><span class="o">.</span><span class="n">patch_all</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">pymongo</span> <span class="kn">import</span> <span class="n">MongoClient</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">client</span> <span class="o">=</span> <span class="n">MongoClient</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>PyMongo uses thread and socket functions from the Python standard library.
+Gevent&#8217;s monkey-patching replaces those standard functions so that PyMongo
+does asynchronous I/O with non-blocking sockets, and schedules operations
+on greenlets instead of threads.</p>
+<div class="section" id="avoid-blocking-in-hub-join">
+<h2>Avoid blocking in Hub.join<a class="headerlink" href="#avoid-blocking-in-hub-join" title="Permalink to this headline">¶</a></h2>
+<p>By default, PyMongo uses threads to discover and monitor your servers&#8217; topology
+(see <a class="reference internal" href="high_availability.html#health-monitoring"><span>Health Monitoring</span></a>). If you execute <code class="docutils literal"><span class="pre">monkey.patch_all()</span></code> when
+your application first begins, PyMongo automatically uses greenlets instead
+of threads.</p>
+<p>When shutting down, if your application calls <a class="reference external" href="http://www.gevent.org/gevent.hub.html#gevent.hub.Hub.join" title="(in gevent v1.2.2dev0)"><code class="xref py py-meth docutils literal"><span class="pre">join()</span></code></a> on
+Gevent&#8217;s <a class="reference external" href="http://www.gevent.org/gevent.hub.html#gevent.hub.Hub" title="(in gevent v1.2.2dev0)"><code class="xref py py-class docutils literal"><span class="pre">Hub</span></code></a> without first terminating these background
+greenlets, the call to <a class="reference external" href="http://www.gevent.org/gevent.hub.html#gevent.hub.Hub.join" title="(in gevent v1.2.2dev0)"><code class="xref py py-meth docutils literal"><span class="pre">join()</span></code></a> blocks indefinitely. You
+therefore <strong>must close or dereference</strong> any active
+<a class="reference internal" href="../api/pymongo/mongo_client.html#pymongo.mongo_client.MongoClient" title="pymongo.mongo_client.MongoClient"><code class="xref py py-class docutils literal"><span class="pre">MongoClient</span></code></a> before exiting.</p>
+<p>An example solution to this issue in some application frameworks is a signal
+handler to end background greenlets when your application receives SIGHUP:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">signal</span>
+
+<span class="k">def</span> <span class="nf">graceful_reload</span><span class="p">(</span><span class="n">signum</span><span class="p">,</span> <span class="n">traceback</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Explicitly close some global MongoClient object.&quot;&quot;&quot;</span>
+    <span class="n">client</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGHUP</span><span class="p">,</span> <span class="n">graceful_reload</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Applications using uWSGI prior to 1.9.16 are affected by this issue,
+or newer uWSGI versions with the <code class="docutils literal"><span class="pre">-gevent-wait-for-hub</span></code> option.
+See <a class="reference external" href="https://uwsgi-docs.readthedocs.io/en/latest/Changelog-1.9.16.html#important-change-in-the-gevent-plugin-shutdown-reload-procedure">the uWSGI changelog for details</a>.</p>
+</div>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="gridfs.html" title="GridFS Example"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="geo.html" title="Geospatial Indexing Example"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PyMongo 3.4.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Examples</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2008 - 2015, MongoDB, Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.5.
+    </div>
+  </body>
+</html>

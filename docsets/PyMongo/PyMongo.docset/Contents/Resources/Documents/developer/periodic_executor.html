@@ -1,0 +1,161 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Periodic Executors &mdash; PyMongo 3.4.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/pydoctheme.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '3.4.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/sidebar.js"></script>
+    <link rel="top" title="PyMongo 3.4.0 documentation" href="../index.html" />
+    <link rel="up" title="Developer Guide" href="index.html" />
+    <link rel="prev" title="Developer Guide" href="index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Developer Guide"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PyMongo 3.4.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Developer Guide</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="periodic-executors">
+<h1>Periodic Executors<a class="headerlink" href="#periodic-executors" title="Permalink to this headline">¶</a></h1>
+<p>PyMongo implements a <code class="xref py py-class docutils literal"><span class="pre">PeriodicExecutor</span></code> for two
+purposes: as the background thread for <code class="xref py py-class docutils literal"><span class="pre">Monitor</span></code>, and to
+regularly check if there are <cite>OP_KILL_CURSORS</cite> messages that must be sent to the server.</p>
+<div class="section" id="killing-cursors">
+<h2>Killing Cursors<a class="headerlink" href="#killing-cursors" title="Permalink to this headline">¶</a></h2>
+<p>An incompletely iterated <a class="reference internal" href="../api/pymongo/cursor.html#pymongo.cursor.Cursor" title="pymongo.cursor.Cursor"><code class="xref py py-class docutils literal"><span class="pre">Cursor</span></code></a> on the client represents an
+open cursor object on the server. In code like this, we lose a reference to
+the cursor before finishing iteration:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">collection</span><span class="o">.</span><span class="n">find</span><span class="p">():</span>
+    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>We try to send an <cite>OP_KILL_CURSORS</cite> to the server to tell it to clean up the
+server-side cursor. But we must not take any locks directly from the cursor&#8217;s
+destructor (see <a class="reference external" href="https://jira.mongodb.org/browse/PYTHON-799">PYTHON-799</a>), so we cannot safely use the PyMongo data
+structures required to send a message. The solution is to add the cursor&#8217;s id
+to an array on the <a class="reference internal" href="../api/pymongo/mongo_client.html#pymongo.mongo_client.MongoClient" title="pymongo.mongo_client.MongoClient"><code class="xref py py-class docutils literal"><span class="pre">MongoClient</span></code></a> without taking any locks.</p>
+<p>Each client has a <code class="xref py py-class docutils literal"><span class="pre">PeriodicExecutor</span></code> devoted to
+checking the array for cursor ids. Any it sees are the result of cursors that
+were freed while the server-side cursor was still open. The executor can safely
+take the locks it needs in order to send the <cite>OP_KILL_CURSORS</cite> message.</p>
+</div>
+<div class="section" id="stopping-executors">
+<h2>Stopping Executors<a class="headerlink" href="#stopping-executors" title="Permalink to this headline">¶</a></h2>
+<p>Just as <a class="reference internal" href="../api/pymongo/cursor.html#pymongo.cursor.Cursor" title="pymongo.cursor.Cursor"><code class="xref py py-class docutils literal"><span class="pre">Cursor</span></code></a> must not take any locks from its destructor,
+neither can <a class="reference internal" href="../api/pymongo/mongo_client.html#pymongo.mongo_client.MongoClient" title="pymongo.mongo_client.MongoClient"><code class="xref py py-class docutils literal"><span class="pre">MongoClient</span></code></a> and <code class="xref py py-class docutils literal"><span class="pre">Topology</span></code>.
+Thus, although the client calls <code class="xref py py-meth docutils literal"><span class="pre">close()</span></code> on its kill-cursors thread, and
+the topology calls <code class="xref py py-meth docutils literal"><span class="pre">close()</span></code> on all its monitor threads, the <code class="xref py py-meth docutils literal"><span class="pre">close()</span></code>
+method cannot actually call <code class="xref py py-meth docutils literal"><span class="pre">wake()</span></code> on the executor, since <code class="xref py py-meth docutils literal"><span class="pre">wake()</span></code>
+takes a lock.</p>
+<p>Instead, executors wake periodically to check if <code class="docutils literal"><span class="pre">self.close</span></code> is set,
+and if so they exit.</p>
+<p>A thread can log spurious errors if it wakes late in the Python interpreter&#8217;s
+shutdown sequence, so we try to join threads before then. Each periodic
+executor (either a monitor or a kill-cursors thread) adds a weakref to itself
+to a set called <code class="docutils literal"><span class="pre">_EXECUTORS</span></code>, in the <code class="docutils literal"><span class="pre">periodic_executor</span></code> module.</p>
+<p>An <a class="reference external" href="https://docs.python.org/2/library/atexit.html">exit handler</a> runs on shutdown and tells all executors to stop, then
+tries (with a short timeout) to join all executor threads.</p>
+</div>
+<div class="section" id="monitoring">
+<h2>Monitoring<a class="headerlink" href="#monitoring" title="Permalink to this headline">¶</a></h2>
+<p>For each server in the topology, <code class="xref py py-class docutils literal"><span class="pre">Topology</span></code> uses a periodic
+executor to launch a monitor thread. This thread must not prevent the topology
+from being freed, so it weakrefs the topology. Furthermore, it uses a weakref
+callback to terminate itself soon after the topology is freed.</p>
+<p>Solid lines represent strong references, dashed lines weak ones:</p>
+<img alt="../_images/periodic-executor-refs.png" src="../_images/periodic-executor-refs.png" />
+<p>See <a class="reference internal" href="#stopping-executors">Stopping Executors</a> above for an explanation of the <code class="docutils literal"><span class="pre">_EXECUTORS</span></code> set.</p>
+<p>It is a requirement of the <a class="reference external" href="https://github.com/mongodb/specifications/blob/master/source/server-discovery-and-monitoring/server-discovery-and-monitoring.rst#requesting-an-immediate-check">Server Discovery And Monitoring Spec</a> that a
+sleeping monitor can be awakened early. Aside from infrequent wakeups to do
+their appointed chores, and occasional interruptions, periodic executors also
+wake periodically to check if they should terminate.</p>
+<p>Our first implementation of this idea was the obvious one: use the Python
+standard library&#8217;s threading.Condition.wait with a timeout. Another thread
+wakes the executor early by signaling the condition variable.</p>
+<p>A topology cannot signal the condition variable to tell the executor to
+terminate, because it would risk a deadlock in the garbage collector: no
+destructor or weakref callback can take a lock to signal the condition variable
+(see <a class="reference external" href="https://jira.mongodb.org/browse/PYTHON-863">PYTHON-863</a>); thus the only way for a dying object to terminate a
+periodic executor is to set its &#8220;stopped&#8221; flag and let the executor see the
+flag next time it wakes.</p>
+<p>We erred on the side of prompt cleanup, and set the check interval at 100ms. We
+assumed that checking a flag and going back to sleep 10 times a second was
+cheap on modern machines.</p>
+<p>Starting in Python 3.2, the builtin C implementation of lock.acquire takes a
+timeout parameter, so Python 3.2+ Condition variables sleep simply by calling
+lock.acquire; they are implemented as efficiently as expected.</p>
+<p>But in Python 2, lock.acquire has no timeout. To wait with a timeout, a Python
+2 condition variable sleeps a millisecond, tries to acquire the lock, sleeps
+twice as long, and tries again. This exponential backoff reaches a maximum
+sleep time of 50ms.</p>
+<p>If PyMongo calls the condition variable&#8217;s &#8220;wait&#8221; method with a short timeout,
+the exponential backoff is restarted frequently. Overall, the condition variable
+is not waking a few times a second, but hundreds of times. (See <a class="reference external" href="https://jira.mongodb.org/browse/PYTHON-983">PYTHON-983</a>.)</p>
+<p>Thus the current design of periodic executors is surprisingly simple: they
+do a simple <cite>time.sleep</cite> for a half-second, check if it is time to wake or
+terminate, and sleep again.</p>
+</div>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Developer Guide"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">PyMongo 3.4.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Developer Guide</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2008 - 2015, MongoDB, Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.5.
+    </div>
+  </body>
+</html>
