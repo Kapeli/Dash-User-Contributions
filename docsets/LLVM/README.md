@@ -1,4 +1,15 @@
-LLVM Dash Docset
+Original LLVM-Dash was last updated on 9 Sep 2015, more than two years ago.
+Unlike original version , this one was built according to the official guide with some modifications.
+See <http://mayuyu.io/llvm/2017/04/06/BuildingLLVMDoc.html>
+
+
+Below was the original README
+
+
+Naville Zhang
+
+
+## LLVM Dash Docset
 =======================
 
 - __Docset Description__:
