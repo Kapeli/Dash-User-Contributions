@@ -24,7 +24,7 @@ git clone -b vulkan git@github.com:antiagainst/dashing.git
 # The above has modifications for parsing Vulkan spec.
 # Build it and use the dashing.json at examples/vulkan/dashing.json
 # for building the docset.
-/path/to/dashing build
+$GOPATH/bin/dashing build
 ```
 
 [vulkan]: https://www.khronos.org/vulkan
