@@ -15,8 +15,7 @@ retrieve the files. The saved mirror of the reference manual subtree
 gets saved under the Documents folder by httrack as follows:
 
 ```
-httrack https://support.hdfgroup.org/HDF5/doc/RM/ -O <path to
-Documents>
+httrack https://support.hdfgroup.org/HDF5/doc/RM/ -O <path to Documents>
 ```
 
 ### Generate the index
