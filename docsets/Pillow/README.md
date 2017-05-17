@@ -1,12 +1,12 @@
 Pillow docset
 =============
 
-__Docset description__:
+__Docset description:__
 	[Pillow](http://python-pillow.github.io), the friendly PIL fork. PIL
 	is the [Python Imaging
 	Library](https://en.wikipedia.org/wiki/Python_Imaging_Library).
 
-__Author__:
+__Author:__
     [153957](https://github.com/153957)
 
 __How to generate the docset:__
@@ -24,4 +24,9 @@ __How to generate the docset:__
         <key>DashDocSetFallbackURL</key>
         <string>http://pillow.readthedocs.org</string>
 
+- Archive the docset:
+
+        tar --exclude='.DS_Store' -cvzf Pillow.tgz Pillow.docset
+
+- Update the version in `docset.json`
 - Icon from https://github.com/python-pillow/python-pillow.github.io
