@@ -4,7 +4,7 @@ SpigotMC
 # What is this?
 * This is the officially unofficial docset for the SpigotMC API. It is generated directly from BuildTools.
 
-## Current V#ersion: 1.11
+### Current Version: 1.11
 # Contributors
 * This docset was created by the user, Croc, and updated by the user kuuy.
 	* **Croc**
