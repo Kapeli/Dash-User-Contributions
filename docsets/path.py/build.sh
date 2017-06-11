@@ -113,7 +113,7 @@ cd "${WORK_DIR}"
 doc2dash -q -f -n path.py -I api.html --destination "${DIST_DIR}" "${BUILD_DIR}"
 
 # Create compressed archive
-tar --exclude=".DS_Store" -C "${DIST_DIR}" -czf "${DIST_DIR}/archive.tar.gz" path.py.docset
+tar --exclude=".DS_Store" -C "${DIST_DIR}" -czf "${DIST_DIR}/path.py.tgz" path.py.docset
 
 
 # Finish up
