@@ -25,7 +25,7 @@ source bin/activate
 path.py needs to be installed as editable. The build script can be fetched from github.
 
 ```sh
-pip install setuptools_scm rst.linker sphinx-readable-theme doc2dash
+pip install setuptools_scm rst.linker sphinx-readable-theme doc2dash jaraco.packaging
 pip install -e git+https://github.com/jaraco/path.py.git#egg=path.py
 curl -O https://raw.githubusercontent.com/Kapeli/Dash-User-Contributions/master/docsets/path.py/build.sh
 ```
