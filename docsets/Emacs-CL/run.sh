@@ -31,7 +31,7 @@ find . -name *.html | ./gendash.hy >> $SQL_FILE
 sqlite3 $RESDIR/docSet.dsidx < $SQL_FILE
 
 # Copy relevant files into the DOCSET directory
-cp info.plist $CONDIR
+cp Info.plist $CONDIR
 cp *.png $BASEDIR
 cp -rp www.gnu.org $DOCDIR
 
