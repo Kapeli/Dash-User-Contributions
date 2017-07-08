@@ -17,7 +17,7 @@ make html
 
 Download all of the externally hosted notebooks and convert to html:
 
-```
+```python
 import os
 from glob import glob
 import re
