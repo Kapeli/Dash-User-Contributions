@@ -12,12 +12,12 @@ INSERT INTO temp (name, type, path) VALUES ("chain", "Function", "language/core.
 INSERT INTO temp (name, type, path) VALUES ("compress", "Function", "language/core.html#included-itertools");
 INSERT INTO temp (name, type, path) VALUES ("drop-while", "Function", "language/core.html#included-itertools");
 INSERT INTO temp (name, type, path) VALUES ("remove", "Function", "language/core.html#included-itertools");
-INSERT INTO temp (name, type, path) VALUES ("group-by", "Function", "language/core.htmlFincluded-itertools");
+INSERT INTO temp (name, type, path) VALUES ("group-by", "Function", "language/core.html#included-itertools");
 INSERT INTO temp (name, type, path) VALUES ("islice", "Function", "language/core.html#included-itertools");
 INSERT INTO temp (name, type, path) VALUES ("map", "Function", "language/core.html#included-itertools");
-INSERT INTO temp (name, type, path) VALUES ("take-while", "Function", "language/core.htmlFincluded-itertools");
+INSERT INTO temp (name, type, path) VALUES ("take-while", "Function", "language/core.html#included-itertools");
 INSERT INTO temp (name, type, path) VALUES ("tee", "Function", "language/core.html#included-itertools");
-INSERT INTO temp (name, type, path) VALUES ("zip-longest", "Function", "language/core.htmlFincluded-itertools");
+INSERT INTO temp (name, type, path) VALUES ("zip-longest", "Function", "language/core.html#included-itertools");
 INSERT INTO temp (name, type, path) VALUES ("product", "Function", "language/core.html#included-itertools");
 INSERT INTO temp (name, type, path) VALUES ("permutations", "Function", "language/core.html#included-itertools");
 INSERT INTO temp (name, type, path) VALUES ("combinations", "Function", "language/core.html#included-itertools");
