@@ -1,7 +1,7 @@
 openFrameworks Docset
 =======================
 
-Docset for openFrameworks 0.9.3 
+Docset for openFrameworks 0.9.8
 
 Created by [Yi donghoon](https://github.com/icq4ever), [@icq4ever](https://twitter.com/icq4ever)
 
@@ -13,6 +13,12 @@ To create this docset
 4. run `make install` in the generated `build/html` directory
 5. you can find generated docset in `~/Library/Developer/Shared/Documentation/docSets/`
 
+
+---
+
+Docset for openFrameworks 0.9.3 
+
+Created by [Yi donghoon](https://github.com/icq4ever), [@icq4ever](https://twitter.com/icq4ever)
 
 ---
 
