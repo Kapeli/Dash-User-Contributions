@@ -1,4 +1,4 @@
-wxWidgets Docset
+wxPython Docset
 =======================
 
 - __Docset Description:__
