@@ -6,7 +6,7 @@ Reference documentation for use with [Dash](http://kapeli.com/dash), an API Docu
 ## About Vaadin
 
 > Vaadin: thinking of U and I
- 
+
 > Vaadin is a Java framework for building modern web applications that look great, perform well and make you and your users happy.
 
 Visit [https://vaadin.com/]() for more information about the project.
@@ -19,6 +19,10 @@ This Dash docset was compiled by [Eric W. Wallace](https://twitter.com/ewall) an
 
 ### Available Versions
 
+* 8.1.1
+* 8.1.0
+* 8.0.7
+* 8.0.6
 * 8.0.5
 * 8.0.3
 * 8.0.2
