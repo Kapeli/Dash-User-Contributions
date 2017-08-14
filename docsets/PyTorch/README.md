@@ -7,7 +7,8 @@ PyTorch Docset
 
 #### How to create:
 
-- see the [script in this repo](https://github.com/iamaziz/PyTorch-docset).
+- See `makefile` in the [main documentation page](https://github.com/pytorch/pytorch/blob/master/docs/Makefile).
+- ~~see the [script in this repo](https://github.com/iamaziz/PyTorch-docset).~~
 
 #### Docset Author:
 
