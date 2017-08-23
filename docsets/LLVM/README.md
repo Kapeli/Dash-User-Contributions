@@ -8,7 +8,7 @@ LLVM Dash Docset
     - [Aziz Alto](https://github.com/iamaziz)
 
 - __Docset repo__:
-    - [https://github.com/iamaziz/llvm-dash](https://github.com/iamaziz/llvm-dash)
+    - [https://github.com/Chilledheart/llvm-dash](https://github.com/Chilledheart/llvm-dash)
 
 - __Instructions to generate the docset:__
 	- As easy as:
