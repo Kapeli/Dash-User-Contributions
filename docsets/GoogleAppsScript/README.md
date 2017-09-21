@@ -13,7 +13,7 @@ Generating the docset:
 # Install Dashing.
 ~ go get -u github.com/technosophos/dashing
 # Clone files for Docset.
-~ clone git@github.com:almai/gas-docset.git
+~ git clone git@github.com:almai/gas-docset.git
 # Change into folder.
 ~ cd gas-docset
 # Edit dashing.json or leave the defaults. (For further information please visit https://github.com/technosophos/dashing).
