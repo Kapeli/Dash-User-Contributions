@@ -16,18 +16,15 @@ How to Generate
 ---------------
 
 ```sh
-# Checkout Vukan specification source code:
-git clone https://github.com/KhronosGroup/Vulkan-Docs
-
-# Go to directory:
-cd Vulkan-Docs/doc/specs/vulkan
-
-# Build the specifation:
-./makeKHR chunked
+# Download the Vulkan spec
+wget https://www.khronos.org/registry/vulkan/specs/1.0-wsi_extensions/html/vkspec.html
 
 # Use dashing to generate
-# dashing.json is at https://github.com/antiagainst/dashing/blob/vulkan/examples/vulkan/dashing.json
-/path/to/dashing build
+git clone -b vulkan git@github.com:antiagainst/dashing.git
+# The above has modifications for parsing Vulkan spec.
+# Build it and use the dashing.json at examples/vulkan/dashing.json
+# for building the docset.
+$GOPATH/bin/dashing build
 ```
 
 [vulkan]: https://www.khronos.org/vulkan
