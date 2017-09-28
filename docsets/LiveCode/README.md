@@ -1,4 +1,5 @@
-#LiveCode Docset#
+LiveCode Docset
+=======================
 
 Complete Dash compatible version of the LiveCode API and Guides.
 
