@@ -5,7 +5,7 @@ Complete Dash compatible version of the LiveCode API and Guides.
 
 **Author:** [James Hale](https://github.com/jameshale)
 
-## To generating your own docset
+## To generate your own docset
 
 ### Requirements
 
