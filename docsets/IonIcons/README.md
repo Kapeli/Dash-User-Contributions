@@ -5,5 +5,5 @@ IonIcons - PHP Docset
 
 This is manually generated from [http://ionicons.com](http://ionicons.com) using my PHP Script.
 
- * Author: [Danang Widiantoro](http://esoftplay.com) (danang@esoftplay.com) [Github](//github.com/esoftplay)
+ * Author: [Danang Widiantoro](http://esoftplay.com) (danang@esoftplay.com) [Github](//github.com/bbcdanang)
  * Docset repository: https://github.com/driftyco/ionicons
