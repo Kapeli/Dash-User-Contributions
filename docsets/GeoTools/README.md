@@ -10,7 +10,17 @@ Documentation for [GeoTools](http://www.geotools.org) library as a [Dash](http:/
 * [javadocset](https://github.com/Kapeli/javadocset), to convert the Javadoc to a Dash docset.
 
 #### Available Versions
+* 17.0
+* 16.2
+* 16.1
+* 16.0
+* 15.4
+* 15.3
+* 15.2
+* 15.1
 * 15.0
+* 14.5
+* 14.4
 * 14.3
 * 14.2
 * 14.1
@@ -28,3 +38,9 @@ Documentation for [GeoTools](http://www.geotools.org) library as a [Dash](http:/
     ```bash
     $ javadocset GeoTools apidocs
     ```
+3. Compress the docset using tar
+
+    ```bash
+    $ tar --exclude='.DS_Store' -cvzf GeoTools.tgz GeoTools.docset
+    ```
+

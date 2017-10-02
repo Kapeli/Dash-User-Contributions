@@ -48,10 +48,10 @@ pip install -q -e .
 
 echo "Building HTML documentation…"
 
-cd "${SRC_DIR}"
+cd "${SRC_DIR}/docs"
 
 # Use Sphinx to build the docs using the "readable" theme
-sphinx-build -Q -a -E -D html_theme="readable" -D html_theme_path="${THEME_PATH}" docs "${BUILD_DIR}"
+sphinx-build -Q -a -E -D html_theme="readable" -D html_theme_path="${THEME_PATH}" . "${BUILD_DIR}"
 
 # Return to the master branch
 git checkout -q master
@@ -62,7 +62,7 @@ git checkout -q master
 
 echo "Preparing documentation for docset conversion…"
 
-cd ${BUILD_DIR}
+cd "${BUILD_DIR}"
 
 # Don't need any images
 rm _static/*.png _static/*.gif
@@ -113,7 +113,7 @@ cd "${WORK_DIR}"
 doc2dash -q -f -n path.py -I api.html --destination "${DIST_DIR}" "${BUILD_DIR}"
 
 # Create compressed archive
-tar --exclude=".DS_Store" -C "${DIST_DIR}" -czf "${DIST_DIR}/archive.tar.gz" path.py.docset
+tar --exclude=".DS_Store" -C "${DIST_DIR}" -czf "${DIST_DIR}/path.py.tgz" path.py.docset
 
 
 # Finish up
