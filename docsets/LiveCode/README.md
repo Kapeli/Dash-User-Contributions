@@ -35,4 +35,6 @@ Copy of [LiveCode](http://downloads.livecode.com/livecode/) (Version 8.1.5 or hi
 Simply run the stack (instructions included) within the version of LiveCode you wish to have a docset for. Once completed a "LiveCode.docset" will be available to import into Dash.
 
 ### Note
-The current docset version was ran against LC 9 dp9. Currently there are just over 5600 entries included as opposed to less than 4000 for the LC 8 series.  This is mainly due to reorganization as well as explicit entries for synonyms. This will change over time.
+The current docset version was ran against LC 9 dp10. Currently there are now just over 4100 entries included as opposed to less than 4000 for the LC 8 series.  Synonyms have now been collapsed into their "master" record.
+
+Please report any discrepancies or misiing items.
