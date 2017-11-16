@@ -1,4 +1,4 @@
-Pillow docset
+Wagtail docset
 =============
 
 __Docset description:__
