@@ -15,6 +15,10 @@ then
 	tag=$(curl 'https://api.github.com/repos/scikit-learn/scikit-learn/releases?per_page=1' | python -c 'import json, sys; print(json.load(sys.stdin)[0]["tag_name"])')
 fi
 
+# check prerequisites
+python --version 2>&1 | grep -q 'Python 3' || (echo 'Require Python 3' >&2; exit 2)
+which optipng || (echo 'Require optipng' >&2; exit 2)
+
 originaldir=$(pwd)
 workdir=$(mktemp -d -t sklearn2dash)
 trap "{ rm -rf $workdir; }" EXIT
@@ -32,7 +36,7 @@ pip install numpy scipy cython nose coverage matplotlib sphinx pillow sphinx-gal
 pip install doc2dash scikit-learn==$tag
 git clone --depth 1 --branch $tag https://github.com/scikit-learn/scikit-learn
 cd scikit-learn/doc
-make html
+make html optipng
 cd $workdir
 
 # convert to dash
