@@ -12,12 +12,5 @@ User Documentation for FreeBSD
 ## How to build dockset
 
 ```bash
-brew install golang recode
-export $GOPATH=~/go
-
-go get -u github.com/technosophos/dashing
-wget https://download.freebsd.org/ftp/doc/en/books/handbook/book.html-split.tar.bz2
-tar -xvf book.html-split.tar.bz2
-recode iso-8859-1..utf8 *.html
-dashing build
+./make-doc
 ```
