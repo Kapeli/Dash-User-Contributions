@@ -1,4 +1,4 @@
-Pillow docset
+Wagtail docset
 =============
 
 __Docset description:__
@@ -27,5 +27,12 @@ __How to generate the docset:__
 
         tar --exclude='.DS_Store' -cvzf Wagtail.tgz Wagtail.docset
 
+- Copy the archived docset `Wagtail.tgz` to two locations (keep the filename the same):
+    1. `specific_versions` folder within a sub-folder with the version name
+    2. main `docsets/Wagtail` folder
+
 - Update the version in `docset.json`
+
+__Icon:__
+
 - Icon from http://docs.wagtail.io/en/latest/_static/logo.png
