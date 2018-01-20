@@ -18,3 +18,10 @@ how to generate the docset.
 the icon is grabbed from the wild randomly, if copyright involved, please contact me
 
 @\_ruoshan
+
+### v1.9.2
+
+Author: Bartosz Janda ([@BartoszJanda](https://twitter.com/BartoszJanda))
+
+Please refer to [this repo](https://github.com/bartoszj/kubernetes-docset) for infomation on
+how to generate the docset.
