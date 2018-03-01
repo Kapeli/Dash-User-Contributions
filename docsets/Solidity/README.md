@@ -1,7 +1,9 @@
 Solidity Docset
 =======================
 
-Solidity docset for Dash
+> ###Latest 0.4.21
+
+Solidity docset for Dash 
 
 - __Docset Description__:
 	- [Solidity](solidity.readthedocs.io) is contract-oriented, high-level, programming language for implementing smart contracts. Influenced by C++, Python and Javascript. Designed to target the Ethereum Virtual Machine
