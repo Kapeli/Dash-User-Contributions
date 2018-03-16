@@ -1,9 +1,9 @@
 TLDR Pages
 =======================
 
-This is the docset for [tldr page][1] and the generator script could be found [here][2].
+This is the docset for [TLDR pages][1]. The generator script can be found [here][2].
 
-Creates by [Moddus][3]
+Created by [Moddus][3]
 
 [1]: https://github.com/tldr-pages/tldr
 [2]: https://github.com/Moddus/tldr-python-dash-docset
