@@ -16,7 +16,7 @@ __How to generate the docset:__
 - Run `make html` in the `docs` directory.
 - Run [doc2dash](https://pypi.python.org/pypi/doc2dash/) on the
   `html` directory inside `docs/_build/`: `doc2dash -n Wagtail html`
-- Edit the Info.plist in the docset, adding the following keys:
+- Edit the `Info.plist` file inside `docs/_build/Wagtail.docset/Contents/`, adding the following keys inside `<dict>`:
 
         <key>dashIndexFilePath</key>
         <string>index.html</string>
