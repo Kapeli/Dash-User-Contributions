@@ -2,10 +2,10 @@ Wagtail docset
 =============
 
 __Docset description:__
-	[Wagtail](http://docs.wagtail.io) is a content management system built on Django.
+	[Wagtail](http://docs.wagtail.io) is an open source content management system built on Django.
 
 __Author:__
-    [153957](https://github.com/153957)
+    [lb-](https://github.com/lb-/)
 
 __How to generate the docset:__
 
