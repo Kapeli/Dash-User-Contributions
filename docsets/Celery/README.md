@@ -58,5 +58,7 @@ fi
 doc2dash -Afj -nCelery -Iindex.html -uhttp://docs.celeryproject.org/en/v4.1.0/ _build/html
 
 # create tarball
-tar --exclude='.DS_Store' -cvzf Celery.tgz ~/Library/Application\ Support/doc2dash/DocSets/Celery.docset
+cd ~/Library/Application\ Support/doc2dash/DocSets
+tar --exclude='.DS_Store' -cvzf Celery.tgz Celery.docset
+
 ```
