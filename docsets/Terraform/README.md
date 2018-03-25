@@ -3,7 +3,7 @@ Terraform Docset
 
 https://terraform.io/docs/
 
-Contriubuted by [rolandjohann](https://github.com/rolandjohann/terraform-dash-doc-generator.git)
+Contributed by [rolandjohann](https://github.com/rolandjohann/terraform-dash-doc-generator.git)
 
 ## Building the docsets
 

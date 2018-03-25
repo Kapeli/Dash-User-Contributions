@@ -1,5 +1,5 @@
-Vaadin Docset for Dash
-======================
+Vaadin Framework Docset for Dash
+================================
 
 Reference documentation for use with [Dash](http://kapeli.com/dash), an API Documentation Browser by [@kapeli](https://twitter.com/kapeli)
 
@@ -19,6 +19,8 @@ This Dash docset was compiled by [Eric W. Wallace](https://twitter.com/ewall) an
 
 ### Available Versions
 
+* 8.3.2
+* 8.3.1
 * 8.1.4
 * 8.1.3
 * 8.1.2
