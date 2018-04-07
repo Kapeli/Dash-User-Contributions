@@ -28,6 +28,7 @@ Please file an issue there if you want to update the docs. Thanks.
 
 | Version | Date Built | Updated By |
 |:------------- |:------------- |:----- |
+| r77 | June 3, 2016  | Drew Lustro [@msodrew](https://twitter.com/msodrew)    |
 | r76 | May 20, 2016  | Drew Lustro [@msodrew](https://twitter.com/msodrew)    |
 | r72 | Sep 30, 2015  | Joshua Zhang [@toruta39](https://twitter.com/toruta39) |
 | r70 | Feb 25, 2015  | Joshua Zhang [@toruta39](https://twitter.com/toruta39) |

@@ -1,12 +1,12 @@
-Vaadin Docset for Dash
-======================
+Vaadin Framework Docset for Dash
+================================
 
 Reference documentation for use with [Dash](http://kapeli.com/dash), an API Documentation Browser by [@kapeli](https://twitter.com/kapeli)
 
 ## About Vaadin
 
 > Vaadin: thinking of U and I
- 
+
 > Vaadin is a Java framework for building modern web applications that look great, perform well and make you and your users happy.
 
 Visit [https://vaadin.com/]() for more information about the project.
@@ -18,6 +18,32 @@ This is a compilation of the Javadoc API documentation available for download fr
 This Dash docset was compiled by [Eric W. Wallace](https://twitter.com/ewall) and is available on [Github](https://github.com/ewall/Dash-User-Contributions/tree/master/docsets/Vaadin).
 
 ### Available Versions
+
+* 8.3.3
+* 8.3.2
+* 8.3.1
+* 8.1.4
+* 8.1.3
+* 8.1.2
+* 8.1.1
+* 8.1.0
+* 8.0.7
+* 8.0.6
+* 8.0.5
+* 8.0.3
+* 8.0.2
+* 8.0.1
+* 8.0.0
+* 7.7.7
+* 7.7.6
+* 7.7.5
+* 7.7.4
+* 7.7.3
+* 7.7.2
+* 7.7.1
+* 7.7.0
+* 7.6.8
+* 7.6.7
 * 7.6.6
 * 7.6.5
 * 7.6.4
