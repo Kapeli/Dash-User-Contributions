@@ -1,4 +1,4 @@
-#!env bash
+#!/usr/bin/env bash
 
 # Automatically exit on error
 set -e
