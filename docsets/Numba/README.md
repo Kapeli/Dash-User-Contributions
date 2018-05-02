@@ -24,7 +24,8 @@
     ```shell
     cd numba/docs
     make html
+    cd _build/html
     doc2dash -n Numba -u http://numba.pydata.org -v -A -i numba_blue_icon_rgb.png .
     ```
 
-    where `numba_blue_icon_rgb.png` can be found under `path/to/cloned/numba/repo/docs/_static`.
+    where `numba_blue_icon_rgb.png` can be found at `path/to/cloned/numba/repo/docs/_static`, put it at `path/to/cloned/numba/repo/docs/_build/html` and run the commands above.
