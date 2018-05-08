@@ -29,3 +29,7 @@
     ```
 
     where `numba_blue_icon_rgb.png` can be found at `path/to/cloned/numba/repo/docs/_static`, put it at `path/to/cloned/numba/repo/docs/_build/html` and run the commands above.
+
+* Guide to optimize `Numba.docset` for display in Dash:
+
+  There is an option called `'navbar_fixed_top': "true",` in `conf.py` in [Sphinx Bootstrap Theme](https://github.com/ryan-roemer/sphinx-bootstrap-theme), download and change it to `'navbar_fixed_top': "false"` and install the theme, then use `doc2dash` to generate the html pages. This will help the docset pages look better in Dash.
