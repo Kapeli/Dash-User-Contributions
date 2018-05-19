@@ -13,8 +13,8 @@ __How to generate the docset:__
 
 - Download the desired release from GitHub
   [Pillow releases](https://github.com/python-pillow/Pillow/releases)
-- Run `make html` in the `docs` directory (if you are missing some
-  requried packages run `python setup.py develop` in the root dir first)
+- Run `make doc` in the Pillow directory (if you are missing some
+  requried packages run `pip install -r requirements.txt` first)
 - Run [doc2dash](https://pypi.python.org/pypi/doc2dash/) on the
   `html` directory inside `docs/_build/`: `doc2dash -n Pillow html`
 - Edit the Info.plist in the docset, adding the following keys:
@@ -22,7 +22,7 @@ __How to generate the docset:__
         <key>dashIndexFilePath</key>
         <string>index.html</string>
         <key>DashDocSetFallbackURL</key>
-        <string>http://pillow.readthedocs.org</string>
+        <string>https://pillow.readthedocs.org</string>
 
 - Archive the docset:
 
