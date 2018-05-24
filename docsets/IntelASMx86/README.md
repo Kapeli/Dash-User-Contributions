@@ -1,11 +1,14 @@
-# x86-docset
-Dash-style docset for the Intel x86 Instruction Set
+IntelASMx86 Dash Docset
+=======================
 
-By Jeremy Agostino (https://github.com/JeremyAgost)
-
-See http://www.felixcloutier.com/x86/ and https://github.com/zneak/x86doc
-
-# Required Changes
-- Replaced forward slashes in html filenames with dashes (slashes confuse Dash)
-- Updated index.html with altered filenames
-- Created an "Instruction" type entry in the search index for each filename
+- __Docset Description__:
+    - Dash-style docset for the Intel x86_64 Instruction Set
+- Author:
+    - [Kira](https://github.com/Kira-cxy)
+- __Docset repo__:
+    - [https://github.com/Kira-cxy/pwn-dash-docset](https://github.com/Kira-cxy/pwn-dash-docset)
+- Instructions to generate the docset:
+    - Run [this script](https://github.com/Kira-cxy/pwn-dash-docset/blob/master/x86_64_asm/build.sh) to generate the docset entries.
+- Thanks:
+    - <https://github.com/technosophos/dashing>
+    - <http://www.felixcloutier.com/x86/>
