@@ -1,4 +1,4 @@
-x86_64_asm Dash Docset
+IntelASMx86 Dash Docset
 =======================
 
 - __Docset Description__:
