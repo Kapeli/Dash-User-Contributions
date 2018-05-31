@@ -7,7 +7,7 @@ Astropy Dash Docset
 - Authors:
     - [Aziz Alto](https://github.com/iamaziz) Original version
     - [William Henney](https://github.com/deprecated) Update to version 1.2. Generate HTML docs from source instead of mirroring from readthedocs
-    - [Simon Conseil](https://github.com/saimn) Update to version 1.3.
+    - [Simon Conseil](https://github.com/saimn) Update to version 1.3, 2.0.
 
 - Instructions to generate the docset:
 	- Download Astropy source to a temporary folder `SRCDIR`

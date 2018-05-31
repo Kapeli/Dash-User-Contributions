@@ -1,11 +1,11 @@
-Pillow docset
+Wagtail docset
 =============
 
 __Docset description:__
-	[Wagtail](http://docs.wagtail.io) is a content management system built on Django.
+	[Wagtail](http://docs.wagtail.io) is an open source content management system built on Django.
 
 __Author:__
-    [153957](https://github.com/153957)
+    [lb-](https://github.com/lb-/)
 
 __How to generate the docset:__
 
@@ -16,7 +16,7 @@ __How to generate the docset:__
 - Run `make html` in the `docs` directory.
 - Run [doc2dash](https://pypi.python.org/pypi/doc2dash/) on the
   `html` directory inside `docs/_build/`: `doc2dash -n Wagtail html`
-- Edit the Info.plist in the docset, adding the following keys:
+- Edit the `Info.plist` file inside `docs/_build/Wagtail.docset/Contents/`, adding the following keys inside `<dict>`:
 
         <key>dashIndexFilePath</key>
         <string>index.html</string>
@@ -27,5 +27,12 @@ __How to generate the docset:__
 
         tar --exclude='.DS_Store' -cvzf Wagtail.tgz Wagtail.docset
 
+- Copy the archived docset `Wagtail.tgz` to two locations (keep the filename the same):
+    1. `specific_versions` folder within a sub-folder with the version name
+    2. main `docsets/Wagtail` folder
+
 - Update the version in `docset.json`
+
+__Icon:__
+
 - Icon from http://docs.wagtail.io/en/latest/_static/logo.png

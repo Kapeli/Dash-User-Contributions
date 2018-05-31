@@ -1,7 +1,7 @@
 openFrameworks Docset
 =======================
 
-Docset for openFrameworks 0.9.8
+Docset for openFrameworks 0.10.0
 
 Created by [Yi donghoon](https://github.com/icq4ever), [@icq4ever](https://twitter.com/icq4ever)
 
@@ -10,9 +10,14 @@ To create this docset
 1. set `GENERATE_DOCSET` to `YES` in `libs/openFrameworksCompiled/project/doxygen/Doxyfile`
 2. set `DISABLE_INDEX` to `YES` in `libs/openFrameworksCompiled/project/doxygen/Doxyfile`
 3. run `doxgen DoxyFile`
-4. run `make install` in the generated `build/html` directory
-5. you can find generated docset in `~/Library/Developer/Shared/Documentation/docSets/`
+4. run `make` in the generated `build/html` directory
+5. generate index with [doxytag2zealdb](https://github.com/vedvyas/doxytag2zealdb)
 
+---
+
+Docset for openFrameworks 0.9.8
+
+Created by [Yi donghoon](https://github.com/icq4ever), [@icq4ever](https://twitter.com/icq4ever)
 
 ---
 
