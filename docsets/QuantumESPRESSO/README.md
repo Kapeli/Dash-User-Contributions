@@ -9,4 +9,6 @@ The docset generation script and corresponding generation guide is open-sourced 
   * Install the dependencies by running `pip3 install -r requirements.txt` from the scripts directory.
   * Edit the `generation.sh` and run it
 
-A website about it has been hosted on the [GitHub Pages](https://chazeon.github.io/qe-docset/), if you are interested go take a look!
+To build docsets in batch for various versions of QE, you can refer to the [auto build scripts](https://github.com/chazeon/qe-docset-autobuild).
+
+Also, a website about it has been hosted on the [GitHub Pages](https://chazeon.github.io/qe-docset/), where you can download the archives of the docsets directly. If you are interested go take a look!
