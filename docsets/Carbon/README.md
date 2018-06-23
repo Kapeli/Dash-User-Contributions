@@ -12,8 +12,10 @@ You can contact me by email (on my [Github page](https://github.com/Max13)) or o
 And finally, you can checkout my GPG keys on [Keybase](https://keybase.io/Max13)
 
 # Prerequisites
+- `dashing`
+- `doxygen`
+- `git`
 - `wget`
-- `dashing` (_will be downloaded automatically_)
 
 # Generate the docset
 This is simple as hell...!
