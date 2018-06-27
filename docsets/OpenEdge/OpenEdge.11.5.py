@@ -10,7 +10,7 @@ import site
 import os, re, sqlite3, urllib, codecs
 from bs4 import BeautifulSoup, NavigableString, Tag 
 
-db = sqlite3.connect('OpenEdge.docset/Contents/Resources/docSet.dsidx')
+db = sqlite3.connect('OpenEdge115.docset/Contents/Resources/docSet.dsidx')
 cur = db.cursor()
 
 try: cur.execute('DROP TABLE searchIndex;')
@@ -18,7 +18,7 @@ except: pass
 cur.execute('CREATE TABLE searchIndex(id INTEGER PRIMARY KEY, name TEXT, type TEXT, path TEXT);')
 cur.execute('CREATE UNIQUE INDEX anchor ON searchIndex (name, type, path);')
 
-docpath = 'OpenEdge.docset/Contents/Resources/Documents'
+docpath = 'OpenEdge115.docset/Contents/Resources/Documents'
 
 files = []
 for name in os.listdir(docpath):
@@ -38,11 +38,11 @@ for file in files:
        if len(name) == 0:
            name = path
         
-       if path.split('#')[0] not in ('index.html'):
-           path = urllib.unquote(path)
-           path = path.encode('ascii', 'ignore')
-           cur.execute('INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES (?,?,?)', (name, 'Guide', path))
-           print 'adding file path: %s, name: %s' % (path, name)
+       # if path.split('#')[0] not in ('index.html'):
+       path = urllib.unquote(path)
+       path = path.encode('ascii', 'ignore')
+       cur.execute('INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES (?,?,?)', (name, 'Guide', path))
+       print 'adding file path: %s, name: %s' % (path, name)
 
    db.commit()
 
@@ -53,80 +53,132 @@ found_files = find_files(path=docpath, match=sh_files_pattern)
 
 for found_file in found_files:
 
-    if path.split('#')[0] not in ('index.html'):
+    # if path.split('#')[0] not in ('index.html'):
 
-        print 'editing file: %s' % (found_file)
+    print 'editing file: %s' % (found_file)
     
-        # Remove the onload attribute from the body tag
-        # <body id="pYxQs0eniL26fH5dRGlU43A" class="ww_skin_page_body" onload="Page.OnLoad('../index.html#page/dvref/xml.html');">
+    soup = BeautifulSoup(open(found_file))
 
-        soup = BeautifulSoup(open(found_file))
-
-        any = re.compile('.*')
+    any = re.compile('.*')
     
-        for tag in soup.find_all('body'):
+    for tag in soup.find_all('body'):
         
-            tag = soup.body
+        tag = soup.body
 
-            del tag['onload']
-            tag
+        del tag['onload']
+        tag
 
-        html = str(soup)
+    html = str(soup)
         
-        new_file = found_file.encode('ascii', 'ignore')
+    new_file = found_file.encode('ascii', 'ignore')
         
-        with open((found_file),"wb") as file:
-            file.write(html)
+    with open((found_file),"wb") as file:
+        file.write(html)
             
-        if new_file <> found_file:
-            with open((new_file),"wb") as file:
-                file.write(html)
+    if new_file <> found_file:
+        with open((new_file),"wb") as file:
+            file.write(html)
 
 
 # Special Types
 
-# Annotation Attribute Binding Builtin Callback Category Class Command Component Constant Constructor Define Delegate Diagram Directive Element Entry Enum Environment Error Event Exception Extension Field File Filter Framework Function Global Guide Hook Instance Instruction Interface Keyword Library Literal Macro Method Mixin Modifier Module Namespace Notation Object Operator Option Package Parameter Plugin Procedure Property Protocol Provider Provisioner Query Record Resource Sample Section Service Setting Shortcut Statement Struct Style Subroutine Tag Test Trait Type Union Value Variable Word
-
+# Annotation
+# Attribute
+# Binding
+# Builtin
+# Callback
+# Category
+# Class
 # Command
-cur.execute('UPDATE searchIndex SET type = "Command" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%command" or name like "%commands")')
-cur.execute('UPDATE searchIndex SET type = "Command" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%utility" or name like "%qualifier")')
+# Component
+# Constant
+# Constructor
+# Define
+# Delegate
+# Diagram
+# Directive
+# Element
+# Entry
+# Enum
+# Environment
+# Error
+# Event
+# Exception
+# Extension
+# Field
+# File
+# Filter
+# Framework
+# Function
+# Global
+# Guide
+# Hook
+# Instance
+# Instruction
+# Interface
+# Keyword
+# Library
+# Literal
+# Macro
+# Method
+# Mixin
+# Modifier
+# Module
+# Namespace
+# Notation
+# Object
+# Operator
+# Option
+# Package
+# Parameter
+# Plugin
+# Procedure
+# Property
+# Protocol
+# Provider
+# Provisioner
+# Query
+# Record
+# Resource
+# Sample
+# Section
+# Service
+# Setting
+# Shortcut
+# Statement
+# Struct
+# Style
+# Subroutine
+# Tag
+# Test
+# Trait
+# Type
+# Union
+# Value
+# Variable
+# Word
 
 # Parameter
-cur.execute('UPDATE searchIndex SET type = "Parameter" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%parameter" or name like "%parameters")')
+cur.execute('UPDATE searchIndex SET type = "Parameter" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%parameter")')
 cur.execute('UPDATE searchIndex SET type = "Parameter" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "% (-%)")')
 
 # Attribute
-cur.execute('UPDATE searchIndex SET type = "Attribute" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%attribute" or name like "%attributes")')
+cur.execute('UPDATE searchIndex SET type = "Attribute" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%attribute")')
 
 # Class
-cur.execute('UPDATE searchIndex SET type = "Class" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%class" or name like "%classes")')
-
-# Event
-cur.execute('UPDATE searchIndex SET type = "Event" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%event" or name like "%events")')
+cur.execute('UPDATE searchIndex SET type = "Class" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "progress.%class")')
 
 # Function
-cur.execute('UPDATE searchIndex SET type = "Function" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%function" or name like "%functions")')
+cur.execute('UPDATE searchIndex SET type = "Function" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%function")')
 
 # Interface
-cur.execute('UPDATE searchIndex SET type = "Interface" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%interface")')
+cur.execute('UPDATE searchIndex SET type = "Interface" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "progress.%interface")')
 
 # Method
-cur.execute('UPDATE searchIndex SET type = "Method" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%method" or name like "%methods")')
-
-# Object
-cur.execute('UPDATE searchIndex SET type = "Object" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%object" or name like "%object")')
-
-# Procedure
-cur.execute('UPDATE searchIndex SET type = "Procedure" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%procedure" or name like "%procedures")')
-
-# Query
-cur.execute('UPDATE searchIndex SET type = "Query" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%query" or name like "%queries")')
+cur.execute('UPDATE searchIndex SET type = "Method" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%method")')
 
 # Statement
-cur.execute('UPDATE searchIndex SET type = "Statement" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%statement" or name like "%statements")')
-
-# Type
-cur.execute('UPDATE searchIndex SET type = "Type" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%type" or name like "%types")')
+cur.execute('UPDATE searchIndex SET type = "Statement" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%statement")')
 
 # Operator
 cur.execute('UPDATE searchIndex SET type = "Operator" WHERE type = "Guide" and (path like "dpspr/%" or path like "dvref/%") and (name like "%operator" or name like "%preprocessor directive" or name like "%preprocessor directives" or name like "%punctuation" or name like "%special character" or name like "%expression precedence" or name like "%array reference" or name like "%character-string literal" or name like "%preprocessor name reference")')
