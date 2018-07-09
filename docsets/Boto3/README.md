@@ -3,7 +3,7 @@ Boto3 Docset
 Boto3 is the Amazon Web Services (AWS) Software Development Kit (SDK) for Python, which allows Python developers to write software that makes use of services like Amazon S3 and Amazon EC2.
 http://boto3.readthedocs.io/en/latest/
 
-* Boto3 Version: 1.7.31
+* Boto3 Version: 1.7.52
 * Dash Docset: Updated by Randall Kahler
 * Twitter: @angrychimp
 * Github: https://github.com/angrychimp
@@ -23,12 +23,14 @@ How to generate this docset:
 
 * Import docset into dash:
 	```
-	doc2dash -A boto3/docs/build/html --name boto3
+	# Removes previous compilation if it exists
+	[[ -e ~/Library/Application\ Support/doc2dash/DocSets/boto3.docset ]] && rm -r ~/Library/Application\ Support/doc2dash/DocSets/boto3.docset
+	doc2dash -A build/html --name boto3
 	```
 
 * Archive docset as per: https://github.com/Kapeli/Dash-User-Contributions#contribute-a-new-docset
 	```
-	cd ~/Library/Application Support/doc2dash/DocSets
+	cd ~/Library/Application\ Support/doc2dash/DocSets
 	tar --exclude='.DS_Store' -cvzf /tmp/boto3.tgz boto3.docset
 	```
 
@@ -38,6 +40,7 @@ How to generate this docset:
 	```
 	cd /path-to-repo/Dash-User-Contributions/docsets/Boto3
 	mv /tmp/boto3.tgz .
+	[[ -e boto3.tgz.txt ]] && rm boto3.tgz.txt
 	```
 
 * (Recommended) Download AWS Python SDK icons, and copy into docset
