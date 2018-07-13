@@ -6,7 +6,7 @@ OpenEdge Docset
 Chris Kelleher 
 Twitter: [@chris4gl](https://twitter.com/chris4gl) 
 GitHub: [chris4gl](https://github.com/chris4gl)
-Web: <http://www.chriskelleherapps.com>
+Web: <http://www.quakersoftware.com>
 
 
 ## Building the Docset
@@ -42,4 +42,3 @@ Disaster Recovery
 Cloud Computing
 Developer Efficiency
 Application Integration
-
