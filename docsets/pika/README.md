@@ -21,7 +21,7 @@ index 0de2264..3623d0b 100644
  html_static_path = ['_static']
  htmlhelp_basename = 'pikadoc'
 ```
- * `sphinx-build doc docbuild` (install sphinx via pip)
+ * `sphinx-build docs docbuild` (install sphinx via pip)
  * `cd docbuild``
  * `cp .../dashing.json .`
  * `dashing build -s . -f dashing.json` (https://github.com/technosophos/dashing)
