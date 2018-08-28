@@ -19,7 +19,7 @@ This documentation set will be updated with each release of the LC 9 series wher
 
 It will also be updated for bug fixes (mainly in formatting) as they become know to me.
 
-The current version(1.6) has been compiled from the 9.01 RC2 release using "Make docset" V2.8" (see below)
+The current version(1.6.1) has been compiled from the 9.01 RC2 release using "Make docset" V2.8" (see below)
  Hopefully this now captures all entries associated with libraries and widgets. 
 
 ## To generate your own docset
