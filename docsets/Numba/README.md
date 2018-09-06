@@ -10,13 +10,16 @@
   >
   > The Numba project is supported by Anaconda, Inc. (formerly known as Continuum Analytics) and [The Gordon and Betty Moore Foundation (Grant GBMF5423)](https://www.continuum.io/blog/developer-blog/gordon-and-betty-moore-foundation-grant-numba-and-dask).
 
-* Complete instructions on how to generate the docset:
-  * `doc2dash 2.2.0` [package](https://pypi.python.org/pypi/doc2dash) and `Sphinx 1.6.2` [package](http://www.sphinx-doc.org/en/master/)
+## Complete instructions on how to generate the docset
 
-  * You could download the initial HTML documentation for the docset from [here](https://github.com/numba/numba), just run
+1. Install [`doc2dash 2.2.0`](https://pypi.python.org/pypi/doc2dash), [`Sphinx 1.6.2`](http://www.sphinx-doc.org/en/master/), and of course, the latest version of [numba](https://pypi.org/project/numba/).
+
+2. Otimize `Numba.docset` for display in Dash: There is an option called `'navbar_fixed_top': "true",` in [`theme.conf`](https://github.com/ryan-roemer/sphinx-bootstrap-theme/blob/master/sphinx_bootstrap_theme/bootstrap/theme.conf) of [Sphinx Bootstrap Theme](https://github.com/ryan-roemer/sphinx-bootstrap-theme), download and change it to `'navbar_fixed_top': "false"` and install the theme, then use command `doc2dash` (see step 3) to generate the html pages. This will help the docset pages look better in Dash.
+
+3. You should download the repository from [here](https://github.com/numba/numba), or just run
 
     ```shell
-    git clone git@github.com:numba/numba.git
+    git clone git@github.com:numba/numba.git /path/you/want/to/clone/to
     ```
 
     to clone the repo to your local machine. Then run
@@ -25,11 +28,40 @@
     cd numba/docs
     make html
     cd _build/html
-    doc2dash -n Numba -u http://numba.pydata.org -v -A -i numba_blue_icon_rgb.png .
+    doc2dash -n Numba -u http://numba.pydata.org/numba-doc/<downloaded-numba-version>/ -v -A -i numba_blue_icon_rgb.png .
     ```
 
     where `numba_blue_icon_rgb.png` can be found at `path/to/cloned/numba/repo/docs/_static`, put it at `path/to/cloned/numba/repo/docs/_build/html` and run the commands above.
 
-* Guide to optimize `Numba.docset` for display in Dash:
+4. Set an index page: Add these lines to `/path/to/Numba.docset/Contents/Info.plist`:
 
-  There is an option called `'navbar_fixed_top': "true",` in `conf.py` in [Sphinx Bootstrap Theme](https://github.com/ryan-roemer/sphinx-bootstrap-theme), download and change it to `'navbar_fixed_top': "false"` and install the theme, then use `doc2dash` to generate the html pages. This will help the docset pages look better in Dash.
+    ```xml
+    <key>dashIndexFilePath</key>
+    <string>index.html</string>
+    ```
+
+    After adding the index, remove and re-add the docset in Dash's Preferences.
+
+5. Compress: go to `/path/to/Numba.docset`, run command
+
+    ```shell
+    tar --exclude='.DS_Store' -cvzf Numba.tgz Numba.docset
+    ```
+
+    to generate `Numba.tgz`.
+
+6. Move `Numba.tgz` to `/path/to/cloned/Dash-User-Contributions/docsets/Numba`, here we called it *top-level compressed docset*.
+
+7. Create a folder under path `Dash-User-Contributions/docsets/Numba/versions/<downloaded-numba-version>/`.
+
+8. Make a copy of "top-level compressed docset", move it to `versions/<downloaded-numba-version>/` for users to download the versions they want. But all of those compressed docsets should have the name `Numba.tgz`! Don’t worry, they are not in the same folder.
+
+9. Edit `docset.json` accordingly. Make sure to follow the same naming rules as the sample.
+
+10. Edit the `README.md`.
+
+11. Submit a pull request.
+
+More details are [here](https://github.com/Kapeli/Dash-User-Contributions#contribute-a-new-docset).
+
+
