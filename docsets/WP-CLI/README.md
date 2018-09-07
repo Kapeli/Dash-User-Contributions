@@ -6,4 +6,4 @@
 
 ## How to generate this docset
 
-View [WP-CLI Dash Docset Generator project on GitHub](https://github.com/ptrkcsk/wp-cli-dash-docset-generator).
+View [WP-CLI Dash Docset Generator project on GitHub](https://github.com/wp-cli/dash-docset-generator).
