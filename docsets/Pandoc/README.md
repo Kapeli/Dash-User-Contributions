@@ -3,7 +3,7 @@ Pandoc Docset
 
 Description
 -----------
-- [Pandoc](http://pandoc.org/) a universal document converter. You can also find [it on github](https://github.com/jgm/pandoc).
+[Pandoc](http://pandoc.org/) is a universal document converter. You can also find [it on github](https://github.com/jgm/pandoc).
 
 Authors
 -------
