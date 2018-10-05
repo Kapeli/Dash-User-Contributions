@@ -34,4 +34,4 @@ To contribute a docset, follow the steps below. If you get stuck at any point or
   * Include a `icon.png` and `icon@2x.png` with sizes `16x16` and `32x32` or simply delete the sample icon if you don't want an icon at all
   * Edit the docset.json file. Make sure to follow the same naming rules as the sample (i.e. your docset name should be the same as the archive name, but replace whitespaces with underscores)
   * Edit the README.md
-* Submit a pull request
+* Then submit a pull request
