@@ -8,7 +8,7 @@ Complete Dash compatible version of the LiveCode API and Guides.
 **Author:** [James Hale](https://github.com/jameshale)
 
 ## Description
-The 9.01 release of LC has now reached Release Candidate (RC) stage. 
+The 9.01 release of LC has now reached "Stable"  stage. 
 
 Extensions (Widgets and Libraries) can now have their own guide files. These now appear after the other guides when the 'home' page of the docset is selected.
 
@@ -19,8 +19,8 @@ This documentation set will be updated with each release of the LC 9 series wher
 
 It will also be updated for bug fixes (mainly in formatting) as they become know to me.
 
-The current version(1.6.1) has been compiled from the 9.01 RC2 release using "Make docset" V2.8" (see below)
- Hopefully this now captures all entries associated with libraries and widgets. 
+The current version(1.7) has been compiled from the 9.01 stable release using "Make docset" V3.0" (see below)
+This version returned syntax collaring to the examples as well as enabled links for "Associations" entries.
 
 ## To generate your own docset
 
@@ -39,9 +39,9 @@ Copy of [LiveCode](http://downloads.livecode.com/livecode/) (Version 8.1.5 or hi
 Simply run the stack (instructions included) within LiveCode. Once completed a "LiveCode.docset" will be available for import into Dash.
 
 ### Note
-The current docset version was ran against LC 9.01 RC2. 
+The current docset version was ran against LC 9.01 stable. 
 Documentation for LiveCode is continually being updated. As such there may still be some failings in the docs or some other type of error.
 
 Please report any discrepancies or omissions in the DocSet to me.
 
-please report any errors or omissions in the actual docs to Livecode.
+Please report any errors or omissions in the actual docs to [Livecode](https://quality.livecode.com).
