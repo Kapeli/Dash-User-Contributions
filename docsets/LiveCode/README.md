@@ -19,8 +19,8 @@ This documentation set will be updated with each release of the LC 9 series wher
 
 It will also be updated for bug fixes (mainly in formatting) as they become know to me.
 
-The current version(1.7) has been compiled from the 9.01 stable release using "Make docset" V3.0" (see below)
-This version returned syntax collaring to the examples as well as enabled links for "Associations" entries.
+The current version(1.7.1) has been compiled from the 9.01 stable release using "Make docset V3.1" (see below)
+This version returned syntax coloring to the examples as well as enabled links for "Associations" entries.
 
 ## To generate your own docset
 
