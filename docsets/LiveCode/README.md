@@ -19,8 +19,13 @@ This documentation set will be updated with each release of the LC 9 series wher
 
 It will also be updated for bug fixes (mainly in formatting) as they become know to me.
 
-The current version(1.7.2) has been compiled from the 9.01 stable release using "Make docset V3.2" (see below)
-This version returned syntax coloring to the examples in the body and the description as well as enabled links for "Associations" entries.
+The current version(1.7.3) has been compiled from the 9.01 stable release using "Make docset V3.3" (see below)
+This version returned syntax coloring to the examples in the body and the description as well as fully enabled links for "Associations" entries.
+
+Please report any discrepancies or omissions in the DocSet relative to the dictionary included with LiveCode to me.
+
+Please report any errors or omissions in the actual docs to [Livecode](https://quality.livecode.com).
+
 
 ## To generate your own docset
 
@@ -42,6 +47,3 @@ Simply run the stack (instructions included) within LiveCode. Once completed a "
 The current docset version was ran against LC 9.01 stable. 
 Documentation for LiveCode is continually being updated. As such there may still be some failings in the docs or some other type of error.
 
-Please report any discrepancies or omissions in the DocSet to me.
-
-Please report any errors or omissions in the actual docs to [Livecode](https://quality.livecode.com).
