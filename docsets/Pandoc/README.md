@@ -1,15 +1,23 @@
-Pandoc Dash Docset
-=======================
+Pandoc Docset
+=============
 
-- Description:
-    - [Pandoc](http://pandoc.org/) a universal document converter. You can also find [it on github](https://github.com/jgm/pandoc).
+Description
+-----------
+[Pandoc](http://pandoc.org/) is a universal document converter. You can also find [it on github](https://github.com/jgm/pandoc).
 
-- Author:
-    - [Aziz Alto](https://github.com/iamaziz)
+Authors
+-------
+- [Aziz Alto](https://github.com/iamaziz)
+- [Bernhard Waldbrunner](https://github.com/vbwx)
 
-- How to generate the docset:
-	See [pandoc-to-dash.py](https://gist.github.com/iamaziz/a9632572c7e992ede22b)
+How to generate the docset
+--------------------------
+- Run `Pandoc-to-dash.py`
+- Delete unnecessary files in `Pandoc.docset/Contents/Resources/Documents`
+- Run `fix-pages.pl`
 
-- Prerequisite:
-	- hhtrack 
-	- BeautifulSoup
+Prerequisites
+-------------
+- [HTTrack](http://www.httrack.com)
+- Python package BeautifulSoup
+- Perl modules HTML::Strip, URI::Encode, String::Util
