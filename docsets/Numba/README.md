@@ -28,10 +28,9 @@
     cd numba/docs
     make html
     cd _build/html
-    doc2dash -n Numba -u http://numba.pydata.org/numba-doc/<downloaded-numba-version>/ -v -A -i numba_blue_icon_rgb.png .
+    # In this folder, execute
+    doc2dash -n Numba -u http://numba.pydata.org/numba-doc/<downloaded-numba-version>/ -v -A -i ../../_static/numba_blue_icon_rgb.png .
     ```
-
-    where `numba_blue_icon_rgb.png` can be found at `path/to/cloned/numba/repo/docs/_static`, put it at `path/to/cloned/numba/repo/docs/_build/html` and run the commands above.
 
 4. Set an index page: Add these lines to `/path/to/Numba.docset/Contents/Info.plist`:
 
