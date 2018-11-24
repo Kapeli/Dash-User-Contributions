@@ -1,17 +1,11 @@
-# Kotlin
+Kotlin Docset
+=======================
 
-Author: Marcel Jackwerth ([@sirlantis](http://twitter.com/sirlantis))
+> Who are you
+Kevin Cianfarini, kevincianfarini on Github/GitLab
 
-Generation steps (see [GitHub repo](https://github.com/sirlantis/kotlin-docset)):
+> Complete Instructions on how to generate the docset
 
-- Download docs via `wget --mirror -k -nH ...`.
-- Add some CSS-overrides.
-- Add each `.html` file as a `Guide` to index.
+* Clone my docset generation script repo from [here](https://github.com/kevincianfarini/kotlin2docset)
+* Follow the README instructions there. 
 
-Where to get the docs:
-
-- The official [Kotlin website](kotlinlang.org/docs).
-
-Known Bugs:
-
-- Some pages of the original Kotlin documentation are missing source code. Once they get this fixed we'll update the docset.
