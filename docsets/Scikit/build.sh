@@ -20,11 +20,11 @@ python --version 2>&1 | grep -q 'Python 3' || (echo 'Require Python 3' >&2; exit
 which optipng || (echo 'Require optipng' >&2; exit 2)
 
 originaldir=$(pwd)
-workdir=$(mktemp -d -t sklearn2dash)
+workdir=$(mktemp -d -t sklearn2dashXXX)
 trap "{ rm -rf $workdir; }" EXIT
 
 # setup virtual environment
-virtualenv $workdir/venv
+python -m virtualenv $workdir/venv
 source $workdir/venv/bin/activate
 cp userguide.py $workdir
 
@@ -32,7 +32,8 @@ cp userguide.py $workdir
 # XXX: alternatively we could just download from scikit-learn.github.io assuming versions are matched
 cd $workdir
 # TODO: perhaps scikit-learn should provide an environment.yml and this script should use conda-env...
-pip install numpy scipy cython nose coverage matplotlib sphinx pillow sphinx-gallery numpydoc
+pip install -U pip
+pip install numpy scipy cython nose coverage matplotlib sphinx pillow sphinx-gallery numpydoc scikit-image joblib pandas
 pip install doc2dash scikit-learn==$tag
 git clone --depth 1 --branch $tag https://github.com/scikit-learn/scikit-learn
 cd scikit-learn/doc
