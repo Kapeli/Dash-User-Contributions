@@ -29,14 +29,19 @@ Build it
 mkdir build
 cd build
 cmake ../ -DWITH_APIDOC=TRUE -DWITH_3D=TRUE
-make
+make apidoc
+```
+Then, in *doc/api/html/Info.plist* remove *CFBundleVersion* (key and string value), and add the following two lines
+```xml
+<key>isDashDocset</key>
+<true/>
 ```
 
 Then generate docset (doxytag2zealdb can be installed with pip)
 ```shell
 # First command fail on docsetutil missing, nevermind!
 cd doc/api/html && make
-doxytag2zealdb --tag doc/qgis.tag --db doc/api/html/QGIS_3.docset/Contents/Resources/docSet.dsidx  --include-parent-scopes --include-function-signatures
+doxytag2zealdb --tag doc/qgis.tag --db doc/api/html/QGIS.docset/Contents/Resources/docSet.dsidx  --include-parent-scopes --include-function-signatures
 ```
 
 Finally, add icons and meta.json
