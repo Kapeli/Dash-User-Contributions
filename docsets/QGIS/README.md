@@ -31,7 +31,6 @@ cd build
 cmake ../ -DWITH_APIDOC=TRUE -DWITH_3D=TRUE
 make apidoc
 ```
-
 Then, in *doc/api/html/Info.plist* remove *CFBundleVersion* (key and string value), and add the following two lines
 ```xml
 <key>isDashDocset</key>
