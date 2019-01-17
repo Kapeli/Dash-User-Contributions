@@ -20,11 +20,11 @@ python --version 2>&1 | grep -q 'Python 3' || (echo 'Require Python 3' >&2; exit
 which optipng || (echo 'Require optipng' >&2; exit 2)
 
 originaldir=$(pwd)
-workdir=$(mktemp -d -t sklearn2dash)
+workdir=$(mktemp -d -t sklearn2dashXXX)
 trap "{ rm -rf $workdir; }" EXIT
 
 # setup virtual environment
-virtualenv $workdir/venv
+python -m virtualenv $workdir/venv
 source $workdir/venv/bin/activate
 cp userguide.py $workdir
 
@@ -32,10 +32,13 @@ cp userguide.py $workdir
 # XXX: alternatively we could just download from scikit-learn.github.io assuming versions are matched
 cd $workdir
 # TODO: perhaps scikit-learn should provide an environment.yml and this script should use conda-env...
-pip install numpy scipy cython nose coverage matplotlib sphinx pillow sphinx-gallery numpydoc
+pip install -U pip
+pip install numpy==1.15 scipy cython nose coverage matplotlib sphinx pillow sphinx-gallery numpydoc scikit-image joblib pandas
 pip install doc2dash scikit-learn==$tag
-git clone --depth 1 --branch $tag https://github.com/scikit-learn/scikit-learn
+git clone --branch $tag https://github.com/scikit-learn/scikit-learn
 cd scikit-learn/doc
+git fetch https://github.com/jnothman/scikit-learn 0.20sphinxrename
+git cherry-pick FETCH_HEAD  # patch sphinx to avoid overwriting generated files with different case
 make html optipng
 cd $workdir
 
@@ -47,5 +50,5 @@ tar --exclude='.DS_Store' -czvf scikit-learn.tgz scikit-learn.docset
 cd $originaldir
 cp $workdir/scikit-learn.tgz .
 # update docset.json
-sed -i bak 's/"version": ".*,/"version": "'$tag'",/' docset.json
+sed -ibak 's/"version": ".*,/"version": "'$tag'",/' docset.json
 git add docset.json scikit-learn.tgz
