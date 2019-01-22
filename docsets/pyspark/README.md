@@ -1,7 +1,7 @@
 pyspark Docset
 =======================
 
-* Author: Ronert Obst (https://twitter.com/ronert_obst)
+* Author: Tomas Kunka (https://twitter.com/TomasKunka)
 * Instructions
   * Clone the Apache Spark repo
   * Modify spark/python/docs/conf.py and add `html_theme_options = {"nosidebar": "true"}` under `html_theme = 'nature'`
