@@ -1,0 +1,19 @@
+var searchData=
+[
+  ['channel_5fprofile_5fcommunication',['CHANNEL_PROFILE_COMMUNICATION',['../namespaceagora_1_1rtc.html#acb7f3de6395617977d45c049ef8a4a86a7aaaf4a8757394f097ce39545b1bc0c4',1,'agora::rtc']]],
+  ['channel_5fprofile_5fgame',['CHANNEL_PROFILE_GAME',['../namespaceagora_1_1rtc.html#acb7f3de6395617977d45c049ef8a4a86ac4f5cd91e845358e73de0006db8b7fe6',1,'agora::rtc']]],
+  ['channel_5fprofile_5flive_5fbroadcasting',['CHANNEL_PROFILE_LIVE_BROADCASTING',['../namespaceagora_1_1rtc.html#acb7f3de6395617977d45c049ef8a4a86a0ebc8e2ca90fd1bfb8a0ff02bdc40e34',1,'agora::rtc']]],
+  ['client_5frole_5faudience',['CLIENT_ROLE_AUDIENCE',['../namespaceagora_1_1rtc.html#a42f167813e36b5c11a8a1c659b877080a21c4eacfac7477cf9b061cebd7093d97',1,'agora::rtc']]],
+  ['client_5frole_5fbroadcaster',['CLIENT_ROLE_BROADCASTER',['../namespaceagora_1_1rtc.html#a42f167813e36b5c11a8a1c659b877080a8a1a7a863a7f1f1f23d300d59d719912',1,'agora::rtc']]],
+  ['connection_5fchanged_5fbanned_5fby_5fserver',['CONNECTION_CHANGED_BANNED_BY_SERVER',['../namespaceagora_1_1rtc.html#a329573b5363b2065b4069e5bf6013144a322a93479407c09f82189e13f6aa79a3',1,'agora::rtc']]],
+  ['connection_5fchanged_5fconnecting',['CONNECTION_CHANGED_CONNECTING',['../namespaceagora_1_1rtc.html#a329573b5363b2065b4069e5bf6013144a909210151e80a40412b33b7c65f657d5',1,'agora::rtc']]],
+  ['connection_5fchanged_5finterrupted',['CONNECTION_CHANGED_INTERRUPTED',['../namespaceagora_1_1rtc.html#a329573b5363b2065b4069e5bf6013144a861e516bece11ba81cf53be6c2c631b0',1,'agora::rtc']]],
+  ['connection_5fchanged_5fjoin_5ffailed',['CONNECTION_CHANGED_JOIN_FAILED',['../namespaceagora_1_1rtc.html#a329573b5363b2065b4069e5bf6013144ab450ea0fd2e115e3ff60cc5afca4a3a5',1,'agora::rtc']]],
+  ['connection_5fchanged_5fjoin_5fsuccess',['CONNECTION_CHANGED_JOIN_SUCCESS',['../namespaceagora_1_1rtc.html#a329573b5363b2065b4069e5bf6013144a7db96919ed2935f5b2002183b1ed21eb',1,'agora::rtc']]],
+  ['connection_5fchanged_5fleave_5fchannel',['CONNECTION_CHANGED_LEAVE_CHANNEL',['../namespaceagora_1_1rtc.html#a329573b5363b2065b4069e5bf6013144a87b7858350d388b2ad6a2c46fd803cbe',1,'agora::rtc']]],
+  ['connection_5fstate_5fconnected',['CONNECTION_STATE_CONNECTED',['../namespaceagora_1_1rtc.html#a430364c3f2cbf4419b898077cf6977f7ae42663fc1191d37b6648916134bc42ea',1,'agora::rtc']]],
+  ['connection_5fstate_5fconnecting',['CONNECTION_STATE_CONNECTING',['../namespaceagora_1_1rtc.html#a430364c3f2cbf4419b898077cf6977f7a8d286796a07a1b7d25d871d859ff5727',1,'agora::rtc']]],
+  ['connection_5fstate_5fdisconnected',['CONNECTION_STATE_DISCONNECTED',['../namespaceagora_1_1rtc.html#a430364c3f2cbf4419b898077cf6977f7a335642f7cca4e7761ddbd0a722f6dd29',1,'agora::rtc']]],
+  ['connection_5fstate_5ffailed',['CONNECTION_STATE_FAILED',['../namespaceagora_1_1rtc.html#a430364c3f2cbf4419b898077cf6977f7aaf1e40b56dd8162ae63b9d6fc0d88241',1,'agora::rtc']]],
+  ['connection_5fstate_5freconnecting',['CONNECTION_STATE_RECONNECTING',['../namespaceagora_1_1rtc.html#a430364c3f2cbf4419b898077cf6977f7a7e870baf55d8bc02fc294ad0b3971d2d',1,'agora::rtc']]]
+];

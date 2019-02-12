@@ -1,0 +1,7 @@
+var searchData=
+[
+  ['videocanvas',['VideoCanvas',['../structagora_1_1rtc_1_1_video_canvas.html#adebf7523e3741aa8b0d2cf41b01a5675',1,'agora::rtc::VideoCanvas::VideoCanvas()'],['../structagora_1_1rtc_1_1_video_canvas.html#ac916f5b3f4fa9e43432f2c9d4ca1f9c1',1,'agora::rtc::VideoCanvas::VideoCanvas(view_t v, int m, uid_t u)']]],
+  ['videocompositinglayout',['VideoCompositingLayout',['../structagora_1_1rtc_1_1_video_compositing_layout.html#a076128e267769224551a13a6aa9a9c6d',1,'agora::rtc::VideoCompositingLayout']]],
+  ['videodimensions',['VideoDimensions',['../structagora_1_1rtc_1_1_video_dimensions.html#a59075efce4de974a93a46525c431d5bc',1,'agora::rtc::VideoDimensions::VideoDimensions()'],['../structagora_1_1rtc_1_1_video_dimensions.html#ac4bb921a72475253389e0e337b63efa8',1,'agora::rtc::VideoDimensions::VideoDimensions(int w, int h)']]],
+  ['videoencoderconfiguration',['VideoEncoderConfiguration',['../structagora_1_1rtc_1_1_video_encoder_configuration.html#a6ed58f22ca015d8b8be7f99ae5346cdc',1,'agora::rtc::VideoEncoderConfiguration::VideoEncoderConfiguration(const VideoDimensions &amp;d, FRAME_RATE f, int b, ORIENTATION_MODE m)'],['../structagora_1_1rtc_1_1_video_encoder_configuration.html#a4349ea68697251841ea83ee75321c114',1,'agora::rtc::VideoEncoderConfiguration::VideoEncoderConfiguration(int width, int height, FRAME_RATE f, int b, ORIENTATION_MODE m)'],['../structagora_1_1rtc_1_1_video_encoder_configuration.html#aa1b767184938acffef52acae4ff092e9',1,'agora::rtc::VideoEncoderConfiguration::VideoEncoderConfiguration()']]]
+];
