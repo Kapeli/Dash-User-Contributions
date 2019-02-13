@@ -1,4 +1,4 @@
-Agora Native SDK for C++ Docset
+Agora Native SDK for Java Docset
 ========================================
 Created by [Agora](https://www.agora.io)
 
