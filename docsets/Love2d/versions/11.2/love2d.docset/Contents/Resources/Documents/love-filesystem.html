@@ -1,0 +1,392 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<title>love.filesystem - LOVE</title>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<link href="main.css" rel="stylesheet"/>
+</head>
+<body>
+<h1 class="firstHeading" id="firstHeading" lang="en">love.filesystem</h1><div id="bodyContent">
+<!-- <div id="siteSub">From LOVE</div> -->
+<!-- <div id="contentSub"></div> -->
+<!-- <div id="jump-to-nav" class="mw-jump">Jump to: <a href="#column-one">navigation</a>, <a href="#searchInput">search</a></div> -->
+<!-- start content -->
+<div class="mw-content-ltr" dir="ltr" id="mw-content-text" lang="en"><p>Provides an interface to the user's filesystem.
+</p><p>This module provides access to files in specific places:
+</p>
+<ul><li>  The root folder of the .love archive (or source directory)</li>
+<li>  The root folder of the game's <i>save directory</i>.</li>
+<li>  The folder <i>containing</i> the game's .love archive (or source directory), but only if <a href="love-filesystem-getsourcebasedirectory.html" title="love.filesystem.getSourceBaseDirectory">specific conditions</a> are met.</li></ul>
+<p>Each game is granted a single directory on the system where files can be saved through love.filesystem. This is the <b>only directory</b> where love.filesystem can write files. These directories will typically be found in something like:
+</p>
+<table border="1" cellpadding="5" cellspacing="1" style="background-color:#E9F5FF; border: 1px solid #83C0F0;">
+<tr>
+<th> OS
+</th>
+<th> Path
+</th>
+<th> Alternative
+</th>
+<th> Notes
+</th></tr>
+<tr>
+<td>Windows XP
+</td>
+<td><code>C:\Documents and Settings\user\Application Data\LOVE\</code>
+</td>
+<td><code>%appdata%\LOVE\</code>
+</td>
+<td>When fused, save directory will created directly inside <code>Application Data</code>, rather than as a sub-directory of <code>LOVE</code>.
+</td></tr>
+<tr>
+<td>Windows Vista, 7, 8 and 10
+</td>
+<td><code>C:\Users\user\AppData\Roaming\LOVE</code>
+</td>
+<td><code>%appdata%\LOVE\</code>
+</td>
+<td>When fused, save directory will created directly inside <code>AppData</code>, rather than as a sub-directory of <code>LOVE</code>.
+</td></tr>
+<tr>
+<td>Mac
+</td>
+<td><code>/Users/user/Library/Application Support/LOVE/</code>
+</td>
+<td> -
+</td>
+<td> -
+</td></tr>
+<tr>
+<td>Linux
+</td>
+<td><code>$XDG_DATA_HOME/love/</code>
+</td>
+<td><code>~/.local/share/love/</code>
+</td>
+<td> -
+</td></tr>
+<tr>
+<td>Android
+</td>
+<td><code>/data/user/0/org.love2d.android/files/save/</code>
+</td>
+<td><code>/data/data/org.love2d.android/files/save/</code>
+</td>
+<td>On Android there are various save locations. If these don't work then you can use <code>love.filesystem.getSaveDirectory()</code> to check.
+</td></tr></table>
+<p>Files that are opened for write or append will always be created in the save directory. The same goes for other operations that involve writing to the filesystem, like mkdir.
+</p><p>Files that are opened for read will be looked for in the save directory, and then in the .love archive (in that order). So if a file with a certain filename (and path) exist in both the .love archive and the save folder, the one in the save directory takes precedence.
+</p><p>Note: <b>All</b> paths are relative to the .love archive and save directory. (except for the get*Directory() calls)
+</p><p>It is recommended to set your game's identity first in your <a href="config-files.html" title="Config Files">conf.lua</a>. You can set it with <a href="love-filesystem-setidentity.html" title="love.filesystem.setIdentity">love.filesystem.setIdentity</a> as well.
+</p>
+<table align="center" bgcolor="gold" class="notice" style="border-style:solid;border-width:1px;-moz-border-radius:3px;border-radius:3px;" width="80%">
+<tr>
+<td width="1"> <img alt="O.png" height="64" src="w-images-0-09-o.png" width="64"/>
+</td>
+<td>There's bug in 0.10.0, up to 0.10.2 where any operation involving the game save directory (i.e. <a href="love-filesystem-write.html" title="love.filesystem.write">writing</a>) always fail in Android Marshmallow and later versions. The workaround is to enable externalstorage configuration.
+</td>
+<td width="1"> 
+</td></tr></table><br/>
+<h2><span class="mw-headline" id="Types">Types</span></h2>
+<table class="smwtable" style="background-color: #eeeeff;">
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="droppedfile.html" title="DroppedFile">DroppedFile</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Represents a file dropped from the window.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.10.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="file.html" title="File">File</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Represents a file on the filesystem.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"> </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="filedata.html" title="FileData">FileData</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="data.html" title="Data">Data</a> representing the contents of a file.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"> </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+</table>
+<h2><span class="mw-headline" id="Functions">Functions</span></h2>
+<table class="smwtable" style="background-color: #eeeeff;">
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-append.html" title="love.filesystem.append">love.filesystem.append</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Append data to an existing file.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.9.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-aresymlinksenabled.html" title="love.filesystem.areSymlinksEnabled">love.filesystem.areSymlinksEnabled</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Gets whether love.filesystem follows symbolic links.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.9.2 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-createdirectory.html" title="love.filesystem.createDirectory">love.filesystem.createDirectory</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Creates a directory.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.9.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-enumerate.html" title="love.filesystem.enumerate">love.filesystem.enumerate</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Returns all the files and subdirectories in the directory.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.3.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #fff8f8; vertical-align: top;"><img alt="Removed in" height="11" src="w-images-f-f4-remove.png" width="8"/> 0.9.0
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-exists.html" title="love.filesystem.exists">love.filesystem.exists</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Check whether a file or directory exists.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"> </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><img alt="Deprecated in" height="11" src="w-images-b-b8-deprecate.png" width="8"/> 11.0
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-getappdatadirectory.html" title="love.filesystem.getAppdataDirectory">love.filesystem.getAppdataDirectory</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Returns the application data directory (could be the same as getUserDirectory)</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"> </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-getcrequirepath.html" title="love.filesystem.getCRequirePath">love.filesystem.getCRequirePath</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Gets the filesystem paths that will be searched for c libraries when require is called.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 11.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-getdirectoryitems.html" title="love.filesystem.getDirectoryItems">love.filesystem.getDirectoryItems</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Returns all the files and subdirectories in the directory.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.9.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-getidentity.html" title="love.filesystem.getIdentity">love.filesystem.getIdentity</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Gets the write directory name for your game.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.9.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-getinfo.html" title="love.filesystem.getInfo">love.filesystem.getInfo</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Gets information about the specified file or directory.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 11.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-getlastmodified.html" title="love.filesystem.getLastModified">love.filesystem.getLastModified</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Gets the last modification time of a file.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.7.1 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><img alt="Deprecated in" height="11" src="w-images-b-b8-deprecate.png" width="8"/> 11.0
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-getrealdirectory.html" title="love.filesystem.getRealDirectory">love.filesystem.getRealDirectory</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Gets the absolute path of the directory containing a filepath.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.9.2 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-getrequirepath.html" title="love.filesystem.getRequirePath">love.filesystem.getRequirePath</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Gets the filesystem paths that will be searched when require is called.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.10.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-getsavedirectory.html" title="love.filesystem.getSaveDirectory">love.filesystem.getSaveDirectory</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Gets the full path to the designated save directory.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.5.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-getsize.html" title="love.filesystem.getSize">love.filesystem.getSize</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Gets the size in bytes of a file.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.9.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><img alt="Deprecated in" height="11" src="w-images-b-b8-deprecate.png" width="8"/> 11.0
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-getsource.html" title="love.filesystem.getSource">love.filesystem.getSource</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Returns the full path to the .love file or directory.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.9.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-getsourcebasedirectory.html" title="love.filesystem.getSourceBaseDirectory">love.filesystem.getSourceBaseDirectory</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Returns the full path to the directory containing the .love file.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.9.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-getuserdirectory.html" title="love.filesystem.getUserDirectory">love.filesystem.getUserDirectory</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Returns the path of the user's directory</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"> </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-getworkingdirectory.html" title="love.filesystem.getWorkingDirectory">love.filesystem.getWorkingDirectory</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Gets the current working directory.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.5.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-init.html" title="love.filesystem.init">love.filesystem.init</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Initializes love.filesystem, will be called internally, so should not be used explictly.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"> </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-isdirectory.html" title="love.filesystem.isDirectory">love.filesystem.isDirectory</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Check whether something is a directory.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"> </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><img alt="Deprecated in" height="11" src="w-images-b-b8-deprecate.png" width="8"/> 11.0
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-isfile.html" title="love.filesystem.isFile">love.filesystem.isFile</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Check whether something is a file.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"> </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><img alt="Deprecated in" height="11" src="w-images-b-b8-deprecate.png" width="8"/> 11.0
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-isfused.html" title="love.filesystem.isFused">love.filesystem.isFused</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Gets whether the game is in fused mode or not.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.9.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-issymlink.html" title="love.filesystem.isSymlink">love.filesystem.isSymlink</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Gets whether a filepath is actually a symbolic link.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.9.2 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><img alt="Deprecated in" height="11" src="w-images-b-b8-deprecate.png" width="8"/> 11.0
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-lines.html" title="love.filesystem.lines">love.filesystem.lines</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Iterate over the lines in a file.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"> </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-load.html" title="love.filesystem.load">love.filesystem.load</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Loads a Lua file (but does not run it).</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.5.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-mkdir.html" title="love.filesystem.mkdir">love.filesystem.mkdir</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Creates a directory.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"> </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #fff8f8; vertical-align: top;"><img alt="Removed in" height="11" src="w-images-f-f4-remove.png" width="8"/> 0.9.0
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-mount.html" title="love.filesystem.mount">love.filesystem.mount</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Mounts a zip file or folder in the game's save directory for reading.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.9.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-newfile.html" title="love.filesystem.newFile">love.filesystem.newFile</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Creates a new <a href="file.html" title="File">File</a> object.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"> </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-newfiledata.html" title="love.filesystem.newFileData">love.filesystem.newFileData</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Creates a new <a href="filedata.html" title="FileData">FileData</a> object.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.7.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-read.html" title="love.filesystem.read">love.filesystem.read</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Read the contents of a file.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"> </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-remove.html" title="love.filesystem.remove">love.filesystem.remove</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Removes a file (or directory).</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"> </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-setcrequirepath.html" title="love.filesystem.setCRequirePath">love.filesystem.setCRequirePath</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Sets the filesystem paths that will be searched for c libraries when require is called.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 11.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-setidentity.html" title="love.filesystem.setIdentity">love.filesystem.setIdentity</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Sets the write directory for your game.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"> </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-setrequirepath.html" title="love.filesystem.setRequirePath">love.filesystem.setRequirePath</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Sets the filesystem paths that will be searched when require is called.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.10.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-setsource.html" title="love.filesystem.setSource">love.filesystem.setSource</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Sets the source of the game, where the code is present. Used internally.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"> </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-setsymlinksenabled.html" title="love.filesystem.setSymlinksEnabled">love.filesystem.setSymlinksEnabled</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Sets whether love.filesystem follows symbolic links.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.9.2 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-unmount.html" title="love.filesystem.unmount">love.filesystem.unmount</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Unmounts a zip file or folder previously mounted with <a href="love-filesystem-mount.html" title="love.filesystem.mount">love.filesystem.mount</a>.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.9.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="love-filesystem-write.html" title="love.filesystem.write">love.filesystem.write</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">Write data to a file.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"> </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+</table>
+<h2><span class="mw-headline" id="Enums">Enums</span></h2>
+<table class="smwtable" style="background-color: #eeeeff;">
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="filedecoder.html" title="FileDecoder">FileDecoder</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">How to decode a given <a href="filedata.html" title="FileData">FileData</a>.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 0.7.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="filemode.html" title="FileMode">FileMode</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">The different modes you can open a <a href="file.html" title="File">File</a> in.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"> </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+<tr>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;"><a href="filetype.html" title="FileType">FileType</a></td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">The type of a file.</td>
+<td style="padding: 1px 5px 1px 5px; background-color: #f8fff8; vertical-align: top;"><img alt="Added since" height="11" src="w-images-a-a7-add.png" width="8"/> 11.0 </td>
+<td style="padding: 1px 5px 1px 5px; background-color: #ffffff; vertical-align: top;">
+</td></tr>
+</table>
+<h2><span class="mw-headline" id="See_Also">See Also</span></h2>
+<ul><li> <a href="love.html" title="love">love</a></li></ul>
+<!-- 
+NewPP limit report
+CPU time usage: 0.392 seconds
+Real time usage: 0.440 seconds
+Preprocessor visited node count: 1920/1000000
+Preprocessor generated node count: 3905/1000000
+Post‐expand include size: 62119/2097152 bytes
+Template argument size: 8230/2097152 bytes
+Highest expansion depth: 4/40
+Expensive parser function count: 0/100
+-->
+<!-- Saved in parser cache with key love2d_wiki:pcache:idhash:61-0!*!0!!*!5!* and timestamp 20190306170531 and revision id 22475
+ -->
+</div>
+<!-- end content -->
+<div class="visualClear"></div>
+</div>
+</body>
+</html>

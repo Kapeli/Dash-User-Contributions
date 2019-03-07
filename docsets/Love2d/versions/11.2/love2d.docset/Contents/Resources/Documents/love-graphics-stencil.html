@@ -1,0 +1,153 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<title>love.graphics.stencil - LOVE</title>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<link href="main.css" rel="stylesheet"/>
+</head>
+<body>
+<h1 class="firstHeading" id="firstHeading" lang="en">love.graphics.stencil</h1><div id="bodyContent">
+<!-- <div id="siteSub">From LOVE</div> -->
+<!-- <div id="contentSub"></div> -->
+<!-- <div id="jump-to-nav" class="mw-jump">Jump to: <a href="#column-one">navigation</a>, <a href="#searchInput">search</a></div> -->
+<!-- start content -->
+<div class="mw-content-ltr" dir="ltr" id="mw-content-text" lang="en"><table bgcolor="#d0d0ff" class="new-section" data-newin="[[0.10.0]]" style="margin-top: 1em; padding: 3px; border-radius:5px; -moz-border-radius:5px;">
+<tr>
+<td><i> <b>Available since LÖVE 0.10.0</b> </i>
+</td></tr>
+<tr>
+<td> <small>Together with <a href="love-graphics-setstenciltest.html" title="love.graphics.setStencilTest">love.graphics.setStencilTest</a>, it has replaced <a href="love-graphics-setstencil.html" title="love.graphics.setStencil">love.graphics.setStencil</a>.</small>
+</td></tr></table>
+<p>Draws geometry as a stencil.
+</p><p>The geometry drawn by the supplied function sets invisible stencil values of pixels, instead of setting pixel colors. The stencil buffer (which contains those stencil values) can act like a mask / stencil - <a href="love-graphics-setstenciltest.html" title="love.graphics.setStencilTest">love.graphics.setStencilTest</a> can be used afterward to determine how further rendering is affected by the stencil values in each pixel.
+</p><p>Stencil values are integers within the range of [0, 255].
+</p><p><br/>
+</p>
+<table align="center" bgcolor="gold" class="notice" style="border-style:solid;border-width:1px;-moz-border-radius:3px;border-radius:3px;" width="80%">
+<tr>
+<td width="1"> <img alt="O.png" height="64" src="w-images-0-09-o.png" width="64"/>
+</td>
+<td>Starting with version 11.0, a stencil buffer must be set or requested in <a href="love-graphics-setcanvas.html" title="love.graphics.setCanvas">love.graphics.setCanvas</a> when using stencils with a Canvas. <code>love.graphics.setCanvas{canvas, stencil=true}</code> is an easy way to use an automatically provided temporary stencil buffer in that case.
+</td>
+<td width="1"> 
+</td></tr></table><br/>
+<h2><span class="mw-headline" id="Function">Function</span></h2>
+<h3><span class="mw-headline" id="Synopsis">Synopsis</span></h3>
+<div class="mw-geshi mw-code mw-content-ltr" dir="ltr"><div class="lua source-lua"><pre class="de1">love<span class="sy0">.</span>graphics<span class="sy0">.</span>stencil<span class="br0">(</span> stencilfunction<span class="sy0">,</span> action<span class="sy0">,</span> value<span class="sy0">,</span> keepvalues <span class="br0">)</span></pre></div></div>
+<h3><span class="mw-headline" id="Arguments">Arguments</span></h3>
+<dl><dt><code>function stencilfunction</code></dt>
+<dd> Function which draws geometry. The stencil values of pixels, rather than the color of each pixel, will be affected by the geometry.</dd>
+<dt><code><a href="stencilaction.html" title="StencilAction">StencilAction</a> action ("replace")</code></dt>
+<dd> How to modify any stencil values of pixels that are touched by what's drawn in the stencil function.</dd>
+<dt><code>number value (1)</code></dt>
+<dd> The new stencil value to use for pixels if the "replace" stencil action is used. Has no effect with other stencil actions. Must be between 0 and 255.</dd>
+<dt><code>boolean keepvalues (false)</code></dt>
+<dd> True to preserve old stencil values of pixels, false to re-set every pixel's stencil value to 0 before executing the stencil function. <a href="love-graphics-clear.html" title="love.graphics.clear">love.graphics.clear</a> will also re-set all stencil values.</dd></dl>
+<h3><span class="mw-headline" id="Returns">Returns</span></h3>
+<p>Nothing.
+</p>
+<h2><span class="mw-headline" id="Notes">Notes</span></h2>
+<p>It is possible to draw to the screen and to the stencil values of pixels at the same time, by using <a href="love-graphics-setcolormask.html" title="love.graphics.setColorMask">love.graphics.setColorMask</a> inside the stencil function to enable drawing to all color components.
+</p>
+<h2><span class="mw-headline" id="Examples">Examples</span></h2>
+<h3><span class="mw-headline" id="Drawing_circles_masked_by_a_rectangle">Drawing circles masked by a rectangle</span></h3>
+<div class="mw-geshi mw-code mw-content-ltr" dir="ltr"><div class="lua source-lua"><pre class="de1"><span class="kw1">local</span> <span class="kw1">function</span> myStencilFunction<span class="br0">(</span><span class="br0">)</span>
+   love<span class="sy0">.</span>graphics<span class="sy0">.</span>rectangle<span class="br0">(</span><span class="st0">"fill"</span><span class="sy0">,</span> <span class="nu0">225</span><span class="sy0">,</span> <span class="nu0">200</span><span class="sy0">,</span> <span class="nu0">350</span><span class="sy0">,</span> <span class="nu0">300</span><span class="br0">)</span>
+<span class="kw1">end</span>
+ 
+<span class="kw1">function</span> love<span class="sy0">.</span>draw<span class="br0">(</span><span class="br0">)</span>
+    <span class="co1">-- draw a rectangle as a stencil. Each pixel touched by the rectangle will have its stencil value set to 1. The rest will be 0.</span>
+    love<span class="sy0">.</span>graphics<span class="sy0">.</span>stencil<span class="br0">(</span>myStencilFunction<span class="sy0">,</span> <span class="st0">"replace"</span><span class="sy0">,</span> <span class="nu0">1</span><span class="br0">)</span>
+ 
+   <span class="co1">-- Only allow rendering on pixels which have a stencil value greater than 0.</span>
+    love<span class="sy0">.</span>graphics<span class="sy0">.</span>setStencilTest<span class="br0">(</span><span class="st0">"greater"</span><span class="sy0">,</span> <span class="nu0">0</span><span class="br0">)</span>
+ 
+    love<span class="sy0">.</span>graphics<span class="sy0">.</span>setColor<span class="br0">(</span><span class="nu0">1</span><span class="sy0">,</span> <span class="nu0">0</span><span class="sy0">,</span> <span class="nu0">0</span><span class="sy0">,</span> <span class="nu0">0.45</span><span class="br0">)</span>
+    love<span class="sy0">.</span>graphics<span class="sy0">.</span>circle<span class="br0">(</span><span class="st0">"fill"</span><span class="sy0">,</span> <span class="nu0">300</span><span class="sy0">,</span> <span class="nu0">300</span><span class="sy0">,</span> <span class="nu0">150</span><span class="sy0">,</span> <span class="nu0">50</span><span class="br0">)</span>
+ 
+    love<span class="sy0">.</span>graphics<span class="sy0">.</span>setColor<span class="br0">(</span><span class="nu0">0</span><span class="sy0">,</span> <span class="nu0">1</span><span class="sy0">,</span> <span class="nu0">0</span><span class="sy0">,</span> <span class="nu0">0.45</span><span class="br0">)</span>
+    love<span class="sy0">.</span>graphics<span class="sy0">.</span>circle<span class="br0">(</span><span class="st0">"fill"</span><span class="sy0">,</span> <span class="nu0">500</span><span class="sy0">,</span> <span class="nu0">300</span><span class="sy0">,</span> <span class="nu0">150</span><span class="sy0">,</span> <span class="nu0">50</span><span class="br0">)</span>
+ 
+    love<span class="sy0">.</span>graphics<span class="sy0">.</span>setColor<span class="br0">(</span><span class="nu0">0</span><span class="sy0">,</span> <span class="nu0">0</span><span class="sy0">,</span> <span class="nu0">1</span><span class="sy0">,</span> <span class="nu0">0.45</span><span class="br0">)</span>
+    love<span class="sy0">.</span>graphics<span class="sy0">.</span>circle<span class="br0">(</span><span class="st0">"fill"</span><span class="sy0">,</span> <span class="nu0">400</span><span class="sy0">,</span> <span class="nu0">400</span><span class="sy0">,</span> <span class="nu0">150</span><span class="sy0">,</span> <span class="nu0">50</span><span class="br0">)</span>
+ 
+    love<span class="sy0">.</span>graphics<span class="sy0">.</span>setStencilTest<span class="br0">(</span><span class="br0">)</span>
+<span class="kw1">end</span></pre></div></div>
+<h3><span class="mw-headline" id="Using_an_Image_as_a_stencil_mask">Using an Image as a stencil mask</span></h3>
+<div class="mw-geshi mw-code mw-content-ltr" dir="ltr"><div class="lua source-lua"><pre class="de1"><span class="co1">-- a black/white mask image: black pixels will mask, white pixels will pass.</span>
+<span class="kw1">local</span> mask <span class="sy0">=</span> love<span class="sy0">.</span>graphics<span class="sy0">.</span>newImage<span class="br0">(</span><span class="st0">"mymask.png"</span><span class="br0">)</span>
+ 
+<span class="kw1">local</span> mask_shader <span class="sy0">=</span> love<span class="sy0">.</span>graphics<span class="sy0">.</span>newShader<span class="co2">[[
+   vec4 effect(vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords) {
+      if (Texel(texture, texture_coords).rgb == vec3(0.0)) {
+         // a discarded pixel wont be applied as the stencil.
+         discard;
+      }
+      return vec4(1.0);
+   }
+]]</span>
+ 
+<span class="kw1">local</span> <span class="kw1">function</span> myStencilFunction<span class="br0">(</span><span class="br0">)</span>
+   love<span class="sy0">.</span>graphics<span class="sy0">.</span>setShader<span class="br0">(</span>mask_shader<span class="br0">)</span>
+   love<span class="sy0">.</span>graphics<span class="sy0">.</span>draw<span class="br0">(</span>mask<span class="sy0">,</span> <span class="nu0">0</span><span class="sy0">,</span> <span class="nu0">0</span><span class="br0">)</span>
+   love<span class="sy0">.</span>graphics<span class="sy0">.</span>setShader<span class="br0">(</span><span class="br0">)</span>
+<span class="kw1">end</span>
+ 
+<span class="kw1">function</span> love<span class="sy0">.</span>draw<span class="br0">(</span><span class="br0">)</span>
+    love<span class="sy0">.</span>graphics<span class="sy0">.</span>stencil<span class="br0">(</span>myStencilFunction<span class="sy0">,</span> <span class="st0">"replace"</span><span class="sy0">,</span> <span class="nu0">1</span><span class="br0">)</span>
+    love<span class="sy0">.</span>graphics<span class="sy0">.</span>setStencilTest<span class="br0">(</span><span class="st0">"greater"</span><span class="sy0">,</span> <span class="nu0">0</span><span class="br0">)</span>
+    love<span class="sy0">.</span>graphics<span class="sy0">.</span>rectangle<span class="br0">(</span><span class="st0">"fill"</span><span class="sy0">,</span> <span class="nu0">0</span><span class="sy0">,</span> <span class="nu0">0</span><span class="sy0">,</span> <span class="nu0">256</span><span class="sy0">,</span> <span class="nu0">256</span><span class="br0">)</span>
+    love<span class="sy0">.</span>graphics<span class="sy0">.</span>setStencilTest<span class="br0">(</span><span class="br0">)</span>
+<span class="kw1">end</span></pre></div></div>
+<h3><span class="mw-headline" id="Allow_drawing_everywhere_except_where_multiple_circles_intersect">Allow drawing everywhere except where multiple circles intersect</span></h3>
+<div class="mw-geshi mw-code mw-content-ltr" dir="ltr"><div class="lua source-lua"><pre class="de1"><span class="kw1">local</span> <span class="kw1">function</span> myStencilFunction<span class="br0">(</span><span class="br0">)</span>
+   <span class="co1">-- Draw four overlapping circles as a stencil.</span>
+   love<span class="sy0">.</span>graphics<span class="sy0">.</span>circle<span class="br0">(</span><span class="st0">"fill"</span><span class="sy0">,</span> <span class="nu0">200</span><span class="sy0">,</span> <span class="nu0">250</span><span class="sy0">,</span> <span class="nu0">100</span><span class="br0">)</span>
+   love<span class="sy0">.</span>graphics<span class="sy0">.</span>circle<span class="br0">(</span><span class="st0">"fill"</span><span class="sy0">,</span> <span class="nu0">300</span><span class="sy0">,</span> <span class="nu0">250</span><span class="sy0">,</span> <span class="nu0">100</span><span class="br0">)</span>
+   love<span class="sy0">.</span>graphics<span class="sy0">.</span>circle<span class="br0">(</span><span class="st0">"fill"</span><span class="sy0">,</span> <span class="nu0">250</span><span class="sy0">,</span> <span class="nu0">200</span><span class="sy0">,</span> <span class="nu0">100</span><span class="br0">)</span>
+   love<span class="sy0">.</span>graphics<span class="sy0">.</span>circle<span class="br0">(</span><span class="st0">"fill"</span><span class="sy0">,</span> <span class="nu0">250</span><span class="sy0">,</span> <span class="nu0">300</span><span class="sy0">,</span> <span class="nu0">100</span><span class="br0">)</span>
+<span class="kw1">end</span>
+ 
+<span class="kw1">function</span> love<span class="sy0">.</span>draw<span class="br0">(</span><span class="br0">)</span>
+   <span class="co1">-- Each pixel touched by each circle will have its stencil value incremented by 1.</span>
+   <span class="co1">-- The stencil values for pixels where the circles overlap will be at least 2.</span>
+   love<span class="sy0">.</span>graphics<span class="sy0">.</span>stencil<span class="br0">(</span>myStencilFunction<span class="sy0">,</span> <span class="st0">"increment"</span><span class="br0">)</span>
+ 
+   <span class="co1">-- Only allow drawing in areas which have stencil values that are less than 2.</span>
+   love<span class="sy0">.</span>graphics<span class="sy0">.</span>setStencilTest<span class="br0">(</span><span class="st0">"less"</span><span class="sy0">,</span> <span class="nu0">2</span><span class="br0">)</span>
+ 
+   <span class="co1">-- Draw a big rectangle.</span>
+   love<span class="sy0">.</span>graphics<span class="sy0">.</span>rectangle<span class="br0">(</span><span class="st0">"fill"</span><span class="sy0">,</span> <span class="nu0">0</span><span class="sy0">,</span> <span class="nu0">0</span><span class="sy0">,</span> <span class="nu0">500</span><span class="sy0">,</span> <span class="nu0">500</span><span class="br0">)</span>
+ 
+   love<span class="sy0">.</span>graphics<span class="sy0">.</span>setStencilTest<span class="br0">(</span><span class="br0">)</span>
+<span class="kw1">end</span></pre></div></div>
+<p>The <a href="love-graphics-setstenciltest.html" title="love.graphics.setStencilTest">love.graphics.setStencilTest</a> wiki page includes more examples.
+</p>
+<h2><span class="mw-headline" id="See_Also">See Also</span></h2>
+<ul><li> <a href="love-graphics.html" title="love.graphics">love.graphics</a></li>
+<li> <a href="love-graphics-setstenciltest.html" title="love.graphics.setStencilTest">love.graphics.setStencilTest</a></li>
+<li> <a href="love-graphics-clear.html" title="love.graphics.clear">love.graphics.clear</a></li></ul>
+<p><br/>
+</p>
+<!-- 
+NewPP limit report
+CPU time usage: 0.108 seconds
+Real time usage: 0.117 seconds
+Preprocessor visited node count: 411/1000000
+Preprocessor generated node count: 1246/1000000
+Post‐expand include size: 5844/2097152 bytes
+Template argument size: 2970/2097152 bytes
+Highest expansion depth: 5/40
+Expensive parser function count: 0/100
+-->
+<!-- Saved in parser cache with key love2d_wiki:pcache:idhash:4087-0!*!0!!*!5!* and timestamp 20190307090024 and revision id 21345
+ -->
+</div>
+<!-- end content -->
+<div class="visualClear"></div>
+</div>
+</body>
+</html>

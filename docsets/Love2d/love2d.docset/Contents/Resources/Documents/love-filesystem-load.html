@@ -1,0 +1,84 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<title>love.filesystem.load - LOVE</title>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<link href="main.css" rel="stylesheet"/>
+</head>
+<body>
+<h1 class="firstHeading" id="firstHeading" lang="en">love.filesystem.load</h1><div id="bodyContent">
+<!-- <div id="siteSub">From LOVE</div> -->
+<!-- <div id="contentSub"></div> -->
+<!-- <div id="jump-to-nav" class="mw-jump">Jump to: <a href="#column-one">navigation</a>, <a href="#searchInput">search</a></div> -->
+<!-- start content -->
+<div class="mw-content-ltr" dir="ltr" id="mw-content-text" lang="en"><table bgcolor="#d0d0ff" class="new-section" data-newin="[[0.5.0]]" style="margin-top: 1em; padding: 3px; border-radius:5px; -moz-border-radius:5px;">
+<tr>
+<td><i> <b>Available since LÖVE 0.5.0</b> </i>
+</td></tr>
+<tr>
+<td> <small>This function is not supported in earlier versions.</small>
+</td></tr></table>
+<p>Loads a Lua file (but does not run it).
+</p>
+<h2><span class="mw-headline" id="Function">Function</span></h2>
+<h3><span class="mw-headline" id="Synopsis">Synopsis</span></h3>
+<div class="mw-geshi mw-code mw-content-ltr" dir="ltr"><div class="lua source-lua"><pre class="de1">chunk<span class="sy0">,</span> errormsg <span class="sy0">=</span> love<span class="sy0">.</span>filesystem<span class="sy0">.</span>load<span class="br0">(</span> name <span class="br0">)</span></pre></div></div>
+<h3><span class="mw-headline" id="Arguments">Arguments</span></h3>
+<dl><dt><code>string name</code></dt>
+<dd> The name (and path) of the file.</dd></dl>
+<h3><span class="mw-headline" id="Returns">Returns</span></h3>
+<dl><dt><code>function chunk</code></dt>
+<dd> The loaded chunk.</dd>
+<dt><code>string errormsg (nil)</code></dt>
+<dd> The error message if file could not be opened.</dd></dl>
+<h2><span class="mw-headline" id="Example">Example</span></h2>
+<p>It is important to note that love.filesystem.load does <b>not</b> invoke the code, it just creates a function (a 'chunk') that will contain the contents of the file inside it. In order to execute the chunk, you have to put () behind it.
+</p><p>Also, it is worth noting that loaded files can return values. For example, the following file:
+</p>
+<div class="mw-geshi mw-code mw-content-ltr" dir="ltr"><div class="lua source-lua"><pre class="de1"><span class="kw1">return</span> <span class="nu0">1</span><span class="sy0">+</span><span class="nu0">1</span></pre></div></div>
+<p>Will return 2, when called like this:
+</p>
+<div class="mw-geshi mw-code mw-content-ltr" dir="ltr"><div class="lua source-lua"><pre class="de1">chunk <span class="sy0">=</span> love<span class="sy0">.</span>filesystem<span class="sy0">.</span>load<span class="br0">(</span> name <span class="br0">)</span> <span class="co1">-- load the chunk</span>
+<span class="kw1">local</span> result <span class="sy0">=</span> chunk<span class="br0">(</span><span class="br0">)</span> <span class="co1">-- execute the chunk</span>
+<span class="kw3">print</span><span class="br0">(</span><span class="st0">'result: '</span> <span class="sy0">..</span> <span class="kw3">tostring</span><span class="br0">(</span>result<span class="br0">)</span><span class="br0">)</span> <span class="co1">-- prints 'result: 2'</span></pre></div></div>
+<p>This bluescreens if there is a syntax error in the loaded file. If you want to continue your game if the file is not valid (for example if you expect it to be written by users), you can protect the calling of the chunk with <b>pcall</b>:
+</p>
+<div class="mw-geshi mw-code mw-content-ltr" dir="ltr"><div class="lua source-lua"><pre class="de1"><span class="kw1">local</span> ok<span class="sy0">,</span> chunk<span class="sy0">,</span> result
+ok<span class="sy0">,</span> chunk <span class="sy0">=</span> <span class="kw3">pcall</span><span class="br0">(</span> love<span class="sy0">.</span>filesystem<span class="sy0">.</span>load<span class="sy0">,</span> name <span class="br0">)</span> <span class="co1">-- load the chunk safely</span>
+<span class="kw1">if</span> <span class="kw2">not</span> ok <span class="kw1">then</span>
+  <span class="kw3">print</span><span class="br0">(</span><span class="st0">'The following error happend: '</span> <span class="sy0">..</span> <span class="kw3">tostring</span><span class="br0">(</span>chunk<span class="br0">)</span><span class="br0">)</span>
+<span class="kw1">else</span>
+  ok<span class="sy0">,</span> result <span class="sy0">=</span> <span class="kw3">pcall</span><span class="br0">(</span>chunk<span class="br0">)</span> <span class="co1">-- execute the chunk safely</span>
+ 
+  <span class="kw1">if</span> <span class="kw2">not</span> ok <span class="kw1">then</span> <span class="co1">-- will be false if there is an error</span>
+    <span class="kw3">print</span><span class="br0">(</span><span class="st0">'The following error happened: '</span> <span class="sy0">..</span> <span class="kw3">tostring</span><span class="br0">(</span>result<span class="br0">)</span><span class="br0">)</span>
+  <span class="kw1">else</span>
+    <span class="kw3">print</span><span class="br0">(</span><span class="st0">'The result of loading is: '</span> <span class="sy0">..</span> <span class="kw3">tostring</span><span class="br0">(</span>result<span class="br0">)</span><span class="br0">)</span>
+  <span class="kw1">end</span>
+<span class="kw1">end</span></pre></div></div>
+<h2><span class="mw-headline" id="See_Also">See Also</span></h2>
+<ul><li> <a href="love-filesystem.html" title="love.filesystem">love.filesystem</a></li></ul>
+<p><br/>
+</p>
+<!-- 
+NewPP limit report
+CPU time usage: 0.088 seconds
+Real time usage: 0.090 seconds
+Preprocessor visited node count: 381/1000000
+Preprocessor generated node count: 1139/1000000
+Post‐expand include size: 4624/2097152 bytes
+Template argument size: 1924/2097152 bytes
+Highest expansion depth: 5/40
+Expensive parser function count: 0/100
+-->
+<!-- Saved in parser cache with key love2d_wiki:pcache:idhash:53-0!*!0!!*!*!* and timestamp 20190306111502 and revision id 21998
+ -->
+</div>
+<!-- end content -->
+<div class="visualClear"></div>
+</div>
+</body>
+</html>

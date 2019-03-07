@@ -1,0 +1,169 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<title>Fixture:rayCast - LOVE</title>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<link href="main.css" rel="stylesheet"/>
+</head>
+<body>
+<h1 class="firstHeading" id="firstHeading" lang="en">Fixture:rayCast</h1><div id="bodyContent">
+<!-- <div id="siteSub">From LOVE</div> -->
+<!-- <div id="contentSub"></div> -->
+<!-- <div id="jump-to-nav" class="mw-jump">Jump to: <a href="#column-one">navigation</a>, <a href="#searchInput">search</a></div> -->
+<!-- start content -->
+<div class="mw-content-ltr" dir="ltr" id="mw-content-text" lang="en"><table bgcolor="#d0d0ff" class="new-section" data-newin="[[0.8.0]]" style="margin-top: 1em; padding: 3px; border-radius:5px; -moz-border-radius:5px;">
+<tr>
+<td><i> <b>Available since LÖVE 0.8.0</b> </i>
+</td></tr>
+<tr>
+<td> <small>This method is not supported in earlier versions.</small>
+</td></tr></table>
+<p>Casts a ray against the shape of the fixture and returns the surface normal vector and the line position where the ray hit. If the ray missed the shape, nil will be returned.
+</p><p>The ray starts on the first point of the input line and goes towards the second point of the line. The fifth argument is the maximum distance the ray is going to travel as a scale factor of the input line length.
+</p><p>The childIndex parameter is used to specify which child of a parent shape, such as a ChainShape, will be ray casted. For ChainShapes, the index of 1 is the first edge on the chain. Ray casting a parent shape will only test the child specified so if you want to test every shape of the parent, you must loop through all of its children.
+</p><p>The world position of the impact can be calculated by multiplying the line vector with the third return value and adding it to the line starting point.
+</p>
+<div class="mw-geshi mw-code mw-content-ltr" dir="ltr"><div class="lua source-lua"><pre class="de1">hitx<span class="sy0">,</span> hity <span class="sy0">=</span> x1 <span class="sy0">+</span> <span class="br0">(</span>x2 <span class="sy0">-</span> x1<span class="br0">)</span> <span class="sy0">*</span> fraction<span class="sy0">,</span> y1 <span class="sy0">+</span> <span class="br0">(</span>y2 <span class="sy0">-</span> y1<span class="br0">)</span> <span class="sy0">*</span> fraction</pre></div></div>
+<p><br/>
+</p>
+<table align="center" bgcolor="gold" class="notice" style="border-style:solid;border-width:1px;-moz-border-radius:3px;border-radius:3px;" width="80%">
+<tr>
+<td width="1"> <img alt="O.png" height="64" src="w-images-0-09-o.png" width="64"/>
+</td>
+<td>There is a bug in 0.8.0 where the normal vector returned by this function gets scaled by <a href="love-physics-getmeter.html" title="love.physics.getMeter">love.physics.getMeter</a>.
+</td>
+<td width="1"> 
+</td></tr></table><br/>
+<h2><span class="mw-headline" id="Function">Function</span></h2>
+<h3><span class="mw-headline" id="Synopsis">Synopsis</span></h3>
+<div class="mw-geshi mw-code mw-content-ltr" dir="ltr"><div class="lua source-lua"><pre class="de1">xn<span class="sy0">,</span> yn<span class="sy0">,</span> fraction <span class="sy0">=</span> Fixture<span class="sy0">:</span>rayCast<span class="br0">(</span> x1<span class="sy0">,</span> y1<span class="sy0">,</span> x2<span class="sy0">,</span> y2<span class="sy0">,</span> maxFraction<span class="sy0">,</span> childIndex <span class="br0">)</span></pre></div></div>
+<h3><span class="mw-headline" id="Arguments">Arguments</span></h3>
+<dl><dt><code>number x1</code></dt>
+<dd> The x position of the input line starting point.</dd>
+<dt><code>number y1</code></dt>
+<dd> The y position of the input line starting point.</dd>
+<dt><code>number x2</code></dt>
+<dd> The x position of the input line end point.</dd>
+<dt><code>number y2</code></dt>
+<dd> The y position of the input line end point.</dd>
+<dt><code>number maxFraction</code></dt>
+<dd> Ray length parameter.</dd>
+<dt><code>number childIndex (1)</code></dt>
+<dd> The index of the child the ray gets cast against.</dd></dl>
+<h3><span class="mw-headline" id="Returns">Returns</span></h3>
+<dl><dt><code>number xn</code></dt>
+<dd> The x component of the normal vector of the edge where the ray hit the shape.</dd>
+<dt><code>number yn</code></dt>
+<dd> The y component of the normal vector of the edge where the ray hit the shape.</dd>
+<dt><code>number fraction</code></dt>
+<dd> The position on the input line where the intersection happened as a factor of the line length.</dd></dl>
+<h2><span class="mw-headline" id="Examples">Examples</span></h2>
+<h3><span class="mw-headline" id="Casting_2_different_rays_against_a_box.">Casting 2 different rays against a box.</span></h3>
+<div class="mw-geshi mw-code mw-content-ltr" dir="ltr"><div class="lua source-lua"><pre class="de1"><span class="kw1">function</span> love<span class="sy0">.</span>load<span class="br0">(</span><span class="br0">)</span>
+	<span class="co1">-- Setting this to 1 to avoid all current scaling bugs.</span>
+	love<span class="sy0">.</span>physics<span class="sy0">.</span>setMeter<span class="br0">(</span><span class="nu0">1</span><span class="br0">)</span>
+ 
+	World <span class="sy0">=</span> love<span class="sy0">.</span>physics<span class="sy0">.</span>newWorld<span class="br0">(</span><span class="br0">)</span>
+ 
+	Box <span class="sy0">=</span> <span class="br0">{</span><span class="br0">}</span>
+	Box<span class="sy0">.</span>Body <span class="sy0">=</span> love<span class="sy0">.</span>physics<span class="sy0">.</span>newBody<span class="br0">(</span>World<span class="sy0">,</span> <span class="nu0">400</span><span class="sy0">,</span> <span class="nu0">300</span><span class="sy0">,</span> <span class="st0">"dynamic"</span><span class="br0">)</span>
+	Box<span class="sy0">.</span>Shape <span class="sy0">=</span> love<span class="sy0">.</span>physics<span class="sy0">.</span>newRectangleShape<span class="br0">(</span><span class="nu0">150</span><span class="sy0">,</span> <span class="nu0">150</span><span class="br0">)</span>
+	Box<span class="sy0">.</span>Fixture <span class="sy0">=</span> love<span class="sy0">.</span>physics<span class="sy0">.</span>newFixture<span class="br0">(</span>Box<span class="sy0">.</span>Body<span class="sy0">,</span> Box<span class="sy0">.</span>Shape<span class="br0">)</span>
+ 
+	<span class="co1">-- Giving the box a gentle spin.</span>
+	Box<span class="sy0">.</span>Body<span class="sy0">:</span>setAngularVelocity<span class="br0">(</span><span class="nu0">0.5</span><span class="br0">)</span>
+ 
+	Ray1 <span class="sy0">=</span> <span class="br0">{</span>
+		point1 <span class="sy0">=</span> <span class="br0">{</span><span class="br0">}</span><span class="sy0">,</span>
+		point2 <span class="sy0">=</span> <span class="br0">{</span><span class="br0">}</span><span class="sy0">,</span>
+	<span class="br0">}</span>
+	Ray1<span class="sy0">.</span>point1<span class="sy0">.</span>x<span class="sy0">,</span> Ray1<span class="sy0">.</span>point1<span class="sy0">.</span>y <span class="sy0">=</span> <span class="nu0">50</span><span class="sy0">,</span> <span class="nu0">50</span>
+	Ray1<span class="sy0">.</span>point2<span class="sy0">.</span>x<span class="sy0">,</span> Ray1<span class="sy0">.</span>point2<span class="sy0">.</span>y <span class="sy0">=</span> <span class="nu0">400</span><span class="sy0">,</span> <span class="nu0">300</span>
+	Ray1<span class="sy0">.</span>scale <span class="sy0">=</span> <span class="nu0">1</span>
+ 
+	Ray2 <span class="sy0">=</span> <span class="br0">{</span>
+		point1 <span class="sy0">=</span> <span class="br0">{</span><span class="br0">}</span><span class="sy0">,</span>
+		point2 <span class="sy0">=</span> <span class="br0">{</span><span class="br0">}</span><span class="sy0">,</span>
+	<span class="br0">}</span>
+	Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>x<span class="sy0">,</span> Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>y <span class="sy0">=</span> <span class="nu0">500</span><span class="sy0">,</span> <span class="nu0">400</span>
+	Ray2<span class="sy0">.</span>point2<span class="sy0">.</span>x<span class="sy0">,</span> Ray2<span class="sy0">.</span>point2<span class="sy0">.</span>y <span class="sy0">=</span> Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>x <span class="sy0">+</span> <span class="kw3">math.cos</span><span class="br0">(</span><span class="kw3">math.pi</span><span class="sy0">*</span><span class="nu0">1.45</span><span class="br0">)</span><span class="sy0">,</span> Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>y <span class="sy0">+</span> <span class="kw3">math.sin</span><span class="br0">(</span><span class="kw3">math.pi</span><span class="sy0">*</span><span class="nu0">1.45</span><span class="br0">)</span>
+	Ray2<span class="sy0">.</span>scale <span class="sy0">=</span> <span class="nu0">150</span>
+<span class="kw1">end</span>
+ 
+<span class="kw1">function</span> love<span class="sy0">.</span>update<span class="br0">(</span>dt<span class="br0">)</span>
+	World<span class="sy0">:</span>update<span class="br0">(</span>dt<span class="br0">)</span>
+<span class="kw1">end</span>
+ 
+<span class="kw1">function</span> love<span class="sy0">.</span>draw<span class="br0">(</span><span class="br0">)</span>
+	<span class="co1">-- Drawing the box.</span>
+	love<span class="sy0">.</span>graphics<span class="sy0">.</span>setColor<span class="br0">(</span><span class="nu0">255</span><span class="sy0">,</span> <span class="nu0">255</span><span class="sy0">,</span> <span class="nu0">255</span><span class="br0">)</span>
+	love<span class="sy0">.</span>graphics<span class="sy0">.</span>polygon<span class="br0">(</span><span class="st0">"line"</span><span class="sy0">,</span> Box<span class="sy0">.</span>Body<span class="sy0">:</span>getWorldPoints<span class="br0">(</span> Box<span class="sy0">.</span>Shape<span class="sy0">:</span>getPoints<span class="br0">(</span><span class="br0">)</span> <span class="br0">)</span><span class="br0">)</span>
+ 
+	<span class="co1">-- Drawing the input lines of the rays and the reach of ray 2 in gray.</span>
+	love<span class="sy0">.</span>graphics<span class="sy0">.</span>setLineWidth<span class="br0">(</span><span class="nu0">3</span><span class="br0">)</span>
+	love<span class="sy0">.</span>graphics<span class="sy0">.</span>setColor<span class="br0">(</span><span class="nu0">50</span><span class="sy0">,</span> <span class="nu0">50</span><span class="sy0">,</span> <span class="nu0">50</span><span class="br0">)</span>
+	love<span class="sy0">.</span>graphics<span class="sy0">.</span>line<span class="br0">(</span>Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>x<span class="sy0">,</span> Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>y<span class="sy0">,</span> Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>x <span class="sy0">+</span> <span class="br0">(</span>Ray2<span class="sy0">.</span>point2<span class="sy0">.</span>x <span class="sy0">-</span> Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>x<span class="br0">)</span> <span class="sy0">*</span> Ray2<span class="sy0">.</span>scale<span class="sy0">,</span> Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>y <span class="sy0">+</span> <span class="br0">(</span>Ray2<span class="sy0">.</span>point2<span class="sy0">.</span>y <span class="sy0">-</span> Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>y<span class="br0">)</span> <span class="sy0">*</span> Ray2<span class="sy0">.</span>scale<span class="br0">)</span>
+	love<span class="sy0">.</span>graphics<span class="sy0">.</span>setColor<span class="br0">(</span><span class="nu0">255</span><span class="sy0">,</span> <span class="nu0">255</span><span class="sy0">,</span> <span class="nu0">255</span><span class="br0">)</span>
+	love<span class="sy0">.</span>graphics<span class="sy0">.</span>line<span class="br0">(</span>Ray1<span class="sy0">.</span>point1<span class="sy0">.</span>x<span class="sy0">,</span> Ray1<span class="sy0">.</span>point1<span class="sy0">.</span>y<span class="sy0">,</span> Ray1<span class="sy0">.</span>point2<span class="sy0">.</span>x<span class="sy0">,</span> Ray1<span class="sy0">.</span>point2<span class="sy0">.</span>y<span class="br0">)</span>
+	love<span class="sy0">.</span>graphics<span class="sy0">.</span>line<span class="br0">(</span>Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>x<span class="sy0">,</span> Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>y<span class="sy0">,</span> Ray2<span class="sy0">.</span>point2<span class="sy0">.</span>x<span class="sy0">,</span> Ray2<span class="sy0">.</span>point2<span class="sy0">.</span>y<span class="br0">)</span>
+	love<span class="sy0">.</span>graphics<span class="sy0">.</span>setLineWidth<span class="br0">(</span><span class="nu0">1</span><span class="br0">)</span>
+ 
+	<span class="co1">-- Remember that the ray cast can return nil if it hits nothing.</span>
+	<span class="kw1">local</span> r1nx<span class="sy0">,</span> r1ny<span class="sy0">,</span> r1f <span class="sy0">=</span> Box<span class="sy0">.</span>Fixture<span class="sy0">:</span>rayCast<span class="br0">(</span>Ray1<span class="sy0">.</span>point1<span class="sy0">.</span>x<span class="sy0">,</span> Ray1<span class="sy0">.</span>point1<span class="sy0">.</span>y<span class="sy0">,</span> Ray1<span class="sy0">.</span>point2<span class="sy0">.</span>x<span class="sy0">,</span> Ray1<span class="sy0">.</span>point2<span class="sy0">.</span>y<span class="sy0">,</span> Ray1<span class="sy0">.</span>scale<span class="br0">)</span>
+	<span class="kw1">local</span> r2nx<span class="sy0">,</span> r2ny<span class="sy0">,</span> r2f <span class="sy0">=</span> Box<span class="sy0">.</span>Fixture<span class="sy0">:</span>rayCast<span class="br0">(</span>Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>x<span class="sy0">,</span> Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>y<span class="sy0">,</span> Ray2<span class="sy0">.</span>point2<span class="sy0">.</span>x<span class="sy0">,</span> Ray2<span class="sy0">.</span>point2<span class="sy0">.</span>y<span class="sy0">,</span> Ray2<span class="sy0">.</span>scale<span class="br0">)</span>
+ 
+	<span class="kw1">if</span> r1nx <span class="kw1">then</span>
+		<span class="co1">-- Calculating the world position where the ray hit.</span>
+		<span class="kw1">local</span> r1HitX <span class="sy0">=</span> Ray1<span class="sy0">.</span>point1<span class="sy0">.</span>x <span class="sy0">+</span> <span class="br0">(</span>Ray1<span class="sy0">.</span>point2<span class="sy0">.</span>x <span class="sy0">-</span> Ray1<span class="sy0">.</span>point1<span class="sy0">.</span>x<span class="br0">)</span> <span class="sy0">*</span> r1f
+		<span class="kw1">local</span> r1HitY <span class="sy0">=</span> Ray1<span class="sy0">.</span>point1<span class="sy0">.</span>y <span class="sy0">+</span> <span class="br0">(</span>Ray1<span class="sy0">.</span>point2<span class="sy0">.</span>y <span class="sy0">-</span> Ray1<span class="sy0">.</span>point1<span class="sy0">.</span>y<span class="br0">)</span> <span class="sy0">*</span> r1f
+ 
+		<span class="co1">-- Drawing the ray from the starting point to the position on the shape.</span>
+		love<span class="sy0">.</span>graphics<span class="sy0">.</span>setColor<span class="br0">(</span><span class="nu0">255</span><span class="sy0">,</span> <span class="nu0">0</span><span class="sy0">,</span> <span class="nu0">0</span><span class="br0">)</span>
+		love<span class="sy0">.</span>graphics<span class="sy0">.</span>line<span class="br0">(</span>Ray1<span class="sy0">.</span>point1<span class="sy0">.</span>x<span class="sy0">,</span> Ray1<span class="sy0">.</span>point1<span class="sy0">.</span>y<span class="sy0">,</span> r1HitX<span class="sy0">,</span> r1HitY<span class="br0">)</span>
+ 
+		<span class="co1">-- We also get the surface normal of the edge the ray hit. Here drawn in green</span>
+		love<span class="sy0">.</span>graphics<span class="sy0">.</span>setColor<span class="br0">(</span><span class="nu0">0</span><span class="sy0">,</span> <span class="nu0">255</span><span class="sy0">,</span> <span class="nu0">0</span><span class="br0">)</span>
+		love<span class="sy0">.</span>graphics<span class="sy0">.</span>line<span class="br0">(</span>r1HitX<span class="sy0">,</span> r1HitY<span class="sy0">,</span> r1HitX <span class="sy0">+</span> r1nx <span class="sy0">*</span> <span class="nu0">25</span><span class="sy0">,</span> r1HitY <span class="sy0">+</span> r1ny <span class="sy0">*</span> <span class="nu0">25</span><span class="br0">)</span>
+	<span class="kw1">end</span>
+ 
+	<span class="kw1">if</span> r2nx <span class="kw1">then</span>
+		<span class="co1">-- Calculating the world position where the ray hit.</span>
+		<span class="kw1">local</span> r2HitX <span class="sy0">=</span> Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>x <span class="sy0">+</span> <span class="br0">(</span>Ray2<span class="sy0">.</span>point2<span class="sy0">.</span>x <span class="sy0">-</span> Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>x<span class="br0">)</span> <span class="sy0">*</span> r2f
+		<span class="kw1">local</span> r2HitY <span class="sy0">=</span> Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>y <span class="sy0">+</span> <span class="br0">(</span>Ray2<span class="sy0">.</span>point2<span class="sy0">.</span>y <span class="sy0">-</span> Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>y<span class="br0">)</span> <span class="sy0">*</span> r2f
+ 
+		<span class="co1">-- Drawing the ray from the starting point to the position on the shape.</span>
+		love<span class="sy0">.</span>graphics<span class="sy0">.</span>setColor<span class="br0">(</span><span class="nu0">255</span><span class="sy0">,</span> <span class="nu0">0</span><span class="sy0">,</span> <span class="nu0">0</span><span class="br0">)</span>
+		love<span class="sy0">.</span>graphics<span class="sy0">.</span>line<span class="br0">(</span>Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>x<span class="sy0">,</span> Ray2<span class="sy0">.</span>point1<span class="sy0">.</span>y<span class="sy0">,</span> r2HitX<span class="sy0">,</span> r2HitY<span class="br0">)</span>
+ 
+		<span class="co1">-- We also get the surface normal of the edge the ray hit. Here drawn in green</span>
+		love<span class="sy0">.</span>graphics<span class="sy0">.</span>setColor<span class="br0">(</span><span class="nu0">0</span><span class="sy0">,</span> <span class="nu0">255</span><span class="sy0">,</span> <span class="nu0">0</span><span class="br0">)</span>
+		love<span class="sy0">.</span>graphics<span class="sy0">.</span>line<span class="br0">(</span>r2HitX<span class="sy0">,</span> r2HitY<span class="sy0">,</span> r2HitX <span class="sy0">+</span> r2nx <span class="sy0">*</span> <span class="nu0">25</span><span class="sy0">,</span> r2HitY <span class="sy0">+</span> r2ny <span class="sy0">*</span> <span class="nu0">25</span><span class="br0">)</span>
+	<span class="kw1">end</span>
+<span class="kw1">end</span></pre></div></div>
+<div class="thumb tnone"><div class="thumbinner" style="width:302px;"><img alt="" class="thumbimage" height="225" src="w-images-thumb-1-14-raycast-example-screenshot-png-300px-raycast-example-screenshot.png" srcset="/w/images/thumb/1/14/raycast_example_screenshot.png/450px-raycast_example_screenshot.png 1.5x, /w/images/thumb/1/14/raycast_example_screenshot.png/600px-raycast_example_screenshot.png 2x" width="300"/> <div class="thumbcaption"><div class="magnify"></div>Screenshot of this example</div></div></div>
+<h2><span class="mw-headline" id="See_Also">See Also</span></h2>
+<ul><li> <a href="fixture.html" title="Fixture">Fixture</a></li></ul>
+<p><br/>
+</p>
+<!-- 
+NewPP limit report
+CPU time usage: 0.112 seconds
+Real time usage: 0.117 seconds
+Preprocessor visited node count: 461/1000000
+Preprocessor generated node count: 1390/1000000
+Post‐expand include size: 5447/2097152 bytes
+Template argument size: 2208/2097152 bytes
+Highest expansion depth: 5/40
+Expensive parser function count: 0/100
+-->
+<!-- Saved in parser cache with key love2d_wiki:pcache:idhash:2315-0!*!0!!*!5!* and timestamp 20190307094514 and revision id 16746
+ -->
+</div>
+<!-- end content -->
+<div class="visualClear"></div>
+</div>
+</body>
+</html>
