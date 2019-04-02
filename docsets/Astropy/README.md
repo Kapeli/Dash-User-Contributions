@@ -19,5 +19,8 @@ Astropy Dash Docset
     - [Add icon](http://kapeli.com/docsets#addingicon):
 	  - `cp icon*.png Astropy.docset`
 	- Edit metadata (version) in `docset.json`.
+    - To avoid a file name conflicts for case-insensitive system, it may be
+      needed to rename some files:
+      - `mv Astropy.docset/Contents/Resources/Documents/api/astropy.units.function.logarithmic.{m_bol,m_bol_renamed}.html`
     - Create archive:
       - `tar --exclude='.DS_Store' -cvzf Astropy.tgz Astropy.docset`
