@@ -22,5 +22,6 @@ Astropy Dash Docset
     - To avoid a file name conflicts for case-insensitive system, it may be
       needed to rename some files:
       - `mv Astropy.docset/Contents/Resources/Documents/api/astropy.units.function.logarithmic.{m_bol,m_bol_renamed}.html`
+      - `sqlite3 ./Astropy.docset/Contents/Resources/docSet.dsidx "UPDATE searchIndex SET path = 'api/astropy.units.function.logarithmic.m_bol_renamed.html#astropy.units.function.logarithmic.m_bol' WHERE name = 'astropy.units.function.logarithmic.m_bol' ;"`
     - Create archive:
       - `tar --exclude='.DS_Store' -cvzf Astropy.tgz Astropy.docset`
