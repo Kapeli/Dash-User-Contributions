@@ -1,0 +1,189 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>SNI - Server Name Identification (virtual hosting for SSL nodes) &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The GeoIP plugin" href="GeoIP.html" />
+    <link rel="prev" title="Serving static files with uWSGI (updated to 1.9)" href="StaticFiles.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="GeoIP.html" title="The GeoIP plugin"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="StaticFiles.html" title="Serving static files with uWSGI (updated to 1.9)"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="sni-server-name-identification-virtual-hosting-for-ssl-nodes">
+<h1>SNI - Server Name Identification (virtual hosting for SSL nodes)<a class="headerlink" href="#sni-server-name-identification-virtual-hosting-for-ssl-nodes" title="Permalink to this headline">¶</a></h1>
+<p>uWSGI 1.9 (codenamed “ssl as p0rn”) added support for SNI (Server Name Identification) throughout the whole
+SSL subsystem. The HTTPS router, the SPDY router and the SSL router can all use it transparently.</p>
+<p>SNI is an extension to the SSL standard which allows a client to specify a “name” for the resource
+it wants. That name is generally the requested hostname, so you can implement virtual hosting-like behavior like you do using the HTTP <code class="docutils literal notranslate"><span class="pre">Host:</span></code> header without requiring extra IP addresses etc.</p>
+<p>In uWSGI an SNI object is composed of a name and a value. The name is the servername/hostname while the value is the “SSL context” (you can think of it as the sum of certificates, key and ciphers for a particular domain).</p>
+<div class="section" id="adding-sni-objects">
+<h2>Adding SNI objects<a class="headerlink" href="#adding-sni-objects" title="Permalink to this headline">¶</a></h2>
+<p>To add an SNI object just use the <code class="docutils literal notranslate"><span class="pre">--sni</span></code> option:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>--sni &lt;name&gt; crt,key<span class="o">[</span>,ciphers,client_ca<span class="o">]</span>
+</pre></div>
+</div>
+<p>For example:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>--sni <span class="s2">&quot;unbit.com unbit.crt,unbit.key&quot;</span>
+</pre></div>
+</div>
+<p>or for client-based SSL authentication and OpenSSL HIGH cipher levels</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>--sni <span class="s2">&quot;secure.unbit.com unbit.crt,unbit.key,HIGH,unbit.ca&quot;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="adding-complex-sni-objects">
+<h2>Adding complex SNI objects<a class="headerlink" href="#adding-complex-sni-objects" title="Permalink to this headline">¶</a></h2>
+<p>Sometimes you need more complex keys for your SNI objects (like when using wildcard certificates)</p>
+<p>If you have built uWSGI with PCRE/regexp support (as you should) you can use the <code class="docutils literal notranslate"><span class="pre">--sni-regexp</span></code> option.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>--sni-regexp <span class="s2">&quot;*.unbit.com unbit.crt,unbit.key,HIGH,unbit.ca&quot;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="massive-sni-hosting">
+<h2>Massive SNI hosting<a class="headerlink" href="#massive-sni-hosting" title="Permalink to this headline">¶</a></h2>
+<p>One of uWSGI’s main purposes is massive hosting, so SSL without support for that would be pretty annoying.</p>
+<p>If you have dozens (or hundreds, for that matter) of certificates mapped to the same IP address you can simply put them in a directory (following a simple convention we’ll elaborate in a bit) and let uWSGI scan it whenever it needs to find a context for a domain.</p>
+<p>To add a directory just use</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>--sni-dir &lt;path&gt;
+</pre></div>
+</div>
+<p>like</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>--sni-dir /etc/customers/certificates
+</pre></div>
+</div>
+<p>Now, if you have <code class="docutils literal notranslate"><span class="pre">unbit.com</span></code> and <code class="docutils literal notranslate"><span class="pre">example.com</span></code> certificates (.crt) and keys (.key) just drop them in there following these naming rules:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">/etc/customers/certificates/unbit.com.crt</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">/etc/customers/certificates/unbit.com.key</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">/etc/customers/certificates/unbit.com.ca</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">/etc/customers/certificates/example.com.crt</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">/etc/customers/certificates/example.com.key</span></code></p></li>
+</ul>
+<p>As you can see, <code class="docutils literal notranslate"><span class="pre">example.com</span></code> has no .ca file, so client authentication will be disabled for it.</p>
+<p>If you want to force a default cipher set to the SNI contexts, use</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>--sni-dir-ciphers HIGH
+</pre></div>
+</div>
+<p>(or whatever other value you need)</p>
+<p>Note: Unloading SNI objects is not supported. Once they are loaded into memory they will be held onto until reload.</p>
+</div>
+<div class="section" id="subscription-system-and-sni">
+<h2>Subscription system and SNI<a class="headerlink" href="#subscription-system-and-sni" title="Permalink to this headline">¶</a></h2>
+<p>uWSGI 2.0 added support for SNI in the subscription system.</p>
+<p>The https/spdy router and the sslrouter can dynamically load certificates and keys from the paths specified in a subscription packet:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --subscribe2 <span class="nv">key</span><span class="o">=</span>mydomain.it,socket<span class="o">=</span><span class="m">0</span>,sni_key<span class="o">=</span>/foo/bar.key,sni_crt<span class="o">=</span>/foo/bar.crt
+</pre></div>
+</div>
+<p>the router will create a new SSL context based on the specified files (be sure the router can reach them) and will destroy it when the last node
+disconnect.</p>
+<p>This is useful for massive hosting where customers have their certificates in the home and you want them the change/update those files without bothering you.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>We understand that directly encapsulating keys and cert in the subscription packets will be much more useful, but network transfer of keys is something
+really foolish from a security point of view. We are investigating if combining it with the secured subscription system (where each packet is encrypted) could be a solution.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">SNI - Server Name Identification (virtual hosting for SSL nodes)</a><ul>
+<li><a class="reference internal" href="#adding-sni-objects">Adding SNI objects</a></li>
+<li><a class="reference internal" href="#adding-complex-sni-objects">Adding complex SNI objects</a></li>
+<li><a class="reference internal" href="#massive-sni-hosting">Massive SNI hosting</a></li>
+<li><a class="reference internal" href="#subscription-system-and-sni">Subscription system and SNI</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="StaticFiles.html"
+                        title="previous chapter">Serving static files with uWSGI (updated to 1.9)</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="GeoIP.html"
+                        title="next chapter">The GeoIP plugin</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/SNI.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="GeoIP.html" title="The GeoIP plugin"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="StaticFiles.html" title="Serving static files with uWSGI (updated to 1.9)"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

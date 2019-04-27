@@ -1,0 +1,204 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>SSI (Server Side Includes) plugin &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="uWSGI V8 support" href="V8.html" />
+    <link rel="prev" title="The XSLT plugin" href="XSLT.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="V8.html" title="uWSGI V8 support"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="XSLT.html" title="The XSLT plugin"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="ssi-server-side-includes-plugin">
+<h1>SSI (Server Side Includes) plugin<a class="headerlink" href="#ssi-server-side-includes-plugin" title="Permalink to this headline">¶</a></h1>
+<p>Server Side Includes are an “old-fashioned” way to write dynamic web pages.</p>
+<p>It is generally recognized as a templating system instead of a full featured language.</p>
+<p>The main purpose of the uWSGI SSI plugin is to have a fast templating system that has access to the uWSGI API.</p>
+<p>At the time of writing, March 2013, the plugin is beta quality and implements less than 30% of the SSI standard, the focus being in exposing uWSGI API as SSI commands.</p>
+<div class="section" id="using-it-as-a-request-handler">
+<h2>Using it as a request handler<a class="headerlink" href="#using-it-as-a-request-handler" title="Permalink to this headline">¶</a></h2>
+<p>The plugin has an official modifier1, number 19.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugin</span> <span class="o">=</span> <span class="s">ssi</span>
+<span class="na">http</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">http-modifier1</span> <span class="o">=</span> <span class="s">19</span>
+<span class="na">http-var</span> <span class="o">=</span> <span class="s">DOCUMENT_ROOT=/var/www</span>
+</pre></div>
+</div>
+<p>The plugin builds the filename as <code class="docutils literal notranslate"><span class="pre">DOCUMENT_ROOT``+``PATH_INFO</span></code>. This file is then parsed as a server side include document.</p>
+<p>Both <code class="docutils literal notranslate"><span class="pre">DOCUMENT_ROOT</span></code> and <code class="docutils literal notranslate"><span class="pre">PATH_INFO</span></code> are required, otherwise a 500 error will be returned.</p>
+<p>An example configuration for Nginx would be:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span>location ~ \.shtml$ {
+    root /var/www;
+    include uwsgi_params;
+    uwsgi_pass 127.0.0.1:3031;
+    uwsgi_modifier1 19;
+}
+</pre></div>
+</div>
+<p>with something like this for uWSGI…</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugin</span> <span class="o">=</span> <span class="s">ssi</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="using-ssi-as-a-routing-action">
+<h2>Using SSI as a routing action<a class="headerlink" href="#using-ssi-as-a-routing-action" title="Permalink to this headline">¶</a></h2>
+<p>A more versatile approach is using the SSI parser as a routing action.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugin</span> <span class="o">=</span> <span class="s">ssi</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/(.*) ssi:/var/www/$1.shtml</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>As with all of the routing actions, no check on file paths is made to allow a higher level of customization. If you pass untrusted paths to the SSI action, you should sanitize them (you can use routing again, checking for the presence of .. or other dangerous symbols).</p>
+</div>
+<p>And with the above admonition in mind, when used as a routing action, <code class="docutils literal notranslate"><span class="pre">DOCUMENT_ROOT</span></code> or <code class="docutils literal notranslate"><span class="pre">PATH_INFO</span></code> are not required, as the parameter passed contains the full filesystem path.</p>
+</div>
+<div class="section" id="supported-ssi-commands">
+<h2>Supported SSI commands<a class="headerlink" href="#supported-ssi-commands" title="Permalink to this headline">¶</a></h2>
+<p>This is the list of supported commands (and their arguments). If a command is not part of the SSI standard (that is, it’s uWSGI specific) it will be reported.</p>
+<div class="section" id="echo">
+<h3>echo<a class="headerlink" href="#echo" title="Permalink to this headline">¶</a></h3>
+<p>Arguments: <code class="docutils literal notranslate"><span class="pre">var</span></code></p>
+<p>Print the content of the specified request variable.</p>
+</div>
+<div class="section" id="printenv">
+<h3>printenv<a class="headerlink" href="#printenv" title="Permalink to this headline">¶</a></h3>
+<p>Print a list of all request variables.</p>
+</div>
+<div class="section" id="include">
+<h3>include<a class="headerlink" href="#include" title="Permalink to this headline">¶</a></h3>
+<p>Arguments: <code class="docutils literal notranslate"><span class="pre">file</span></code></p>
+<p>Include the specified file (relative to the current directory).</p>
+</div>
+<div class="section" id="cache">
+<h3>cache<a class="headerlink" href="#cache" title="Permalink to this headline">¶</a></h3>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is uWSGI specific/non-standard.</p>
+</div>
+<p>Arguments: <code class="docutils literal notranslate"><span class="pre">key</span></code> <code class="docutils literal notranslate"><span class="pre">name</span></code></p>
+<p>Print the value of the specified cache key in the named cache.</p>
+</div>
+</div>
+<div class="section" id="status">
+<h2>Status<a class="headerlink" href="#status" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>The plugin is fully thread safe and very fast.</p></li>
+<li><p>Very few commands are available, more will be added soon.</p></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">SSI (Server Side Includes) plugin</a><ul>
+<li><a class="reference internal" href="#using-it-as-a-request-handler">Using it as a request handler</a></li>
+<li><a class="reference internal" href="#using-ssi-as-a-routing-action">Using SSI as a routing action</a></li>
+<li><a class="reference internal" href="#supported-ssi-commands">Supported SSI commands</a><ul>
+<li><a class="reference internal" href="#echo">echo</a></li>
+<li><a class="reference internal" href="#printenv">printenv</a></li>
+<li><a class="reference internal" href="#include">include</a></li>
+<li><a class="reference internal" href="#cache">cache</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#status">Status</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="XSLT.html"
+                        title="previous chapter">The XSLT plugin</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="V8.html"
+                        title="next chapter">uWSGI V8 support</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/SSI.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="V8.html" title="uWSGI V8 support"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="XSLT.html" title="The XSLT plugin"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,250 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Managing external daemons/services &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The Master FIFO" href="MasterFIFO.html" />
+    <link rel="prev" title="The uwsgi Protocol" href="Protocol.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="MasterFIFO.html" title="The Master FIFO"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Protocol.html" title="The uwsgi Protocol"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="managing-external-daemons-services">
+<h1>Managing external daemons/services<a class="headerlink" href="#managing-external-daemons-services" title="Permalink to this headline">¶</a></h1>
+<p>uWSGI can easily monitor external processes, allowing you to increase
+reliability and usability of your multi-tier apps.  For example you can manage
+services like Memcached, Redis, Celery, Ruby delayed_job or even dedicated
+PostgreSQL instances.</p>
+<div class="section" id="kinds-of-services">
+<h2>Kinds of services<a class="headerlink" href="#kinds-of-services" title="Permalink to this headline">¶</a></h2>
+<p>Currently uWSGI supports 3 categories of processes:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--attach-daemon</span></code> – directly attached non daemonized processes</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--smart-attach-daemon</span></code> – pidfile governed (both foreground and daemonized)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--smart-attach-daemon2</span></code> – pidfile governed with daemonization management</p></li>
+</ul>
+<p>The first category allows you to directly attach processes to the uWSGI master.
+When the master dies or is reloaded these processes are destroyed. This is the
+best choice for services that must be flushed whenever the app is restarted.</p>
+<p>Pidfile governed processes can survive death or reload of the master so long as
+their pidfiles are available and the pid contained therein matches a running
+pid. This is the best choice for processes requiring longer persistence, and
+for which a brutal kill could mean loss of data such as a database.</p>
+<p>The last category is a superset of the second one. If your process does not
+support daemonization or writing to pidfile, you can let the master do the
+management.  Very few daemons/applications require this feature, but it could
+be useful for tiny prototype applications or simply poorly designed ones.</p>
+<p>Since uWSGI 2.0 a fourth option, <code class="docutils literal notranslate"><span class="pre">--attach-daemon2</span></code> has been added for advanced configurations (see below).</p>
+</div>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<p>Managing a <strong>memcached</strong> instance in ‘dumb’ mode. Whenever uWSGI is stopped or reloaded, memcached is destroyed.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:3031</span>
+<span class="na">attach-daemon</span> <span class="o">=</span> <span class="s">memcached -p 11311 -u roberto</span>
+</pre></div>
+</div>
+<p>Managing a <strong>memcached</strong> instance in ‘smart’ mode. Memcached survives uWSGI stop and reload.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:3031</span>
+<span class="na">smart-attach-daemon</span> <span class="o">=</span> <span class="s">/tmp/memcached.pid memcached -p 11311 -d -P /tmp/memcached.pid -u roberto</span>
+</pre></div>
+</div>
+<p>Managing 2 <strong>mongodb</strong> instances in smart mode:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:3031</span>
+<span class="na">smart-attach-daemon</span> <span class="o">=</span> <span class="s">/tmp/mongo1.pid mongod --pidfilepath /tmp/mongo1.pid --dbpath foo1 --port 50001</span>
+<span class="na">smart-attach-daemon</span> <span class="o">=</span> <span class="s">/tmp/mongo2.pid mongod --pidfilepath /tmp/mongo2.pid --dbpath foo2 --port 50002</span>
+</pre></div>
+</div>
+<p>Managing <strong>PostgreSQL</strong> dedicated-instance (cluster in /db/foobar1):</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:3031</span>
+<span class="na">smart-attach-daemon</span> <span class="o">=</span> <span class="s">/db/foobar1/postmaster.pid /usr/lib/postgresql/9.1/bin/postgres -D /db/foobar1</span>
+</pre></div>
+</div>
+<p>Managing <strong>celery</strong>:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:3031</span>
+<span class="na">smart-attach-daemon</span> <span class="o">=</span> <span class="s">/tmp/celery.pid celery -A tasks worker --pidfile=/tmp/celery.pid</span>
+</pre></div>
+</div>
+<p>Managing <strong>delayed_job</strong>:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:3031</span>
+<span class="na">env</span> <span class="o">=</span> <span class="s">RAILS_ENV=production</span>
+<span class="na">rbrequire</span> <span class="o">=</span> <span class="s">bundler/setup</span>
+<span class="na">rack</span> <span class="o">=</span> <span class="s">config.ru</span>
+<span class="na">chdir</span> <span class="o">=</span> <span class="s">/var/apps/foobar</span>
+<span class="na">smart-attach-daemon</span> <span class="o">=</span> <span class="s">%(chdir)/tmp/pids/delayed_job.pid %(chdir)/script/delayed_job start</span>
+</pre></div>
+</div>
+<p>Managing <strong>dropbear</strong>:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">namespace</span> <span class="o">=</span> <span class="s">/ns/001/:testns</span>
+<span class="na">namespace-keep-mount</span> <span class="o">=</span> <span class="s">/dev/pts</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:3031</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">chown -R www-data /etc/dropbear</span>
+<span class="na">attach-daemon</span> <span class="o">=</span> <span class="s">/usr/sbin/dropbear -j -k -p 1022 -E -F -I 300</span>
+</pre></div>
+</div>
+<p>When using the namespace option you can attach a dropbear daemon to allow direct
+access to the system inside the specified namespace.  This requires the
+<em>/dev/pts</em> filesystem to be mounted inside the namespace, and the user your
+workers will be running as have access to the <em>/etc/dropbear</em> directory inside
+the namespace.</p>
+</div>
+<div class="section" id="legion-support">
+<h2>Legion support<a class="headerlink" href="#legion-support" title="Permalink to this headline">¶</a></h2>
+<p>Starting with uWSGI 1.9.9 it’s possible to use the <a class="reference internal" href="Legion.html"><span class="doc">The uWSGI Legion subsystem</span></a> subsystem for
+daemon management.  Legion daemons will be executed only on the legion
+lord node, so there will always be a single daemon instance running in each
+legion. Once the lord dies a daemon will be spawned on another node.  To add a
+legion daemon use –legion-attach-daemon, –legion-smart-attach-daemon and
+–legion-smart-attach-daemon2 options, they have the same syntax as normal
+daemon options. The difference is the need to add legion name as first
+argument.</p>
+<p>Example:</p>
+<p>Managing <strong>celery beat</strong>:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:3031</span>
+<span class="na">legion-mcast</span> <span class="o">=</span> <span class="s">mylegion 225.1.1.1:9191 90 bf-cbc:mysecret</span>
+<span class="na">legion-smart-attach-daemon</span> <span class="o">=</span> <span class="s">mylegion /tmp/celery-beat.pid celery beat --pidfile=/tmp/celery-beat.pid</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="attach-daemon2">
+<h2><code class="docutils literal notranslate"><span class="pre">--attach-daemon2</span></code><a class="headerlink" href="#attach-daemon2" title="Permalink to this headline">¶</a></h2>
+<p>This option has been added in uWSGI 2.0 and allows advanced configurations. It is a keyval option, and it accepts the following keys:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">command</span></code>/<code class="docutils literal notranslate"><span class="pre">cmd</span></code>/<code class="docutils literal notranslate"><span class="pre">exec</span></code>: the command line to execute</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">freq</span></code>: maximum attempts before considering a daemon “broken”</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pidfile</span></code>: the pidfile to check (enable smart mode)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">control</span></code>: if set, the daemon becomes a ‘control’ one: if it dies the whole uWSGI instance dies</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">daemonize</span></code>/<code class="docutils literal notranslate"><span class="pre">daemon</span></code>: daemonize the process (enable smart2 mode)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">touch</span></code> semicolon separated list of files to check: whenever they are ‘touched’, the daemon is restarted</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">stopsignal</span></code>/<code class="docutils literal notranslate"><span class="pre">stop_signal</span></code>: the signal number to send to the daemon when uWSGI is stopped</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">reloadsignal</span></code>/<code class="docutils literal notranslate"><span class="pre">reload_signal</span></code>: the signal to send to the daemon when uWSGI is reloaded</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">stdin</span></code>: if set the file descriptor zero is not remapped to /dev/null</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">uid</span></code>: drop privileges to the specified uid (requires master running as root)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gid</span></code>: drop privileges to the specified gid (requires master running as root)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ns_pid</span></code>: spawn the process in a new pid namespace (requires master running as root, Linux only)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chdir</span></code>: chdir() to the specified directory before running the command (added in uWSGI 2.0.6)</p></li>
+</ul>
+<p>Example:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">attach-daemon2</span> <span class="o">=</span> <span class="s">cmd=my_daemon.sh,pidfile=/tmp/my.pid,uid=33,gid=33,stopsignal=3</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Managing external daemons/services</a><ul>
+<li><a class="reference internal" href="#kinds-of-services">Kinds of services</a></li>
+<li><a class="reference internal" href="#examples">Examples</a></li>
+<li><a class="reference internal" href="#legion-support">Legion support</a></li>
+<li><a class="reference internal" href="#attach-daemon2"><code class="docutils literal notranslate"><span class="pre">--attach-daemon2</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Protocol.html"
+                        title="previous chapter">The uwsgi Protocol</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="MasterFIFO.html"
+                        title="next chapter">The Master FIFO</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/AttachingDaemons.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="MasterFIFO.html" title="The Master FIFO"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Protocol.html" title="The uwsgi Protocol"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

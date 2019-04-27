@@ -1,0 +1,211 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>HTTPS support (from 1.3) &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The SPDY router (uWSGI 1.9)" href="SPDY.html" />
+    <link rel="prev" title="Native HTTP support" href="HTTP.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="SPDY.html" title="The SPDY router (uWSGI 1.9)"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="HTTP.html" title="Native HTTP support"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="HTTP.html" accesskey="U">Native HTTP support</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="https-support-from-1-3">
+<h1>HTTPS support (from 1.3)<a class="headerlink" href="#https-support-from-1-3" title="Permalink to this headline">¶</a></h1>
+<p>Use the <code class="docutils literal notranslate"><span class="pre">https</span> <span class="pre">&lt;socket&gt;,&lt;certificate&gt;,&lt;key&gt;</span></code> option. This option may be
+specified multiple times. First generate your server key, certificate signing
+request, and self-sign the certificate using the OpenSSL toolset:</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>You’ll want a real SSL certificate for production use.</p>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">openssl</span> <span class="n">genrsa</span> <span class="o">-</span><span class="n">out</span> <span class="n">foobar</span><span class="o">.</span><span class="n">key</span> <span class="mi">2048</span>
+<span class="n">openssl</span> <span class="n">req</span> <span class="o">-</span><span class="n">new</span> <span class="o">-</span><span class="n">key</span> <span class="n">foobar</span><span class="o">.</span><span class="n">key</span> <span class="o">-</span><span class="n">out</span> <span class="n">foobar</span><span class="o">.</span><span class="n">csr</span>
+<span class="n">openssl</span> <span class="n">x509</span> <span class="o">-</span><span class="n">req</span> <span class="o">-</span><span class="n">days</span> <span class="mi">365</span> <span class="o">-</span><span class="ow">in</span> <span class="n">foobar</span><span class="o">.</span><span class="n">csr</span> <span class="o">-</span><span class="n">signkey</span> <span class="n">foobar</span><span class="o">.</span><span class="n">key</span> <span class="o">-</span><span class="n">out</span> <span class="n">foobar</span><span class="o">.</span><span class="n">crt</span>
+</pre></div>
+</div>
+<p>Then start the server using the SSL certificate and key just generated:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">uwsgi</span> <span class="o">--</span><span class="n">master</span> <span class="o">--</span><span class="n">https</span> <span class="mf">0.0</span><span class="o">.</span><span class="mf">0.0</span><span class="p">:</span><span class="mi">8443</span><span class="p">,</span><span class="n">foobar</span><span class="o">.</span><span class="n">crt</span><span class="p">,</span><span class="n">foobar</span><span class="o">.</span><span class="n">key</span>
+</pre></div>
+</div>
+<p>As port 443, the port normally used by HTTPS, is privileged (ie. non-root
+processes may not bind to it), you can use the shared socket mechanism and drop
+privileges after binding like thus:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">uwsgi</span> <span class="o">--</span><span class="n">shared</span><span class="o">-</span><span class="n">socket</span> <span class="mf">0.0</span><span class="o">.</span><span class="mf">0.0</span><span class="p">:</span><span class="mi">443</span> <span class="o">--</span><span class="n">uid</span> <span class="n">roberto</span> <span class="o">--</span><span class="n">gid</span> <span class="n">roberto</span> <span class="o">--</span><span class="n">https</span> <span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">foobar</span><span class="o">.</span><span class="n">crt</span><span class="p">,</span><span class="n">foobar</span><span class="o">.</span><span class="n">key</span>
+</pre></div>
+</div>
+<p>uWSGI will bind to 443 on any IP, then drop privileges to those of <code class="docutils literal notranslate"><span class="pre">roberto</span></code>,
+and use the shared socket 0 (<code class="docutils literal notranslate"><span class="pre">=0</span></code>) for HTTPS.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The =0 syntax is currently undocumented.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In order to use <cite>https</cite> option be sure that you have OpenSSL
+development headers installed (e.g. libssl-dev on Debian). Install them
+and rebuild uWSGI so the build system will automatically detect it.</p>
+</div>
+<div class="section" id="setting-ssl-tls-ciphers">
+<h2>Setting SSL/TLS ciphers<a class="headerlink" href="#setting-ssl-tls-ciphers" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">https</span></code> option takes an optional fourth argument you can use to specify
+the OpenSSL cipher suite.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">shared-socket</span> <span class="o">=</span> <span class="s">0.0.0.0:443</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">www-data</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">www-data</span>
+
+<span class="na">https</span> <span class="o">=</span> <span class="s">=0,foobar.crt,foobar.key,HIGH</span>
+<span class="na">http-to</span> <span class="o">=</span> <span class="s">/tmp/uwsgi.sock</span>
+</pre></div>
+</div>
+<p>This will set all of the <strong>HIGHest</strong> ciphers (whenever possible) for your
+SSL/TLS transactions.</p>
+</div>
+<div class="section" id="client-certificate-authentication">
+<h2>Client certificate authentication<a class="headerlink" href="#client-certificate-authentication" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">https</span></code> option can also take an optional 5th argument. You can use it to
+specify a CA certificate to authenticate your clients with. Generate your CA
+key and certificate (this time the key will be 4096 bits and
+password-protected):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">openssl</span> <span class="n">genrsa</span> <span class="o">-</span><span class="n">des3</span> <span class="o">-</span><span class="n">out</span> <span class="n">ca</span><span class="o">.</span><span class="n">key</span> <span class="mi">4096</span>
+<span class="n">openssl</span> <span class="n">req</span> <span class="o">-</span><span class="n">new</span> <span class="o">-</span><span class="n">x509</span> <span class="o">-</span><span class="n">days</span> <span class="mi">365</span> <span class="o">-</span><span class="n">key</span> <span class="n">ca</span><span class="o">.</span><span class="n">key</span> <span class="o">-</span><span class="n">out</span> <span class="n">ca</span><span class="o">.</span><span class="n">crt</span>
+</pre></div>
+</div>
+<p>Generate the server key and CSR (as before):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">openssl</span> <span class="n">genrsa</span> <span class="o">-</span><span class="n">out</span> <span class="n">foobar</span><span class="o">.</span><span class="n">key</span> <span class="mi">2048</span>
+<span class="n">openssl</span> <span class="n">req</span> <span class="o">-</span><span class="n">new</span> <span class="o">-</span><span class="n">key</span> <span class="n">foobar</span><span class="o">.</span><span class="n">key</span> <span class="o">-</span><span class="n">out</span> <span class="n">foobar</span><span class="o">.</span><span class="n">csr</span>
+</pre></div>
+</div>
+<p>Sign the server certificate with your new CA:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">openssl</span> <span class="n">x509</span> <span class="o">-</span><span class="n">req</span> <span class="o">-</span><span class="n">days</span> <span class="mi">365</span> <span class="o">-</span><span class="ow">in</span> <span class="n">foobar</span><span class="o">.</span><span class="n">csr</span> <span class="o">-</span><span class="n">CA</span> <span class="n">ca</span><span class="o">.</span><span class="n">crt</span> <span class="o">-</span><span class="n">CAkey</span> <span class="n">ca</span><span class="o">.</span><span class="n">key</span> <span class="o">-</span><span class="n">set_serial</span> <span class="mi">01</span> <span class="o">-</span><span class="n">out</span> <span class="n">foobar</span><span class="o">.</span><span class="n">crt</span>
+</pre></div>
+</div>
+<p>Create a key and a CSR for your client, sign it with your CA and package it as
+PKCS#12. Repeat these steps for each client.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">openssl</span> <span class="n">genrsa</span> <span class="o">-</span><span class="n">des3</span> <span class="o">-</span><span class="n">out</span> <span class="n">client</span><span class="o">.</span><span class="n">key</span> <span class="mi">2048</span>
+<span class="n">openssl</span> <span class="n">req</span> <span class="o">-</span><span class="n">new</span> <span class="o">-</span><span class="n">key</span> <span class="n">client</span><span class="o">.</span><span class="n">key</span> <span class="o">-</span><span class="n">out</span> <span class="n">client</span><span class="o">.</span><span class="n">csr</span>
+<span class="n">openssl</span> <span class="n">x509</span> <span class="o">-</span><span class="n">req</span> <span class="o">-</span><span class="n">days</span> <span class="mi">365</span> <span class="o">-</span><span class="ow">in</span> <span class="n">client</span><span class="o">.</span><span class="n">csr</span> <span class="o">-</span><span class="n">CA</span> <span class="n">ca</span><span class="o">.</span><span class="n">crt</span> <span class="o">-</span><span class="n">CAkey</span> <span class="n">ca</span><span class="o">.</span><span class="n">key</span> <span class="o">-</span><span class="n">set_serial</span> <span class="mi">01</span> <span class="o">-</span><span class="n">out</span> <span class="n">client</span><span class="o">.</span><span class="n">crt</span>
+<span class="n">openssl</span> <span class="n">pkcs12</span> <span class="o">-</span><span class="n">export</span> <span class="o">-</span><span class="ow">in</span> <span class="n">client</span><span class="o">.</span><span class="n">crt</span> <span class="o">-</span><span class="n">inkey</span> <span class="n">client</span><span class="o">.</span><span class="n">key</span> <span class="o">-</span><span class="n">name</span> <span class="s2">&quot;Client 01&quot;</span> <span class="o">-</span><span class="n">out</span> <span class="n">client</span><span class="o">.</span><span class="n">p12</span>
+</pre></div>
+</div>
+<p>Then configure uWSGI for certificate client authentication</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">shared-socket</span> <span class="o">=</span> <span class="s">0.0.0.0:443</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">www-data</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">www-data</span>
+<span class="na">https</span> <span class="o">=</span> <span class="s">=0,foobar.crt,foobar.key,HIGH,!ca.crt</span>
+<span class="na">http-to</span> <span class="o">=</span> <span class="s">/tmp/uwsgi.sock</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you don’t want the client certificate authentication to be
+mandatory, remove the ‘!’ before ca.crt in the https options.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">HTTPS support (from 1.3)</a><ul>
+<li><a class="reference internal" href="#setting-ssl-tls-ciphers">Setting SSL/TLS ciphers</a></li>
+<li><a class="reference internal" href="#client-certificate-authentication">Client certificate authentication</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="HTTP.html"
+                        title="previous chapter">Native HTTP support</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="SPDY.html"
+                        title="next chapter">The SPDY router (uWSGI 1.9)</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/HTTPS.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="SPDY.html" title="The SPDY router (uWSGI 1.9)"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="HTTP.html" title="Native HTTP support"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="HTTP.html" >Native HTTP support</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

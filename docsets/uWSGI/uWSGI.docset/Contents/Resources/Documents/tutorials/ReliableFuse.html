@@ -1,0 +1,288 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Reliably use FUSE filesystems for uWSGI vassals (with Linux) &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Build a dynamic proxy using RPC and internal routing" href="DynamicProxying.html" />
+    <link rel="prev" title="Running Ruby/Rack webapps on Heroku with uWSGI" href="heroku_ruby.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="DynamicProxying.html" title="Build a dynamic proxy using RPC and internal routing"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="heroku_ruby.html" title="Running Ruby/Rack webapps on Heroku with uWSGI"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="reliably-use-fuse-filesystems-for-uwsgi-vassals-with-linux">
+<h1>Reliably use FUSE filesystems for uWSGI vassals (with Linux)<a class="headerlink" href="#reliably-use-fuse-filesystems-for-uwsgi-vassals-with-linux" title="Permalink to this headline">¶</a></h1>
+<p>Requirements: uWSGI 1.9.18, Linux kernel with FUSE and namespaces support.</p>
+<p>FUSE is a technology allowing the implementation of filesystems in user space (hence the name: <strong>F</strong>ilesystem in <strong>Use</strong>rspace).
+There are hundreds of high-quality FUSE filesystems, so having your application relying on them is a common situation.</p>
+<p>FUSE filesystems are normal system processes, so as any process in the system, they can crash (or you may involuntarily kill them).
+In addition to this, if you host multiple applications, each one requiring a FUSE mount point, you may want to avoid polluting the main mount points namespace and, more important,
+avoid having unused mount points in your system (i.e. an instance is completely removed and you do not want its FUSE mount point to be still available in the system).</p>
+<p>The purpose of this tutorial is to configure an Emperor and a series of vassals, each one mounting a FUSE filesystem.</p>
+<div class="section" id="a-zip-filesystem">
+<h2>A Zip filesystem<a class="headerlink" href="#a-zip-filesystem" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://code.google.com/p/fuse-zip/">fuse-zip</a> is a FUSE process exposing a zip file as a filesystem.</p>
+<p>Our objective is to store whole app in a zip archive and instruct uWSGI to mount it as a filesystem (via FUSE) under <code class="docutils literal notranslate"><span class="pre">/app</span></code>.</p>
+<div class="section" id="the-emperor">
+<h3>The Emperor<a class="headerlink" href="#the-emperor" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">emperor</span> <span class="o">=</span> <span class="s">/etc/uwsgi/vassals</span>
+<span class="na">emperor-use-clone</span> <span class="o">=</span> <span class="s">fs,pid</span>
+</pre></div>
+</div>
+<p>The trick here is to use Linux namespaces to create vassals in a new pid and filesystem namespace.</p>
+<p>The first one (<code class="docutils literal notranslate"><span class="pre">fs</span></code>) allows mount point created by the vassal to be available only to the vassal (without messing with the main system), while the <code class="docutils literal notranslate"><span class="pre">pid</span></code>
+allows the uWSGI master to be the “init” process (pid 1) of the vassal. Being “pid 1” means that when you die all your children die too. In our scenario (where our vassal launches a FUSE process on startup) it means that when
+the vassal is destroyed, the FUSE process is destroyed too, as well as its mount point.</p>
+</div>
+<div class="section" id="a-vassal">
+<h3>A Vassal<a class="headerlink" href="#a-vassal" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">user001</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">user001</span>
+
+<span class="c1">; mount FUSE filesystem under /app (but only if it is not a reload)</span>
+<span class="na">if-not-reload</span> <span class="o">=</span><span class="s"></span>
+<span class="s">  exec-as-user = fuse-zip -r /var/www/app001.zip /app</span>
+<span class="na">endif</span> <span class="o">=</span>
+
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">psgi</span> <span class="o">=</span> <span class="s">/app/myapp.pl</span>
+</pre></div>
+</div>
+<p>Here we use the <code class="docutils literal notranslate"><span class="pre">-r</span></code> option of the <code class="docutils literal notranslate"><span class="pre">fuse-zip</span></code> command for a read-only mount.</p>
+</div>
+<div class="section" id="monitoring-mount-points">
+<h3>Monitoring mount points<a class="headerlink" href="#monitoring-mount-points" title="Permalink to this headline">¶</a></h3>
+<p>The problem with the current setup is that if the <code class="docutils literal notranslate"><span class="pre">fuse-zip</span></code> process dies, the instance will no more be able to access <code class="docutils literal notranslate"><span class="pre">/app</span></code> until it is respawned.</p>
+<p>uWSGI 1.9.18 added the <code class="docutils literal notranslate"><span class="pre">--mountpoint-check</span></code> option. It forces the master to constantly verify the specified filesystem. If it fails, the whole instance will be brutally destroyed.
+As we are under The Emperor, soon after the vassal is destroyed it will be restarted in a clean state (allowing the FUSE mount point to be started again).</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">user001</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">user001</span>
+
+<span class="c1">; mount FUSE filesystem under /app (but only if it is not a reload)</span>
+<span class="na">if-not-reload</span> <span class="o">=</span><span class="s"></span>
+<span class="s">  exec-as-user = fuse-zip -r /var/www/app001.zip /app</span>
+<span class="na">endif</span> <span class="o">=</span>
+
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">psgi</span> <span class="o">=</span> <span class="s">/app/myapp.pl</span>
+
+<span class="na">mountpoint-check</span> <span class="o">=</span> <span class="s">/app</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="going-heavy-metal-a-cow-rootfs-unionfs-fuse">
+<h2>Going Heavy Metal: A CoW rootfs (unionfs-fuse)<a class="headerlink" href="#going-heavy-metal-a-cow-rootfs-unionfs-fuse" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="http://podgorny.cz/moin/UnionFsFuse">unionfs-fuse</a> is a user-space implementation of a union filesystem.
+A union filesystem is a stack of multiple filesystems, so directories with same name are merged into a single view.</p>
+<p>Union filesystems are more than this and one of the most useful features is copy-on-write (COW or CoW).
+Enabling CoWs means you will have an immutable/read-only mount point base and all of the modifications to it will go to another mount point.</p>
+<p>Our objective is to have a read-only rootfs shared by all of our customers, and a writable mount point (configured as CoW) for each customer, in which every modification will be stored.</p>
+<div class="section" id="id1">
+<h3>The Emperor<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<p>Previous Emperor configuration can be used, but we need to prepare our
+filesystems.</p>
+<p>The layout will be:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span>/ufs (where we initially mount our unionfs for each vassal)
+/ns
+  /ns/precise (the shared rootfs, based on Ubuntu Precise Pangolin)
+  /ns/lucid (an alternative rootfs for old-fashioned customers, based on Ubuntu Lucid Lynx)
+  /ns/saucy (another shared rootfs, based on Ubuntu Saucy Salamander)
+
+  /ns/cow (the customers&#39; writable areas)
+    /ns/cow/user001
+    /ns/cow/user002
+    /ns/cow/userXXX
+    ...
+</pre></div>
+</div>
+<p>We create our rootfs:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>debootstrap precise /ns/precise
+debootstrap lucid /ns/lucid
+debootstrap saucy /ns/saucy
+</pre></div>
+</div>
+<p>And we create the <code class="docutils literal notranslate"><span class="pre">.old_root</span></code> directory in each one (it is required for <code class="docutils literal notranslate"><span class="pre">pivot_root</span></code>, see below):</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>mkdir /ns/precise/.old_root
+mkdir /ns/lucid/.old_root
+mkdir /ns/saucy/.old_root
+</pre></div>
+</div>
+<p>Be sure to install the required libraries into each of them (especially the libraries required for your language).</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">uwsgi</span></code> binary must be executable in this rootfs, so you have to invest a bit of time in it (a good approach is having a language plugin
+compiled for each distribution and placed into a common directory, for example, each rootfs could have an <code class="docutils literal notranslate"><span class="pre">/opt/uwsgi/plugins/psgi_plugin.so</span></code> file and so on).</p>
+</div>
+<div class="section" id="id2">
+<h3>A Vassal<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<p>Here things get a bit more complicated. We need to launch the unionfs process (as root, as it must be our new rootfs) and then call <code class="docutils literal notranslate"><span class="pre">pivot_root</span></code> (a more advanced <code class="docutils literal notranslate"><span class="pre">chroot</span></code> available on Linux).</p>
+<p><a class="reference internal" href="../Hooks.html"><span class="doc">Hooks</span></a> are the best way to run custom commands (or functions) at various uWSGI startup phases.</p>
+<p>In our example we will run FUSE processes at the “pre-jail” phase, and deal with mount points at the “as-root” phase (that happens after <code class="docutils literal notranslate"><span class="pre">pivot_root</span></code>).</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; choose the approach that suits you best (plugins loading)</span>
+<span class="c1">; this will be used for the first run ...</span>
+<span class="na">plugins-dir</span> <span class="o">=</span> <span class="s">/ns/precise/opt/uwsgi/plugins</span>
+<span class="c1">; and this after a reload (where our rootfs is already /ns/precise)</span>
+<span class="na">plugins-dir</span> <span class="o">=</span> <span class="s">/opt/uwsgi/plugins</span>
+<span class="na">plugin</span> <span class="o">=</span> <span class="s">psgi</span>
+
+<span class="c1">; drop privileges</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">user001</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">user001</span>
+
+<span class="c1">; chdir to / to avoid problems after pivot_root</span>
+<span class="na">hook-pre-jail</span> <span class="o">=</span> <span class="s">callret:chdir /</span>
+<span class="c1">; run unionfs-fuse using chroot (it is required to avoid deadlocks) and cow (we mount it under /ufs)</span>
+<span class="na">hook-pre-jail</span> <span class="o">=</span> <span class="s">exec:unionfs-fuse -ocow,chroot=/ns,default_permissions,allow_other /precise=RO:/cow/%(uid)=RW /ufs</span>
+
+<span class="c1">; change the rootfs to the unionfs one</span>
+<span class="c1">; the .old_root directory is where the old rootfs is still available</span>
+<span class="na">pivot_root</span> <span class="o">=</span> <span class="s">/ufs /ufs/.old_root</span>
+
+<span class="c1">; now we are in the new rootfs and in &#39;as-root&#39; phase</span>
+<span class="c1">; remount the /proc filesystem</span>
+<span class="na">hook-as-root</span> <span class="o">=</span> <span class="s">mount:proc none /proc</span>
+<span class="c1">; bind mount the original /dev in the new rootfs (simplifies things a lot)</span>
+<span class="na">hook-as-root</span> <span class="o">=</span> <span class="s">mount:none /.old_root/dev /dev bind</span>
+<span class="c1">; recursively un-mount the old rootfs</span>
+<span class="na">hook-as-root</span> <span class="o">=</span> <span class="s">umount:/.old_root rec,detach</span>
+
+<span class="c1">; common bind</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+
+<span class="c1">; load the app (fix it according to your requirements)</span>
+<span class="na">psgi</span> <span class="o">=</span> <span class="s">/var/www/myapp.pl</span>
+
+<span class="c1">; constantly check for the rootfs (seems odd but is is very useful)</span>
+<span class="na">mountpoint-check</span> <span class="o">=</span> <span class="s">/</span>
+</pre></div>
+</div>
+<p>If your app will try to write to its filesystem, you will see that all
+of the created/updated files are available in its <code class="docutils literal notranslate"><span class="pre">/cow</span></code> directory.</p>
+</div>
+</div>
+<div class="section" id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
+<p>Some FUSE filesystems do not commit writes until they are unmounted.
+In such a case unmounting on vassal shutdown is a good trick:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; vassal options ...</span>
+<span class="na">...</span>
+<span class="c1">; umount on exit</span>
+<span class="na">exec-as-user-atexit</span> <span class="o">=</span> <span class="s">fusermount -u /app</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Reliably use FUSE filesystems for uWSGI vassals (with Linux)</a><ul>
+<li><a class="reference internal" href="#a-zip-filesystem">A Zip filesystem</a><ul>
+<li><a class="reference internal" href="#the-emperor">The Emperor</a></li>
+<li><a class="reference internal" href="#a-vassal">A Vassal</a></li>
+<li><a class="reference internal" href="#monitoring-mount-points">Monitoring mount points</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#going-heavy-metal-a-cow-rootfs-unionfs-fuse">Going Heavy Metal: A CoW rootfs (unionfs-fuse)</a><ul>
+<li><a class="reference internal" href="#id1">The Emperor</a></li>
+<li><a class="reference internal" href="#id2">A Vassal</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#notes">Notes</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="heroku_ruby.html"
+                        title="previous chapter">Running Ruby/Rack webapps on Heroku with uWSGI</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="DynamicProxying.html"
+                        title="next chapter">Build a dynamic proxy using RPC and internal routing</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/tutorials/ReliableFuse.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="DynamicProxying.html" title="Build a dynamic proxy using RPC and internal routing"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="heroku_ruby.html" title="Running Ruby/Rack webapps on Heroku with uWSGI"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

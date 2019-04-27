@@ -1,0 +1,160 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>The XSLT plugin &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="SSI (Server Side Includes) plugin" href="SSI.html" />
+    <link rel="prev" title="The Symcall plugin" href="Symcall.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="SSI.html" title="SSI (Server Side Includes) plugin"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Symcall.html" title="The Symcall plugin"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="the-xslt-plugin">
+<h1>The XSLT plugin<a class="headerlink" href="#the-xslt-plugin" title="Permalink to this headline">¶</a></h1>
+<p>Since uWSGI 1.9.1 a new plugin named “xslt” is available, implementing XML Stylesheet Transformation both as request handler and routing instruction.</p>
+<p>To successfully apply a transformation you need a ‘doc’ (an XML document) and a stylesheet (the XSLT file).</p>
+<p>Additionally you can apply global params and set a specific content type (by default the generated output is set as text/html).</p>
+<div class="section" id="the-request-handler">
+<h2>The request handler<a class="headerlink" href="#the-request-handler" title="Permalink to this headline">¶</a></h2>
+<p>Modifier1 23 has been assigned to the XSLT request handler.</p>
+<p>The document path is created appending the <code class="docutils literal notranslate"><span class="pre">PATH_INFO</span></code> to the <code class="docutils literal notranslate"><span class="pre">DOCUMENT_ROOT</span></code>.</p>
+<p>The stylesheet path is created following these steps:</p>
+<ul class="simple">
+<li><p>If a specific CGI variable is set (via <code class="docutils literal notranslate"><span class="pre">--xslt-var</span></code>) it will be used as the stylesheet path.</p></li>
+<li><p>If a file named like the document plus a specific extension (by default <code class="docutils literal notranslate"><span class="pre">.xsl</span></code> and <code class="docutils literal notranslate"><span class="pre">.xslt</span></code> are searched) exists it will be used as the stylesheet path.</p></li>
+<li><p>Finally a series of static XSLT files (specified with <code class="docutils literal notranslate"><span class="pre">--xslt-stylesheet</span></code>) is tried.</p></li>
+</ul>
+<p>Examples:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --http-socket :9090 --http-socket-modifier1 <span class="m">23</span> --xslt-ext .bar
+</pre></div>
+</div>
+<p>If /foo.xml is requested (and the file exists) <code class="docutils literal notranslate"><span class="pre">DOCUMENT_ROOT``+``foo.xml.bar</span></code> will be searched as the xslt file.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --http-socket :9090 --http-socket-modifier1 <span class="m">23</span> --xslt-stylesheet /var/www/myfile1.xslt --xslt-stylesheet /var/www/myfile2.xslt
+</pre></div>
+</div>
+<p>If /foo.xml is requested (and the file exists) <code class="docutils literal notranslate"><span class="pre">/var/www/myfile1.xslt</span></code> will be tried. If it does not exist, <code class="docutils literal notranslate"><span class="pre">/var/www/myfile2.xslt</span></code> will be tried instead.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --http-socket :9090 --http-socket-modifier1 <span class="m">23</span> --xslt-var UWSGI_XSLT
+</pre></div>
+</div>
+<p>If /foo.xml is requested (and the file exists), the content of the <code class="docutils literal notranslate"><span class="pre">UWSGI_XSLT</span></code> variable (you can set it from your webserver) is used as the stylesheet path.</p>
+<p>If a <code class="docutils literal notranslate"><span class="pre">QUERY_STRING</span></code> is available, its items will be passed as global parameters to the stylesheet.</p>
+<p>As an example if you request <code class="docutils literal notranslate"><span class="pre">/foo.xml?foo=bar&amp;test=uwsgi</span></code>, “foo” (as “bar” and “test” (as “uwsgi”) will be passed as global variables:</p>
+<div class="highlight-xml notranslate"><div class="highlight"><pre><span></span><span class="nt">&lt;xsl:value-of</span> <span class="na">select=</span><span class="s">&quot;$foo&quot;</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;xsl:value-of</span> <span class="na">select=</span><span class="s">&quot;$test&quot;</span><span class="nt">/&gt;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="the-routing-instruction">
+<h2>The routing instruction<a class="headerlink" href="#the-routing-instruction" title="Permalink to this headline">¶</a></h2>
+<p>The plugin registers itself as internal routing instruction named “xslt”. It is probably a lot more versatile then the request plugin.</p>
+<p>Its syntax is pretty simple:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugin</span> <span class="o">=</span> <span class="s">xslt</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/foo xslt:doc=${DOCUMENT_ROOT}/${PATH_INFO}.xml,stylesheet=/var/www/myfunction.xslt,content_type=text/html,params=foo=bar&amp;test=unbit</span>
+</pre></div>
+</div>
+<p>This will apply the <code class="docutils literal notranslate"><span class="pre">/var/www/myfunction.xslt</span></code> transformation to <code class="docutils literal notranslate"><span class="pre">foo.xml</span></code> and will return it as <code class="docutils literal notranslate"><span class="pre">text/html</span></code>.</p>
+<p>The only required parameters for the routing instruction are <code class="docutils literal notranslate"><span class="pre">doc</span></code> and <code class="docutils literal notranslate"><span class="pre">stylesheet</span></code>.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">The XSLT plugin</a><ul>
+<li><a class="reference internal" href="#the-request-handler">The request handler</a></li>
+<li><a class="reference internal" href="#the-routing-instruction">The routing instruction</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Symcall.html"
+                        title="previous chapter">The Symcall plugin</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="SSI.html"
+                        title="next chapter">SSI (Server Side Includes) plugin</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/XSLT.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="SSI.html" title="SSI (Server Side Includes) plugin"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Symcall.html" title="The Symcall plugin"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

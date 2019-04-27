@@ -1,0 +1,188 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>The Master FIFO &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Socket activation with inetd/xinetd" href="Inetd.html" />
+    <link rel="prev" title="Managing external daemons/services" href="AttachingDaemons.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Inetd.html" title="Socket activation with inetd/xinetd"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="AttachingDaemons.html" title="Managing external daemons/services"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="the-master-fifo">
+<h1>The Master FIFO<a class="headerlink" href="#the-master-fifo" title="Permalink to this headline">¶</a></h1>
+<p>Available from uWSGI 1.9.17.</p>
+<p>Generally you use UNIX signals to manage the master, but we are running out of signal numbers and (more importantly) not needing to mess with PIDs
+greatly simplifies the implementation of external management scripts.</p>
+<p>So, instead of signals, you can tell the master to create a UNIX named pipe (FIFO) that you may use to issue commands to the master.</p>
+<p>To create a FIFO just add <code class="docutils literal notranslate"><span class="pre">--master-fifo</span> <span class="pre">&lt;filename&gt;</span></code> then start issuing commands to it.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nb">echo</span> r &gt; /tmp/yourfifo
+</pre></div>
+</div>
+<p>You can send multiple commands in one shot.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># add 3 workers and print stats</span>
+<span class="nb">echo</span> +++s &gt; /tmp/yourfifo
+</pre></div>
+</div>
+<div class="section" id="available-commands">
+<h2>Available commands<a class="headerlink" href="#available-commands" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>‘0’ to ‘9’ - set the fifo slot (see below)</p></li>
+<li><p>‘+’ - increase the number of workers when in cheaper mode (add <code class="docutils literal notranslate"><span class="pre">--cheaper-algo</span> <span class="pre">manual</span></code> for full control)</p></li>
+<li><p>‘-‘ - decrease the number of workers when in cheaper mode (add <code class="docutils literal notranslate"><span class="pre">--cheaper-algo</span> <span class="pre">manual</span></code> for full control)</p></li>
+<li><p>‘B’ - ask Emperor for reinforcement (broodlord mode, requires uWSGI &gt;= 2.0.7)</p></li>
+<li><p>‘C’ - set cheap mode</p></li>
+<li><p>‘c’ - trigger chain reload</p></li>
+<li><p>‘E’ - trigger an Emperor rescan</p></li>
+<li><p>‘f’ - re-fork the master (dangerous, but very powerful)</p></li>
+<li><p>‘l’ - reopen log file (need –log-master and –logto/–logto2)</p></li>
+<li><p>‘L’ - trigger log rotation (need –log-master and –logto/–logto2)</p></li>
+<li><p>‘p’ - pause/resume the instance</p></li>
+<li><p>‘P’ - update pidfiles (can be useful after master re-fork)</p></li>
+<li><p>‘Q’ - brutally shutdown the instance</p></li>
+<li><p>‘q’ - gracefully shutdown the instance</p></li>
+<li><p>‘R’ - send brutal reload</p></li>
+<li><p>‘r’ - send graceful reload</p></li>
+<li><p>‘S’ - block/unblock subscriptions</p></li>
+<li><p>‘s’ - print stats in the logs</p></li>
+<li><p>‘W’ - brutally reload workers</p></li>
+<li><p>‘w’ - gracefully reload workers</p></li>
+</ul>
+</div>
+<div class="section" id="fifo-slots">
+<h2>FIFO slots<a class="headerlink" href="#fifo-slots" title="Permalink to this headline">¶</a></h2>
+<p>uWSGI supports up to 10 different FIFO files. By default the first specified is bound (mapped as ‘0’).</p>
+<p>During the instance’s lifetime you can change from one FIFO to another by simply sending the number of the FIFO slot to use.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master-fifo</span> <span class="o">=</span> <span class="s">/tmp/fifo0</span>
+<span class="na">master-fifo</span> <span class="o">=</span> <span class="s">/tmp/fifo1</span>
+<span class="na">master-fifo</span> <span class="o">=</span> <span class="s">/var/run/foofifo</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">2</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+<p>By default <code class="docutils literal notranslate"><span class="pre">/tmp/fifo0</span></code> will be allocated, but after sending:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nb">echo</span> <span class="m">1</span> &gt; /tmp/fifo0
+</pre></div>
+</div>
+<p>the <code class="docutils literal notranslate"><span class="pre">/tmp/fifo1</span></code> file will be bound.</p>
+<p>This is very useful to map FIFO files to specific instance when you (ab)use the ‘fork the master’ command (the ‘f’ one).</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nb">echo</span> 1fp &gt; /tmp/fifo0
+</pre></div>
+</div>
+<p>After sending this command, a new uWSGI instance (inheriting all of the bound sockets) will be spawned, the old one will be put in “paused” mode (the ‘p’ command).</p>
+<p>As we have sent the ‘1’ command before ‘f’ and ‘p’ the old instance will now accept commands on /tmp/fifo1 (the slot 1), and the new one will use the default one (‘0’).</p>
+<p>There are lot of tricks you can accomplish, and lots of ways to abuse the forking of the master.</p>
+<p>Just take into account that corner-case problems can occur all over the place, especially if you use the most complex features of uWSGI.</p>
+</div>
+<div class="section" id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>The FIFO is created in non-blocking modes and recreated by the master every time a client disconnects.</p></li>
+<li><p>You can override (or add) commands using the global array <code class="docutils literal notranslate"><span class="pre">uwsgi_fifo_table</span></code> via plugins or C hooks.</p></li>
+<li><p>Only the uid running the master has write access to the fifo.</p></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">The Master FIFO</a><ul>
+<li><a class="reference internal" href="#available-commands">Available commands</a></li>
+<li><a class="reference internal" href="#fifo-slots">FIFO slots</a></li>
+<li><a class="reference internal" href="#notes">Notes</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="AttachingDaemons.html"
+                        title="previous chapter">Managing external daemons/services</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Inetd.html"
+                        title="next chapter">Socket activation with inetd/xinetd</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/MasterFIFO.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Inetd.html" title="Socket activation with inetd/xinetd"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="AttachingDaemons.html" title="Managing external daemons/services"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

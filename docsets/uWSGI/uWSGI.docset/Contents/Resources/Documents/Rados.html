@@ -1,0 +1,316 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>The RADOS plugin &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The Pty plugin" href="Pty.html" />
+    <link rel="prev" title="The GlusterFS plugin" href="GlusterFS.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Pty.html" title="The Pty plugin"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="GlusterFS.html" title="The GlusterFS plugin"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="the-rados-plugin">
+<h1>The RADOS plugin<a class="headerlink" href="#the-rados-plugin" title="Permalink to this headline">¶</a></h1>
+<p>Available from uWSGI 1.9.16, stable from uWSGI 2.0.6</p>
+<p>official modifier1: 28</p>
+<p>Authors: Javier Guerra, Marcin Deranek, Roberto De Ioris, Sokolov Yura aka funny_falcon</p>
+<p>The ‘rados’ plugin allows you to serve objects stored in a Ceph cluster directly using the librados API.</p>
+<p>Note that it’s not the CephFS filesystem, nor the ‘radosgw’ S3/Swift-compatible layer; RADOS is the bare object-storage layer.</p>
+<div class="section" id="step1-ceph-cluster-and-content">
+<h2>Step1: Ceph cluster and content<a class="headerlink" href="#step1-ceph-cluster-and-content" title="Permalink to this headline">¶</a></h2>
+<p>If you want to try a minimal Ceph instalation, you can follow this guide: <a class="reference external" href="http://ceph.com/docs/master/start/">http://ceph.com/docs/master/start/</a>. note that
+you only need the OSD and MON daemons, the MDS are needed only for CephFS filesystems.</p>
+<p>Once you get it running, you should have a configuration file (by default on /etc/ceph/ceph.con), and should be able to use the <cite>rados</cite> utility.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>rados lspools
+</pre></div>
+</div>
+<p>by default, you should have at least the ‘data’, ‘metadata’ and ‘rbd’ pools.  Now add some content to the ‘data’ pool.
+For example, if you have a ‘list.html’ file and images ‘first.jpeg’, ‘second.jpeg’ on a subdirectory ‘imgs/’:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>rados -p data put list.html list.html
+rados -p data put imgs/first.jpeg imgs/first.jpeg
+rados -p data put imgs/second.jpeg imgs/second.jpeg
+rados -p data ls -
+</pre></div>
+</div>
+<p>note that RADOS doesn’t have a concept of directories, but the object names can contain slashes.</p>
+</div>
+<div class="section" id="step2-uwsgi">
+<h2>Step2: uWSGI<a class="headerlink" href="#step2-uwsgi" title="Permalink to this headline">¶</a></h2>
+<p>A build profile, named ‘rados’ is already available, so you can simply do:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>make <span class="nv">PROFILE</span><span class="o">=</span>rados
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python uwsgiconfig.py --build rados
+</pre></div>
+</div>
+<p>or use the installer</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># this will create a binary called /tmp/radosuwsgi that you will use instead of &#39;uwsgi&#39;</span>
+curl http://uwsgi.it/install <span class="p">|</span> bash -s rados /tmp/radosuwsgi
+</pre></div>
+</div>
+<p>Obviously you can build rados support as plugin</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --build-plugin plugins/rados/
+</pre></div>
+</div>
+<p>or the old style:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python uwsgiconfig.py --plugin plugins/rados/
+</pre></div>
+</div>
+<p>You can now start an HTTP server to serve RADOS objects:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; bind on port 9090</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="c1">; set the default modifier1 to the rados one</span>
+<span class="na">http-socket-modifier1</span> <span class="o">=</span> <span class="s">28</span>
+<span class="c1">; mount our rados pool</span>
+<span class="na">rados-mount</span> <span class="o">=</span> <span class="s">mountpoint=/rad/,pool=data,config=/etc/ceph/ceph.conf</span>
+<span class="c1">; spawn 30 threads</span>
+<span class="na">threads</span> <span class="o">=</span> <span class="s">30</span>
+</pre></div>
+</div>
+<p>the ‘rados-mount’ parameter takes various subparameters:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>mountpoint: required, the URL prefix on which the RADOS objects will appear.</p></li>
+<li><p>pool: required, the RADOS pool to serve.</p></li>
+<li><p>config: optional, the path to the ceph config file.</p></li>
+<li><p>timeout: optional, set the timeout for operations, in seconds</p></li>
+<li><p>allow_put: allow calling the <code class="docutils literal notranslate"><span class="pre">PUT</span></code> HTTP method to store new objects</p></li>
+<li><p>allow_delete: allow calling the <code class="docutils literal notranslate"><span class="pre">DELETE</span></code> HTTP method to remove objects</p></li>
+<li><p>allow_mkcol: allow calling <code class="docutils literal notranslate"><span class="pre">MKCOL</span></code> HTTP method to create new pools</p></li>
+<li><p>allow_propfind: (requires uWSGI 2.1) allow calling the WebDAV <code class="docutils literal notranslate"><span class="pre">PROPFIND</span></code> method</p></li>
+<li><p>buffer_size: maximum buffer size for <code class="docutils literal notranslate"><span class="pre">GET</span></code> requests in bytes (min 8192, max 16777216, default to 131072)</p></li>
+<li><p>put_buffer_size: maximum buffer size for <code class="docutils literal notranslate"><span class="pre">PUT</span></code> requests (default to buffer_size)</p></li>
+</ul>
+</div></blockquote>
+<p>In this example, your content will be served at <a class="reference external" href="http://localhost:9090/rad/list.html">http://localhost:9090/rad/list.html</a>, <a class="reference external" href="http://localhost:9090/rad/imgs/first.jpeg">http://localhost:9090/rad/imgs/first.jpeg</a>
+and <a class="reference external" href="http://localhost:9090/rad/imgs/second.jpeg">http://localhost:9090/rad/imgs/second.jpeg</a>.</p>
+</div>
+<div class="section" id="high-availability">
+<h2>High availability<a class="headerlink" href="#high-availability" title="Permalink to this headline">¶</a></h2>
+<p>The RADOS storage system is fully distributed, just starting several uWSGI workers on several machines with the same
+‘ceph.conf’, all will see the same pools.  If they all serve on the same mountpoint, you get a failure-resistant
+RADOS-HTTP gateway.</p>
+</div>
+<div class="section" id="multiple-mountpoints">
+<h2>Multiple mountpoints<a class="headerlink" href="#multiple-mountpoints" title="Permalink to this headline">¶</a></h2>
+<p>You can issue several ‘rados-mount’ entries, each one will define a new mountpoint.  This way you can expose different
+RADOS pools at different URLs.</p>
+</div>
+<div class="section" id="http-methods">
+<h2>HTTP methods<a class="headerlink" href="#http-methods" title="Permalink to this headline">¶</a></h2>
+<p>The following methods are supported:</p>
+<ul class="simple">
+<li><p>GET -&gt; retrieve a resource</p></li>
+<li><p>HEAD -&gt; like GET but without body</p></li>
+<li><p>OPTIONS -&gt; (requires uWSGI 2.1) returns the list of allowed HTTP methods and WebDAV support</p></li>
+<li><p>PUT -&gt; requires allow_put in mountpoint options, store a resource in ceph: curl -T /etc/services <a class="reference external" href="http://localhost:8080/services">http://localhost:8080/services</a></p></li>
+<li><p>MKCOL -&gt; requires allow_mkcol in mountpoint options, creates a new pool: curl -X MKCOL <a class="reference external" href="http://localhost:8080/anewpool">http://localhost:8080/anewpool</a> (the pool ‘anewpool’ will be created)</p></li>
+<li><p>DELETE -&gt; requires allow_delete in mountpoint options, removes an object</p></li>
+<li><p>PROPFIND -&gt; requires allow_propfind in mountpoint options (uWSGI 2.1+), implements WebDAV PROPFIND method</p></li>
+</ul>
+</div>
+<div class="section" id="features">
+<h2>Features<a class="headerlink" href="#features" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>multiprocessing is supported</p></li>
+<li><p>async support is fully functional, the ugreen suspend engine is the only supported one:</p></li>
+</ul>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; bind on port 9090</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="c1">; set the default modifier1 to the rados one</span>
+<span class="na">http-socket-modifier1</span> <span class="o">=</span> <span class="s">28</span>
+<span class="c1">; mount our rados pool</span>
+<span class="na">rados-mount</span> <span class="o">=</span> <span class="s">mountpoint=/rad/,pool=data,config=/etc/ceph/ceph.conf</span>
+<span class="c1">; spawn 1000 async cores</span>
+<span class="na">async</span> <span class="o">=</span> <span class="s">1000</span>
+<span class="c1">; required !!!</span>
+<span class="na">ugreen</span> <span class="o">=</span> <span class="s">true</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="caching-example">
+<h2>Caching example<a class="headerlink" href="#caching-example" title="Permalink to this headline">¶</a></h2>
+<p>Caching is highly recommended to improve performance and reduce the load on the Ceph cluster. This is a good example:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; create a bitmap cache with max 1000 items storable in 10000 4k blocks</span>
+<span class="na">cache2</span> <span class="o">=</span> <span class="s">name=radoscache,items=1000,blocks=10000,blocksize=4096,bitmap=1</span>
+
+<span class="c1">; check every object ending with .html in the &#39;radoscache&#39; cache</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">\.html$ cache:key=${PATH_INFO},name=radoscache,content_type=text/html</span>
+<span class="c1">; if not found, store it at the end of the request for 3600 seconds (this will automatically enable Expires header)</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">\.html$ cachestore:key=${PATH_INFO},name=radoscache,expires=3600</span>
+
+<span class="c1">; general options</span>
+
+<span class="c1">; master is always a good idea</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; bind on http port 9090 (better to use a uwsgi socket behind a proxy like nginx)</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="c1">; set the default modifier1 to the rados one</span>
+<span class="na">http-socket-modifier1</span> <span class="o">=</span> <span class="s">28</span>
+<span class="c1">; mount our rados &#39;htmlpages&#39; pool</span>
+<span class="na">rados-mount</span> <span class="o">=</span> <span class="s">mountpoint=/,pool=htmlpages</span>
+
+<span class="c1">; spawn multiple processes and threads</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">4</span>
+<span class="na">threads</span> <span class="o">=</span> <span class="s">8</span>
+</pre></div>
+</div>
+<p>To test the caching behaviour, a tool like uwsgicachetop (<a class="reference external" href="https://pypi.python.org/pypi/uwsgicachetop">https://pypi.python.org/pypi/uwsgicachetop</a>) will be very useful.</p>
+<p>More information about caching here: <span class="xref std std-doc">CachingCookbook</span></p>
+</div>
+<div class="section" id="security-note">
+<h2>Security note<a class="headerlink" href="#security-note" title="Permalink to this headline">¶</a></h2>
+<p>Enabling MKCOL, PUT and DELETE may be high security risks.</p>
+<p>Combine them with the internal routing framework for adding authentication/authorization policies:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; bind on http port 9090 (better to use a uwsgi socket behind a proxy like nginx)</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="c1">; set the default modifier1 to the rados one</span>
+<span class="na">http-socket-modifier1</span> <span class="o">=</span> <span class="s">28</span>
+<span class="c1">; mount our rados &#39;htmlpages&#39; pool</span>
+<span class="na">rados-mount</span> <span class="o">=</span> <span class="s">mountpoint=/,pool=htmlpages,allow_put=1,allow_mkcol=1</span>
+
+<span class="c1">; spawn multiple processes and threads</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">4</span>
+<span class="na">threads</span> <span class="o">=</span> <span class="s">8</span>
+
+<span class="c1">; permit PUT only to authenticated &#39;foo&#39; user</span>
+<span class="na">route-if</span> <span class="o">=</span> <span class="s">equal:${REQUEST_METHOD};PUT basicauth:my secret area,foo:bar</span>
+
+<span class="c1">; allow MKCOL only from 127.0.0.1</span>
+<span class="na">route-if</span> <span class="o">=</span> <span class="s">equal:${REQUEST_METHOD};MKCOL goto:check_localhost</span>
+<span class="c1">; end of the chain</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">last:</span>
+
+<span class="na">route-label</span> <span class="o">=</span> <span class="s">check_localhost</span>
+<span class="c1">; if REMOTE_ADDR = 127.0.0.1 -&gt; continue to rados plugin</span>
+<span class="na">route-remote-addr</span> <span class="o">=</span> <span class="s">^127\.0\.0\.1$ continue:</span>
+<span class="c1">; otherwise break with 403</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">break:403 Forbidden</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>The plugin automatically enables the MIME type engine.</p></li>
+<li><p>There is no directory index support. It makes no sense in rados/ceph context.</p></li>
+<li><p>You should drop privileges in your uWSGI instances, so be sure you give the right permissions to the ceph keyring.</p></li>
+<li><p>If you use it for getting/storing large objects, consider increasing <code class="docutils literal notranslate"><span class="pre">buffer_size</span></code>. 4194304 is very performant value, 1048576 is also good, if you wish to conserve memory.</p></li>
+<li><p>PUT into Erasure coded pools is supported. <code class="docutils literal notranslate"><span class="pre">put_buffer_size</span></code> is automatically adjusted to satisfy pool alignment requirements.</p></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">The RADOS plugin</a><ul>
+<li><a class="reference internal" href="#step1-ceph-cluster-and-content">Step1: Ceph cluster and content</a></li>
+<li><a class="reference internal" href="#step2-uwsgi">Step2: uWSGI</a></li>
+<li><a class="reference internal" href="#high-availability">High availability</a></li>
+<li><a class="reference internal" href="#multiple-mountpoints">Multiple mountpoints</a></li>
+<li><a class="reference internal" href="#http-methods">HTTP methods</a></li>
+<li><a class="reference internal" href="#features">Features</a></li>
+<li><a class="reference internal" href="#caching-example">Caching example</a></li>
+<li><a class="reference internal" href="#security-note">Security note</a></li>
+<li><a class="reference internal" href="#notes">Notes</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="GlusterFS.html"
+                        title="previous chapter">The GlusterFS plugin</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Pty.html"
+                        title="next chapter">The Pty plugin</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Rados.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Pty.html" title="The Pty plugin"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="GlusterFS.html" title="The GlusterFS plugin"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

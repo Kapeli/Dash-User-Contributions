@@ -1,0 +1,331 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Running uWSGI on Dreamhost shared hosting &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Running python webapps on Heroku with uWSGI" href="heroku_python.html" />
+    <link rel="prev" title="Setting up Django and your web server with uWSGI and nginx" href="Django_and_nginx.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="heroku_python.html" title="Running python webapps on Heroku with uWSGI"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Django_and_nginx.html" title="Setting up Django and your web server with uWSGI and nginx"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="running-uwsgi-on-dreamhost-shared-hosting">
+<h1>Running uWSGI on Dreamhost shared hosting<a class="headerlink" href="#running-uwsgi-on-dreamhost-shared-hosting" title="Permalink to this headline">¶</a></h1>
+<p>Note: the following tutorial gives suggestions on how to name files with the objective of hosting multiple applications
+on your account. You are obviously free to change naming schemes.</p>
+<p>The tutorial assumes a shared hosting account, but it works on the VPS offer too (even if on such a system you have lot more freedom and you could use
+better techniques to accomplish the result)</p>
+<div class="section" id="preparing-the-environment">
+<h2>Preparing the environment<a class="headerlink" href="#preparing-the-environment" title="Permalink to this headline">¶</a></h2>
+<p>Log in via ssh to your account and move to the home (well, you should be already there after login).</p>
+<p>Download a uWSGI tarball (anything &gt;= 1.4 is good, but for maximum performance use &gt;= 1.9), explode it and build it
+normally (run make).</p>
+<p>At the end of the procedure copy the resulting <code class="docutils literal notranslate"><span class="pre">uwsgi</span></code> binary to your home (just to avoid writing longer paths later).</p>
+<p>Now move to the document root of your domain (it should be named like the domain) and put a file named <code class="docutils literal notranslate"><span class="pre">uwsgi.fcgi</span></code> in it with that content:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/bin/sh</span>
+/home/XXX/uwsgi /home/XXX/YYY.ini
+</pre></div>
+</div>
+<p>change XXX with your account name and YYY with your domain name (it is only a convention, if you know what you are doing feel free to change it)</p>
+<p>Give the file ‘execute’ permission</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>chmod +x uwsgi.fcgi
+</pre></div>
+</div>
+<p>Now in your home create a YYY.ini (remember to change YYY with your domain name) with that content</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">flock</span> <span class="o">=</span> <span class="s">/home/XXX/YYY.ini</span>
+<span class="na">account</span> <span class="o">=</span> <span class="s">XXX</span>
+<span class="na">domain</span> <span class="o">=</span> <span class="s">YYY</span>
+
+<span class="na">protocol</span> <span class="o">=</span> <span class="s">fastcgi</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">3</span>
+<span class="na">logto</span> <span class="o">=</span> <span class="s">/home/%(account)/%(domain).uwsgi.log</span>
+<span class="na">virtualenv</span> <span class="o">=</span> <span class="s">/home/%(account)/venv</span>
+<span class="na">module</span> <span class="o">=</span> <span class="s">werkzeug.testapp:test_app</span>
+<span class="na">touch-reload</span> <span class="o">=</span> <span class="s">%p</span>
+<span class="na">auto-procname</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">procname-prefix-spaced</span> <span class="o">=</span> <span class="s">[%(domain)]</span>
+</pre></div>
+</div>
+<p>change the first three lines accordingly.</p>
+</div>
+<div class="section" id="preparing-the-python-virtualenv">
+<h2>Preparing the python virtualenv<a class="headerlink" href="#preparing-the-python-virtualenv" title="Permalink to this headline">¶</a></h2>
+<p>As we want to run the werkzeug test app, we need to install its package in a virtualenv.</p>
+<p>Move to the home:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>virtualenv venv
+venv/bin/easy_install werkzeug
+</pre></div>
+</div>
+</div>
+<div class="section" id="the-htaccess">
+<h2>The .htaccess<a class="headerlink" href="#the-htaccess" title="Permalink to this headline">¶</a></h2>
+<p>Move again to the document root to create the .htaccess file that will instruct Apache to forward request to uWSGI</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>RewriteEngine On
+RewriteBase /
+RewriteRule ^uwsgi.fcgi/ - <span class="o">[</span>L<span class="o">]</span>
+RewriteRule ^<span class="o">(</span>.*<span class="o">)</span>$ uwsgi.fcgi/<span class="nv">$1</span> <span class="o">[</span>L<span class="o">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="ready">
+<h2>Ready<a class="headerlink" href="#ready" title="Permalink to this headline">¶</a></h2>
+<p>Go to your domain and you should see the Werkzeug test page. If it does not show you can check uWSGI logs in the file you specified with the
+logto option.</p>
+</div>
+<div class="section" id="the-flock-trick">
+<h2>The flock trick<a class="headerlink" href="#the-flock-trick" title="Permalink to this headline">¶</a></h2>
+<p>As the apache mod_fcgi/mod_fastcgi/mod_fcgid implemenetations are very flaky on process management, you can easily end with lot of copies
+of the same process running. The flock trick avoid that. Just remember that the flock option is very special as you cannot use
+placeholder or other advanced techniques with it. You can only specify the absolute path of the file to lock.</p>
+</div>
+<div class="section" id="statistics">
+<h2>Statistics<a class="headerlink" href="#statistics" title="Permalink to this headline">¶</a></h2>
+<p>As always remember to use uWSGI internal stats system</p>
+<p>first, install uwsgitop</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>venv/bin/easy_install uwsgitop
+</pre></div>
+</div>
+<p>Enable the stats server on the uWSGI config</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span>
+</pre></div>
+</div>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">flock</span> <span class="o">=</span> <span class="s">/home/XXX/YYY.ini</span>
+<span class="na">account</span> <span class="o">=</span> <span class="s">XXX</span>
+<span class="na">domain</span> <span class="o">=</span> <span class="s">YYY</span>
+
+<span class="na">protocol</span> <span class="o">=</span> <span class="s">fastcgi</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">3</span>
+<span class="na">logto</span> <span class="o">=</span> <span class="s">/home/%(account)/%(domain).uwsgi.log</span>
+<span class="na">virtualenv</span> <span class="o">=</span> <span class="s">/home/%(account)/venv</span>
+<span class="na">module</span> <span class="o">=</span> <span class="s">werkzeug.testapp:test_app</span>
+<span class="na">touch-reload</span> <span class="o">=</span> <span class="s">%p</span>
+<span class="na">auto-procname</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">procname-prefix-spaced</span> <span class="o">=</span> <span class="s">[%(domain)]</span>
+
+<span class="na">stats</span> <span class="o">=</span> <span class="s">/home/%(account)/stats_%(domain).sock</span>
+</pre></div>
+</div>
+<p>(as we have touch-reload in place, as soon as you update the ini file your instance is reloaded, and you will be able to suddenly use uwsgitop)</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>venv/bin/uwsgitop /home/WWW/stats_YYY.sock
+</pre></div>
+</div>
+<p>(remember to change XXX and YYY accordingly)</p>
+</div>
+<div class="section" id="running-perl-psgi-apps-requires-uwsgi-1-9">
+<h2>Running Perl/PSGI apps (requires uWSGI &gt;= 1.9)<a class="headerlink" href="#running-perl-psgi-apps-requires-uwsgi-1-9" title="Permalink to this headline">¶</a></h2>
+<p>Older uWSGI versions does not work well with plugins other than the python one, as the fastcgi implementation has lot of limits.</p>
+<p>Starting from 1.9, fastCGI is a first-class citizen in the uWSGI project, so all of the plugins work with it.</p>
+<p>As before, compile the uWSGI sources but this time we will build a PSGI monolithic binary:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">UWSGI_PROFILE</span><span class="o">=</span>psgi make
+</pre></div>
+</div>
+<p>copy the resulting binary in the home as uwsgi_perl</p>
+<p>Now edit the previously created uwsgi.fcgi file changing it to</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/bin/sh</span>
+/home/XXX/uwsgi_perl /home/XXX/YYY.ini
+</pre></div>
+</div>
+<p>(again, change XXX and YYY accordingly)</p>
+<p>Now upload an app.psgi file in the document root (this is your app)</p>
+<div class="highlight-pl notranslate"><div class="highlight"><pre><span></span><span class="k">my</span> <span class="nv">$app</span> <span class="o">=</span> <span class="k">sub</span> <span class="p">{</span>
+   <span class="k">my</span> <span class="nv">$env</span> <span class="o">=</span> <span class="nb">shift</span><span class="p">;</span>
+   <span class="k">return</span> <span class="p">[</span>
+       <span class="s">&#39;200&#39;</span><span class="p">,</span>
+       <span class="p">[</span> <span class="s">&#39;Content-Type&#39;</span> <span class="o">=&gt;</span> <span class="s">&#39;text/plain&#39;</span> <span class="p">],</span>
+       <span class="p">[</span> <span class="s">&quot;Hello World&quot;</span> <span class="p">]</span>
+   <span class="p">];</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<p>and change the uWSGI ini file accordingly</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">flock</span> <span class="o">=</span> <span class="s">/home/XXX/YYY.ini</span>
+<span class="na">account</span> <span class="o">=</span> <span class="s">XXX</span>
+<span class="na">domain</span> <span class="o">=</span> <span class="s">YYY</span>
+
+<span class="na">psgi</span> <span class="o">=</span> <span class="s">/home/%(account)/%(domain)/app.psgi</span>
+<span class="na">fastcgi-modifier1</span> <span class="o">=</span> <span class="s">5</span>
+
+<span class="na">protocol</span> <span class="o">=</span> <span class="s">fastcgi</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">3</span>
+<span class="na">logto</span> <span class="o">=</span> <span class="s">/home/%(account)/%(domain).uwsgi.log</span>
+<span class="na">virtualenv</span> <span class="o">=</span> <span class="s">/home/%(account)/venv</span>
+<span class="na">touch-reload</span> <span class="o">=</span> <span class="s">%p</span>
+<span class="na">auto-procname</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">procname-prefix-spaced</span> <span class="o">=</span> <span class="s">[%(domain)]</span>
+
+<span class="na">stats</span> <span class="o">=</span> <span class="s">/home/%(account)/stats_%(domain).sock</span>
+</pre></div>
+</div>
+<p>The only difference from the python one, is the usage of ‘psgi’ instead of ‘module’ and the addition of fastcgi-modifier1
+that set the uWSGI modifier to the perl/psgi one</p>
+</div>
+<div class="section" id="running-ruby-rack-apps-requires-uwsgi-1-9">
+<h2>Running Ruby/Rack apps (requires uWSGI &gt;= 1.9)<a class="headerlink" href="#running-ruby-rack-apps-requires-uwsgi-1-9" title="Permalink to this headline">¶</a></h2>
+<p>By default you can use passenger on Dreamhost servers to host ruby/rack applications, but you may need a more advanced application servers
+for your work (or you may need simply more control over the deployment process)</p>
+<p>As the PSGI one you need a uWSGI version &gt;= 1.9 to get better (and faster) fastcgi support</p>
+<p>Build a new uWSGI binary with rack support</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">UWSGI_PROFILE</span><span class="o">=</span>rack make
+</pre></div>
+</div>
+<p>and copy it in the home as ‘’uwsgi_ruby’‘</p>
+<p>Edit (again) the uwsgi.fcgi file changing it to</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/bin/sh</span>
+/home/XXX/uwsgi_rack /home/XXX/YYY.ini
+</pre></div>
+</div>
+<p>and create a Rack application in the document root (call it app.ru)</p>
+<div class="highlight-rb notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">RackFoo</span>
+
+     <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
+             <span class="o">[</span><span class="mi">200</span><span class="p">,</span> <span class="p">{</span> <span class="s1">&#39;Content-Type&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;text/plain&#39;</span><span class="p">},</span> <span class="o">[</span><span class="s1">&#39;ciao&#39;</span><span class="o">]]</span>
+     <span class="k">end</span>
+
+<span class="k">end</span>
+
+<span class="n">run</span> <span class="no">RackFoo</span><span class="o">.</span><span class="n">new</span>
+</pre></div>
+</div>
+<p>Finally change the uWSGI .ini file for a rack app:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">flock</span> <span class="o">=</span> <span class="s">/home/XXX/YYY.ini</span>
+<span class="na">account</span> <span class="o">=</span> <span class="s">XXX</span>
+<span class="na">domain</span> <span class="o">=</span> <span class="s">YYY</span>
+
+<span class="na">rack</span> <span class="o">=</span> <span class="s">/home/%(account)/%(domain)/app.ru</span>
+<span class="na">fastcgi-modifier1</span> <span class="o">=</span> <span class="s">7</span>
+
+<span class="na">protocol</span> <span class="o">=</span> <span class="s">fastcgi</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">3</span>
+<span class="na">logto</span> <span class="o">=</span> <span class="s">/home/%(account)/%(domain).uwsgi.log</span>
+<span class="na">virtualenv</span> <span class="o">=</span> <span class="s">/home/%(account)/venv</span>
+<span class="na">touch-reload</span> <span class="o">=</span> <span class="s">%p</span>
+<span class="na">auto-procname</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">procname-prefix-spaced</span> <span class="o">=</span> <span class="s">[%(domain)]</span>
+
+<span class="na">stats</span> <span class="o">=</span> <span class="s">/home/%(account)/stats_%(domain).sock</span>
+</pre></div>
+</div>
+<p>Only differences from the PSGI one, is the use of ‘rack’ instead of ‘psgi’, and the modifier1 mapped to 7 (the ruby/rack one)</p>
+</div>
+<div class="section" id="serving-static-files">
+<h2>Serving static files<a class="headerlink" href="#serving-static-files" title="Permalink to this headline">¶</a></h2>
+<p>It is unlikely you will need to serve static files on uWSGI on a dreamhost account. You can directly use apache for that
+(eventually remember to change the .htaccess file accordingly)</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Running uWSGI on Dreamhost shared hosting</a><ul>
+<li><a class="reference internal" href="#preparing-the-environment">Preparing the environment</a></li>
+<li><a class="reference internal" href="#preparing-the-python-virtualenv">Preparing the python virtualenv</a></li>
+<li><a class="reference internal" href="#the-htaccess">The .htaccess</a></li>
+<li><a class="reference internal" href="#ready">Ready</a></li>
+<li><a class="reference internal" href="#the-flock-trick">The flock trick</a></li>
+<li><a class="reference internal" href="#statistics">Statistics</a></li>
+<li><a class="reference internal" href="#running-perl-psgi-apps-requires-uwsgi-1-9">Running Perl/PSGI apps (requires uWSGI &gt;= 1.9)</a></li>
+<li><a class="reference internal" href="#running-ruby-rack-apps-requires-uwsgi-1-9">Running Ruby/Rack apps (requires uWSGI &gt;= 1.9)</a></li>
+<li><a class="reference internal" href="#serving-static-files">Serving static files</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Django_and_nginx.html"
+                        title="previous chapter">Setting up Django and your web server with uWSGI and nginx</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="heroku_python.html"
+                        title="next chapter">Running python webapps on Heroku with uWSGI</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/tutorials/dreamhost.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="heroku_python.html" title="Running python webapps on Heroku with uWSGI"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Django_and_nginx.html" title="Setting up Django and your web server with uWSGI and nginx"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

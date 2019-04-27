@@ -1,0 +1,257 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ruby support &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Ruby API support" href="RubyAPI.html" />
+    <link rel="prev" title="uWSGI Perl support (PSGI)" href="Perl.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="RubyAPI.html" title="Ruby API support"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Perl.html" title="uWSGI Perl support (PSGI)"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="ruby-support">
+<h1>Ruby support<a class="headerlink" href="#ruby-support" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="RubyAPI.html">Ruby API support</a></li>
+</ul>
+</div>
+<p>Starting from version 0.9.7-dev a Ruby (Rack/Rails) plugin is officially available. The official modifier number for Ruby apps is 7, so remember to set it in your web server configuration.</p>
+<p>The plugin can be embedded in the uWSGI core or built as a dynamically loaded plugin.</p>
+<p>Some uWSGI standard features still aren’t supported by the plugin, such as:</p>
+<ul class="simple">
+<li><p>UDP request management</p></li>
+<li><p><a class="reference internal" href="SharedArea.html"><span class="doc">SharedArea – share memory pages between uWSGI components</span></a> (support on the way)</p></li>
+<li><p><a class="reference internal" href="Queue.html"><span class="doc">The uWSGI queue framework</span></a></p></li>
+</ul>
+<p>See the <a class="reference internal" href="RubyAPI.html"><span class="doc">Ruby API support</span></a> page for a list of features currently supported.</p>
+<div class="section" id="building-uwsgi-for-ruby-support">
+<h2>Building uWSGI for Ruby support<a class="headerlink" href="#building-uwsgi-for-ruby-support" title="Permalink to this headline">¶</a></h2>
+<p>You can find <code class="file docutils literal notranslate"><span class="pre">rack.ini</span></code> in the <code class="file docutils literal notranslate"><span class="pre">buildconf</span></code> directory. This configuration will build uWSGI with a Ruby interpreter embedded. To build uWSGI with this configuration, you’ll need the Ruby headers/development package.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python uwsgiconfig.py --build rack
+</pre></div>
+</div>
+<p>The resulting uWSGI binary can run Ruby apps.</p>
+<p>A <code class="file docutils literal notranslate"><span class="pre">rackp.ini</span></code> build configuration also exists; this will build uWSGI with Ruby support as a plugin; in this case remember to invoke uWSGI with the <code class="docutils literal notranslate"><span class="pre">plugins=rack</span></code> option.</p>
+</div>
+<div class="section" id="a-note-regarding-memory-consumption">
+<h2>A note regarding memory consumption<a class="headerlink" href="#a-note-regarding-memory-consumption" title="Permalink to this headline">¶</a></h2>
+<p>By default the memory management of this plugin is very aggressive (as Ruby can easily devour memory like it was going out of fashion). The Ruby garbage collector is invoked after every request by default. This may hurt your performance if your app creates lots of objects on every request. You can tune the frequency of the collection with the <span class="xref std std-ref">OptionRubyGcFreq</span> option. As usual, there is no one-value-fits-all setting for this, so experiment a bit.</p>
+<p>If your app leaks memory without control, consider limiting the number of requests a worker can manage before being restarted with the <code class="docutils literal notranslate"><span class="pre">max-requests</span></code> option. Using <code class="docutils literal notranslate"><span class="pre">limit-as</span></code> can help too.</p>
+</div>
+<div class="section" id="a-note-regarding-threads-and-fibers">
+<h2>A note regarding threads and fibers<a class="headerlink" href="#a-note-regarding-threads-and-fibers" title="Permalink to this headline">¶</a></h2>
+<p>Adding threading support in Ruby 1.8 is out of discussion. Thread support in this versions is practically useless in a server like uWSGI.
+Ruby 1.9 has a threading mode very similar to the Python one, its support is available starting from uWSGI 1.9.14 using the “rbthreads” plugin.</p>
+<p>Fibers are a new feature of Ruby 1.9. They are an implementation of coroutines/green threads/stop resume/cooperative multithreading, or whatever you’d like to call this class of funny technologies. See <span class="xref std std-doc">FiberLoop</span>.</p>
+</div>
+<div class="section" id="running-rack-applications-on-uwsgi">
+<h2>Running Rack applications on uWSGI<a class="headerlink" href="#running-rack-applications-on-uwsgi" title="Permalink to this headline">¶</a></h2>
+<p>This example shows you how to run a Sinatra application on uWSGI.</p>
+<p><code class="file docutils literal notranslate"><span class="pre">config.ru</span></code></p>
+<div class="highlight-ruby notranslate"><div class="highlight"><pre><span></span><span class="nb">require</span> <span class="s1">&#39;rubygems&#39;</span>
+<span class="nb">require</span> <span class="s1">&#39;sinatra&#39;</span>
+
+<span class="n">get</span> <span class="s1">&#39;/hi&#39;</span> <span class="k">do</span>
+<span class="s2">&quot;Hello World!&quot;</span>
+<span class="k">end</span>
+
+<span class="n">run</span> <span class="no">Sinatra</span><span class="o">::</span><span class="no">Application</span>
+</pre></div>
+</div>
+<p>Then invoke uWSGI (with <code class="docutils literal notranslate"><span class="pre">--plugins</span></code> if you built Ruby support as a plugin):</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi -s :3031 -M -p <span class="m">4</span> -m --post-buffering <span class="m">4096</span> --rack config.ru
+./uwsgi --plugins rack -s :3031 -M -p <span class="m">4</span> -m --post-buffering <span class="m">4096</span> --rack config.ru
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="docutils literal notranslate"><span class="pre">post-buffering</span></code> is required by the Rack specification.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>As Sinatra has a built-in logging system, you may wish to disable uWSGI’s logging of requests with the <code class="docutils literal notranslate"><span class="pre">disable-logging</span></code> option.</p>
+</div>
+</div>
+<div class="section" id="running-ruby-on-rails-applications-on-uwsgi">
+<h2>Running Ruby on Rails applications on uWSGI<a class="headerlink" href="#running-ruby-on-rails-applications-on-uwsgi" title="Permalink to this headline">¶</a></h2>
+<p>As writing formal documentation isn’t very interesting, here’s a couple of examples of Rails apps on uWSGI.</p>
+<div class="section" id="running-typo">
+<h3>Running Typo<a class="headerlink" href="#running-typo" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>sudo gem install typo
+typo install /tmp/mytypo
+./uwsgi -s :3031 --lazy-apps --master --processes <span class="m">4</span> --memory-report --rails /tmp/mytypo --post-buffering <span class="m">4096</span> --env <span class="nv">RAILS_ENV</span><span class="o">=</span>production
+</pre></div>
+</div>
+<p>–lazy-apps is vital here as typo (like a lot of apps) is not fork-friendly (it does not expect is loaded in the master and then fork() is called). With this option
+the app is fully loaded one-time per-worker.</p>
+<p>Nginx configuration:</p>
+<div class="highlight-nginx notranslate"><div class="highlight"><pre><span></span><span class="k">location</span> <span class="s">/</span> <span class="p">{</span>
+  <span class="kn">root</span> <span class="s">&quot;/tmp/mytypo/public&quot;</span><span class="p">;</span>
+  <span class="kn">include</span> <span class="s">&quot;uwsgi_params&quot;</span><span class="p">;</span>
+  <span class="kn">uwsgi_modifier1</span> <span class="mi">7</span><span class="p">;</span>
+  <span class="kn">if</span> <span class="s">(!-f</span> <span class="nv">$request_filename</span><span class="s">)</span> <span class="p">{</span>
+    <span class="kn">uwsgi_pass</span> <span class="n">127.0.0.1</span><span class="p">:</span><span class="mi">3031</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="running-radiant">
+<h3>Running Radiant<a class="headerlink" href="#running-radiant" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>sudo gem install radiant
+radiant /tmp/myradiant
+<span class="nb">cd</span> /tmp/myradiant
+<span class="c1"># (edit config/database.yml to fit)</span>
+rake production db:bootstrap
+./uwsgi -s :3031 -M -p <span class="m">2</span> -m --rails /tmp/myradiant --post-buffering <span class="m">4096</span> --env <span class="nv">RAILS_ENV</span><span class="o">=</span>production
+</pre></div>
+</div>
+<p>Apache configuration (with static paths mapped directly):</p>
+<div class="highlight-apache notranslate"><div class="highlight"><pre><span></span><span class="nb">DocumentRoot</span> <span class="sx">/tmp/myradiant/public</span>
+
+<span class="nt">&lt;Directory</span> <span class="s">/tmp/myradiant/public</span><span class="nt">&gt;</span>
+  <span class="nb">Allow</span> from <span class="k">all</span>
+<span class="nt">&lt;/Directory&gt;</span>
+
+<span class="nt">&lt;Location</span> <span class="s">/</span><span class="nt">&gt;</span>
+  <span class="nb">uWSGISocket</span> <span class="m">127.0.0.1</span>:3032
+  <span class="nb">SetHandler</span> uwsgi-handler
+  <span class="nb">uWSGIForceScriptName</span> /
+  <span class="nb">uWSGImodifier1</span> <span class="m">7</span>
+<span class="nt">&lt;/Location&gt;</span>
+
+<span class="nt">&lt;Location</span> <span class="s">/images</span><span class="nt">&gt;</span>
+  <span class="nb">SetHandler</span> default-handler
+<span class="nt">&lt;/Location&gt;</span>
+
+<span class="nt">&lt;Location</span> <span class="s">/stylesheets</span><span class="nt">&gt;</span>
+  <span class="nb">SetHandler</span> default-handler
+<span class="nt">&lt;/Location&gt;</span>
+
+<span class="nt">&lt;Location</span> <span class="s">/javascripts</span><span class="nt">&gt;</span>
+  <span class="nb">SetHandler</span> default-handler
+<span class="nt">&lt;/Location&gt;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="rails-and-ssl">
+<h3>Rails and SSL<a class="headerlink" href="#rails-and-ssl" title="Permalink to this headline">¶</a></h3>
+<p>You may wish to use the <code class="docutils literal notranslate"><span class="pre">HTTPS</span></code> / <code class="docutils literal notranslate"><span class="pre">UWSGI_SCHEME</span> <span class="pre">https</span></code> uwsgi protocol parameters to inform the app that it is running under HTTPS.</p>
+<p>For Nginx:</p>
+<div class="highlight-nginx notranslate"><div class="highlight"><pre><span></span><span class="k">uwsgi_param</span> <span class="s">HTTPS</span> <span class="no">on</span><span class="p">;</span> <span class="c1"># Rails 2.x apps</span>
+<span class="k">uwsgi_param</span> <span class="s">UWSGI_SCHEME</span> <span class="s">https</span><span class="p">;</span> <span class="c1"># Rails 3.x apps</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Ruby support</a><ul>
+<li><a class="reference internal" href="#building-uwsgi-for-ruby-support">Building uWSGI for Ruby support</a></li>
+<li><a class="reference internal" href="#a-note-regarding-memory-consumption">A note regarding memory consumption</a></li>
+<li><a class="reference internal" href="#a-note-regarding-threads-and-fibers">A note regarding threads and fibers</a></li>
+<li><a class="reference internal" href="#running-rack-applications-on-uwsgi">Running Rack applications on uWSGI</a></li>
+<li><a class="reference internal" href="#running-ruby-on-rails-applications-on-uwsgi">Running Ruby on Rails applications on uWSGI</a><ul>
+<li><a class="reference internal" href="#running-typo">Running Typo</a></li>
+<li><a class="reference internal" href="#running-radiant">Running Radiant</a></li>
+<li><a class="reference internal" href="#rails-and-ssl">Rails and SSL</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Perl.html"
+                        title="previous chapter">uWSGI Perl support (PSGI)</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="RubyAPI.html"
+                        title="next chapter">Ruby API support</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Ruby.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="RubyAPI.html" title="Ruby API support"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Perl.html" title="uWSGI Perl support (PSGI)"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

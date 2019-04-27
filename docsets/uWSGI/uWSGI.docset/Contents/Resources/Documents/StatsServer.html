@@ -1,0 +1,313 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>The uWSGI Stats Server &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="uWSGI asynchronous/non-blocking modes (updated to uWSGI 1.9)" href="Async.html" />
+    <link rel="prev" title="Integration with Graphite/Carbon" href="Carbon.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Async.html" title="uWSGI asynchronous/non-blocking modes (updated to uWSGI 1.9)"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Carbon.html" title="Integration with Graphite/Carbon"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="the-uwsgi-stats-server">
+<h1>The uWSGI Stats Server<a class="headerlink" href="#the-uwsgi-stats-server" title="Permalink to this headline">¶</a></h1>
+<p>In addition to <a class="reference internal" href="SNMP.html"><span class="doc">SNMP</span></a>, uWSGI also supports a Stats Server mechanism which exports the uWSGI state as a JSON object to a socket.</p>
+<p>Simply use the <code class="docutils literal notranslate"><span class="pre">stats</span></code> option followed by a valid socket address. If you want the stats served over HTTP you will need to also add the <code class="docutils literal notranslate"><span class="pre">stats-http</span></code> option.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>--stats <span class="m">127</span>.0.0.1:1717
+--stats /tmp/statsock
+--stats :5050
+--stats @foobar
+<span class="c1"># Any of the above socket types can also return stats using HTTP</span>
+--stats <span class="m">127</span>.0.0.1:1717 --stats-http
+</pre></div>
+</div>
+<p>If a client connects to the specified socket it will get a JSON object containing uWSGI internal statistics before the connection ends.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket :3031 --stats :1717 --module welcome --master --processes <span class="m">8</span>
+</pre></div>
+</div>
+<p>then</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>nc <span class="m">127</span>.0.0.1 <span class="m">1717</span>
+<span class="c1"># or for convenience...</span>
+uwsgi --connect-and-read <span class="m">127</span>.0.0.1:1717
+</pre></div>
+</div>
+<p>will return something like this:</p>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="s2">&quot;workers&quot;</span><span class="o">:</span> <span class="p">[{</span>
+    <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;pid&quot;</span><span class="o">:</span> <span class="mi">31759</span><span class="p">,</span>
+    <span class="s2">&quot;requests&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;exceptions&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;status&quot;</span><span class="o">:</span> <span class="s2">&quot;idle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;rss&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;vsz&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;running_time&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;last_spawn&quot;</span><span class="o">:</span> <span class="mi">1317235041</span><span class="p">,</span>
+    <span class="s2">&quot;respawn_count&quot;</span><span class="o">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;tx&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;avg_rt&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;apps&quot;</span><span class="o">:</span> <span class="p">[{</span>
+      <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;modifier1&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;mountpoint&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;requests&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;exceptions&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;chdir&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span>
+    <span class="p">}]</span>
+  <span class="p">},</span> <span class="p">{</span>
+    <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="s2">&quot;pid&quot;</span><span class="o">:</span> <span class="mi">31760</span><span class="p">,</span>
+    <span class="s2">&quot;requests&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;exceptions&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;status&quot;</span><span class="o">:</span> <span class="s2">&quot;idle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;rss&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;vsz&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;running_time&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;last_spawn&quot;</span><span class="o">:</span> <span class="mi">1317235041</span><span class="p">,</span>
+    <span class="s2">&quot;respawn_count&quot;</span><span class="o">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;tx&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;avg_rt&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;apps&quot;</span><span class="o">:</span> <span class="p">[{</span>
+      <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;modifier1&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;mountpoint&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;requests&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;exceptions&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;chdir&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span>
+    <span class="p">}]</span>
+  <span class="p">},</span> <span class="p">{</span>
+    <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="s2">&quot;pid&quot;</span><span class="o">:</span> <span class="mi">31761</span><span class="p">,</span>
+    <span class="s2">&quot;requests&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;exceptions&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;status&quot;</span><span class="o">:</span> <span class="s2">&quot;idle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;rss&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;vsz&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;running_time&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;last_spawn&quot;</span><span class="o">:</span> <span class="mi">1317235041</span><span class="p">,</span>
+    <span class="s2">&quot;respawn_count&quot;</span><span class="o">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;tx&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;avg_rt&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;apps&quot;</span><span class="o">:</span> <span class="p">[{</span>
+      <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;modifier1&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;mountpoint&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;requests&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;exceptions&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;chdir&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span>
+    <span class="p">}]</span>
+  <span class="p">},</span> <span class="p">{</span>
+    <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">4</span><span class="p">,</span>
+    <span class="s2">&quot;pid&quot;</span><span class="o">:</span> <span class="mi">31762</span><span class="p">,</span>
+    <span class="s2">&quot;requests&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;exceptions&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;status&quot;</span><span class="o">:</span> <span class="s2">&quot;idle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;rss&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;vsz&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;running_time&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;last_spawn&quot;</span><span class="o">:</span> <span class="mi">1317235041</span><span class="p">,</span>
+    <span class="s2">&quot;respawn_count&quot;</span><span class="o">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;tx&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;avg_rt&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;apps&quot;</span><span class="o">:</span> <span class="p">[{</span>
+      <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;modifier1&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;mountpoint&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;requests&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;exceptions&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;chdir&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span>
+    <span class="p">}]</span>
+  <span class="p">},</span> <span class="p">{</span>
+    <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="s2">&quot;pid&quot;</span><span class="o">:</span> <span class="mi">31763</span><span class="p">,</span>
+    <span class="s2">&quot;requests&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;exceptions&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;status&quot;</span><span class="o">:</span> <span class="s2">&quot;idle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;rss&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;vsz&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;running_time&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;last_spawn&quot;</span><span class="o">:</span> <span class="mi">1317235041</span><span class="p">,</span>
+    <span class="s2">&quot;respawn_count&quot;</span><span class="o">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;tx&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;avg_rt&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;apps&quot;</span><span class="o">:</span> <span class="p">[{</span>
+      <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;modifier1&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;mountpoint&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;requests&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;exceptions&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;chdir&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span>
+    <span class="p">}]</span>
+  <span class="p">},</span> <span class="p">{</span>
+    <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">6</span><span class="p">,</span>
+    <span class="s2">&quot;pid&quot;</span><span class="o">:</span> <span class="mi">31764</span><span class="p">,</span>
+    <span class="s2">&quot;requests&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;exceptions&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;status&quot;</span><span class="o">:</span> <span class="s2">&quot;idle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;rss&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;vsz&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;running_time&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;last_spawn&quot;</span><span class="o">:</span> <span class="mi">1317235041</span><span class="p">,</span>
+    <span class="s2">&quot;respawn_count&quot;</span><span class="o">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;tx&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;avg_rt&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;apps&quot;</span><span class="o">:</span> <span class="p">[{</span>
+      <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;modifier1&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;mountpoint&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;requests&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;exceptions&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;chdir&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span>
+    <span class="p">}]</span>
+  <span class="p">},</span> <span class="p">{</span>
+    <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">7</span><span class="p">,</span>
+    <span class="s2">&quot;pid&quot;</span><span class="o">:</span> <span class="mi">31765</span><span class="p">,</span>
+    <span class="s2">&quot;requests&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;exceptions&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;status&quot;</span><span class="o">:</span> <span class="s2">&quot;idle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;rss&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;vsz&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;running_time&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;last_spawn&quot;</span><span class="o">:</span> <span class="mi">1317235041</span><span class="p">,</span>
+    <span class="s2">&quot;respawn_count&quot;</span><span class="o">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;tx&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;avg_rt&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;apps&quot;</span><span class="o">:</span> <span class="p">[{</span>
+      <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;modifier1&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;mountpoint&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;requests&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;exceptions&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;chdir&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span>
+    <span class="p">}]</span>
+  <span class="p">},</span> <span class="p">{</span>
+    <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">8</span><span class="p">,</span>
+    <span class="s2">&quot;pid&quot;</span><span class="o">:</span> <span class="mi">31766</span><span class="p">,</span>
+    <span class="s2">&quot;requests&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;exceptions&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;status&quot;</span><span class="o">:</span> <span class="s2">&quot;idle&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;rss&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;vsz&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;running_time&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;last_spawn&quot;</span><span class="o">:</span> <span class="mi">1317235041</span><span class="p">,</span>
+    <span class="s2">&quot;respawn_count&quot;</span><span class="o">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;tx&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;avg_rt&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s2">&quot;apps&quot;</span><span class="o">:</span> <span class="p">[{</span>
+      <span class="s2">&quot;id&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;modifier1&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;mountpoint&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+      <span class="s2">&quot;requests&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;exceptions&quot;</span><span class="o">:</span> <span class="mi">0</span><span class="p">,</span>
+      <span class="s2">&quot;chdir&quot;</span><span class="o">:</span> <span class="s2">&quot;&quot;</span>
+    <span class="p">}]</span>
+  <span class="p">}]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="section" id="uwsgitop">
+<h2>uwsgitop<a class="headerlink" href="#uwsgitop" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">uwsgitop</span></code> is a top-like command that uses the stats server. It is available on PyPI, so use <code class="docutils literal notranslate"><span class="pre">easy_install</span></code> or <code class="docutils literal notranslate"><span class="pre">pip</span></code> to install it (package name <code class="docutils literal notranslate"><span class="pre">uwsgitop</span></code>, naturally).</p>
+<p>The sources are available on Github. <a class="reference external" href="https://github.com/unbit/uwsgitop">https://github.com/unbit/uwsgitop</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">The uWSGI Stats Server</a><ul>
+<li><a class="reference internal" href="#uwsgitop">uwsgitop</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Carbon.html"
+                        title="previous chapter">Integration with Graphite/Carbon</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Async.html"
+                        title="next chapter">uWSGI asynchronous/non-blocking modes (updated to uWSGI 1.9)</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/StatsServer.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Async.html" title="uWSGI asynchronous/non-blocking modes (updated to uWSGI 1.9)"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Carbon.html" title="Integration with Graphite/Carbon"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

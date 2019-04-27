@@ -1,0 +1,270 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>uWSGI Perl support (PSGI) &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Ruby support" href="Ruby.html" />
+    <link rel="prev" title="Running PHP scripts in uWSGI" href="PHP.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Ruby.html" title="Ruby support"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="PHP.html" title="Running PHP scripts in uWSGI"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="uwsgi-perl-support-psgi">
+<h1>uWSGI Perl support (PSGI)<a class="headerlink" href="#uwsgi-perl-support-psgi" title="Permalink to this headline">¶</a></h1>
+<p><span class="xref std std-term">PSGI</span> is the equivalent of <span class="xref std std-term">WSGI</span> in the Perl world.</p>
+<ul class="simple">
+<li><p><a class="reference external" href="http://plackperl.org/">http://plackperl.org/</a></p></li>
+<li><p><a class="reference external" href="https://github.com/plack/psgi-specs/blob/master/PSGI.pod">https://github.com/plack/psgi-specs/blob/master/PSGI.pod</a></p></li>
+</ul>
+<p>The PSGI plugin is officially supported and has an officially assigned uwsgi modifier, <code class="docutils literal notranslate"><span class="pre">5</span></code>. So as usual, when you’re in the business of dispatching requests to Perl apps, set the <code class="docutils literal notranslate"><span class="pre">modifier1</span></code> value to 5 in your web server configuration.</p>
+<div class="section" id="compiling-the-psgi-plugin">
+<h2>Compiling the PSGI plugin<a class="headerlink" href="#compiling-the-psgi-plugin" title="Permalink to this headline">¶</a></h2>
+<p>You can build a PSGI-only uWSGI server using the supplied <code class="file docutils literal notranslate"><span class="pre">buildconf/psgi.ini</span></code> file. Make sure that
+the <code class="docutils literal notranslate"><span class="pre">ExtUtils::Embed</span></code> module and its prerequisites are installed before building the PSGI plugin.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python uwsgiconfig.py --build psgi
+<span class="c1"># or compile it as a plugin...</span>
+python uwsgiconfig.py --plugin plugins/psgi
+<span class="c1"># and if you have not used the default configuration</span>
+<span class="c1"># to build the uWSGI core, you have to pass</span>
+<span class="c1"># the configuration name you used while doing that:</span>
+python uwsgiconfig.py --plugin plugins/psgi core
+</pre></div>
+</div>
+<p>or (as always) you can use the network installer:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl http://uwsgi.it/install <span class="p">|</span> bash -s psgi /tmp/uwsgi
+</pre></div>
+</div>
+<p>to have a single-file uwsgi binary with perl support in /tmp/uwsgi</p>
+</div>
+<div class="section" id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<p>There is only one option exported by the plugin: <code class="docutils literal notranslate"><span class="pre">psgi</span> <span class="pre">&lt;app&gt;</span></code></p>
+<p>You can simply load applications using</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi -s :3031 -M -p <span class="m">4</span> --psgi myapp.psgi -m
+<span class="c1"># or when compiled as a plugin,</span>
+./uwsgi --plugins psgi -s :3031 -M -p <span class="m">4</span> --psgi myapp.psgi -m
+</pre></div>
+</div>
+</div>
+<div class="section" id="tested-psgi-frameworks-applications">
+<h2>Tested PSGI frameworks/applications<a class="headerlink" href="#tested-psgi-frameworks-applications" title="Permalink to this headline">¶</a></h2>
+<p>The following frameworks/apps have been tested with uWSGI:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="http://mojomojo.org/">MojoMojo</a></p></li>
+<li><p><a class="reference external" href="http://mojolicio.us/">Mojolicious</a></p></li>
+<li><p><a class="reference external" href="https://github.com/kraih/mojo/wiki/nginx-&amp;-uwsgi(psgi)-&amp;-perlbrew-&amp;-mojolicious">Mojolicious+perlbrew+uWSGI+nginx</a> install bundle</p></li>
+</ul>
+</div>
+<div class="section" id="multi-app-support">
+<h2>Multi-app support<a class="headerlink" href="#multi-app-support" title="Permalink to this headline">¶</a></h2>
+<p>You can load multiple almost-isolated apps in the same uWSGI process using the <code class="docutils literal notranslate"><span class="pre">mount</span></code> option or using the <code class="docutils literal notranslate"><span class="pre">UWSGI_SCRIPT</span></code>/<code class="docutils literal notranslate"><span class="pre">UWSGI_FILE</span></code> request variables.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+
+<span class="na">mount</span> <span class="o">=</span> <span class="s">app1=foo1.pl</span>
+<span class="na">mount</span> <span class="o">=</span> <span class="s">app2=foo2.psgi</span>
+<span class="na">mount</span> <span class="o">=</span> <span class="s">app3=foo3.pl</span>
+</pre></div>
+</div>
+<div class="highlight-nginx notranslate"><div class="highlight"><pre><span></span><span class="k">server</span> <span class="p">{</span>
+  <span class="kn">server_name</span> <span class="s">example1.com</span><span class="p">;</span>
+  <span class="kn">location</span> <span class="s">/</span> <span class="p">{</span>
+    <span class="kn">include</span> <span class="s">uwsgi_params</span><span class="p">;</span>
+    <span class="kn">uwsgi_pass</span> <span class="n">127.0.0.1</span><span class="p">:</span><span class="mi">3031</span><span class="p">;</span>
+    <span class="kn">uwsgi_param</span> <span class="s">UWSGI_APPID</span> <span class="s">app1</span><span class="p">;</span>
+    <span class="kn">uwsgi_param</span> <span class="s">UWSGI_SCRIPT</span> <span class="s">foo1.pl</span><span class="p">;</span>
+    <span class="kn">uwsgi_modifier1</span> <span class="mi">5</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">server</span> <span class="p">{</span>
+  <span class="kn">server_name</span> <span class="s">example2.com</span><span class="p">;</span>
+  <span class="kn">location</span> <span class="s">/</span> <span class="p">{</span>
+    <span class="kn">include</span> <span class="s">uwsgi_params</span><span class="p">;</span>
+    <span class="kn">uwsgi_pass</span> <span class="n">127.0.0.1</span><span class="p">:</span><span class="mi">3031</span><span class="p">;</span>
+    <span class="kn">uwsgi_param</span> <span class="s">UWSGI_APPID</span> <span class="s">app2</span><span class="p">;</span>
+    <span class="kn">uwsgi_param</span> <span class="s">UWSGI_SCRIPT</span> <span class="s">foo2.psgi</span><span class="p">;</span>
+    <span class="kn">uwsgi_modifier1</span> <span class="mi">5</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">server</span> <span class="p">{</span>
+  <span class="kn">server_name</span> <span class="s">example3.com</span><span class="p">;</span>
+  <span class="kn">location</span> <span class="s">/</span> <span class="p">{</span>
+    <span class="kn">include</span> <span class="s">uwsgi_params</span><span class="p">;</span>
+    <span class="kn">uwsgi_pass</span> <span class="n">127.0.0.1</span><span class="p">:</span><span class="mi">3031</span><span class="p">;</span>
+    <span class="kn">uwsgi_param</span> <span class="s">UWSGI_APPID</span> <span class="s">app3</span><span class="p">;</span>
+    <span class="kn">uwsgi_param</span> <span class="s">UWSGI_SCRIPT</span> <span class="s">foo3.pl</span><span class="p">;</span>
+    <span class="kn">uwsgi_modifier1</span> <span class="mi">5</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="the-auto-reloader-from-uwsgi-1-9-18">
+<h2>The auto reloader (from uWSGI 1.9.18)<a class="headerlink" href="#the-auto-reloader-from-uwsgi-1-9-18" title="Permalink to this headline">¶</a></h2>
+<p>The option –perl-auto-reload &lt;n&gt; allows you to instruct uWSGI to monitor every single module imported by the perl vm.</p>
+<p>Whenever one of the module changes, the whole instance will be (gracefully) reloaded.</p>
+<p>The monitor works by iterating over %INC after a request is served and the specified number of seconds (from the last run) is elapsed (this number of seconds is the value of the option)</p>
+<p>This could look sub-optimal (you wil get the new content starting from from the following request) but it is the more solid (and safe) approach for the way perl works.</p>
+<p>If you want to skip specific files from the monitoring, just add them with –perl-auto-reload-ignore</p>
+<p>Remember that always modules in %INC are scanned, if you want to monitor your .psgi files, you need to specify them using the classic –touch-reload option</p>
+</div>
+<div class="section" id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Async support should work out-of-the-box.</p></li>
+<li><p>Threads are supported on ithreads-enabled perl builds. For each app, a new interpreter will be created for each thread. This shouldn’t be too different from a simple multi-process fork()-based subsystem.</p></li>
+<li><p>There are currently no known memory leaks.</p></li>
+</ul>
+</div>
+<div class="section" id="real-world-example-html-mason">
+<h2>Real world example, <cite>HTML::Mason</cite><a class="headerlink" href="#real-world-example-html-mason" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p>Install the HTML::Mason PSGI handler from CPAN and create a directory for your site.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>cpan install HTML::Mason::PSGIHandler
+mkdir mason
+</pre></div>
+</div>
+</li>
+<li><p>Create <code class="docutils literal notranslate"><span class="pre">mason/index.html</span></code>:</p>
+<div class="highlight-html notranslate"><div class="highlight"><pre><span></span>% my $noun = &#39;World&#39;;
+% my $ua = $r-&gt;headers_in;
+% foreach my $hh (keys %{$ua}) {
+ &lt;% $hh %&gt;&lt;br/&gt;
+% }
+Hello &lt;% $noun %&gt;!&lt;br/&gt;
+How are ya?&lt;br/&gt;
+Request &lt;% $r-&gt;method %&gt; &lt;% $r-&gt;uri %&gt;&lt;br/&gt;
+</pre></div>
+</div>
+</li>
+<li><p>Create the PSGI file (<code class="docutils literal notranslate"><span class="pre">mason.psgi</span></code>):</p>
+<div class="highlight-perl notranslate"><div class="highlight"><pre><span></span><span class="k">use</span> <span class="nn">HTML::Mason::PSGIHandler</span><span class="p">;</span>
+
+<span class="k">my</span> <span class="nv">$h</span> <span class="o">=</span> <span class="nn">HTML::Mason::PSGIHandler</span><span class="o">-&gt;</span><span class="k">new</span><span class="p">(</span>
+       <span class="n">comp_root</span> <span class="o">=&gt;</span> <span class="s">&quot;/Users/serena/uwsgi/mason&quot;</span><span class="p">,</span> <span class="c1"># required</span>
+<span class="p">);</span>
+
+<span class="k">my</span> <span class="nv">$handler</span> <span class="o">=</span> <span class="k">sub</span> <span class="p">{</span>
+       <span class="k">my</span> <span class="nv">$env</span> <span class="o">=</span> <span class="nb">shift</span><span class="p">;</span>
+       <span class="nv">$h</span><span class="o">-&gt;</span><span class="n">handle_psgi</span><span class="p">(</span><span class="nv">$env</span><span class="p">);</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<p>Pay attention to <code class="docutils literal notranslate"><span class="pre">comp_root</span></code>, it must be an absolute path!</p>
+</li>
+<li><p>Now run uWSGI:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi -s :3031 -M -p <span class="m">8</span> --psgi mason.psgi -m
+</pre></div>
+</div>
+</li>
+<li><p>Then go to <code class="docutils literal notranslate"><span class="pre">/index.html</span></code> with your browser.</p></li>
+</ol>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">uWSGI Perl support (PSGI)</a><ul>
+<li><a class="reference internal" href="#compiling-the-psgi-plugin">Compiling the PSGI plugin</a></li>
+<li><a class="reference internal" href="#usage">Usage</a></li>
+<li><a class="reference internal" href="#tested-psgi-frameworks-applications">Tested PSGI frameworks/applications</a></li>
+<li><a class="reference internal" href="#multi-app-support">Multi-app support</a></li>
+<li><a class="reference internal" href="#the-auto-reloader-from-uwsgi-1-9-18">The auto reloader (from uWSGI 1.9.18)</a></li>
+<li><a class="reference internal" href="#notes">Notes</a></li>
+<li><a class="reference internal" href="#real-world-example-html-mason">Real world example, <cite>HTML::Mason</cite></a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="PHP.html"
+                        title="previous chapter">Running PHP scripts in uWSGI</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Ruby.html"
+                        title="next chapter">Ruby support</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Perl.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Ruby.html" title="Ruby support"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="PHP.html" title="Running PHP scripts in uWSGI"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

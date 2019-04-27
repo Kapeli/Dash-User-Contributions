@@ -1,0 +1,149 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Things to know (best practices and “issues”) READ IT !!! &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Configuring uWSGI" href="Configuration.html" />
+    <link rel="prev" title="Frequently Asked Questions (FAQ)" href="FAQ.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Configuration.html" title="Configuring uWSGI"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="FAQ.html" title="Frequently Asked Questions (FAQ)"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="things-to-know-best-practices-and-issues-read-it">
+<h1>Things to know (best practices and “issues”) READ IT !!!<a class="headerlink" href="#things-to-know-best-practices-and-issues-read-it" title="Permalink to this headline">¶</a></h1>
+<ul>
+<li><p>Obviously, never expose a socket speaking the uwsgi protocol to the public network unless you know what you are doing. That channel allows for dynamic loading of applications (read: arbitrary execution of code). The protocol is meant to be sanitized/validated by a proxy like nginx, apache, the uWSGI routers…</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">http</span></code> and <code class="docutils literal notranslate"><span class="pre">http-socket</span></code> options are entirely different beasts.
+The first one spawns an additional process forwarding requests to a series of workers (think about it as a form of shield, at the same level of apache or nginx), while the second one sets workers to natively speak the http protocol.
+TL/DR: if you plan to expose uWSGI directly to the public, use <code class="docutils literal notranslate"><span class="pre">--http</span></code>, if you want to proxy it behind a webserver speaking http with backends, use <code class="docutils literal notranslate"><span class="pre">--http-socket</span></code>.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="HTTP.html"><span class="doc">Native HTTP support</span></a></p>
+</div>
+</li>
+<li><p>Till uWSGI 2.1, by default, sending the <code class="docutils literal notranslate"><span class="pre">SIGTERM</span></code> signal to uWSGI means “brutally reload the stack” while the convention is to shut an application down on <code class="docutils literal notranslate"><span class="pre">SIGTERM</span></code>. To shutdown uWSGI use <code class="docutils literal notranslate"><span class="pre">SIGINT</span></code> or <code class="docutils literal notranslate"><span class="pre">SIGQUIT</span></code> instead.
+If you absolutely can not live with uWSGI being so disrespectful towards <code class="docutils literal notranslate"><span class="pre">SIGTERM</span></code>, by all means enable the <code class="docutils literal notranslate"><span class="pre">die-on-term</span></code> option. Fortunately, this bad choice has been fixed in uWSGI 2.1</p></li>
+<li><p>If you plan to host multiple applications do yourself a favor and check the <a class="reference internal" href="Emperor.html"><span class="doc">The uWSGI Emperor – multi-app deployment</span></a> docs.</p></li>
+<li><p>Always use uwsgitop, through <a class="reference internal" href="StatsServer.html"><span class="doc">The uWSGI Stats Server</span></a> or something similar to monitor your apps’ health.</p></li>
+<li><p>uWSGI can include features in the core or as loadable plugins. uWSGI packages supplied with OS distributions tend to be modular. In such setups, be sure to load the plugins you require with the <code class="docutils literal notranslate"><span class="pre">plugins</span></code> option. A good symptom to recognize an unloaded plugin is messages like “Unavailable modifier requested” in your logs. If you are using distribution supplied packages, double check that you have installed the plugin for your language of choice.</p></li>
+<li><p>Config files support a limited form of inheritance, variables, if constructs and simple cycles. Check the <a class="reference internal" href="ConfigLogic.html"><span class="doc">Configuration logic</span></a> and <a class="reference internal" href="ParsingOrder.html"><span class="doc">How uWSGI parses config files</span></a> pages.</p></li>
+<li><p>To route requests to a specific plugin, the webserver needs to pass a magic number known as a modifier to the uWSGI instances. By default this number is set to 0, which is mapped to Python. As an example, routing a request to a <span class="xref std std-doc">PSGI</span> app requires you to set the modifier to <code class="docutils literal notranslate"><span class="pre">5</span></code> - or optionally to load the PSGI plugin as modifier <code class="docutils literal notranslate"><span class="pre">0</span></code>. (This will mean that all modifierless requests will be considered Perl.)</p></li>
+<li><p>There is no magic rule for setting the number of processes or threads to use. It is very much application and system dependent. Simple math like <code class="docutils literal notranslate"><span class="pre">processes</span> <span class="pre">=</span> <span class="pre">2</span> <span class="pre">*</span> <span class="pre">cpucores</span></code> will not be enough. You need to experiment with various setups and be prepared to constantly monitor your apps. <code class="docutils literal notranslate"><span class="pre">uwsgitop</span></code> could be a great tool to find the best values.</p></li>
+<li><p>If an HTTP request has a body (like a POST request generated by a form), you <em>have</em> to read (consume) it in your application. If you do not do this, the communication socket with your webserver may be clobbered. If you are lazy you can use the <code class="docutils literal notranslate"><span class="pre">post-buffering</span></code> option that will automatically read data for you. For <span class="xref std std-doc">Rack</span> applications this is automatically enabled.</p></li>
+<li><p>Always check the memory usage of your apps. The <code class="docutils literal notranslate"><span class="pre">memory-report</span></code> option could be your best friend.</p></li>
+<li><p>If you plan to use UNIX sockets (as opposed to TCP), remember they are standard filesystem objects. This means they have permissions and as such your webserver must have write access to them.</p></li>
+<li><p>Common sense: do not run uWSGI instances as root. You can start your uWSGIs as root, but be sure to drop privileges with the <code class="docutils literal notranslate"><span class="pre">uid</span></code> and <code class="docutils literal notranslate"><span class="pre">gid</span></code> options.</p></li>
+<li><p>uWSGI tries to (ab)use the Copy On Write semantics of the <a class="reference external" href="http://en.wikipedia.org/wiki/Fork_%28operating_system%29">fork()</a> call whenever possible. By default it will fork after having loaded your applications to share as much of their memory as possible. If this behavior is undesirable for some reason, use the <code class="docutils literal notranslate"><span class="pre">lazy-apps</span></code> option. This will instruct uWSGI to load the applications after each worker’s <code class="docutils literal notranslate"><span class="pre">fork()</span></code>. Beware as there is an older options named <code class="docutils literal notranslate"><span class="pre">lazy</span></code> that is way more invasive and highly discouraged (it is still here only for backward compatibility)</p></li>
+<li><p>By default the Python plugin does not initialize the GIL. This means your app-generated threads will not run. If you need threads, remember to enable them with <code class="docutils literal notranslate"><span class="pre">enable-threads</span></code>. Running uWSGI in multithreading mode (with the <code class="docutils literal notranslate"><span class="pre">threads</span></code> options) will automatically enable threading support. This “strange” default behaviour is for performance reasons, no shame in that.</p></li>
+<li><p>If you spawn a new process during a request it will inherit the file descriptors of the worker spawning it - including the socket connected with the webserver/router. If you do not want this behaviour set the <code class="docutils literal notranslate"><span class="pre">close-on-exec</span></code> option.</p></li>
+<li><p>The Ruby garbage collector is configured by default to run after every request. This is an aggressive policy that may slow down your apps a bit – but CPU resources are cheaper than memory, and especially cheaper than running out of memory. To tune this frequency use the <code class="docutils literal notranslate"><span class="pre">ruby-gc</span> <span class="pre">&lt;freq&gt;</span></code> option.</p></li>
+<li><p>On OpenBSD, NetBSD and FreeBSD &lt; 9, SysV IPC semaphores are used as the locking subsystem. These operating systems tend to limit the number of allocable semaphores to fairly small values. You should raise the default limits if you plan to run more than one uWSGI instance. FreeBSD 9 has POSIX semaphores, so you do not need to bother with that.</p></li>
+<li><p>Do not build plugins using a different config file than used to build the uWSGI binary itself – unless you like pain or know <em>exactly</em> what you are doing.</p></li>
+<li><p>By default uWSGI allocates a very small buffer (4096 bytes) for the headers of each request. If you start receiving “invalid request block size” in your logs, it could mean you need a bigger buffer. Increase it (up to 65535) with the <code class="docutils literal notranslate"><span class="pre">buffer-size</span></code> option.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you receive ‘21573’ as the request block size in your logs, it could mean you are using the HTTP protocol to speak with an instance speaking the uwsgi protocol. Don’t do this.</p>
+</div>
+</li>
+<li><p>If your (Linux) server seems to have lots of idle workers, but performance is still sub-par, you may want to look at the value of the <code class="docutils literal notranslate"><span class="pre">ip_conntrack_max</span></code> system variable (<code class="docutils literal notranslate"><span class="pre">/proc/sys/net/ipv4/ip_conntrack_max</span></code>) and increase it to see if it helps.</p></li>
+<li><p>Some Linux distributions (read: Debian 4 Etch, RHEL / CentOS 5) make a mix of newer kernels with very old userspace. This kind of combination can make the uWSGI build system spit out errors (most notably on <code class="docutils literal notranslate"><span class="pre">unshare()</span></code>, pthread locking, <code class="docutils literal notranslate"><span class="pre">inotify</span></code>…). You can force uWSGI to configure itself for an older system prefixing the ‘make’ (or whatever way you use to build it) with <code class="docutils literal notranslate"><span class="pre">CFLAGS=&quot;-DOBSOLETE_LINUX_KERNEL&quot;</span></code></p></li>
+<li><p>By default, stdin is remapped to <code class="docutils literal notranslate"><span class="pre">/dev/null</span></code> on uWSGI startup. If you need a valid stdin (for debugging, piping and so on) add <code class="docutils literal notranslate"><span class="pre">--honour-stdin</span></code>.</p></li>
+<li><p>You can easily add non-existent options to your config files (as placeholders, custom options, or app-related configuration items). This is a really handy feature, but can lead to headaches on typos. The strict mode (<code class="docutils literal notranslate"><span class="pre">--strict</span></code>) will disable this feature, and only valid uWSGI options are tolerated.</p></li>
+<li><p>Some plugins (most notably Python and Perl) have code auto-reloading facilities. Although they might sound very appealing, you MUST use them only under development as they are really heavy-weight. For example the Python –py-autoreload option will scan your whole module tree at every check cycle.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">wsgi.file_wrapper</span></code> is an optimization of the WSGI standard. In some corner case it can raise an error.
+For example when returning an in-memory bytes buffer (<a class="reference external" href="https://docs.python.org/3/library/io.html#io.BytesIO">io.Bytesio</a>) in Python 3.5.
+See this <a class="reference external" href="https://github.com/unbit/uwsgi/issues/1126">issue</a>. You can disable it by setting the option <code class="docutils literal notranslate"><span class="pre">wsgi-disable-file-wrapper</span></code> to <code class="docutils literal notranslate"><span class="pre">true</span></code>.</p></li>
+</ul>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="FAQ.html"
+                        title="previous chapter">Frequently Asked Questions (FAQ)</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Configuration.html"
+                        title="next chapter">Configuring uWSGI</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/ThingsToKnow.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Configuration.html" title="Configuring uWSGI"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="FAQ.html" title="Frequently Asked Questions (FAQ)"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

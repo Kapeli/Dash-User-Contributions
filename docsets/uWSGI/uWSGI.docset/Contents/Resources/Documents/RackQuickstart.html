@@ -1,0 +1,528 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Quickstart for ruby/Rack applications &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Snippets" href="Snippets.html" />
+    <link rel="prev" title="Quickstart for perl/PSGI applications" href="PSGIquickstart.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Snippets.html" title="Snippets"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="PSGIquickstart.html" title="Quickstart for perl/PSGI applications"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="quickstart-for-ruby-rack-applications">
+<h1>Quickstart for ruby/Rack applications<a class="headerlink" href="#quickstart-for-ruby-rack-applications" title="Permalink to this headline">¶</a></h1>
+<p>The following instructions will guide you through installing and running a Ruby-based uWSGI distribution aimed at running Rack apps.</p>
+<div class="section" id="installing-uwsgi-with-ruby-support">
+<h2>Installing uWSGI with Ruby support<a class="headerlink" href="#installing-uwsgi-with-ruby-support" title="Permalink to this headline">¶</a></h2>
+<p>To build uWSGI you need a C compiler (gcc and clang are supported) and the Python binary (to run the uwsgiconfig.py script that will execute the various compilation steps).</p>
+<p>As we are building an uWSGI binary with Ruby support we need the Ruby development headers too (the <code class="docutils literal notranslate"><span class="pre">ruby-dev</span></code> package on Debian-based distributions).</p>
+<p>You can build uWSGI manually – all of these are equivalent:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>make rack
+<span class="nv">UWSGI_PROFILE</span><span class="o">=</span>rack make
+make <span class="nv">PROFILE</span><span class="o">=</span>rack
+python uwsgiconfig.py --build rack
+</pre></div>
+</div>
+<p>But if you are lazy, you can download, build and install an uWSGI + Ruby binary in a single shot:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl http://uwsgi.it/install <span class="p">|</span> bash -s rack /tmp/uwsgi
+</pre></div>
+</div>
+<p>Or in a more “Ruby-friendly” way:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>gem install uwsgi
+</pre></div>
+</div>
+<p>All of these methods build a “monolithic” uWSGI binary.
+The uWSGI project is composed by dozens of plugins. You can choose to build the server core and having a plugin for every feature (that you will load when needed),
+or you can build a single binary with all the features you need. This latter kind of build is called ‘monolithic’.</p>
+<p>This quickstart assumes a monolithic binary (so you do not need to load plugins).
+If you prefer to use your package distributions (instead of building uWSGI from official sources), see below.</p>
+</div>
+<div class="section" id="note-for-distro-packages">
+<h2>Note for distro packages<a class="headerlink" href="#note-for-distro-packages" title="Permalink to this headline">¶</a></h2>
+<p>Your distribution very probably contains an uWSGI package set. Those uWSGI packages tend to be highly modular (and occasionally highly outdated),
+so in addition to the core you need to install the required plugins. Plugins must be loaded in your uWSGI configuration.
+In the learning phase we strongly suggest to not use distribution packages to easily follow documentation and tutorials.</p>
+<p>Once you feel comfortable with the “uWSGI way” you can choose the best approach for your deployments.</p>
+<p>As an example, the tutorial makes use of the “http” and “rack” plugins. If you are using a modular build be sure to load them with the <code class="docutils literal notranslate"><span class="pre">--plugins</span> <span class="pre">http,rack</span></code> option.</p>
+</div>
+<div class="section" id="your-first-rack-app">
+<h2>Your first Rack app<a class="headerlink" href="#your-first-rack-app" title="Permalink to this headline">¶</a></h2>
+<p>Rack is the standard way for writing Ruby web apps.</p>
+<p>This is a standard Rack Hello world script (call it app.ru):</p>
+<div class="highlight-rb notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">App</span>
+
+  <span class="k">def</span> <span class="nf">call</span><span class="p">(</span><span class="n">environ</span><span class="p">)</span>
+    <span class="o">[</span><span class="mi">200</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;Content-Type&#39;</span> <span class="o">=&gt;</span> <span class="s1">&#39;text/html&#39;</span><span class="p">},</span> <span class="o">[</span><span class="s1">&#39;Hello&#39;</span><span class="o">]]</span>
+  <span class="k">end</span>
+
+<span class="k">end</span>
+
+<span class="n">run</span> <span class="no">App</span><span class="o">.</span><span class="n">new</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">.ru</span></code> extension stands for “rackup”, which is the deployment tool included in the Rack distribution.
+Rackup uses a little DSL, so to use it into uWSGI you need to install the rack gem:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>gem install rack
+</pre></div>
+</div>
+<p>Now we are ready to deploy with uWSGI:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --http :8080 --http-modifier1 <span class="m">7</span> --rack app.ru
+</pre></div>
+</div>
+<p>(remember to replace ‘uwsgi’ if it is not in your current $PATH)</p>
+<p>or if you are using a modular build (like the one of your distribution)</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --plugins http,rack --http :8080 --http-modifier1 <span class="m">7</span> --rack app.ru
+</pre></div>
+</div>
+<p>With this command line we’ve spawned an HTTP proxy routing each request to a process (named the ‘worker’) that manages it and send back the response to the HTTP router (that sends back to the client).</p>
+<p>If you are asking yourself why spawning two processes, it is because this is the normal architecture you will use in production (a frontline web server with a backend application server).</p>
+<p>If you do not want to spawn the HTTP proxy and directly force the worker to answer HTTP requests just change the command line to</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --http-socket :8080 --http-socket-modifier1 <span class="m">7</span> --rack app.ru
+</pre></div>
+</div>
+<p>now you have a single process managing requests (but remember that directly exposing the application server to the public is generally dangerous and less versatile).</p>
+</div>
+<div class="section" id="what-is-that-http-modifier1-7-thing">
+<h2>What is that ‘–http-modifier1 7’ thing?<a class="headerlink" href="#what-is-that-http-modifier1-7-thing" title="Permalink to this headline">¶</a></h2>
+<p>uWSGI supports various languages and platforms. When the server receives a request it has to know where to ‘route’ it.</p>
+<p>Each uWSGI plugin has an assigned number (the modifier), the ruby/rack one has the 7. So <code class="docutils literal notranslate"><span class="pre">--http-modifier1</span> <span class="pre">7</span></code> means “route to the rack plugin”.</p>
+<p>Though uWSGI also has a more “human-friendly” <a class="reference internal" href="InternalRouting.html"><span class="doc">internal routing system</span></a> using modifiers is the fastest way, so if at all possible always use them.</p>
+</div>
+<div class="section" id="using-a-full-webserver-nginx">
+<h2>Using a full webserver: nginx<a class="headerlink" href="#using-a-full-webserver-nginx" title="Permalink to this headline">¶</a></h2>
+<p>The supplied HTTP router, is (yes, astoundingly enough) only a router.
+You can use it as a load balancer or a proxy, but if you need a full web server (for efficiently serving static files or all of those task a webserver is good at),
+you can get rid of the uwsgi HTTP router (remember to change –plugins http,rack to –plugins rack if you are using a modular build) and put your app behind Nginx.</p>
+<p>To communicate with Nginx, uWSGI can use various protocol: HTTP, uwsgi, FastCGI, SCGI, etc.</p>
+<p>The most efficient one is the uwsgi one. Nginx includes uwsgi protocol support out of the box.</p>
+<p>Run your rack application on an uwsgi socket:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket <span class="m">127</span>.0.0.1:3031 --rack app.ru
+</pre></div>
+</div>
+<p>then add a location stanza in your nginx config</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">location</span> <span class="o">/</span> <span class="p">{</span>
+    <span class="n">include</span> <span class="n">uwsgi_params</span><span class="p">;</span>
+    <span class="n">uwsgi_pass</span> <span class="mf">127.0.0.1</span><span class="o">:</span><span class="mi">3031</span><span class="p">;</span>
+    <span class="n">uwsgi_modifier1</span> <span class="mi">7</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Reload your nginx server, and it should start proxying requests to your uWSGI instance.</p>
+<p>Note that you do not need to configure uWSGI to set a specific modifier, nginx will do it using the <code class="docutils literal notranslate"><span class="pre">uwsgi_modifier1</span> <span class="pre">5;</span></code> directive.</p>
+</div>
+<div class="section" id="adding-concurrency">
+<h2>Adding concurrency<a class="headerlink" href="#adding-concurrency" title="Permalink to this headline">¶</a></h2>
+<p>With the previous example you deployed a stack being able to serve a single request at time.</p>
+<p>To increase concurrency you need to add more processes.
+If you are hoping there is a magic math formula to find the right number of processes to spawn, well… we’re sorry.
+You need to experiment and monitor your app to find the right value.
+Take in account every single process is a complete copy of your app, so memory usage should be taken in account.</p>
+<p>To add more processes just use the <cite>–processes &lt;n&gt;</cite> option:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket <span class="m">127</span>.0.0.1:3031 --rack app.ru --processes <span class="m">8</span>
+</pre></div>
+</div>
+<p>will spawn 8 processes.</p>
+<p>Ruby 1.9/2.0 introduced an improved threads support and uWSGI supports it via the ‘rbthreads’ plugin. This plugin is automatically
+built when you compile the uWSGI+ruby (&gt;=1.9) monolithic binary.</p>
+<p>To add more threads:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket <span class="m">127</span>.0.0.1:3031 --rack app.ru --rbthreads <span class="m">4</span>
+</pre></div>
+</div>
+<p>or threads + processes</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket <span class="m">127</span>.0.0.1:3031 --rack app.ru --processes --rbthreads <span class="m">4</span>
+</pre></div>
+</div>
+<p>There are other (generally more advanced/complex) ways to increase concurrency (for example ‘fibers’), but most of the time
+you will end up with a plain old multi-process or multi-thread models. If you are interested, check the complete documentation over at <span class="xref std std-doc">Rack</span>.</p>
+</div>
+<div class="section" id="adding-robustness-the-master-process">
+<h2>Adding robustness: the Master process<a class="headerlink" href="#adding-robustness-the-master-process" title="Permalink to this headline">¶</a></h2>
+<p>It is highly recommended to have the uWSGI master process always running on productions apps.</p>
+<p>It will constantly monitor your processes/threads and will add fun features like the <a class="reference internal" href="StatsServer.html"><span class="doc">The uWSGI Stats Server</span></a>.</p>
+<p>To enable the master simply add <code class="docutils literal notranslate"><span class="pre">--master</span></code></p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket <span class="m">127</span>.0.0.1:3031 --rack app.ru --processes <span class="m">4</span> --master
+</pre></div>
+</div>
+</div>
+<div class="section" id="using-config-files">
+<h2>Using config files<a class="headerlink" href="#using-config-files" title="Permalink to this headline">¶</a></h2>
+<p>uWSGI has literally hundreds of options (but generally you will not use more than a dozens of them). Dealing with them via command line is basically silly, so try to always use config files.</p>
+<p>uWSGI supports various standards (XML, INI, JSON, YAML, etc). Moving from one to another is pretty simple.
+The same options you can use via command line can be used with config files by simply removing the <code class="docutils literal notranslate"><span class="pre">--</span></code> prefix:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+<span class="na">rack</span> <span class="o">=</span> <span class="s">app.ru</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">4</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+</pre></div>
+</div>
+<p>or xml:</p>
+<div class="highlight-xml notranslate"><div class="highlight"><pre><span></span><span class="nt">&lt;uwsgi&gt;</span>
+  <span class="nt">&lt;socket&gt;</span>127.0.0.1:3031<span class="nt">&lt;/socket&gt;</span>
+  <span class="nt">&lt;rack&gt;</span>app.ru<span class="nt">&lt;/rack&gt;</span>
+  <span class="nt">&lt;processes&gt;</span>4<span class="nt">&lt;/processes&gt;</span>
+  <span class="nt">&lt;master/&gt;</span>
+<span class="nt">&lt;/uwsgi&gt;</span>
+</pre></div>
+</div>
+<p>To run uWSGI using a config file, just specify it as argument:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi yourconfig.ini
+</pre></div>
+</div>
+<p>if for some reason your config cannot end with the expected extension (.ini, .xml, .yml, .js) you can force the binary to
+use a specific parser in this way:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --ini yourconfig.foo
+</pre></div>
+</div>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --xml yourconfig.foo
+</pre></div>
+</div>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --yaml yourconfig.foo
+</pre></div>
+</div>
+<p>and so on.</p>
+<p>You can even pipe configs (using the dash to force reading from stdin):</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>ruby myjsonconfig_generator.rb <span class="p">|</span> uwsgi --json -
+</pre></div>
+</div>
+</div>
+<div class="section" id="the-fork-problem-when-you-spawn-multiple-processes">
+<h2>The fork() problem when you spawn multiple processes<a class="headerlink" href="#the-fork-problem-when-you-spawn-multiple-processes" title="Permalink to this headline">¶</a></h2>
+<p>uWSGI is “Perlish” in a way, there is nothing we can do to hide that. Most of its choices (starting from “There’s more than one way to do it”) came from the Perl world (and more generally from classical UNIX sysadmin approaches).</p>
+<p>Sometimes this approach could lead to unexpected behaviors when applied to other languages/platforms.</p>
+<p>One of the “problems” you can face when starting to learn uWSGI is its <code class="docutils literal notranslate"><span class="pre">fork()</span></code> usage.</p>
+<p>By default uWSGI loads your application in the first spawned process and then <code class="docutils literal notranslate"><span class="pre">fork()</span></code> itself multiple times.</p>
+<p>It means your app is loaded a single time and then copied.</p>
+<p>While this approach speedups the start of the server, some application could have problems with this technique (especially those initializing db connections
+on startup, as the file descriptor of the connection will be inherited in the subprocesses).</p>
+<p>If you are unsure about the brutal preforking used by uWSGI, just disable it with the <code class="docutils literal notranslate"><span class="pre">--lazy-apps</span></code> option. It will force uWSGI to completely load
+your app one time per each worker.</p>
+</div>
+<div class="section" id="deploying-sinatra">
+<h2>Deploying Sinatra<a class="headerlink" href="#deploying-sinatra" title="Permalink to this headline">¶</a></h2>
+<p>Let’s forget about fork(), and back to fun things. This time we’re deploying a Sinatra application:</p>
+<div class="highlight-rb notranslate"><div class="highlight"><pre><span></span><span class="nb">require</span> <span class="s1">&#39;sinatra&#39;</span>
+
+<span class="n">get</span> <span class="s1">&#39;/hi&#39;</span> <span class="k">do</span>
+  <span class="s2">&quot;Hello World&quot;</span>
+<span class="k">end</span>
+
+<span class="n">run</span> <span class="no">Sinatra</span><span class="o">::</span><span class="no">Application</span>
+</pre></div>
+</div>
+<p>save it as <code class="docutils literal notranslate"><span class="pre">config.ru</span></code> and run as seen before:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+<span class="na">rack</span> <span class="o">=</span> <span class="s">config.ru</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">4</span>
+<span class="na">lazy-apps</span> <span class="o">=</span> <span class="s">true</span>
+</pre></div>
+</div>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi yourconf.ini
+</pre></div>
+</div>
+<p>Well, maybe you already noted that basically nothing changed from the previous app.ru examples.</p>
+<p>That is because basically every modern Rack app exposes itself as a .ru file (generally called config.ru), so there is no need
+for multiple options for loading applications (like for example in the Python/WSGI world).</p>
+</div>
+<div class="section" id="deploying-rubyonrails-3">
+<h2>Deploying RubyOnRails &gt;= 3<a class="headerlink" href="#deploying-rubyonrails-3" title="Permalink to this headline">¶</a></h2>
+<p>Starting from 3.0, Rails is fully Rack compliant, and exposes a config.ru file you can directly load (like we did with Sinatra).</p>
+<p>The only difference from Sinatra is that your project has a specific layout/convention expecting your current working directory is the one containing the project, so let’s add a chdir option:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+<span class="na">rack</span> <span class="o">=</span> <span class="s">config.ru</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">4</span>
+<span class="na">lazy-apps</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">chdir</span> <span class="o">=</span> <span class="s">&lt;path_to_your_rails_app&gt;</span>
+<span class="na">env</span> <span class="o">=</span> <span class="s">RAILS_ENV=production</span>
+</pre></div>
+</div>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi yourconf.ini
+</pre></div>
+</div>
+<p>In addition to chdir we have added the ‘env’ option that set the <code class="docutils literal notranslate"><span class="pre">RAILS_ENV</span></code> environment variable.</p>
+<p>Starting from 4.0, Rails support multiple threads (only for ruby 2.0):</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+<span class="na">rack</span> <span class="o">=</span> <span class="s">config.ru</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">4</span>
+<span class="na">rbthreads</span> <span class="o">=</span> <span class="s">2</span>
+<span class="na">lazy-apps</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">chdir</span> <span class="o">=</span> <span class="s">&lt;path_to_your_rails_app&gt;</span>
+<span class="na">env</span> <span class="o">=</span> <span class="s">RAILS_ENV=production</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="deploying-older-rubyonrails">
+<h2>Deploying older RubyOnRails<a class="headerlink" href="#deploying-older-rubyonrails" title="Permalink to this headline">¶</a></h2>
+<p>Older Rails versions are not fully Rack-compliant. For such a reason a specific option is available in uWSGI to load older Rails apps (you will need the ‘thin’ gem too).</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">4</span>
+<span class="na">lazy-apps</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">rails</span> <span class="o">=</span> <span class="s">&lt;path_to_your_rails_app&gt;</span>
+<span class="na">env</span> <span class="o">=</span> <span class="s">RAILS_ENV=production</span>
+</pre></div>
+</div>
+<p>So, in short, specify the <code class="docutils literal notranslate"><span class="pre">rails</span></code> option, passing the rails app directory as the argument, instead of a Rackup file.</p>
+</div>
+<div class="section" id="bundler-and-rvm">
+<h2>Bundler and RVM<a class="headerlink" href="#bundler-and-rvm" title="Permalink to this headline">¶</a></h2>
+<p>Bundler is the standard de-facto Ruby tool for managing dependencies. Basically you specify the gems needed by your app in the Gemfile text file and then you launch bundler to install them.</p>
+<p>To allow uWSGI to honor bundler installations you only need to add:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="na">rbrequire</span> <span class="o">=</span> <span class="s">rubygems</span>
+<span class="na">rbrequire</span> <span class="o">=</span> <span class="s">bundler/setup</span>
+<span class="na">env</span> <span class="o">=</span> <span class="s">BUNDLE_GEMFILE=&lt;path_to_your_Gemfile&gt;</span>
+</pre></div>
+</div>
+<p>(The first require stanza is not required for ruby 1.9/2.x.)</p>
+<p>Basically those lines force uWSGI to load the bundler engine and to use the Gemfile specified in the <code class="docutils literal notranslate"><span class="pre">BUNDLE_GEMFILE</span></code> environment variable.</p>
+<p>When using Bundler (like modern frameworks do) your common deployment configuration will be:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+<span class="na">rack</span> <span class="o">=</span> <span class="s">config.ru</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">4</span>
+<span class="na">lazy-apps</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">rbrequire</span> <span class="o">=</span> <span class="s">rubygems</span>
+<span class="na">rbrequire</span> <span class="o">=</span> <span class="s">bundler/setup</span>
+<span class="na">env</span> <span class="o">=</span> <span class="s">BUNDLE_GEMFILE=&lt;path_to_your_Gemfile&gt;</span>
+</pre></div>
+</div>
+<p>In addition to Bundler, RVM is another common tool.</p>
+<p>It allows you to have multiple (independent) Ruby installations (with their gemsets) on a single system.</p>
+<p>To instruct uWSGI to use the gemset of a specific RVM version just use the <cite>–gemset</cite> option:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+<span class="na">rack</span> <span class="o">=</span> <span class="s">config.ru</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">4</span>
+<span class="na">lazy-apps</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">rbrequire</span> <span class="o">=</span> <span class="s">rubygems</span>
+<span class="na">rbrequire</span> <span class="o">=</span> <span class="s">bundler/setup</span>
+<span class="na">env</span> <span class="o">=</span> <span class="s">BUNDLE_GEMFILE=&lt;path_to_your_Gemfile&gt;</span>
+<span class="na">gemset</span> <span class="o">=</span> <span class="s">ruby-2.0@foobar</span>
+</pre></div>
+</div>
+<p>Just pay attention you need a uWSGI binary (or a plugin if you are using a modular build) for every Ruby version (that’s Ruby version, not gemset!).</p>
+<p>If you are interested, this is a list of commands to build the uWSGI core + 1 one plugin per every Ruby version installed in rvm:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># build the core</span>
+make nolang
+<span class="c1"># build plugin for 1.8.7</span>
+rvm use <span class="m">1</span>.8.7
+./uwsgi --build-plugin <span class="s2">&quot;plugins/rack rack187&quot;</span>
+<span class="c1"># build for 1.9.2</span>
+rvm use <span class="m">1</span>.9.2
+./uwsgi --build-plugin <span class="s2">&quot;plugins/rack rack192&quot;</span>
+<span class="c1"># and so on...</span>
+</pre></div>
+</div>
+<p>Then if you want to use ruby 1.9.2 with the &#64;oops gemset:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">ruby192</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+<span class="na">rack</span> <span class="o">=</span> <span class="s">config.ru</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">4</span>
+<span class="na">lazy-apps</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">rbrequire</span> <span class="o">=</span> <span class="s">rubygems</span>
+<span class="na">rbrequire</span> <span class="o">=</span> <span class="s">bundler/setup</span>
+<span class="na">env</span> <span class="o">=</span> <span class="s">BUNDLE_GEMFILE=&lt;path_to_your_Gemfile&gt;</span>
+<span class="na">gemset</span> <span class="o">=</span> <span class="s">ruby-1.9.2@oops</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="automatically-starting-uwsgi-on-boot">
+<h2>Automatically starting uWSGI on boot<a class="headerlink" href="#automatically-starting-uwsgi-on-boot" title="Permalink to this headline">¶</a></h2>
+<p>If you are thinking about firing up vi and writing an init.d script for spawning uWSGI, just sit (and calm) down and make sure your system doesn’t offer a better (more modern) approach first.</p>
+<p>Each distribution has chosen a startup system (<a class="reference internal" href="Upstart.html"><span class="doc">Upstart</span></a>, <a class="reference internal" href="Systemd.html"><span class="doc">Systemd</span></a>…) and there are tons of process managers available (supervisord, god, monit, circus…).</p>
+<p>uWSGI will integrate very well with all of them (we hope), but if you plan to deploy a big number of apps check the uWSGI <a class="reference internal" href="Emperor.html"><span class="doc">Emperor</span></a> - it is more or less the dream of every devops engineer.</p>
+</div>
+<div class="section" id="security-and-availability">
+<h2>Security and availability<a class="headerlink" href="#security-and-availability" title="Permalink to this headline">¶</a></h2>
+<p>ALWAYS avoid running your uWSGI instances as root. You can drop privileges using the uid and gid options.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">foo</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">bar</span>
+<span class="na">chdir</span> <span class="o">=</span> <span class="s">path_toyour_app</span>
+<span class="na">rack</span> <span class="o">=</span> <span class="s">app.ru</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">8</span>
+</pre></div>
+</div>
+<p>A common problem with webapp deployment is “stuck requests”. All of your threads/workers are stuck blocked on a request and your app cannot accept more of them.</p>
+<p>To avoid that problem you can set an <code class="docutils literal notranslate"><span class="pre">harakiri</span></code> timer. It is a monitor (managed by the master process) that will destroy processes stuck for more than the specified number of seconds.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">foo</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">bar</span>
+<span class="na">chdir</span> <span class="o">=</span> <span class="s">path_toyour_app</span>
+<span class="na">rack</span> <span class="o">=</span> <span class="s">app.ru</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">8</span>
+<span class="na">harakiri</span> <span class="o">=</span> <span class="s">30</span>
+</pre></div>
+</div>
+<p>This will destroy workers blocked for more than 30 seconds. Choose the harakiri value carefully!</p>
+<p>In addition to this, since uWSGI 1.9, the stats server exports the whole set of request variables, so you can see (in real time) what your instance is doing (for each worker, thread or async core)</p>
+<p>Enabling the stats server is easy:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">foo</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">bar</span>
+<span class="na">chdir</span> <span class="o">=</span> <span class="s">path_to_your_app</span>
+<span class="na">rack</span> <span class="o">=</span> <span class="s">app.ru</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">8</span>
+<span class="na">harakiri</span> <span class="o">=</span> <span class="s">30</span>
+<span class="na">stats</span> <span class="o">=</span> <span class="s">127.0.0.1:5000</span>
+</pre></div>
+</div>
+<p>just bind it to an address (UNIX or TCP) and just connect (you can use telnet too) to it to receive a JSON representation of your instance.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">uwsgitop</span></code> application (you can find it in the official github repository) is an example of using the stats server to have a top-like realtime monitoring tool (with fancy colors!)</p>
+</div>
+<div class="section" id="memory-usage">
+<h2>Memory usage<a class="headerlink" href="#memory-usage" title="Permalink to this headline">¶</a></h2>
+<p>Low memory usage is one of the selling point of the whole uWSGI project.</p>
+<p>Unfortunately being aggressive with memory by default could (read well: could) lead to some performance problems.</p>
+<p>By default the uWSGI Rack plugin calls the Ruby GC (garbage collector) after every request. If you want to reduce this rate just add the <code class="docutils literal notranslate"><span class="pre">--rb-gc-freq</span> <span class="pre">&lt;n&gt;</span></code> option, where n is the number of requests after the GC is called.</p>
+<p>If you plan to make benchmarks of uWSGI (or compare it with other solutions) take in account its use of GC.</p>
+<p>Ruby can be a real memory devourer, so we prefer to be aggressive with memory by default instead of making hello-world benchmarkers happy.</p>
+</div>
+<div class="section" id="offloading">
+<h2>Offloading<a class="headerlink" href="#offloading" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference internal" href="OffloadSubsystem.html"><span class="doc">The uWSGI offloading subsystem</span></a> allows you to free your workers as soon as possible when some specific pattern matches and can be delegated
+to a pure-c thread. Examples are sending static file from the file system, transferring data from the network to the client and so on.</p>
+<p>Offloading is very complex, but its use is transparent to the end user. If you want to try just add <code class="docutils literal notranslate"><span class="pre">--offload-threads</span> <span class="pre">&lt;n&gt;</span></code> where &lt;n&gt; is the number of threads to spawn (1 per CPU is a good value to start with).</p>
+<p>When offload threads are enabled, all of the parts that can be optimized will be automatically detected.</p>
+</div>
+<div class="section" id="and-now">
+<h2>And now<a class="headerlink" href="#and-now" title="Permalink to this headline">¶</a></h2>
+<p>You should already be able to go in production with such few concepts, but uWSGI is an enormous project with hundreds of features
+and configurations. If you want to be a better sysadmin, continue reading the full docs.</p>
+<p>Welcome!</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Quickstart for ruby/Rack applications</a><ul>
+<li><a class="reference internal" href="#installing-uwsgi-with-ruby-support">Installing uWSGI with Ruby support</a></li>
+<li><a class="reference internal" href="#note-for-distro-packages">Note for distro packages</a></li>
+<li><a class="reference internal" href="#your-first-rack-app">Your first Rack app</a></li>
+<li><a class="reference internal" href="#what-is-that-http-modifier1-7-thing">What is that ‘–http-modifier1 7’ thing?</a></li>
+<li><a class="reference internal" href="#using-a-full-webserver-nginx">Using a full webserver: nginx</a></li>
+<li><a class="reference internal" href="#adding-concurrency">Adding concurrency</a></li>
+<li><a class="reference internal" href="#adding-robustness-the-master-process">Adding robustness: the Master process</a></li>
+<li><a class="reference internal" href="#using-config-files">Using config files</a></li>
+<li><a class="reference internal" href="#the-fork-problem-when-you-spawn-multiple-processes">The fork() problem when you spawn multiple processes</a></li>
+<li><a class="reference internal" href="#deploying-sinatra">Deploying Sinatra</a></li>
+<li><a class="reference internal" href="#deploying-rubyonrails-3">Deploying RubyOnRails &gt;= 3</a></li>
+<li><a class="reference internal" href="#deploying-older-rubyonrails">Deploying older RubyOnRails</a></li>
+<li><a class="reference internal" href="#bundler-and-rvm">Bundler and RVM</a></li>
+<li><a class="reference internal" href="#automatically-starting-uwsgi-on-boot">Automatically starting uWSGI on boot</a></li>
+<li><a class="reference internal" href="#security-and-availability">Security and availability</a></li>
+<li><a class="reference internal" href="#memory-usage">Memory usage</a></li>
+<li><a class="reference internal" href="#offloading">Offloading</a></li>
+<li><a class="reference internal" href="#and-now">And now</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="PSGIquickstart.html"
+                        title="previous chapter">Quickstart for perl/PSGI applications</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Snippets.html"
+                        title="next chapter">Snippets</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/RackQuickstart.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Snippets.html" title="Snippets"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="PSGIquickstart.html" title="Quickstart for perl/PSGI applications"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

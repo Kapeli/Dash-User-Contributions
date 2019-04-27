@@ -1,0 +1,247 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>uWSGI 1.9.13 &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="uWSGI 1.9.12" href="Changelog-1.9.12.html" />
+    <link rel="prev" title="uWSGI 1.9.14" href="Changelog-1.9.14.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.12.html" title="uWSGI 1.9.12"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.14.html" title="uWSGI 1.9.14"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="uwsgi-1-9-13">
+<h1>uWSGI 1.9.13<a class="headerlink" href="#uwsgi-1-9-13" title="Permalink to this headline">¶</a></h1>
+<p>Changelog [20130622]</p>
+<div class="section" id="bugfixes">
+<h2>Bugfixes<a class="headerlink" href="#bugfixes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Fixed a corner case bug when response offloading is enabled, but no request plugin is loaded</p></li>
+<li><p>Fixed harakiri routing when multiple rules are in place (return NEXT instead of CONTINUE)</p></li>
+<li><p>Fixed curl crashing master on slow dns responses (Łukasz Mierzwa)</p></li>
+<li><p>Removed PTRACE check in uwsgi.h (it is no more needed since uWSGI 1.0)</p></li>
+<li><p>Fixed –print-sym</p></li>
+<li><p>Added a newline in –cflags</p></li>
+<li><p>Improved python3 detection and compilation</p></li>
+<li><p>Fixed Coro::AnyEvent loop engine (John Berthels)</p></li>
+<li><p>Rack api functions are now static</p></li>
+<li><p>Better fastcgi handling of big uploads</p></li>
+<li><p>Improved GCC usage on Darwin for Python non-apple builds</p></li>
+<li><p>Fixed XCLIENT usage in rawrouter</p></li>
+<li><p>Use the clang preprocessor instead of hardcoded ‘cpp’ when CC=clang is used</p></li>
+<li><p>Set 16bit options to 65535 when higher values are requested</p></li>
+<li><p>Fixed virtualhosting (it is now compatible with 1.4 configurations)</p></li>
+</ul>
+</div>
+<div class="section" id="new-features">
+<h2>New features<a class="headerlink" href="#new-features" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="pypy-performance-and-features-improvents">
+<h3>PyPy performance and features improvents<a class="headerlink" href="#pypy-performance-and-features-improvents" title="Permalink to this headline">¶</a></h3>
+<p>The PyPy plugin has been improved a lot. The amount of C code has been reduced by 70%, so, now, the vast majority of the plugin is
+written in python. The c helpers have been removed allowing the python part to directly call native uWSGI functions via cffi.</p>
+<p>Support for PyPy continulets (and their greenlet abstraction) has been added (while waiting for a solid gevent port for pypy) and a chat example is already available
+(using the uwsgi async api):</p>
+<p><a class="reference external" href="https://github.com/unbit/uwsgi/tree/master/t/pypy">https://github.com/unbit/uwsgi/tree/master/t/pypy</a></p>
+<p><a class="reference external" href="https://github.com/unbit/uwsgi/blob/master/contrib/pypy/uwsgi_pypy_greenlets.py">https://github.com/unbit/uwsgi/blob/master/contrib/pypy/uwsgi_pypy_greenlets.py</a></p>
+<p>The pypy uwsgi api has been improved and now you can use the uwsgidecorators module (even if the spooler subsystem is still missing)</p>
+</div>
+<div class="section" id="chunked-input-api">
+<h3>Chunked input api<a class="headerlink" href="#chunked-input-api" title="Permalink to this headline">¶</a></h3>
+<p>In the last days there have been a bunch of discussions on how to correctly manage chunked input. As basically none
+of the available standards support it in a “definitive” way, we have defined a low-level api (so we can easily adapt it
+in the feature).</p>
+<p>The api exposes two functions:</p>
+<p>uwsgi.chunked_read()</p>
+<p>and</p>
+<p>uwsgi.chunked_read_nb()</p>
+<p>A non blocking chat example:</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">uwsgi</span>
+<span class="k">def</span> <span class="nf">application</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">sr</span><span class="p">):</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">uwsgi</span><span class="o">.</span><span class="n">wait_fd_read</span><span class="p">(</span><span class="n">uwsgi</span><span class="o">.</span><span class="n">connection_fd</span><span class="p">())</span>
+        <span class="n">uwsgi</span><span class="o">.</span><span class="n">suspend</span><span class="p">()</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">uwsgi</span><span class="o">.</span><span class="n">chunked_read_nb</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">msg</span><span class="p">:</span> <span class="k">print</span> <span class="s2">&quot;core </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">[</span><span class="s1">&#39;uwsgi.core&#39;</span><span class="p">],</span> <span class="n">msg</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="toward-better-third-party-plugins-management-the-dot-h-option">
+<h3>Toward better third-party plugins management: the –dot-h option<a class="headerlink" href="#toward-better-third-party-plugins-management-the-dot-h-option" title="Permalink to this headline">¶</a></h3>
+<p>As the –cflags option shows the CFLAGS used to build the server, the –dot-h option shows the content of uwsgi.h</p>
+<p>This means the content of uwsgi.h is now embedded in the binary (compressed where available).</p>
+<p>It could look a bizarre choice but the objective is to allow easy compilation of plugins out of the uwsgi sources
+(somethign that will be available in 2.0 for sure)</p>
+</div>
+<div class="section" id="setmethod-seturi-and-setpathinfo-routing-action">
+<h3>setmethod, seturi and setpathinfo routing action<a class="headerlink" href="#setmethod-seturi-and-setpathinfo-routing-action" title="Permalink to this headline">¶</a></h3>
+<p>we continue extending the routing api.</p>
+<p>Three new actions have been added to dinamically modify the request</p>
+</div>
+<div class="section" id="uwsgi-includes">
+<h3>UWSGI_INCLUDES<a class="headerlink" href="#uwsgi-includes" title="Permalink to this headline">¶</a></h3>
+<p>You can now ovverride the include search path (while building uWSGI) with this environment variable.</p>
+</div>
+<div class="section" id="improved-set-user-harakiri-api-function">
+<h3>Improved set_user_harakiri api function<a class="headerlink" href="#improved-set-user-harakiri-api-function" title="Permalink to this headline">¶</a></h3>
+<p>Now the uwsgi.set_user_harakiri automatically recognize mules and spoolers. It has been added to the ruby/rack, pypy and perl/psgi plugins</p>
+</div>
+<div class="section" id="add-cache-item-cache-key-value">
+<h3>–add-cache-item [cache ]KEY=VALUE<a class="headerlink" href="#add-cache-item-cache-key-value" title="Permalink to this headline">¶</a></h3>
+<p>this is a commodity option (mainly useful for testing) allowing you to store an item in a uWSGI cache during startup</p>
+</div>
+<div class="section" id="the-router-xmldir-plugin">
+<h3>the router_xmldir plugin<a class="headerlink" href="#the-router-xmldir-plugin" title="Permalink to this headline">¶</a></h3>
+<p>This is a proof of concept plugin aimed at stressing the transformation api.</p>
+<p>It basically generates an xml representation of a directory. This could be useful to
+implement apache-style directoryindex:</p>
+<p>Check this example using xslt:</p>
+<p><a class="reference external" href="https://github.com/unbit/uwsgi/issues/271#issuecomment-19820204">https://github.com/unbit/uwsgi/issues/271#issuecomment-19820204</a></p>
+</div>
+<div class="section" id="implement-call-for-spool-decorators">
+<h3>Implement __call__ for &#64;spool* decorators<a class="headerlink" href="#implement-call-for-spool-decorators" title="Permalink to this headline">¶</a></h3>
+<p>Thanks to ‘anaconda’, you can now directly call functions mapped to the spooler, so instead of</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="n">myfunc</span><span class="o">.</span><span class="n">spool</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>you can directly do:</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="n">myfunc</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>the old way is obviously supported</p>
+</div>
+<div class="section" id="the-uwsgi-lq-routing-var">
+<h3>the uwsgi[lq] routing var<a class="headerlink" href="#the-uwsgi-lq-routing-var" title="Permalink to this headline">¶</a></h3>
+<p>this routing var exports the current size of the listen_queue:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="na">route-if</span> <span class="o">=</span> <span class="s">higher:${uwsgi[lq]};70 break:503 Server Overload</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="use-abort">
+<h3>–use-abort<a class="headerlink" href="#use-abort" title="Permalink to this headline">¶</a></h3>
+<p>On some system the SEGV signal handler cannot be correctly restored after the uWSGI backtrace.</p>
+<p>If you want to generate a core file, you may want to trigger a SIGABRT soon after the backtrace.</p>
+</div>
+</div>
+<div class="section" id="availability">
+<h2>Availability<a class="headerlink" href="#availability" title="Permalink to this headline">¶</a></h2>
+<p>uWSGI 1.9.13 will be available 22th June 2013 at this url:</p>
+<p><a class="reference external" href="https://projects.unbit.it/downloads/uwsgi-1.9.13.tar.gz">https://projects.unbit.it/downloads/uwsgi-1.9.13.tar.gz</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">uWSGI 1.9.13</a><ul>
+<li><a class="reference internal" href="#bugfixes">Bugfixes</a></li>
+<li><a class="reference internal" href="#new-features">New features</a><ul>
+<li><a class="reference internal" href="#pypy-performance-and-features-improvents">PyPy performance and features improvents</a></li>
+<li><a class="reference internal" href="#chunked-input-api">Chunked input api</a></li>
+<li><a class="reference internal" href="#toward-better-third-party-plugins-management-the-dot-h-option">Toward better third-party plugins management: the –dot-h option</a></li>
+<li><a class="reference internal" href="#setmethod-seturi-and-setpathinfo-routing-action">setmethod, seturi and setpathinfo routing action</a></li>
+<li><a class="reference internal" href="#uwsgi-includes">UWSGI_INCLUDES</a></li>
+<li><a class="reference internal" href="#improved-set-user-harakiri-api-function">Improved set_user_harakiri api function</a></li>
+<li><a class="reference internal" href="#add-cache-item-cache-key-value">–add-cache-item [cache ]KEY=VALUE</a></li>
+<li><a class="reference internal" href="#the-router-xmldir-plugin">the router_xmldir plugin</a></li>
+<li><a class="reference internal" href="#implement-call-for-spool-decorators">Implement __call__ for &#64;spool* decorators</a></li>
+<li><a class="reference internal" href="#the-uwsgi-lq-routing-var">the uwsgi[lq] routing var</a></li>
+<li><a class="reference internal" href="#use-abort">–use-abort</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#availability">Availability</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Changelog-1.9.14.html"
+                        title="previous chapter">uWSGI 1.9.14</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Changelog-1.9.12.html"
+                        title="next chapter">uWSGI 1.9.12</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Changelog-1.9.13.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.12.html" title="uWSGI 1.9.12"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.14.html" title="uWSGI 1.9.14"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

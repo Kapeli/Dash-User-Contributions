@@ -1,0 +1,255 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>uWSGI 1.9.1 &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="uWSGI 1.9" href="Changelog-1.9.html" />
+    <link rel="prev" title="uWSGI 1.9.2" href="Changelog-1.9.2.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.html" title="uWSGI 1.9"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.2.html" title="uWSGI 1.9.2"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="uwsgi-1-9-1">
+<h1>uWSGI 1.9.1<a class="headerlink" href="#uwsgi-1-9-1" title="Permalink to this headline">¶</a></h1>
+<p>First minor release for the 1.9 tree.</p>
+<div class="section" id="bugfixes">
+<h2>Bugfixes<a class="headerlink" href="#bugfixes" title="Permalink to this headline">¶</a></h2>
+<p>Fixed –req-logger after a graceful reload</p>
+<p>Fixed a crash with the carbon plugin</p>
+<p>Fixed signal handling when multiple workers + copy on write is in place</p>
+<p>Fixed exception handling in the Rack plugin</p>
+</div>
+<div class="section" id="the-xslt-plugin">
+<h2>The XSLT plugin<a class="headerlink" href="#the-xslt-plugin" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference internal" href="XSLT.html"><span class="doc">XSLT</span></a> plugin has been added. It allows to apply XML transformation via request plugin or <a class="reference internal" href="InternalRouting.html"><span class="doc">uWSGI internal routing</span></a></p>
+</div>
+<div class="section" id="legion-scrolls-api">
+<h2>Legion scrolls api<a class="headerlink" href="#legion-scrolls-api" title="Permalink to this headline">¶</a></h2>
+<p>Scrolls are text blob attached to each member of a <a class="reference internal" href="Legion.html"><span class="doc">Legion</span></a> cluster. We are slowly defining an api allowing developers to directly
+use the legion subsystem in their apps and configurations. The addition in 1.9.1 is the uwsgi.scrolls(legion) function returning a list/array
+of the current scrolls defined by the whole cluster. This is still not something fully usable (and useful) more to come soon…</p>
+</div>
+<div class="section" id="on-demand-vassals">
+<h2>On demand vassals<a class="headerlink" href="#on-demand-vassals" title="Permalink to this headline">¶</a></h2>
+<p>Another step in better resource usage for massive hosting. You can now tell the <a class="reference internal" href="Emperor.html"><span class="doc">Emperor</span></a> to start vassals only after the first request
+to a specific socket. Combined with –idle/–die-on-idle options, you can have truly on-demand applications.</p>
+<p>To define the socket to wait for for each vassal you have 3 options:</p>
+<div class="section" id="emperor-on-demand-extension-ext">
+<h3>–emperor-on-demand-extension &lt;ext&gt;<a class="headerlink" href="#emperor-on-demand-extension-ext" title="Permalink to this headline">¶</a></h3>
+<p>this will instruct the Emperor to check for a file named &lt;vassal&gt;+&lt;ext&gt;, if the file is available it will be read and its content used as the socket to wait for:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --emperor /etc/uwsgi/vassals --emperor-on-demand-extension .socket
+</pre></div>
+</div>
+<p>supposing a myapp.ini file in /etc/uwsgi/vassals, a /etc/uwsgi/vassals/myapp.ini.socket will be searched for (and its content used as the socket name)</p>
+<p>At the first connection, the vassal is spawned and the socket passed as the file descriptor 0. File descriptor 0 is always checked by uWSGI
+so you do not need to specify a –socket option in the vassal file. This works automagically for uwsgi sockets, if you use
+other protocols (like http or fastcgi) you have to specify it with the –protocol option</p>
+</div>
+<div class="section" id="emperor-on-demand-directory-dir">
+<h3>–emperor-on-demand-directory &lt;dir&gt;<a class="headerlink" href="#emperor-on-demand-directory-dir" title="Permalink to this headline">¶</a></h3>
+<p>This is a less-versatile approach supporting only UNIX sockets. Basically the name (without extension and path) of the vassal is appended
+to the specified directory + the .socket extension and used as the on-demand socket:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --emperor /etc/uwsgi/vassals --emperor-on-demand-directory /var/tmp
+</pre></div>
+</div>
+<p>using the previous example, the socket /var/tmp/myapp.socket will be automatically bound</p>
+</div>
+<div class="section" id="emperor-on-demand-exec-cmd">
+<h3>–emperor-on-demand-exec &lt;cmd&gt;<a class="headerlink" href="#emperor-on-demand-exec-cmd" title="Permalink to this headline">¶</a></h3>
+<p>This is what (very probably) you will use in very big deployments. Every time a new vassal is added the supplied command is run passing the vassal name
+as the first argument. The STDOUT of the command is used as the socket name.</p>
+</div>
+</div>
+<div class="section" id="the-exec-post-app-hook">
+<h2>The –exec-post-app hook<a class="headerlink" href="#the-exec-post-app-hook" title="Permalink to this headline">¶</a></h2>
+<p>In addition to the other –exec-* options (used to run commands at the various server stages), a new one has been added
+allowing you to run commands after the load of an application.</p>
+</div>
+<div class="section" id="the-pyring-build-profile">
+<h2>The pyring build profile<a class="headerlink" href="#the-pyring-build-profile" title="Permalink to this headline">¶</a></h2>
+<p>This is a very specific build profile allowing you to automatically build a uWSGI stack with monolithic python support and modular jvm + ring honouring virtualenvs.</p>
+</div>
+<div class="section" id="the-cache-router-plugin">
+<h2>The cache router plugin<a class="headerlink" href="#the-cache-router-plugin" title="Permalink to this headline">¶</a></h2>
+<p>This has been improved, and in next releases we should be able to directly store response in the uWSGI cache only using the internal routing subsystem</p>
+<p>Docs will be available soon</p>
+</div>
+<div class="section" id="the-crypto-logger">
+<h2>The crypto logger<a class="headerlink" href="#the-crypto-logger" title="Permalink to this headline">¶</a></h2>
+<p>If you host your applications on cloud services without persistent storage you may want to send your logs to external
+systems. Sadly logs often contain sensible informations you should not transfer in clear. The new crypto logger try to solve
+this issue allowing you to encrypt each log packet and send it over udp to a server able to decrypt it.</p>
+<p>The following example</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --plugin logcrypto --logger crypto:addr<span class="o">=</span><span class="m">192</span>.168.173.22:1717,algo<span class="o">=</span>bf-cbc,secret<span class="o">=</span>ciaociao -M -p <span class="m">4</span> -s :3031
+</pre></div>
+</div>
+<p>will send each log packet to the udp server available at 192.168.173.22:1717 encrypting the text with ‘ciaociao’ secret key using
+the blowfish cbc algorithm.</p>
+<p>An example server is available here:</p>
+<p><a class="reference external" href="https://github.com/unbit/uwsgi/blob/master/contrib/cryptologger.rb">https://github.com/unbit/uwsgi/blob/master/contrib/cryptologger.rb</a></p>
+</div>
+<div class="section" id="the-rpc-internal-routing-instruction">
+<h2>The rpc internal routing instruction<a class="headerlink" href="#the-rpc-internal-routing-instruction" title="Permalink to this headline">¶</a></h2>
+<p>The “rpc” routing instruction has been added, allowing you to call rpc functions directly from the routing subsystem
+and forward they output to the client.</p>
+<p>Check the following examples:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/foo addheader:Content-Type: text/html</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/foo rpc:hello ${REQUEST_URI} ${HTTP_USER_AGENT}</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/bar/(.+)$ rpc:test $1 ${REMOTE_ADDR} uWSGI %V</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/pippo/(.+)$ rpc:test@127.0.0.1:4141 $1 ${REMOTE_ADDR} uWSGI %V</span>
+<span class="na">import</span> <span class="o">=</span> <span class="s">funcs.py</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="preliminary-support-for-name-resolving-in-the-carbon-plugin">
+<h2>Preliminary support for name resolving in the carbon plugin<a class="headerlink" href="#preliminary-support-for-name-resolving-in-the-carbon-plugin" title="Permalink to this headline">¶</a></h2>
+<p>You can specify carbon servers using hostnames. The current code is pretty simple. Future updates will support round robin queries.</p>
+</div>
+<div class="section" id="new-routing-conditions">
+<h2>New routing conditions<a class="headerlink" href="#new-routing-conditions" title="Permalink to this headline">¶</a></h2>
+<p>New routing conditions have been added (equal,startswith,endswith,regexp) check the updated docs:</p>
+<p><a class="reference external" href="https://uwsgi-docs.readthedocs.io/en/latest/InternalRouting.html#the-internal-routing-table">https://uwsgi-docs.readthedocs.io/en/latest/InternalRouting.html#the-internal-routing-table</a></p>
+</div>
+<div class="section" id="the-v-magic-var">
+<h2>The ‘V’ magic var<a class="headerlink" href="#the-v-magic-var" title="Permalink to this headline">¶</a></h2>
+<p>You can reference the uWSGI version string using the %V magic var in your configurations</p>
+</div>
+<div class="section" id="the-mongodb-generic-plugin">
+<h2>The ‘mongodb’ generic plugin<a class="headerlink" href="#the-mongodb-generic-plugin" title="Permalink to this headline">¶</a></h2>
+<p>This is a commodity plugin for packagers not able to access a shared libmongoclient. This basically link it in a new shared object
+that can be used by the others mongodb plugin</p>
+</div>
+<div class="section" id="build-profiles-over-network">
+<h2>Build profiles over network<a class="headerlink" href="#build-profiles-over-network" title="Permalink to this headline">¶</a></h2>
+<p>You can now reference build profiles using urls (http, https and ftp are supported):</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">UWSGI_PROFILE</span><span class="o">=</span>http://uwsgi.it/psgi.ini make
+</pre></div>
+</div>
+</div>
+<div class="section" id="get-it">
+<h2>Get it<a class="headerlink" href="#get-it" title="Permalink to this headline">¶</a></h2>
+<p>uWSGI 1.9.1 will be available since 20130324 at this url:</p>
+<p><a class="reference external" href="https://projects.unbit.it/downloads/uwsgi-1.9.1.tar.gz">https://projects.unbit.it/downloads/uwsgi-1.9.1.tar.gz</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">uWSGI 1.9.1</a><ul>
+<li><a class="reference internal" href="#bugfixes">Bugfixes</a></li>
+<li><a class="reference internal" href="#the-xslt-plugin">The XSLT plugin</a></li>
+<li><a class="reference internal" href="#legion-scrolls-api">Legion scrolls api</a></li>
+<li><a class="reference internal" href="#on-demand-vassals">On demand vassals</a><ul>
+<li><a class="reference internal" href="#emperor-on-demand-extension-ext">–emperor-on-demand-extension &lt;ext&gt;</a></li>
+<li><a class="reference internal" href="#emperor-on-demand-directory-dir">–emperor-on-demand-directory &lt;dir&gt;</a></li>
+<li><a class="reference internal" href="#emperor-on-demand-exec-cmd">–emperor-on-demand-exec &lt;cmd&gt;</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#the-exec-post-app-hook">The –exec-post-app hook</a></li>
+<li><a class="reference internal" href="#the-pyring-build-profile">The pyring build profile</a></li>
+<li><a class="reference internal" href="#the-cache-router-plugin">The cache router plugin</a></li>
+<li><a class="reference internal" href="#the-crypto-logger">The crypto logger</a></li>
+<li><a class="reference internal" href="#the-rpc-internal-routing-instruction">The rpc internal routing instruction</a></li>
+<li><a class="reference internal" href="#preliminary-support-for-name-resolving-in-the-carbon-plugin">Preliminary support for name resolving in the carbon plugin</a></li>
+<li><a class="reference internal" href="#new-routing-conditions">New routing conditions</a></li>
+<li><a class="reference internal" href="#the-v-magic-var">The ‘V’ magic var</a></li>
+<li><a class="reference internal" href="#the-mongodb-generic-plugin">The ‘mongodb’ generic plugin</a></li>
+<li><a class="reference internal" href="#build-profiles-over-network">Build profiles over network</a></li>
+<li><a class="reference internal" href="#get-it">Get it</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Changelog-1.9.2.html"
+                        title="previous chapter">uWSGI 1.9.2</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Changelog-1.9.html"
+                        title="next chapter">uWSGI 1.9</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Changelog-1.9.1.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.html" title="uWSGI 1.9"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.2.html" title="uWSGI 1.9.2"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

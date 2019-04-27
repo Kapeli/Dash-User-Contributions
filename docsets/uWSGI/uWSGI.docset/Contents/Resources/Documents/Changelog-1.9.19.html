@@ -1,0 +1,267 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>uWSGI 1.9.19 &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="uWSGI 1.9.18" href="Changelog-1.9.18.html" />
+    <link rel="prev" title="uWSGI 1.9.20" href="Changelog-1.9.20.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.18.html" title="uWSGI 1.9.18"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.20.html" title="uWSGI 1.9.20"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="uwsgi-1-9-19">
+<h1>uWSGI 1.9.19<a class="headerlink" href="#uwsgi-1-9-19" title="Permalink to this headline">¶</a></h1>
+<p>Changelog [20131109]</p>
+<p>This release starts the ‘hardening’ cycle for uWSGI 2.0 (scheduled for the end of december 2013).</p>
+<p>The metrics subsystem was the last piece missing and this version (after 1 year of analysis) finally includes it.</p>
+<p>During the following 2 months we will start deprecating features or plugins that got no-interest, are known to be broken or are simply superseed
+by more modern/advanced ones.</p>
+<p>Currently the following plugin and features are scheduled for removal:</p>
+<ul class="simple">
+<li><p>The Go plugin, superseeded by the gccgo one. (eventually the Go plugin will be brought back if something changes in the fork() support)</p></li>
+<li><p>Auto-snapshotting, was never documented, it has tons of corner case bugs and it is huber-complex. The features added by the <span class="xref std std-doc">MasterFifo</span> allows for better implementations of snapshotting.</p></li>
+</ul>
+<p>Waiting for decision:</p>
+<ul class="simple">
+<li><p>the erlang plugin is extremely old, was badly engineered and should be completely rewritten. If you are a user of it, please contact the staff. Very probably we will not be able to maintain it without sponsorship.</p></li>
+<li><p>the matheval support could be removed soon (unless we find some specific use that could require it), substituted by some form of simple math directly implemented in the option parser</p></li>
+<li><p>the admin plugin should be substituted with something more advanced. An api for defining dynamic options is on-work</p></li>
+</ul>
+<div class="section" id="bugfixes">
+<h2>Bugfixes<a class="headerlink" href="#bugfixes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>completely skip cgroups initialization when non-root</p></li>
+<li><p>tons of post-static_analysis fixes by Riccardo Magliocchetti</p></li>
+<li><p>fixed the greenlet plugin reference counting</p></li>
+<li><p>avoid kevent storm for stats pusher thread</p></li>
+<li><p>fixed rbtimers math</p></li>
+<li><p>both ‘cache’ and ‘file’ routers got a ‘no_content_length’ key option to avoid settign the Content-Length header</p></li>
+<li><p>the PyPy plugin automatically enables threads/GIL</p></li>
+<li><p>manage dot_segments in HTTP parser</p></li>
+<li><p>improved srand() usage</p></li>
+</ul>
+</div>
+<div class="section" id="new-features">
+<h2>New features<a class="headerlink" href="#new-features" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="the-metrics-subsystem">
+<h3>The Metrics subsystem<a class="headerlink" href="#the-metrics-subsystem" title="Permalink to this headline">¶</a></h3>
+<p>This was the last piece missing before uWSGI 2.0. The Metrics subsystem allows you to store “numbers” related to monitoring, graphing and quality checks and exports them in various ways.</p>
+<p>Official docs: <a class="reference internal" href="Metrics.html"><span class="doc">The Metrics subsystem</span></a></p>
+</div>
+<div class="section" id="the-tornado-loop-engine">
+<h3>The Tornado loop engine<a class="headerlink" href="#the-tornado-loop-engine" title="Permalink to this headline">¶</a></h3>
+<p>While working on nodejs integration we realized that contrary to what we used to believe, Tornado (an asynchronous, callback based module for python) is usable in uWSGI.</p>
+<p>Note: The plugin is not built-in by default</p>
+<p>Official docs: <a class="reference internal" href="Tornado.html"><span class="doc">The Tornado loop engine</span></a></p>
+</div>
+<div class="section" id="the-puwsgi-protocol">
+<h3>The ‘puwsgi’ protocol<a class="headerlink" href="#the-puwsgi-protocol" title="Permalink to this headline">¶</a></h3>
+<p>A “persistent” (keep-alive) version of the ‘uwsgi’ parser has been added named ‘puwsgi’ (persistent uwsgi).</p>
+<p>This protocol works only for request without a body and requires support from the frontend. Its use is currently for custom clients/apps, there is no webserver handler supporting it.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">--puwsgi-socket</span> <span class="pre">&lt;addr&gt;</span></code> will bind a puwsgi socket to the specified address</p>
+</div>
+<div class="section" id="vassal-set">
+<h3>–vassal-set<a class="headerlink" href="#vassal-set" title="Permalink to this headline">¶</a></h3>
+<p>You can tell the Emperor to pass specific options to every vassal using the –set facility:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">emperor</span> <span class="o">=</span> <span class="s">/etc/uwsgi/vassals</span>
+<span class="na">vassal-set</span> <span class="o">=</span> <span class="s">processes=8</span>
+<span class="na">vassal-set</span> <span class="o">=</span> <span class="s">enable-metrics=1</span>
+</pre></div>
+</div>
+<p>this will add <code class="docutils literal notranslate"><span class="pre">--set</span> <span class="pre">processes=8</span></code> and <code class="docutils literal notranslate"><span class="pre">--set</span> <span class="pre">enable-metrics=1</span></code> to each vassal</p>
+</div>
+<div class="section" id="the-template-transformation">
+<h3>The ‘template’ transformation<a class="headerlink" href="#the-template-transformation" title="Permalink to this headline">¶</a></h3>
+<p>This is a transformation allowing you to apply all of the internal routing patterns to your responses.</p>
+<p>Take the following file (foo.html)</p>
+<div class="highlight-html notranslate"><div class="highlight"><pre><span></span><span class="p">&lt;</span><span class="nt">html</span><span class="p">&gt;</span>
+  <span class="p">&lt;</span><span class="nt">head</span><span class="p">&gt;</span>
+    <span class="p">&lt;</span><span class="nt">title</span><span class="p">&gt;</span>Running on ${SERVER_NAME}<span class="p">&lt;/</span><span class="nt">title</span><span class="p">&gt;</span>
+  <span class="p">&lt;/</span><span class="nt">head</span><span class="p">&gt;</span>
+  <span class="p">&lt;</span><span class="nt">body</span><span class="p">&gt;</span>
+    Your ip address is: ${REMOTE_ADDR}<span class="p">&lt;</span><span class="nt">br</span><span class="p">/&gt;</span>
+    Served requests: ${metric[worker.0.requests]}<span class="p">&lt;</span><span class="nt">br</span><span class="p">/&gt;</span>
+    Pid: ${uwsgi[pid]}<span class="p">&lt;</span><span class="nt">br</span><span class="p">/&gt;</span>
+    A random UUID: ${uwsgi[uuid]}
+  <span class="p">&lt;/</span><span class="nt">body</span><span class="p">&gt;</span>
+<span class="p">&lt;/</span><span class="nt">html</span><span class="p">&gt;</span>
+</pre></div>
+</div>
+<p>we will apply the ‘template’ transformation to it:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="c1">; enable the metrics subsystem</span>
+<span class="na">enable-metrics</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; inject the route transformation</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">template:</span>
+<span class="c1">; return a file (transformation will be applied to it)</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">file:filename=foo.html,no_content_length=1</span>
+</pre></div>
+</div>
+<p>everything available in the internal routing subsystem can be used into the template transformation.</p>
+<p>Performance are stellar, so instead of old Server Side Includes, you may want to try it.</p>
+<p>Not enough ? combine it with caching:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="c1">; enable the metrics subsystem</span>
+<span class="na">enable-metrics</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; load foo.html in the cache</span>
+<span class="na">cache2</span> <span class="o">=</span> <span class="s">name=mycache,items=10</span>
+<span class="na">load-file-in-cache</span> <span class="o">=</span> <span class="s">foo.html</span>
+<span class="c1">; inject the route transformation</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">template:</span>
+<span class="c1">; return the cache item (transformation will be applied to it)</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">cache:key=foo.html,no_content_length=1</span>
+</pre></div>
+</div>
+<p>Again ?</p>
+<p>what about chunked encoding ?</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="c1">; enable the metrics subsystem</span>
+<span class="na">enable-metrics</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; load foo.html in the cache</span>
+<span class="na">cache2</span> <span class="o">=</span> <span class="s">name=mycache,items=10</span>
+<span class="na">load-file-in-cache</span> <span class="o">=</span> <span class="s">foo.html</span>
+<span class="c1">; inject the route transformation</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">template:</span>
+<span class="c1">; inject chunked encoding</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">chunked:</span>
+<span class="c1">; return the cache item (transformation will be applied to it)</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">cache:key=foo.html,no_content_length=1</span>
+</pre></div>
+</div>
+<p>or gzip ?</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="c1">; enable the metrics subsystem</span>
+<span class="na">enable-metrics</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; load foo.html in the cache</span>
+<span class="na">cache2</span> <span class="o">=</span> <span class="s">name=mycache,items=10</span>
+<span class="na">load-file-in-cache</span> <span class="o">=</span> <span class="s">foo.html</span>
+<span class="c1">; inject the route transformation</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">template:</span>
+<span class="c1">; inject gzip</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">gzip:</span>
+<span class="c1">; return the cache item (transformation will be applied to it)</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">cache:key=foo.html,no_content_length=1</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="availability">
+<h2>Availability<a class="headerlink" href="#availability" title="Permalink to this headline">¶</a></h2>
+<p>uWSGI 1.9.19 has been released on 20131109, you can download it from:</p>
+<p><a class="reference external" href="https://projects.unbit.it/downloads/uwsgi-1.9.19.tar.gz">https://projects.unbit.it/downloads/uwsgi-1.9.19.tar.gz</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">uWSGI 1.9.19</a><ul>
+<li><a class="reference internal" href="#bugfixes">Bugfixes</a></li>
+<li><a class="reference internal" href="#new-features">New features</a><ul>
+<li><a class="reference internal" href="#the-metrics-subsystem">The Metrics subsystem</a></li>
+<li><a class="reference internal" href="#the-tornado-loop-engine">The Tornado loop engine</a></li>
+<li><a class="reference internal" href="#the-puwsgi-protocol">The ‘puwsgi’ protocol</a></li>
+<li><a class="reference internal" href="#vassal-set">–vassal-set</a></li>
+<li><a class="reference internal" href="#the-template-transformation">The ‘template’ transformation</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#availability">Availability</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Changelog-1.9.20.html"
+                        title="previous chapter">uWSGI 1.9.20</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Changelog-1.9.18.html"
+                        title="next chapter">uWSGI 1.9.18</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Changelog-1.9.19.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.18.html" title="uWSGI 1.9.18"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.20.html" title="uWSGI 1.9.20"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

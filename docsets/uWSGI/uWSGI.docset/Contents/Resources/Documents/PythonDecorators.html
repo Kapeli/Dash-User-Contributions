@@ -1,0 +1,538 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8"/>
+<title>uWSGI API - Python decorators — uWSGI 2.0 documentation</title>
+<link href="_static/classic.css" rel="stylesheet" type="text/css"/>
+<link href="_static/pygments.css" rel="stylesheet" type="text/css"/>
+<script data-url_root="./" id="documentation_options" src="_static/documentation_options.js" type="text/javascript"></script>
+<script src="_static/jquery.js" type="text/javascript"></script>
+<script src="_static/underscore.js" type="text/javascript"></script>
+<script src="_static/doctools.js" type="text/javascript"></script>
+<script src="_static/language_data.js" type="text/javascript"></script>
+<link href="genindex.html" rel="index" title="Index"/>
+<link href="search.html" rel="search" title="Search"/>
+<link href="PythonPump.html" rel="next" title="Pump support"/>
+<link href="PythonModule.html" rel="prev" title="The uwsgi Python module"/>
+</head><body>
+<div aria-label="related navigation" class="related" role="navigation">
+<h3>Navigation</h3>
+<ul>
+<li class="right" style="margin-right: 10px">
+<a accesskey="I" href="genindex.html" title="General Index">index</a></li>
+<li class="right">
+<a href="py-modindex.html" title="Python Module Index">modules</a> |</li>
+<li class="right">
+<a accesskey="N" href="PythonPump.html" title="Pump support">next</a> |</li>
+<li class="right">
+<a accesskey="P" href="PythonModule.html" title="The uwsgi Python module">previous</a> |</li>
+<li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> »</li>
+<li class="nav-item nav-item-1"><a accesskey="U" href="Python.html">Python support</a> »</li>
+</ul>
+</div>
+<div class="document">
+<div class="documentwrapper">
+<div class="bodywrapper">
+<div class="body" role="main">
+<div class="section" id="uwsgi-api-python-decorators">
+<h1>uWSGI API - Python decorators<a class="headerlink" href="#uwsgi-api-python-decorators" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference internal" href="PythonModule.html"><span class="doc">The uWSGI API</span></a> is very low-level, as it must be language-independent.</p>
+<p>That said, being too low-level is not a Good Thing for many languages, such as Python.</p>
+<p>Decorators are, in our humble opinion, one of the more kick-ass features of Python, so in the uWSGI source tree you will find a module exporting a bunch of decorators that cover a good part of the uWSGI API.</p>
+<div class="section" id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
+<p>Signal-based decorators execute the signal handler in the first available worker.
+If you have enabled the spooler you can execute the signal handlers in it, leaving workers free to manage normal requests. Simply pass <code class="docutils literal notranslate"><span class="pre">target='spooler'</span></code> to the decorator.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@timer</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="s1">'spooler'</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">hello</span><span class="p">(</span><span class="n">signum</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">"hello"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="example-a-django-session-cleaner-and-video-encoder">
+<h2>Example: a Django session cleaner and video encoder<a class="headerlink" href="#example-a-django-session-cleaner-and-video-encoder" title="Permalink to this headline">¶</a></h2>
+<p>Let’s define a <code class="file docutils literal notranslate"><span class="pre">task.py</span></code> module and put it in the Django project directory.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">uwsgidecorators</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">django.contrib.sessions.models</span> <span class="kn">import</span> <span class="n">Session</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="nd">@cron</span><span class="p">(</span><span class="mi">40</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">clear_django_session</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">"it's 2:40 in the morning: clearing django sessions"</span><span class="p">)</span>
+    <span class="n">Session</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">()</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+
+<span class="nd">@spool</span>
+<span class="k">def</span> <span class="nf">encode_video</span><span class="p">(</span><span class="n">arguments</span><span class="p">):</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s2">"ffmpeg -i </span><span class="se">\"</span><span class="si">%s</span><span class="se">\"</span><span class="s2"> image</span><span class="si">%%</span><span class="s2">d.jpg"</span> <span class="o">%</span> <span class="n">arguments</span><span class="p">[</span><span class="s1">'filename'</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>The session cleaner will be executed every day at 2:40, to enqueue a video encoding we simply need to spool it from somewhere else.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">task</span> <span class="kn">import</span> <span class="n">encode_video</span>
+
+<span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="c1"># launching video encoding</span>
+    <span class="n">encode_video</span><span class="o">.</span><span class="n">spool</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">[</span><span class="s1">'video_filename'</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">render_to_response</span><span class="p">(</span><span class="s1">'enqueued.html'</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now run uWSGI with the spooler enabled:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; a couple of placeholder</span>
+<span class="na">django_projects_dir</span> <span class="o">=</span> <span class="s">/var/www/apps</span>
+<span class="na">my_project</span> <span class="o">=</span> <span class="s">foobar</span>
+<span class="c1">; chdir to app project dir and set pythonpath</span>
+<span class="na">chdir</span> <span class="o">=</span> <span class="s">%(django_projects_dir)/%(my_project)</span>
+<span class="na">pythonpath</span> <span class="o">=</span> <span class="s">%(django_projects_dir)</span>
+<span class="c1">; load django</span>
+<span class="na">module</span> <span class="o">=</span> <span class="s">django.core.handlers:WSGIHandler()</span>
+<span class="na">env</span> <span class="o">=</span> <span class="s">DJANGO_SETTINGS_MODULE=%(my_project).settings</span>
+<span class="c1">; enable master</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; 4 processes should be enough</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">4</span>
+<span class="c1">; enable the spooler (the mytasks dir must exist!)</span>
+<span class="na">spooler</span> <span class="o">=</span> <span class="s">%(chdir)/mytasks</span>
+<span class="c1">; load the task.py module</span>
+<span class="na">import</span> <span class="o">=</span> <span class="s">task</span>
+<span class="c1">; bind on a tcp socket</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+</pre></div>
+</div>
+<p>The only especially relevant option is the <code class="docutils literal notranslate"><span class="pre">import</span></code> one. It works in the same way as <code class="docutils literal notranslate"><span class="pre">module</span></code> but skips the WSGI callable search.
+You can use it to preload modules before the loading of WSGI apps. You can specify an unlimited number of ‘’‘import’‘’ directives.</p>
+</div>
+<div class="section" id="example-web2py-spooler-timer">
+<h2>Example: web2py + spooler + timer<a class="headerlink" href="#example-web2py-spooler-timer" title="Permalink to this headline">¶</a></h2>
+<p>First of all define your spooler and timer functions (we will call it :file:<code class="docutils literal notranslate"><span class="pre">mytasks.py</span></code>)</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">uwsgidecorators</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="nd">@spool</span>
+<span class="k">def</span> <span class="nf">a_long_task</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+
+<span class="nd">@spool</span>
+<span class="k">def</span> <span class="nf">a_longer_task</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">"longer....."</span><span class="p">)</span>
+
+<span class="nd">@timer</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">three_seconds</span><span class="p">(</span><span class="n">signum</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">"3 seconds elapsed"</span><span class="p">)</span>
+
+<span class="nd">@timer</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">target</span><span class="o">=</span><span class="s1">'spooler'</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">ten_seconds_in_the_spooler</span><span class="p">(</span><span class="n">signum</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">"10 seconds elapsed in the spooler"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now run web2py.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket :3031 --spooler myspool --master --processes <span class="m">4</span> --import mytasks --module web2py.wsgihandler
+</pre></div>
+</div>
+<p>As soon as the application is loaded, you will see the 2 timers running in your logs.</p>
+<p>Now we want to enqueue tasks from our web2py controllers.</p>
+<p>Edit one of them and add</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">mytasks</span> <span class="c1"># be sure mytasks is importable!</span>
+
+<span class="k">def</span> <span class="nf">index</span><span class="p">():</span> <span class="c1"># this is a web2py action</span>
+    <span class="n">mytasks</span><span class="o">.</span><span class="n">a_long_task</span><span class="o">.</span><span class="n">spool</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s1">'bar'</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">"Task enqueued"</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="module-uwsgidecorators">
+<span id="uwsgidecorators-api-reference"></span><h2><a name="//apple_ref/cpp/Module/uwsgidecorators"></a>uwsgidecorators API reference<a class="headerlink" href="#module-uwsgidecorators" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="uwsgidecorators.postfork"><a name="//apple_ref/cpp/Function/uwsgidecorators.postfork"></a>
+<code class="descclassname">uwsgidecorators.</code><code class="descname">postfork</code><span class="sig-paren">(</span><em>func</em><span class="sig-paren">)</span><a class="headerlink" href="#uwsgidecorators.postfork" title="Permalink to this definition">¶</a></dt>
+<dd><p>uWSGI is a preforking (or “fork-abusing”) server, so you might need to execute a fixup task after each <code class="docutils literal notranslate"><span class="pre">fork()</span></code>. The <code class="docutils literal notranslate"><span class="pre">postfork</span></code> decorator is just the ticket.
+You can declare multiple <code class="docutils literal notranslate"><span class="pre">postfork</span></code> tasks. Each decorated function will be executed in sequence after each <code class="docutils literal notranslate"><span class="pre">fork()</span></code>.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@postfork</span>
+<span class="k">def</span> <span class="nf">reconnect_to_db</span><span class="p">():</span>
+    <span class="n">myfoodb</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+
+<span class="nd">@postfork</span>
+<span class="k">def</span> <span class="nf">hello_world</span><span class="p">():</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">"Hello World"</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="uwsgidecorators.spool"><a name="//apple_ref/cpp/Function/uwsgidecorators.spool"></a>
+<code class="descclassname">uwsgidecorators.</code><code class="descname">spool</code><span class="sig-paren">(</span><em>func</em>, <em>pass_arguments=False</em><span class="sig-paren">)</span><a class="headerlink" href="#uwsgidecorators.spool" title="Permalink to this definition">¶</a></dt>
+<dd><p>The uWSGI <a class="reference internal" href="Spooler.html"><span class="doc">spooler</span></a> can be very useful. Compared to
+Celery or other queues it is very “raw”. The <code class="docutils literal notranslate"><span class="pre">spool</span></code> decorator will
+help!</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@spool</span>
+<span class="k">def</span> <span class="nf">a_long_long_task</span><span class="p">(</span><span class="n">arguments</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">arguments</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10000000</span><span class="p">):</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+
+<span class="nd">@spool</span>
+<span class="k">def</span> <span class="nf">a_longer_task</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10000000</span><span class="p">):</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+
+<span class="c1"># enqueue the tasks</span>
+<span class="n">a_long_long_task</span><span class="o">.</span><span class="n">spool</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s1">'bar'</span><span class="p">,</span> <span class="n">hello</span><span class="o">=</span><span class="s1">'world'</span><span class="p">)</span>
+<span class="n">a_longer_task</span><span class="o">.</span><span class="n">spool</span><span class="p">({</span><span class="s1">'pippo'</span><span class="p">:</span><span class="s1">'pluto'</span><span class="p">})</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>On Python3, only <code class="docutils literal notranslate"><span class="pre">bytes</span></code> type arguments are allowed. See below for
+another way of passing arguments.</p>
+</div>
+<p>When <code class="docutils literal notranslate"><span class="pre">pass_arguments</span></code> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, arguments can be of any type
+supported by the <code class="xref py py-mod docutils literal notranslate"><span class="pre">pickle</span></code> module. The following arguments have
+a special meaning:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">spooler</span></code>: specify the <strong>absolute</strong> path of the spooler that has to
+manage this task</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">at</span></code>: unix time at which the task must be executed (read: the task
+will not be run until the <code class="docutils literal notranslate"><span class="pre">at</span></code> time is passed)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">priority</span></code>: this will be the subdirectory in the spooler directory
+in which the task will be placed, you can use that trick to give
+a good-enough prioritization to tasks (for better approach use
+multiple spoolers)</p></li>
+</ul>
+</div></blockquote>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>On Python3, the special arguments <code class="docutils literal notranslate"><span class="pre">spooler</span></code>, <code class="docutils literal notranslate"><span class="pre">at</span></code>,
+<code class="docutils literal notranslate"><span class="pre">priority</span></code> and <code class="docutils literal notranslate"><span class="pre">body</span></code> <strong>must</strong> be <code class="docutils literal notranslate"><span class="pre">bytes</span></code>.</p>
+</div>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@spool</span><span class="p">(</span><span class="n">pass_arguments</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">some_task</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10000000</span><span class="p">):</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+
+<span class="c1"># enqueue the task</span>
+<span class="n">some_task</span><span class="o">.</span><span class="n">spool</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">foo</span><span class="o">=</span><span class="p">[</span><span class="s1">'bar'</span><span class="p">,</span> <span class="s1">'baz'</span><span class="p">],</span> <span class="n">func</span><span class="o">=</span><span class="nb">min</span><span class="p">,</span> <span class="n">at</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="mi">1497023151</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>The functions will automatically return <code class="docutils literal notranslate"><span class="pre">uwsgi.SPOOL_OK</span></code> so they will
+be executed one time independently by their return status.</p>
+</dd></dl>
+<dl class="function">
+<dt id="uwsgidecorators.spoolforever"><a name="//apple_ref/cpp/Function/uwsgidecorators.spoolforever"></a>
+<code class="descclassname">uwsgidecorators.</code><code class="descname">spoolforever</code><span class="sig-paren">(</span><em>func</em>, <em>pass_arguments=False</em><span class="sig-paren">)</span><a class="headerlink" href="#uwsgidecorators.spoolforever" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use <code class="docutils literal notranslate"><span class="pre">spoolforever</span></code> when you want to continuously execute a spool task.
+A <code class="docutils literal notranslate"><span class="pre">@spoolforever</span></code> task will always return <code class="docutils literal notranslate"><span class="pre">uwsgi.SPOOL_RETRY</span></code>.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@spoolforever</span>
+<span class="k">def</span> <span class="nf">a_longer_task</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10000000</span><span class="p">):</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+
+<span class="c1"># enqueue the task</span>
+<span class="n">a_longer_task</span><span class="o">.</span><span class="n">spool</span><span class="p">({</span><span class="s1">'pippo'</span><span class="p">:</span><span class="s1">'pluto'</span><span class="p">})</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>On Python3, only <code class="docutils literal notranslate"><span class="pre">bytes</span></code> type arguments are allowed. See below for
+another way of passing arguments.</p>
+</div>
+<p>When <code class="docutils literal notranslate"><span class="pre">pass_arguments</span></code> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, arguments can be of any type
+supported by the <code class="xref py py-mod docutils literal notranslate"><span class="pre">pickle</span></code> module. The following arguments have
+a special meaning:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">spooler</span></code>: specify the <strong>absolute</strong> path of the spooler that has to
+manage this task</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">at</span></code>: unix time at which the task must be executed (read: the task
+will not be run until the <code class="docutils literal notranslate"><span class="pre">at</span></code> time is passed)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">priority</span></code>: this will be the subdirectory in the spooler directory
+in which the task will be placed, you can use that trick to give
+a good-enough prioritization to tasks (for better approach use
+multiple spoolers)</p></li>
+</ul>
+</div></blockquote>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>On Python3, the special arguments <code class="docutils literal notranslate"><span class="pre">spooler</span></code>, <code class="docutils literal notranslate"><span class="pre">at</span></code>,
+<code class="docutils literal notranslate"><span class="pre">priority</span></code> and <code class="docutils literal notranslate"><span class="pre">body</span></code> <strong>must</strong> be <code class="docutils literal notranslate"><span class="pre">bytes</span></code>.</p>
+</div>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@spoolforever</span><span class="p">(</span><span class="n">pass_arguments</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">a_longer_task</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10000000</span><span class="p">):</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+
+<span class="c1"># enqueue the task</span>
+<span class="n">a_longer_task</span><span class="o">.</span><span class="n">spool</span><span class="p">(</span><span class="s1">'pluto'</span><span class="p">,</span> <span class="mi">42</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="uwsgidecorators.spoolraw"><a name="//apple_ref/cpp/Function/uwsgidecorators.spoolraw"></a>
+<code class="descclassname">uwsgidecorators.</code><code class="descname">spoolraw</code><span class="sig-paren">(</span><em>func</em>, <em>pass_arguments=False</em><span class="sig-paren">)</span><a class="headerlink" href="#uwsgidecorators.spoolraw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Advanced users may want to control the return value of a task.</p>
+<blockquote>
+<div><div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@spoolraw</span>
+<span class="k">def</span> <span class="nf">a_controlled_task</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">args</span><span class="p">[</span><span class="s1">'foo'</span><span class="p">]</span> <span class="o">==</span> <span class="s1">'bar'</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">uwsgi</span><span class="o">.</span><span class="n">SPOOL_OK</span>
+    <span class="k">return</span> <span class="n">uwsgi</span><span class="o">.</span><span class="n">SPOOL_RETRY</span>
+
+<span class="n">a_controlled_task</span><span class="o">.</span><span class="n">spool</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s1">'bar'</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>On Python3, only <code class="docutils literal notranslate"><span class="pre">bytes</span></code> type arguments are allowed. See below for
+another way of passing arguments.</p>
+</div>
+<p>When <code class="docutils literal notranslate"><span class="pre">pass_arguments</span></code> is set to <code class="docutils literal notranslate"><span class="pre">True</span></code>, arguments can be of any type
+supported by the <code class="xref py py-mod docutils literal notranslate"><span class="pre">pickle</span></code> module. The following arguments have
+a special meaning:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">spooler</span></code>: specify the <strong>absolute</strong> path of the spooler that has to
+manage this task</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">at</span></code>: unix time at which the task must be executed (read: the task
+will not be run until the <code class="docutils literal notranslate"><span class="pre">at</span></code> time is passed)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">priority</span></code>: this will be the subdirectory in the spooler directory
+in which the task will be placed, you can use that trick to give
+a good-enough prioritization to tasks (for better approach use
+multiple spoolers)</p></li>
+</ul>
+</div></blockquote>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>On Python3, the special arguments <code class="docutils literal notranslate"><span class="pre">spooler</span></code>, <code class="docutils literal notranslate"><span class="pre">at</span></code>,
+<code class="docutils literal notranslate"><span class="pre">priority</span></code> and <code class="docutils literal notranslate"><span class="pre">body</span></code> <strong>must</strong> be <code class="docutils literal notranslate"><span class="pre">bytes</span></code>.</p>
+</div>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@spoolraw</span><span class="p">(</span><span class="n">pass_arguments</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">a_controlled_task</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">'foo'</span><span class="p">]</span> <span class="o">==</span> <span class="s1">'bar'</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">uwsgi</span><span class="o">.</span><span class="n">SPOOL_OK</span>
+    <span class="k">return</span> <span class="n">uwsgi</span><span class="o">.</span><span class="n">SPOOL_RETRY</span>
+
+<span class="n">a_controlled_task</span><span class="o">.</span><span class="n">spool</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s1">'bar'</span><span class="p">,</span> <span class="n">age</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+</pre></div>
+</div>
+</div></blockquote>
+</dd></dl>
+<dl class="function">
+<dt id="uwsgidecorators.rpc"><a name="//apple_ref/cpp/Function/uwsgidecorators.rpc"></a>
+<code class="descclassname">uwsgidecorators.</code><code class="descname">rpc</code><span class="sig-paren">(</span><em>"name"</em>, <em>func</em><span class="sig-paren">)</span><a class="headerlink" href="#uwsgidecorators.rpc" title="Permalink to this definition">¶</a></dt>
+<dd><p>uWSGI <a class="reference internal" href="RPC.html"><span class="doc">uWSGI RPC Stack</span></a> is the fastest way to remotely call functions in applications hosted in uWSGI instances. You can easily define exported functions with the @rpc decorator.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@rpc</span><span class="p">(</span><span class="s1">'helloworld'</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">ciao_mondo_function</span><span class="p">():</span>
+    <span class="k">return</span> <span class="s2">"Hello World"</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="uwsgidecorators.signal"><a name="//apple_ref/cpp/Function/uwsgidecorators.signal"></a>
+<code class="descclassname">uwsgidecorators.</code><code class="descname">signal</code><span class="sig-paren">(</span><em>num)(func</em><span class="sig-paren">)</span><a class="headerlink" href="#uwsgidecorators.signal" title="Permalink to this definition">¶</a></dt>
+<dd><p>You can register signals for the <a class="reference internal" href="Signals.html"><span class="doc">signal framework</span></a> in one shot.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@signal</span><span class="p">(</span><span class="mi">17</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">my_signal</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">"i am signal </span><span class="si">%d</span><span class="s2">"</span> <span class="o">%</span> <span class="n">num</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="uwsgidecorators.timer"><a name="//apple_ref/cpp/Function/uwsgidecorators.timer"></a>
+<code class="descclassname">uwsgidecorators.</code><code class="descname">timer</code><span class="sig-paren">(</span><em>interval</em>, <em>func</em><span class="sig-paren">)</span><a class="headerlink" href="#uwsgidecorators.timer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute a function at regular intervals.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@timer</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">three_seconds</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">"3 seconds elapsed"</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="uwsgidecorators.rbtimer"><a name="//apple_ref/cpp/Function/uwsgidecorators.rbtimer"></a>
+<code class="descclassname">uwsgidecorators.</code><code class="descname">rbtimer</code><span class="sig-paren">(</span><em>interval</em>, <em>func</em><span class="sig-paren">)</span><a class="headerlink" href="#uwsgidecorators.rbtimer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Works like @timer but using red black timers.</p>
+</dd></dl>
+<dl class="function">
+<dt id="uwsgidecorators.cron"><a name="//apple_ref/cpp/Function/uwsgidecorators.cron"></a>
+<code class="descclassname">uwsgidecorators.</code><code class="descname">cron</code><span class="sig-paren">(</span><em>min</em>, <em>hour</em>, <em>day</em>, <em>mon</em>, <em>wday</em>, <em>func</em><span class="sig-paren">)</span><a class="headerlink" href="#uwsgidecorators.cron" title="Permalink to this definition">¶</a></dt>
+<dd><p>Easily register functions for the <span class="xref std std-doc">CronInterface</span>.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@cron</span><span class="p">(</span><span class="mi">59</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">execute_me_at_three_and_fiftynine</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">"it's 3:59 in the morning"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Since 1.2, a new syntax is supported to simulate <code class="docutils literal notranslate"><span class="pre">crontab</span></code>-like intervals (every Nth minute, etc.). <code class="docutils literal notranslate"><span class="pre">*/5</span> <span class="pre">*</span> <span class="pre">*</span> <span class="pre">*</span> <span class="pre">*</span></code> can be specified in uWSGI like thus:</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@cron</span><span class="p">(</span><span class="o">-</span><span class="mi">5</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">execute_me_every_five_min</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">"5 minutes, what a long time!"</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="uwsgidecorators.filemon"><a name="//apple_ref/cpp/Function/uwsgidecorators.filemon"></a>
+<code class="descclassname">uwsgidecorators.</code><code class="descname">filemon</code><span class="sig-paren">(</span><em>path</em>, <em>func</em><span class="sig-paren">)</span><a class="headerlink" href="#uwsgidecorators.filemon" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute a function every time a file/directory is modified.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@filemon</span><span class="p">(</span><span class="s2">"/tmp"</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">tmp_has_been_modified</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">"/tmp directory has been modified. Great magic is afoot"</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="uwsgidecorators.erlang"><a name="//apple_ref/cpp/Function/uwsgidecorators.erlang"></a>
+<code class="descclassname">uwsgidecorators.</code><code class="descname">erlang</code><span class="sig-paren">(</span><em>process_name</em>, <em>func</em><span class="sig-paren">)</span><a class="headerlink" href="#uwsgidecorators.erlang" title="Permalink to this definition">¶</a></dt>
+<dd><p>Map a function as an <a class="reference internal" href="Erlang.html"><span class="doc">Erlang</span></a> process.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@erlang</span><span class="p">(</span><span class="s1">'foobar'</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">hello</span><span class="p">():</span>
+    <span class="k">return</span> <span class="s2">"Hello"</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="uwsgidecorators.thread"><a name="//apple_ref/cpp/Function/uwsgidecorators.thread"></a>
+<code class="descclassname">uwsgidecorators.</code><code class="descname">thread</code><span class="sig-paren">(</span><em>func</em><span class="sig-paren">)</span><a class="headerlink" href="#uwsgidecorators.thread" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mark function to be executed in a separate thread.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Threading must be enabled in uWSGI with the <code class="docutils literal notranslate"><span class="pre">enable-threads</span></code> or <code class="docutils literal notranslate"><span class="pre">threads</span> <span class="pre">&lt;n&gt;</span></code> option.</p>
+</div>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@thread</span>
+<span class="k">def</span> <span class="nf">a_running_thread</span><span class="p">():</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">"i am a no-args thread"</span><span class="p">)</span>
+
+<span class="nd">@thread</span>
+<span class="k">def</span> <span class="nf">a_running_thread_with_args</span><span class="p">(</span><span class="n">who</span><span class="p">):</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">"Hello </span><span class="si">%s</span><span class="s2"> (from arged-thread)"</span> <span class="o">%</span> <span class="n">who</span><span class="p">)</span>
+
+<span class="n">a_running_thread</span><span class="p">()</span>
+<span class="n">a_running_thread_with_args</span><span class="p">(</span><span class="s2">"uWSGI"</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You may also combine <code class="docutils literal notranslate"><span class="pre">@thread</span></code> with <code class="docutils literal notranslate"><span class="pre">@postfork</span></code> to spawn the postfork handler in a new thread in the freshly spawned worker.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@postfork</span>
+<span class="nd">@thread</span>
+<span class="k">def</span> <span class="nf">a_post_fork_thread</span><span class="p">():</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s2">"Hello from a thread in worker </span><span class="si">%d</span><span class="s2">"</span> <span class="o">%</span> <span class="n">uwsgi</span><span class="o">.</span><span class="n">worker_id</span><span class="p">())</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="uwsgidecorators.lock"><a name="//apple_ref/cpp/Function/uwsgidecorators.lock"></a>
+<code class="descclassname">uwsgidecorators.</code><code class="descname">lock</code><span class="sig-paren">(</span><em>func</em><span class="sig-paren">)</span><a class="headerlink" href="#uwsgidecorators.lock" title="Permalink to this definition">¶</a></dt>
+<dd><p>This decorator will execute a function in fully locked environment, making it impossible for other workers or threads (or the master, if you’re foolish or brave enough) to run it simultaneously.
+Obviously this may be combined with @postfork.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@lock</span>
+<span class="k">def</span> <span class="nf">dangerous_op</span><span class="p">():</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">"Concurrency is for fools!"</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="uwsgidecorators.mulefunc"><a name="//apple_ref/cpp/Function/uwsgidecorators.mulefunc"></a>
+<code class="descclassname">uwsgidecorators.</code><code class="descname">mulefunc</code><span class="sig-paren">(</span><span class="optional">[</span><em>mulespec</em>, <span class="optional">]</span><em>func</em><span class="sig-paren">)</span><a class="headerlink" href="#uwsgidecorators.mulefunc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Offload the execution of the function to a <a class="reference internal" href="Mules.html"><span class="doc">mule</span></a>. When the offloaded function is called, it will return immediately and execution is delegated to a mule.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@mulefunc</span>
+<span class="k">def</span> <span class="nf">i_am_an_offloaded_function</span><span class="p">(</span><span class="n">argument1</span><span class="p">,</span> <span class="n">argument2</span><span class="p">):</span>
+    <span class="k">print</span> <span class="n">argument1</span><span class="p">,</span><span class="n">argument2</span>
+</pre></div>
+</div>
+<p>You may also specify a mule ID or mule farm to run the function on. Please remember to register your function with a uwsgi import configuration option.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@mulefunc</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">on_three</span><span class="p">():</span>
+    <span class="k">print</span> <span class="s2">"I'm running on mule 3."</span>
+
+<span class="nd">@mulefunc</span><span class="p">(</span><span class="s1">'old_mcdonalds_farm'</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">on_mcd</span><span class="p">():</span>
+    <span class="k">print</span> <span class="s2">"I'm running on a mule on Old McDonalds' farm."</span>
+</pre></div>
+</div>
+</dd></dl>
+<dl class="function">
+<dt id="uwsgidecorators.harakiri"><a name="//apple_ref/cpp/Function/uwsgidecorators.harakiri"></a>
+<code class="descclassname">uwsgidecorators.</code><code class="descname">harakiri</code><span class="sig-paren">(</span><em>time</em>, <em>func</em><span class="sig-paren">)</span><a class="headerlink" href="#uwsgidecorators.harakiri" title="Permalink to this definition">¶</a></dt>
+<dd><p>Starting from uWSGI 1.3-dev, a customizable secondary <a class="reference internal" href="Glossary.html#term-harakiri"><span class="xref std std-term">harakiri</span></a> subsystem has been added. You can use this decorator to kill a worker if the given call is taking too long.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="nd">@harakiri</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">slow_function</span><span class="p">(</span><span class="n">foo</span><span class="p">,</span> <span class="n">bar</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10000</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10000</span><span class="p">):</span>
+            <span class="k">pass</span>
+
+<span class="c1"># or the alternative lower level api</span>
+
+<span class="n">uwsgi</span><span class="o">.</span><span class="n">set_user_harakiri</span><span class="p">(</span><span class="mi">30</span><span class="p">)</span> <span class="c1"># you have 30 seconds. fight!</span>
+<span class="n">slow_function</span><span class="p">()</span>
+<span class="n">uwsgi</span><span class="o">.</span><span class="n">set_user_harakiri</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># clear the timer, all is well</span>
+</pre></div>
+</div>
+</dd></dl>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div aria-label="main navigation" class="sphinxsidebar" role="navigation">
+<div class="sphinxsidebarwrapper">
+<h3><a href="index.html">Table of Contents</a></h3>
+<ul>
+<li><a class="reference internal" href="#">uWSGI API - Python decorators</a><ul>
+<li><a class="reference internal" href="#notes">Notes</a></li>
+<li><a class="reference internal" href="#example-a-django-session-cleaner-and-video-encoder">Example: a Django session cleaner and video encoder</a></li>
+<li><a class="reference internal" href="#example-web2py-spooler-timer">Example: web2py + spooler + timer</a></li>
+<li><a class="reference internal" href="#module-uwsgidecorators">uwsgidecorators API reference</a></li>
+</ul>
+</li>
+</ul>
+<h4>Previous topic</h4>
+<p class="topless"><a href="PythonModule.html" title="previous chapter">The uwsgi Python module</a></p>
+<h4>Next topic</h4>
+<p class="topless"><a href="PythonPump.html" title="next chapter">Pump support</a></p>
+<div aria-label="source link" role="note">
+<h3>This Page</h3>
+<ul class="this-page-menu">
+<li><a href="_sources/PythonDecorators.rst.txt" rel="nofollow">Show Source</a></li>
+</ul>
+</div>
+<div id="searchbox" role="search" style="display: none">
+<h3>Quick search</h3>
+<div class="searchformwrapper">
+<form action="search.html" class="search" method="get">
+<input name="q" type="text"/>
+<input type="submit" value="Go"/>
+</form>
+</div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+</div>
+</div>
+<div class="clearer"></div>
+</div>
+<div aria-label="related navigation" class="related" role="navigation">
+<h3>Navigation</h3>
+<ul>
+<li class="right" style="margin-right: 10px">
+<a href="genindex.html" title="General Index">index</a></li>
+<li class="right">
+<a href="py-modindex.html" title="Python Module Index">modules</a> |</li>
+<li class="right">
+<a href="PythonPump.html" title="Pump support">next</a> |</li>
+<li class="right">
+<a href="PythonModule.html" title="The uwsgi Python module">previous</a> |</li>
+<li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> »</li>
+<li class="nav-item nav-item-1"><a href="Python.html">Python support</a> »</li>
+</ul>
+</div>
+<div class="footer" role="contentinfo">
+        © Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+</body>
+</html>

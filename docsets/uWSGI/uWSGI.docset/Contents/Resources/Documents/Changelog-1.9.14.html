@@ -1,0 +1,266 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>uWSGI 1.9.14 &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="uWSGI 1.9.13" href="Changelog-1.9.13.html" />
+    <link rel="prev" title="uWSGI 1.9.15" href="Changelog-1.9.15.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.13.html" title="uWSGI 1.9.13"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.15.html" title="uWSGI 1.9.15"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="uwsgi-1-9-14">
+<h1>uWSGI 1.9.14<a class="headerlink" href="#uwsgi-1-9-14" title="Permalink to this headline">¶</a></h1>
+<p>Changelog [20130721]</p>
+<div class="section" id="bugfixes">
+<h2>Bugfixes<a class="headerlink" href="#bugfixes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>fixed python modifier1 management (was hardcoded to 0)</p></li>
+<li><p>fixed url decoding in http and http-socket (it now supports lowercase hex, spotted by Miles Shang)</p></li>
+<li><p>more user-friendly error message for undeletable unix sockets</p></li>
+<li><p>fixed –http-auto-chunked in http 1.1 keepalive mode (André Cruz)</p></li>
+<li><p>fixed python wheel support (Fraser Nevett)</p></li>
+<li><p>fixed –safe-fd (was not correctly honoured by the Emperor)</p></li>
+<li><p>fixed ruby 2.x reloading</p></li>
+<li><p>improved support for OSX Tiger (yes, OSX 10.4)</p></li>
+<li><p>better computation of listen queue load</p></li>
+<li><p>fixed v8 build on OSX</p></li>
+<li><p>fixed pypy rpc</p></li>
+<li><p>improved chunked api performance</p></li>
+<li><p>fixed latin1 encoding with python3</p></li>
+<li><p>fixed –spooler-ordered (Roberto Leandrini)</p></li>
+<li><p>fixed php status line reported in request logs</p></li>
+</ul>
+</div>
+<div class="section" id="new-features">
+<h2>New features<a class="headerlink" href="#new-features" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="ruby-1-9-x-2-x-native-threads-support">
+<h3>Ruby 1.9.x/2.x native threads support<a class="headerlink" href="#ruby-1-9-x-2-x-native-threads-support" title="Permalink to this headline">¶</a></h3>
+<p>Ruby 1.9 (mri) introduced native threads support (very similar to the CPython ones, governed by a global lock named GVL).</p>
+<p>For various reasons (check the comments on top of the source plugin) the ruby threads support in uWSGI has been implemented as a “loop engine plugin”.</p>
+<p>You need to build the “rbthreads” plugin (it is automatic when using the ‘ruby2’ build profile) and enable it with ‘–rbthreads’</p>
+<p>The gem script has been extended, automatically selecting the ‘ruby2’ build profile when a ruby &gt;= 1.9 is detected (this should make the life easier for Heroku users)</p>
+<p>Rails4 is the first Ruby on Rails version supporting and blessing threads (in 3.x you need to explicitly enable support). You can use
+multiple threads in Rails4 only when in “production” mode, otherwise your app will deadlock after the first request.</p>
+<p>An example config:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">rack,rbthreads</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; spawn 2 processes</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">2</span>
+<span class="c1">; spawn 8 threads</span>
+<span class="na">threads</span> <span class="o">=</span> <span class="s">8</span>
+<span class="c1">; enable ruby threads</span>
+<span class="na">rbthreads</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; load the Rack app</span>
+<span class="na">rack</span> <span class="o">=</span> <span class="s">config.ru</span>
+<span class="c1">; bind to an http port</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">http-socket-modifier1</span> <span class="o">=</span> <span class="s">7</span>
+</pre></div>
+</div>
+<p>it will generate a total of 16 threads</p>
+</div>
+<div class="section" id="filesystem-monitoring-interface-fsmon">
+<h3>Filesystem monitoring interface (fsmon)<a class="headerlink" href="#filesystem-monitoring-interface-fsmon" title="Permalink to this headline">¶</a></h3>
+<p>Currently uWSGI is able to monitor filesystem changes using the “simple” –touch-* facility or the signal framework (using various
+operating system api like inotify or kqueue).</p>
+<p>A new interface for plugin writers named “fsmon” has been added, allowing easy implementation of realtime filesystem monitors.</p>
+<p>Three new options have been added:</p>
+<blockquote>
+<div><p><cite>–fs-reload &lt;path&gt;</cite></p>
+<p><cite>–fs-brutal-reload &lt;path&gt;</cite></p>
+<p><cite>–fs-signal &lt;path&gt; &lt;signal&gt;</cite></p>
+</div></blockquote>
+<p>Contrary to the –touch-* options they are realtime (the master is woke up as soon as the item changes) and. uses kernel facilities
+(currently only inotify() and kqueue() are supported). Thanks to this choice you can now monitor a whole directory for changes (without the need of external
+processes/wrapper like inotifywatch)</p>
+</div>
+<div class="section" id="uclibc-support">
+<h3>uClibc support<a class="headerlink" href="#uclibc-support" title="Permalink to this headline">¶</a></h3>
+<p>Author: Natanael Copa</p>
+<p>uWSGI can now be built on uclibc-based systems (generally, embedded systems)</p>
+<p>Alpine Linux is the operating system on which the support has been tested</p>
+</div>
+<div class="section" id="lua-5-2-support">
+<h3>Lua 5.2 support<a class="headerlink" href="#lua-5-2-support" title="Permalink to this headline">¶</a></h3>
+<p>Author: Natanael Copa</p>
+<p>the lua plugins now supports Lua 5.2</p>
+</div>
+<div class="section" id="setscheme-setdocroot">
+<h3>setscheme, setdocroot<a class="headerlink" href="#setscheme-setdocroot" title="Permalink to this headline">¶</a></h3>
+<p>This two new routing actions allow you to dynamically override DOCUMENT_ROOT and UWSGI_SCHEME</p>
+</div>
+<div class="section" id="sendfile-fastfile">
+<h3>sendfile, fastfile<a class="headerlink" href="#sendfile-fastfile" title="Permalink to this headline">¶</a></h3>
+<p>This two actions (added to the router_static plugin) allows you to return static files to the client bypassing the DOCUMENT_ROOT check.</p>
+<p>The first one forces the use of the sendfile() syscall (where available), while the second automatically tries to choose the best serving strategy (like offloading)</p>
+</div>
+<div class="section" id="reload-on-fd-and-brutal-reload-on-fd">
+<h3>–reload-on-fd and –brutal-reload-on-fd<a class="headerlink" href="#reload-on-fd-and-brutal-reload-on-fd" title="Permalink to this headline">¶</a></h3>
+<p>Two new options allowing you to reload an instance when a file descriptor is ready.</p>
+<p>Currently the best usage scenario is for the oom_control cgroup interface (via eventfd).</p>
+<p>Supposing you have a process wrapper allocating an eventfd() reporting OOM events (and exposed as the ‘OOM’ environment var) you can force a uWSGI reload
+when out of memory with:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="na">reload-on-fd</span> <span class="o">=</span> <span class="s">$(OOM):8 OUT OF MEMORY !!!</span>
+</pre></div>
+</div>
+<p>it means:</p>
+<p>monitor the $(OOM) file descriptor and read 8 bytes from it when ready (it is an eventfd() requirement), then print “OUT OF MEMORY !!!” in the logs and gracefully reload the instance.</p>
+<p>Obviously this is only a way to use it. The UNIX world is file-descriptor based so you have plenty of funny ways to use it.</p>
+</div>
+<div class="section" id="spooler-improvements">
+<h3>Spooler improvements<a class="headerlink" href="#spooler-improvements" title="Permalink to this headline">¶</a></h3>
+<p>Author: Roberto Leandrini</p>
+<p>Effectively all of the work has been done in uwsgidecorators.py</p>
+<p>You can now pass to all of the available spooler-related decorators the “pass_arguments=True” option, to automatically
+serialize the spooler function parameters. This is an abstraction avoiding you the need to serialize/deserialize arguments.</p>
+<p>In addition to this the decorators have been extended to implement __call__ in this way you can directly call spooler decorated functions
+as normal functions.</p>
+</div>
+<div class="section" id="emperor-nofollow">
+<h3>–emperor-nofollow<a class="headerlink" href="#emperor-nofollow" title="Permalink to this headline">¶</a></h3>
+<p>Enabling this option will allows the Emperor to watch for symbolic links mtime update instead of the mtime of the real file.</p>
+<p>Alberto Scotto is working on an updated version supporting both (should be ready for the next release)</p>
+</div>
+<div class="section" id="daemontools-envdir-support">
+<h3>daemontools envdir support<a class="headerlink" href="#daemontools-envdir-support" title="Permalink to this headline">¶</a></h3>
+<p>Albeit daemontools look old-fashioned, things like envdirs (<a class="reference external" href="http://cr.yp.to/daemontools/envdir.html">http://cr.yp.to/daemontools/envdir.html</a>) are heavily used in various context.</p>
+<p>uWSGI got two new options (–envdir &lt;path&gt; and –early-envdir &lt;path&gt;) allowing you to support this special (archaic ?) configuration way.</p>
+</div>
+<div class="section" id="xmldir-improvements">
+<h3>xmldir improvements<a class="headerlink" href="#xmldir-improvements" title="Permalink to this headline">¶</a></h3>
+<p>Author: Guido Berhoerster</p>
+<p>The xmldir plugins has been improved supporting iconv-based utf8 encoding. Various minor fixes have been committed.</p>
+<p>The examples directory contains two new files showing an xmldir+xslt usage</p>
+</div>
+</div>
+<div class="section" id="breaking-news">
+<h2>Breaking News !!!<a class="headerlink" href="#breaking-news" title="Permalink to this headline">¶</a></h2>
+<p>Servlet 2.5 support development has just started. The plugin is present in the tree but it is unusable (it is a hardcoded
+jsp engine). We expect a beta version after the summer. Obviously we shameless consider <a class="reference internal" href="JWSGI.html"><span class="doc">The JWSGI interface</span></a> a better approach than servlet for non-Enterprise people ;)</p>
+</div>
+<div class="section" id="availability">
+<h2>Availability<a class="headerlink" href="#availability" title="Permalink to this headline">¶</a></h2>
+<p>Download uWSGI 1.9.14 from</p>
+<p><a class="reference external" href="https://projects.unbit.it/downloads/uwsgi-1.9.14.tar.gz">https://projects.unbit.it/downloads/uwsgi-1.9.14.tar.gz</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">uWSGI 1.9.14</a><ul>
+<li><a class="reference internal" href="#bugfixes">Bugfixes</a></li>
+<li><a class="reference internal" href="#new-features">New features</a><ul>
+<li><a class="reference internal" href="#ruby-1-9-x-2-x-native-threads-support">Ruby 1.9.x/2.x native threads support</a></li>
+<li><a class="reference internal" href="#filesystem-monitoring-interface-fsmon">Filesystem monitoring interface (fsmon)</a></li>
+<li><a class="reference internal" href="#uclibc-support">uClibc support</a></li>
+<li><a class="reference internal" href="#lua-5-2-support">Lua 5.2 support</a></li>
+<li><a class="reference internal" href="#setscheme-setdocroot">setscheme, setdocroot</a></li>
+<li><a class="reference internal" href="#sendfile-fastfile">sendfile, fastfile</a></li>
+<li><a class="reference internal" href="#reload-on-fd-and-brutal-reload-on-fd">–reload-on-fd and –brutal-reload-on-fd</a></li>
+<li><a class="reference internal" href="#spooler-improvements">Spooler improvements</a></li>
+<li><a class="reference internal" href="#emperor-nofollow">–emperor-nofollow</a></li>
+<li><a class="reference internal" href="#daemontools-envdir-support">daemontools envdir support</a></li>
+<li><a class="reference internal" href="#xmldir-improvements">xmldir improvements</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#breaking-news">Breaking News !!!</a></li>
+<li><a class="reference internal" href="#availability">Availability</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Changelog-1.9.15.html"
+                        title="previous chapter">uWSGI 1.9.15</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Changelog-1.9.13.html"
+                        title="next chapter">uWSGI 1.9.13</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Changelog-1.9.14.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.13.html" title="uWSGI 1.9.13"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.15.html" title="uWSGI 1.9.15"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,365 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>The uWSGI Spooler &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="uWSGI Subscription Server" href="SubscriptionServer.html" />
+    <link rel="prev" title="The uWSGI Signal Framework" href="Signals.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="SubscriptionServer.html" title="uWSGI Subscription Server"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Signals.html" title="The uWSGI Signal Framework"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="the-uwsgi-spooler">
+<h1>The uWSGI Spooler<a class="headerlink" href="#the-uwsgi-spooler" title="Permalink to this headline">¶</a></h1>
+<p>Updated to uWSGI 2.0.1</p>
+<p>Supported on: Perl, Python, Ruby</p>
+<p>The Spooler is a queue manager built into uWSGI that works like a printing/mail system.</p>
+<p>You can enqueue massive sending of emails, image processing, video encoding, etc. and let the spooler do the hard work in background while your users get their requests served by normal workers.</p>
+<p>A spooler works by defining a directory in which “spool files” will be written, every time the spooler find a file in its directory it will parse it and will run a specific function.</p>
+<p>You can have multiple spoolers mapped to different directories and even multiple spoolers mapped to the same one.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">--spooler</span> <span class="pre">&lt;directory&gt;</span></code> option allows you to generate a spooler process, while the <code class="docutils literal notranslate"><span class="pre">--spooler-processes</span> <span class="pre">&lt;n&gt;</span></code> allows you to set how many processes to spawn for every spooler.</p>
+<p>The spooler is able to manage uWSGI signals too, so you can use it as a target for your handlers.</p>
+<p>This configuration will generate a spooler for your instance (myspool directory must exists)</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">spooler</span> <span class="o">=</span> <span class="s">myspool</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+<p>while this one will create two spoolers:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">spooler</span> <span class="o">=</span> <span class="s">myspool</span>
+<span class="na">spooler</span> <span class="o">=</span> <span class="s">myspool2</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+<p>having multiple spoolers allows you to prioritize tasks (and eventually parallelize them)</p>
+<div class="section" id="spool-files">
+<h2>Spool files<a class="headerlink" href="#spool-files" title="Permalink to this headline">¶</a></h2>
+<p>Spool files are serialized hashes/dictionaries of strings. The spooler will parse them and pass the resulting hash/dictionary to the spooler function (see below).</p>
+<p>The serialization format is the same used for the ‘uwsgi’ protocol, so you are limited to 64k (even if there is a trick for passing bigger values, see the ‘body’ magic key below). The modifier1
+for spooler packets is the 17, so a {‘hello’ =&gt; ‘world’} hash will be encoded as:</p>
+<table class="docutils align-center">
+<colgroup>
+<col style="width: 24%" />
+<col style="width: 38%" />
+<col style="width: 38%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>header</p></th>
+<th class="head"><p>key1</p></th>
+<th class="head"><p>value1</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>17|14|0|0</p></td>
+<td><p><a href="#id1"><span class="problematic" id="id2">|</span></a>5|0|h|e|l|l|o</p></td>
+<td><p><a href="#id3"><span class="problematic" id="id4">|</span></a>5|0|w|o|r|l|d</p></td>
+</tr>
+</tbody>
+</table>
+<p>A locking system allows you to safely manually remove spool files if something goes wrong, or to move them between spooler directories.</p>
+<p>Spool dirs over NFS are allowed, but if you do not have proper NFS locking in place, avoid mapping the same spooler NFS directory to spooler on different machines.</p>
+</div>
+<div class="section" id="setting-the-spooler-function-callable">
+<h2>Setting the spooler function/callable<a class="headerlink" href="#setting-the-spooler-function-callable" title="Permalink to this headline">¶</a></h2>
+<p>Because there are dozens of different ways to enqueue spooler requests, we’re going to cover receiving the requests first.</p>
+<p>To have a fully operational spooler you need to define a “spooler function/callable” to process the requests.</p>
+<p>Regardless of the the number of configured spoolers, the same function will be executed.
+It is up to the developer to instruct it to recognize tasks.
+If you don’t process requests, the spool directory will just fill up.</p>
+<p>This function must returns an integer value:</p>
+<ul class="simple">
+<li><p>-2 (SPOOL_OK) – the task has been completed, the spool file will be removed</p></li>
+<li><p>-1 (SPOOL_RETRY) – something is temporarily wrong, the task will be retried at the next spooler iteration</p></li>
+<li><p>0 (SPOOL_IGNORE) – ignore this task, if multiple languages are loaded in the instance all of them will fight for managing the task. This return values allows you to skip a task in specific languages.</p></li>
+</ul>
+<p>Any other value will be interpreted as -1 (retry).</p>
+<p>Each language plugin has its own way to define the spooler function:</p>
+<p>Perl:</p>
+<div class="highlight-pl notranslate"><div class="highlight"><pre><span></span><span class="nn">uwsgi::</span><span class="n">spooler</span><span class="p">(</span>
+    <span class="k">sub</span> <span class="p">{</span>
+        <span class="k">my</span> <span class="p">(</span><span class="nv">$env</span><span class="p">)</span> <span class="o">=</span> <span class="nv">@_</span><span class="p">;</span>
+        <span class="k">print</span> <span class="nv">$env</span><span class="o">-&gt;</span><span class="p">{</span><span class="n">foobar</span><span class="p">};</span>
+        <span class="k">return</span> <span class="nn">uwsgi::</span><span class="n">SPOOL_OK</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">);</span>
+<span class="c1"># hint - uwsgi:: is available when running using perl-exec= or psgi=</span>
+<span class="c1"># no don&#39;t need to use &quot;use&quot; or &quot;require&quot; it, it&#39;s already there.</span>
+</pre></div>
+</div>
+<p>Python:</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">uwsgi</span>
+
+<span class="k">def</span> <span class="nf">my_spooler</span><span class="p">(</span><span class="n">env</span><span class="p">):</span>
+    <span class="k">print</span> <span class="n">env</span><span class="p">[</span><span class="s1">&#39;foobar&#39;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">uwsgi</span><span class="o">.</span><span class="n">SPOOL_OK</span>
+
+<span class="n">uwsgi</span><span class="o">.</span><span class="n">spooler</span> <span class="o">=</span> <span class="n">my_spooler</span>
+</pre></div>
+</div>
+<p>Ruby:</p>
+<div class="highlight-rb notranslate"><div class="highlight"><pre><span></span><span class="k">module</span> <span class="nn">UWSGI</span>
+     <span class="kp">module_function</span>
+     <span class="k">def</span> <span class="nf">spooler</span><span class="p">(</span><span class="n">env</span><span class="p">)</span>
+             <span class="nb">puts</span> <span class="n">env</span><span class="o">.</span><span class="n">inspect</span>
+             <span class="k">return</span> <span class="no">UWSGI</span><span class="o">::</span><span class="no">SPOOL_OK</span>
+     <span class="k">end</span>
+<span class="k">end</span>
+</pre></div>
+</div>
+<p>Spooler functions must be defined in the master process, so if you are in lazy-apps mode, be sure to place it in a file that is parsed
+early in the server setup. (in Python you can use –shared-import, in Ruby –shared-require, in Perl –perl-exec).</p>
+<p>Python has support for importing code directly in the spooler with the <code class="docutils literal notranslate"><span class="pre">--spooler-python-import</span></code> option.</p>
+</div>
+<div class="section" id="enqueueing-requests-to-a-spooler">
+<h2>Enqueueing requests to a spooler<a class="headerlink" href="#enqueueing-requests-to-a-spooler" title="Permalink to this headline">¶</a></h2>
+<p>The ‘spool’ api function allows you to enqueue a hash/dictionary into the spooler specified by the instance:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="c1"># add this to your instance .ini file</span>
+<span class="na">spooler</span><span class="o">=</span><span class="s">/path/to/spooler</span>
+<span class="c1"># that&#39;s it! now use one of the code blocks below to send requests</span>
+<span class="c1"># note: you&#39;ll still need to register some sort of receiving function (specified above)</span>
+</pre></div>
+</div>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="c1"># python</span>
+<span class="kn">import</span> <span class="nn">uwsgi</span>
+<span class="n">uwsgi</span><span class="o">.</span><span class="n">spool</span><span class="p">({</span><span class="s1">&#39;foo&#39;</span><span class="p">:</span> <span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="s1">&#39;Kratos&#39;</span><span class="p">,</span> <span class="s1">&#39;surname&#39;</span><span class="p">:</span> <span class="s1">&#39;the same of Zeus&#39;</span><span class="p">})</span>
+<span class="c1"># or</span>
+<span class="n">uwsgi</span><span class="o">.</span><span class="n">spool</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;Kratos&#39;</span><span class="p">,</span> <span class="n">surname</span><span class="o">=</span><span class="s1">&#39;the same of Zeus&#39;</span><span class="p">)</span>
+<span class="c1"># for python3 use bytes instead of strings !!!</span>
+</pre></div>
+</div>
+<div class="highlight-pl notranslate"><div class="highlight"><pre><span></span><span class="c1"># perl</span>
+<span class="nn">uwsgi::</span><span class="n">spool</span><span class="p">({</span><span class="n">foo</span> <span class="o">=&gt;</span> <span class="s">&#39;bar&#39;</span><span class="p">,</span> <span class="n">name</span> <span class="o">=&gt;</span> <span class="s">&#39;Kratos&#39;</span><span class="p">,</span> <span class="n">surname</span> <span class="o">=&gt;</span> <span class="s">&#39;the same of Zeus&#39;</span><span class="p">})</span>
+<span class="c1"># the uwsgi:: functions are available when executed within psgi or perl-exec</span>
+</pre></div>
+</div>
+<div class="highlight-rb notranslate"><div class="highlight"><pre><span></span><span class="c1"># ruby</span>
+<span class="no">UWSGI</span><span class="o">.</span><span class="n">spool</span><span class="p">(</span><span class="n">foo</span> <span class="o">=&gt;</span> <span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="nb">name</span> <span class="o">=&gt;</span> <span class="s1">&#39;Kratos&#39;</span><span class="p">,</span> <span class="n">surname</span> <span class="o">=&gt;</span> <span class="s1">&#39;the same of Zeus&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Some keys have a special meaning:</p>
+<ul class="simple">
+<li><p>‘spooler’ =&gt; specify the ABSOLUTE path of the spooler that has to manage this task</p></li>
+<li><p>‘at’ =&gt; unix time at which the task must be executed (read: the task will not be run until the ‘at’ time is passed)</p></li>
+<li><p>‘priority’ =&gt; this will be the subdirectory in the spooler directory in which the task will be placed, you can use that trick to give a good-enough prioritization to tasks (for better approach use multiple spoolers)</p></li>
+<li><p>‘body’ =&gt; use this key for objects bigger than 64k, the blob will be appended to the serialzed uwsgi packet and passed back to the spooler function as the ‘body’ argument</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Spool arguments must be strings (or bytes for python3). The API functions will try to cast non-string values to strings/bytes, but do not rely on that functionality!</p>
+</div>
+</div>
+<div class="section" id="external-spoolers">
+<h2>External spoolers<a class="headerlink" href="#external-spoolers" title="Permalink to this headline">¶</a></h2>
+<p>You could want to implement a centralized spooler for your server across many uWSGI instances.</p>
+<p>A single instance will manage all of the tasks enqueued by multiple uWSGI instances.</p>
+<p>To accomplish this setup, each uWSGI instance has to know which spooler directories are valid (consider it a form of security).</p>
+<p>To add an external spooler directory use the <code class="docutils literal notranslate"><span class="pre">--spooler-external</span> <span class="pre">&lt;directory&gt;</span></code> option, then add to it using the spool function.</p>
+<p>The spooler locking subsystem will avoid any messes that you might think could occur.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">spooler-external</span> <span class="o">=</span> <span class="s">/var/spool/uwsgi/external</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="c1"># python</span>
+<span class="kn">import</span> <span class="nn">uwsgi</span>
+<span class="n">uwsgi</span><span class="o">.</span><span class="n">spool</span><span class="p">({</span><span class="s1">&#39;foo&#39;</span><span class="p">:</span> <span class="s1">&#39;bar&#39;</span><span class="p">,</span>  <span class="s1">&#39;spooler&#39;</span><span class="p">:</span> <span class="s1">&#39;/var/spool/uwsgi/external&#39;</span><span class="p">})</span>
+<span class="c1"># or</span>
+<span class="n">uwsgi</span><span class="o">.</span><span class="n">spool</span><span class="p">(</span><span class="n">foo</span><span class="o">=</span><span class="s1">&#39;bar&#39;</span><span class="p">,</span> <span class="n">spooler</span><span class="o">=</span><span class="s1">&#39;/var/spool/uwsgi/external&#39;</span><span class="p">)</span>
+<span class="c1"># for python3 use bytes instead of strings !!!</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="networked-spoolers">
+<h2>Networked spoolers<a class="headerlink" href="#networked-spoolers" title="Permalink to this headline">¶</a></h2>
+<p>You can even enqueue tasks over the network (be sure the ‘spooler’ plugin is loaded in your instance, but generally it is built in by default).</p>
+<p>As we have already seen, spooler packets have modifier1 17, you can directly send those packets to an uWSGI socket of an instance with a spooler enabled.</p>
+<p>We will use the Perl <code class="docutils literal notranslate"><span class="pre">Net::uwsgi</span></code> module (exposing a handy uwsgi_spool function) in this example (but feel free to use whatever you want to write the spool files).</p>
+<div class="highlight-perl notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/perl</span>
+<span class="k">use</span> <span class="nn">Net::uwsgi</span><span class="p">;</span>
+<span class="n">uwsgi_spool</span><span class="p">(</span><span class="s">&#39;localhost:3031&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s">&#39;test&#39;</span><span class="o">=&gt;</span><span class="s">&#39;test001&#39;</span><span class="p">,</span><span class="s">&#39;argh&#39;</span><span class="o">=&gt;</span><span class="s">&#39;boh&#39;</span><span class="p">,</span><span class="s">&#39;foo&#39;</span><span class="o">=&gt;</span><span class="s">&#39;bar&#39;</span><span class="p">});</span>
+<span class="n">uwsgi_spool</span><span class="p">(</span><span class="s">&#39;/path/to/my.sock&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s">&#39;test&#39;</span><span class="o">=&gt;</span><span class="s">&#39;test001&#39;</span><span class="p">,</span><span class="s">&#39;argh&#39;</span><span class="o">=&gt;</span><span class="s">&#39;boh&#39;</span><span class="p">,</span><span class="s">&#39;foo&#39;</span><span class="o">=&gt;</span><span class="s">&#39;bar&#39;</span><span class="p">});</span>
+</pre></div>
+</div>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">/path/to/my.sock</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">localhost:3031</span>
+<span class="na">spooler</span> <span class="o">=</span> <span class="s">/path/for/files</span>
+<span class="na">spooler-processes</span><span class="o">=</span><span class="s">1</span>
+<span class="na">perl-exec</span> <span class="o">=</span> <span class="s">/path/for/script-which-registers-spooler-sub.pl</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+<p>(thanks brianhorakh for the example)</p>
+</div>
+<div class="section" id="priorities">
+<h2>Priorities<a class="headerlink" href="#priorities" title="Permalink to this headline">¶</a></h2>
+<p>We have already seen that you can use the ‘priority’ key to give order in spooler parsing.</p>
+<p>While having multiple spoolers would be an extremely better approach, on system with few resources ‘priorities’ are a good trick.</p>
+<p>They works only if you enable the <code class="docutils literal notranslate"><span class="pre">--spooler-ordered</span></code> option. This option allows the spooler to scan directories entry in alphabetical order.</p>
+<p>If during the scan a directory with a ‘number’ name is found, the scan is suspended and the content of this subdirectory will be explored for tasks.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>/spool
+/spool/ztask
+/spool/xtask
+/spool/1/task1
+/spool/1/task0
+/spool/2/foo
+</pre></div>
+</div>
+<p>With this layout the order in which files will be parsed is:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>/spool/1/task0
+/spool/1/task1
+/spool/2/foo
+/spool/xtask
+/spool/ztask
+</pre></div>
+</div>
+<p>Remember, priorities only work for subdirectories named as ‘numbers’ and you need the <code class="docutils literal notranslate"><span class="pre">--spooler-ordered</span></code> option.</p>
+<p>The uWSGI spooler gives special names to tasks so the ordering of enqueuing is always respected.</p>
+</div>
+<div class="section" id="options">
+<h2>Options<a class="headerlink" href="#options" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">spooler=directory</span></code>
+run a spooler on the specified directory</p>
+<p><code class="docutils literal notranslate"><span class="pre">spooler-external=directory</span></code>
+map spoolers requests to a spooler directory managed by an external instance</p>
+<p><code class="docutils literal notranslate"><span class="pre">spooler-ordered</span></code>
+try to order the execution of spooler tasks (uses scandir instead of readdir)</p>
+<p><code class="docutils literal notranslate"><span class="pre">spooler-chdir=directory</span></code>
+call chdir() to specified directory before each spooler task</p>
+<p><code class="docutils literal notranslate"><span class="pre">spooler-processes=##</span></code>
+set the number of processes for spoolers</p>
+<p><code class="docutils literal notranslate"><span class="pre">spooler-quiet</span></code>
+do not be verbose with spooler tasks</p>
+<p><code class="docutils literal notranslate"><span class="pre">spooler-max-tasks=##</span></code>
+set the maximum number of tasks to run before recycling a spooler (to help alleviate memory leaks)</p>
+<p><code class="docutils literal notranslate"><span class="pre">spooler-signal-as-task</span></code>
+combined use with <code class="docutils literal notranslate"><span class="pre">spooler-max-tasks</span></code>. enable this, spooler will treat signal events as task.
+run signal handler will also increase the spooler task count.</p>
+<p><code class="docutils literal notranslate"><span class="pre">spooler-harakiri=##</span></code>
+set harakiri timeout for spooler tasks, see [harakiri] for more information.</p>
+<p><code class="docutils literal notranslate"><span class="pre">spooler-frequency=##</span></code>
+set the spooler frequency</p>
+<p><code class="docutils literal notranslate"><span class="pre">spooler-python-import=???</span></code>
+import a python module directly in the spooler</p>
+</div>
+<div class="section" id="tips-and-tricks">
+<h2>Tips and tricks<a class="headerlink" href="#tips-and-tricks" title="Permalink to this headline">¶</a></h2>
+<p>You can re-enqueue a spooler request by returning <code class="docutils literal notranslate"><span class="pre">uwsgi.SPOOL_RETRY</span></code> in your callable:</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">call_me_again_and_again</span><span class="p">(</span><span class="n">env</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">uwsgi</span><span class="o">.</span><span class="n">SPOOL_RETRY</span>
+</pre></div>
+</div>
+<p>You can set the spooler poll frequency using the <code class="docutils literal notranslate"><span class="pre">--spooler-frequency</span> <span class="pre">&lt;secs&gt;</span></code> option (default 30 seconds).</p>
+<p>You could use the <a class="reference internal" href="Caching.html"><span class="doc">The uWSGI caching framework</span></a> or <a class="reference internal" href="SharedArea.html"><span class="doc">SharedArea – share memory pages between uWSGI components</span></a> to exchange memory structures between spoolers and workers.</p>
+<p>Python (uwsgidecorators.py) and Ruby (uwsgidsl.rb) exposes higher-level facilities to manage the spooler, try to use them instead of the low-level approach described here.</p>
+<p>When using a spooler as a target for a uWSGI signal handler you can specify which one to route signal to using its ABSOLUTE directory name.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">The uWSGI Spooler</a><ul>
+<li><a class="reference internal" href="#spool-files">Spool files</a></li>
+<li><a class="reference internal" href="#setting-the-spooler-function-callable">Setting the spooler function/callable</a></li>
+<li><a class="reference internal" href="#enqueueing-requests-to-a-spooler">Enqueueing requests to a spooler</a></li>
+<li><a class="reference internal" href="#external-spoolers">External spoolers</a></li>
+<li><a class="reference internal" href="#networked-spoolers">Networked spoolers</a></li>
+<li><a class="reference internal" href="#priorities">Priorities</a></li>
+<li><a class="reference internal" href="#options">Options</a></li>
+<li><a class="reference internal" href="#tips-and-tricks">Tips and tricks</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Signals.html"
+                        title="previous chapter">The uWSGI Signal Framework</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="SubscriptionServer.html"
+                        title="next chapter">uWSGI Subscription Server</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Spooler.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="SubscriptionServer.html" title="uWSGI Subscription Server"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Signals.html" title="The uWSGI Signal Framework"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

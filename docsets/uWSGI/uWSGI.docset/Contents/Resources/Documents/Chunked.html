@@ -1,0 +1,187 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>The Chunked input API &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The uWSGI cheaper subsystem – adaptive process spawning" href="Cheaper.html" />
+    <link rel="prev" title="The Metrics subsystem" href="Metrics.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Cheaper.html" title="The uWSGI cheaper subsystem – adaptive process spawning"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Metrics.html" title="The Metrics subsystem"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="the-chunked-input-api">
+<h1>The Chunked input API<a class="headerlink" href="#the-chunked-input-api" title="Permalink to this headline">¶</a></h1>
+<p>An API for managing HTTP chunked input requests has been added in uWSGI 1.9.13.</p>
+<p>The API is very low-level to allow easy integration with standard apps.</p>
+<p>There are only two functions exposed:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">chunked_read([timeout])</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">chunked_read_nb()</span></code></p></li>
+</ul>
+<p>This API is supported (from uWSGI 1.9.20) on CPython, PyPy and Perl.</p>
+<div class="section" id="reading-chunks">
+<h2>Reading chunks<a class="headerlink" href="#reading-chunks" title="Permalink to this headline">¶</a></h2>
+<p>To read a chunk (blocking) just run</p>
+<div class="highlight-perl notranslate"><div class="highlight"><pre><span></span><span class="k">my</span> <span class="nv">$msg</span> <span class="o">=</span> <span class="nn">uwsgi::</span><span class="n">chunked_read</span>
+</pre></div>
+</div>
+<p>If no timeout is specified, the default one will be used. If you do not get a chunk in time, the function will croak (or raise an exception when under Python).</p>
+<p>Under non-blocking/async engines you may want to use</p>
+<div class="highlight-perl notranslate"><div class="highlight"><pre><span></span><span class="k">my</span> <span class="nv">$msg</span> <span class="o">=</span> <span class="nn">uwsgi::</span><span class="n">chunked_read_nb</span>
+</pre></div>
+</div>
+<p>The function will soon return <code class="docutils literal notranslate"><span class="pre">undef</span></code> (or <code class="docutils literal notranslate"><span class="pre">None</span></code> on Python) if no chunks are available (and croak/raise an exception on error).</p>
+<p>A full PSGI streaming echo example:</p>
+<div class="highlight-perl notranslate"><div class="highlight"><pre><span></span><span class="c1"># simple PSGI echo app reading chunked input</span>
+<span class="k">sub</span> <span class="nf">streamer</span> <span class="p">{</span>
+     <span class="nv">$responder</span> <span class="o">=</span> <span class="nb">shift</span><span class="p">;</span>
+     <span class="c1"># generate the headers and start streaming the response</span>
+     <span class="k">my</span> <span class="nv">$writer</span> <span class="o">=</span> <span class="nv">$responder</span><span class="o">-&gt;</span><span class="p">(</span> <span class="p">[</span><span class="mi">200</span><span class="p">,</span> <span class="p">[</span><span class="s">&#39;Content-Type&#39;</span> <span class="o">=&gt;</span> <span class="s">&#39;text/plain&#39;</span><span class="p">]]);</span>
+
+     <span class="k">while</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+             <span class="k">my</span> <span class="nv">$msg</span> <span class="o">=</span> <span class="nn">uwsgi::</span><span class="n">chunked_read</span><span class="p">;</span>
+             <span class="k">last</span> <span class="k">unless</span> <span class="nv">$msg</span><span class="p">;</span>
+             <span class="nv">$writer</span><span class="o">-&gt;</span><span class="nb">write</span><span class="p">(</span><span class="nv">$msg</span><span class="p">);</span>
+     <span class="p">}</span>
+
+     <span class="nv">$writer</span><span class="o">-&gt;</span><span class="nb">close</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">my</span> <span class="nv">$app</span> <span class="o">=</span> <span class="k">sub</span> <span class="p">{</span>
+     <span class="k">return</span> <span class="o">\&amp;</span><span class="n">streamer</span><span class="p">;</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="tuning-the-chunks-buffer">
+<h2>Tuning the chunks buffer<a class="headerlink" href="#tuning-the-chunks-buffer" title="Permalink to this headline">¶</a></h2>
+<p>Before starting to read chunks, uWSGI allocates a fixed buffer for storing chunks.</p>
+<p>All of the messages are always stored in the same buffer. If a message bigger than the buffer is received, an exception will be raised.</p>
+<p>By default the buffer is limited to 1 MB. You can tune it with the <code class="docutils literal notranslate"><span class="pre">--chunked-input-limit</span></code> option (bytes).</p>
+</div>
+<div class="section" id="integration-with-proxies">
+<h2>Integration with proxies<a class="headerlink" href="#integration-with-proxies" title="Permalink to this headline">¶</a></h2>
+<p>If you plan to put uWSGI behind a proxy/router be sure it supports chunked input requests (or generally raw HTTP requests).</p>
+<p>When using the uWSGI HTTP router just add <code class="docutils literal notranslate"><span class="pre">--http-raw-body</span></code> to support chunked input.</p>
+<p>HAProxy works out of the box.</p>
+<p>Nginx &gt;= 1.4 supports chunked input.</p>
+</div>
+<div class="section" id="options">
+<h2>Options<a class="headerlink" href="#options" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--chunked-input-limit</span></code>: the limit (in bytes) of a chunk message (default 1MB)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--chunked-input-timeout</span></code>: the default timeout (in seconds) for blocking chunked_read (default to the same –socket-timeout value, 4 seconds)</p></li>
+</ul>
+</div>
+<div class="section" id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Calling chunked API functions after having consumed even a single byte of the request body is wrong (this includes <code class="docutils literal notranslate"><span class="pre">--post-buffering</span></code>).</p></li>
+<li><p>Chunked API functions can be called independently by the presence of “Transfer-Encoding: chunked” header.</p></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">The Chunked input API</a><ul>
+<li><a class="reference internal" href="#reading-chunks">Reading chunks</a></li>
+<li><a class="reference internal" href="#tuning-the-chunks-buffer">Tuning the chunks buffer</a></li>
+<li><a class="reference internal" href="#integration-with-proxies">Integration with proxies</a></li>
+<li><a class="reference internal" href="#options">Options</a></li>
+<li><a class="reference internal" href="#notes">Notes</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Metrics.html"
+                        title="previous chapter">The Metrics subsystem</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Cheaper.html"
+                        title="next chapter">The uWSGI cheaper subsystem – adaptive process spawning</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Chunked.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Cheaper.html" title="The uWSGI cheaper subsystem – adaptive process spawning"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Metrics.html" title="The Metrics subsystem"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

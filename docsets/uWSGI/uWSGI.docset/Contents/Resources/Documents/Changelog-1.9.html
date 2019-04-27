@@ -1,0 +1,411 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>uWSGI 1.9 &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="uWSGI 1.9.1" href="Changelog-1.9.1.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.1.html" title="uWSGI 1.9.1"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="uwsgi-1-9">
+<h1>uWSGI 1.9<a class="headerlink" href="#uwsgi-1-9" title="Permalink to this headline">¶</a></h1>
+<p>This is the version that will lead to the LTS 2.0. It includes a lot of internal changes and removal of a lot of basically unused, broken, or too ugly functionality.</p>
+<p>Options deprecated in 1.0.x have been definitely removed.</p>
+<div class="section" id="non-blocking-for-all">
+<h2>Non-blocking for all<a class="headerlink" href="#non-blocking-for-all" title="Permalink to this headline">¶</a></h2>
+<p>From now on, all of the request plugins, need to be non-blocking. A new set of
+C/C++/Obj-C api have been added to help the user/developer writing non-blocking
+code in a safe way.  Plugins like the RPC one have been rewritten using that
+new api, allowing you to use it with engines like Gevent or Coro::Anyevent The
+async mode has been rewritten to better cooperate with this new rule. More info
+can be found on <a class="reference internal" href="Async.html"><span class="doc">uWSGI asynchronous/non-blocking modes (updated to uWSGI 1.9)</span></a> The new async mode requires some form of
+coroutine/greenthread/suspend engine to correctly work. Again, check
+<a class="reference internal" href="Async.html"><span class="doc">uWSGI asynchronous/non-blocking modes (updated to uWSGI 1.9)</span></a></p>
+</div>
+<div class="section" id="coro-anyevent">
+<h2>Coro::AnyEvent<a class="headerlink" href="#coro-anyevent" title="Permalink to this headline">¶</a></h2>
+<p>The Perl/PSGI plugin is one of the most ancient in the uWSGI project, but used to not support the async mode in advanced ways.</p>
+<p>Thanks to the new <a class="reference internal" href="Async.html"><span class="doc">uWSGI asynchronous/non-blocking modes (updated to uWSGI 1.9)</span></a> mode, a Coro::Anyevent (coroae) loop engine has been added.</p>
+<p>To build it you need the Coro::Anyevent package (you can use cpanm to get it), then just add –coroae &lt;n&gt; to your options
+where &lt;n&gt; is the number of async cores to spawn.</p>
+</div>
+<div class="section" id="the-jvm-plugin">
+<h2>The JVM plugin<a class="headerlink" href="#the-jvm-plugin" title="Permalink to this headline">¶</a></h2>
+<p>We finally have a truly working JVM infrastructure in uWSGI 1.9.  Check the new
+docs at <a class="reference internal" href="JVM.html"><span class="doc">JVM in the uWSGI server (updated to 1.9)</span></a> Improved <a class="reference internal" href="JWSGI.html"><span class="doc">The JWSGI interface</span></a> support is available as well as the
+new Clojure <a class="reference internal" href="Ring.html"><span class="doc">The Clojure/Ring JVM request handler</span></a> plugin</p>
+</div>
+<div class="section" id="the-mono-asp-net-plugin">
+<h2>The Mono ASP.NET plugin<a class="headerlink" href="#the-mono-asp-net-plugin" title="Permalink to this headline">¶</a></h2>
+<p>The first Mono plugin attempt (in 2010) was a total failure. Now we have a new shining implementation.</p>
+<p>Check docs here <a class="reference internal" href="Mono.html"><span class="doc">The Mono ASP.NET plugin</span></a></p>
+</div>
+<div class="section" id="language-independent-http-body-management">
+<h2>Language independent HTTP body management<a class="headerlink" href="#language-independent-http-body-management" title="Permalink to this headline">¶</a></h2>
+<p>One of the most annoying task in writing uWSGI request plugins, was re-implementing the management of HTTP body reader every time.</p>
+<p>The new non-blocking api added 3 simple generic C/C++/Obj-C functions to deal with it in a language independent way:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">char</span> <span class="o">*</span><span class="nf">uwsgi_request_body_read</span><span class="p">(</span><span class="k">struct</span> <span class="n">wsgi_request</span> <span class="o">*</span><span class="n">wsgi_req</span><span class="p">,</span> <span class="kt">ssize_t</span> <span class="n">hint</span><span class="p">,</span> <span class="kt">ssize_t</span> <span class="o">*</span><span class="n">rlen</span><span class="p">);</span>
+<span class="kt">char</span> <span class="o">*</span><span class="nf">uwsgi_request_body_readline</span><span class="p">(</span><span class="k">struct</span> <span class="n">wsgi_request</span> <span class="o">*</span><span class="n">wsgi_req</span><span class="p">,</span> <span class="kt">ssize_t</span> <span class="n">hint</span><span class="p">,</span> <span class="kt">ssize_t</span> <span class="o">*</span><span class="n">rlen</span><span class="p">);</span>
+<span class="kt">void</span> <span class="nf">uwsgi_request_body_seek</span><span class="p">(</span><span class="k">struct</span> <span class="n">wsgi_request</span> <span class="o">*</span><span class="n">wsgi_req</span><span class="p">,</span> <span class="kt">off_t</span> <span class="n">pos</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>they automatically manage post-buffering, non-blocking and upload progress.</p>
+<p>All of the request plugins have been updated to the new api</p>
+</div>
+<div class="section" id="faster-uwsgi-http-fastcgi-scgi-native-sockets">
+<h2>Faster uwsgi/HTTP/FastCGI/SCGI native sockets<a class="headerlink" href="#faster-uwsgi-http-fastcgi-scgi-native-sockets" title="Permalink to this headline">¶</a></h2>
+<p>All of the –socket protocol parsers have been rewritten to be faster (less
+syscall usage) and to use less memory.  They are now more complex, but you
+should note (on loaded site) a reduced amount of syscalls per-request.</p>
+<p>The SCGI protocol support has been added, while a NPH fastcgi mode (where the output is HTTP instead of cgi) has been implemented.</p>
+<p>The FastCGI protocol now supports true sendfile() usage</p>
+<p>The old behaviour of storing the request body for HTTP and FastCGI on a temp
+file, has been removed (unless you use post-buffering).  This means you can now
+have upload progress with protocols other than uwsgi.</p>
+</div>
+<div class="section" id="request-logging-vs-err-logging">
+<h2>Request logging VS err logging<a class="headerlink" href="#request-logging-vs-err-logging" title="Permalink to this headline">¶</a></h2>
+<p>One of the most annoying problem with older uWSGI releases was the lack of
+ability to easily split request logs from error logs.  You can now create a
+logger and map it only to request logging:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">req-logger</span> <span class="o">=</span> <span class="s">syslog</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+<p>As an example you may want to send request logging to syslog and redis, and error log to mongodb (on the foo.bar collection):</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">req-logger</span> <span class="o">=</span> <span class="s">syslog</span>
+<span class="na">req-logger</span> <span class="o">=</span> <span class="s">redislog:127.0.0.1:6269</span>
+<span class="na">logger</span> <span class="o">=</span> <span class="s">mongodblog:127.0.0.1:9090,foo.bar</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+<p>Or just use (boring) files</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">req-logger</span> <span class="o">=</span> <span class="s">file:/tmp/reqlog</span>
+<span class="na">logger</span> <span class="o">=</span> <span class="s">file:/tmp/errlog</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="chain-reloading">
+<h2>Chain reloading<a class="headerlink" href="#chain-reloading" title="Permalink to this headline">¶</a></h2>
+<p>When in lazy/lazy_apps mode, you can simply destroy a worker to force it to
+reload the application code.</p>
+<p>A new reloading system named “chain reload”, allows you to reload one worker at
+time (opposed to the standard way where all of the workers are destroyed in
+bulk)</p>
+<p>Chain reloading can only be triggered via “touch”: –touch-chain-reload &lt;file&gt;</p>
+</div>
+<div class="section" id="offloading-improvements">
+<h2>Offloading improvements<a class="headerlink" href="#offloading-improvements" title="Permalink to this headline">¶</a></h2>
+<p>Offloading appeared in uWSGI 1.4 and is one of the most loved features.  In 1.9
+we added a new engine: “write”, that allows you to offload the write of files
+on disk.  A general function api uwsgi.offload() is on work, to allow
+applications to access the offload engine.  All of the uWSGI parts sending
+static files (including the language-specific implementations, like WSGI
+wsgi.file_wrapper) have been extended to automatically use offloading if
+available.  This means you can use your Framework’s way for serving static
+files, without losing too much performance and (more important) without
+blocking your workers.</p>
+</div>
+<div class="section" id="better-static-files-management-serving">
+<h2>Better static files management/serving<a class="headerlink" href="#better-static-files-management-serving" title="Permalink to this headline">¶</a></h2>
+<p>uWSGI 1.9 received many improvements in static file serving.</p>
+<p>You may want to check: <a class="reference internal" href="StaticFiles.html"><span class="doc">Serving static files with uWSGI (updated to 1.9)</span></a></p>
+<p>For syadmins one of the most interesting new features is the ability to use the
+uWSGI new generation cacheing (see below) to store request -&gt; absolute_path
+mappings</p>
+</div>
+<div class="section" id="the-new-generation-cache-subsystem-cache2">
+<h2>The New Generation Cache subsystem (cache2)<a class="headerlink" href="#the-new-generation-cache-subsystem-cache2" title="Permalink to this headline">¶</a></h2>
+<p>The uWSGI caching subsystem has been completely rewritten to be a more general
+purpose in-memory key/value store.  The old caching subsystem has been re-built
+on top of it, and is now more of a general “web caching” system.  The new
+cache subsystem allows you to control all of the aspects of your memory store,
+from the hashing algorithm to the amount of blocks.</p>
+<p>You can now have multiple caches per-instance (identified by name)</p>
+<p>To create a cache just use the new –cache2 option</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">cache2</span> <span class="o">=</span> <span class="s">name=mycache,items=100</span>
+<span class="na">cache2</span> <span class="o">=</span> <span class="s">name=faster,items=200,hash=murmur2,keysize=100,blocksize=4096</span>
+<span class="na">cache2</span> <span class="o">=</span> <span class="s">name=fslike,items=1000,keysize=256,bitmap=1,blocks=2000,blocksize=8192</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+<p>In this example we created 3 caches: mycache, faster and fslike.</p>
+<p>The first one is a standard old-style, cache able to store 100 items of a
+maximum size of 64k with keys limited to 2048 bytes using djb33x hashing
+algorithm The second one use the murmur2 hashing algorithm, each key can be at
+most 1000 bytes, can store 200 items of max 4k The last one works like a
+filesystem, where each item can span over multiple blocks. That means, fslike
+cache can save lot of memory for boject of different size (but it will be
+slower than non-bitmap based caches)</p>
+<p>The options you can specify in cache2 are the following:</p>
+<p><code class="docutils literal notranslate"><span class="pre">name</span></code> the name of the cache (must be unique) REQUIRED</p>
+<p><code class="docutils literal notranslate"><span class="pre">items/max_items/maxitems</span></code> set the max number of items the cache can store REQUIRED</p>
+<p><code class="docutils literal notranslate"><span class="pre">blocksize</span></code> set the size of a single block</p>
+<p><code class="docutils literal notranslate"><span class="pre">blocks</span></code> set the number of blocks (used only in bitmap mode)</p>
+<p><code class="docutils literal notranslate"><span class="pre">hash</span></code> set the hashing algorithm, currently supported: djbx33 and murmur2</p>
+<p><code class="docutils literal notranslate"><span class="pre">hashsize/hash_size</span></code> set the size of the hash table (default to 65536 items)</p>
+<p><code class="docutils literal notranslate"><span class="pre">keysize/key_size</span></code> set the max size of a key</p>
+<p><code class="docutils literal notranslate"><span class="pre">store</span></code> set the filename in which to persistent store the cache</p>
+<p><code class="docutils literal notranslate"><span class="pre">store_sync/storesync</span></code> set the frequency (in seconds) at which msync() is called to flush cache on disk (when in persistent mode)</p>
+<p><code class="docutils literal notranslate"><span class="pre">node/nodes</span></code> the new cache subsystem can send cache updates via udp packet. With this option you set one or more (separated with <cite>;</cite>) udp addresses on which to send updates</p>
+<p><code class="docutils literal notranslate"><span class="pre">sync</span></code> set it to the address of a cache server. Its whole content will be copied in the new cache (use it for initial sync)</p>
+<p><code class="docutils literal notranslate"><span class="pre">udp/udp_servers/udp_server/udpservers/udpserver</span></code> bind to the specified udp addresses (separated with <cite>;</cite>) listening for cache updates</p>
+<p><code class="docutils literal notranslate"><span class="pre">bitmap</span></code> enable botmap mode (set it to 1)</p>
+<p>If you are asking yourself why such low-level tunings exists, you have to take in account that the new caching subsystem is used in lot of areas, so for different
+needs you may want different tuning. Just check <a class="reference internal" href="SSLScaling.html"><span class="doc">Scaling SSL connections (uWSGI 1.9)</span></a> for an example</p>
+<p>The old –cache-server option has been removed. The threaded cache server added in 0.9.8 has been completed superseeded
+by the new non blocking infrastructure. If you load the “cache” plugin (enabled by default in monolithic build) a cache server
+will be available and managed by the workers.</p>
+<p>Update docs are available here <a class="reference internal" href="Caching.html"><span class="doc">The uWSGI caching framework</span></a></p>
+</div>
+<div class="section" id="the-legion-subsystem">
+<h2>The Legion subsystem<a class="headerlink" href="#the-legion-subsystem" title="Permalink to this headline">¶</a></h2>
+<p>The Legion subsystem is a new whole addition to the uWSGI project.  It has
+superseeded the old Clustering subsystem (which has been removed in 1.9).  It
+implements a quorum system to manage shared resources in clustered
+environments.  Docs are already available: <a class="reference internal" href="Legion.html"><span class="doc">The uWSGI Legion subsystem</span></a></p>
+</div>
+<div class="section" id="cygwin-windows-support">
+<h2>Cygwin (windows) support<a class="headerlink" href="#cygwin-windows-support" title="Permalink to this headline">¶</a></h2>
+<p>uWSGI can be compiled on windows machines using the cygwin POSIX emulation
+system.  The event subsystem uses simple poll() (mapped to select() on cygwin),
+while the lock engine uses windows mutexes.  Albeit from our tests it looks
+pretty solid, we consider the porting still “experimental”</p>
+</div>
+<div class="section" id="advanced-exceptions-subsystem">
+<h2>Advanced Exceptions subsystem<a class="headerlink" href="#advanced-exceptions-subsystem" title="Permalink to this headline">¶</a></h2>
+<p>As well as the request body language-independent management, an exception
+management system has been added.  Currently supported only in the Python and
+Ruby plugins, allows language-independent handling of exceptions cases (like
+reloading on a specific exception).  The –catch-exception option has been
+improved to show lot of useful information. Just try it (in development !!!)
+Future development will allow automatic sending of exception to system like
+Sentry or Airbrake.</p>
+</div>
+<div class="section" id="spdy-ssl-and-sni">
+<h2>SPDY, SSL and SNI<a class="headerlink" href="#spdy-ssl-and-sni" title="Permalink to this headline">¶</a></h2>
+<p>Exciting new features have been added to the SSL system and the HTTP router</p>
+<p>SPDY support (currently only version 3) will get lot of users attention, but SNI subsystem is what sysadmins will love</p>
+<p>Preliminary docs are available</p>
+<p><a class="reference internal" href="SPDY.html"><span class="doc">The SPDY router (uWSGI 1.9)</span></a></p>
+<p><a class="reference internal" href="SNI.html"><span class="doc">SNI - Server Name Identification (virtual hosting for SSL nodes)</span></a></p>
+</div>
+<div class="section" id="http-router-keepalive-auto-chunking-auto-gzip-and-transparent-websockets">
+<h2>HTTP router keepalive, auto-chunking, auto-gzip and transparent websockets<a class="headerlink" href="#http-router-keepalive-auto-chunking-auto-gzip-and-transparent-websockets" title="Permalink to this headline">¶</a></h2>
+<p>Many users have started using the HTTP/HTTPS/SPDY router in production,
+so we started adding features to it. Remember this is ONLY a router/proxy, NO
+I/O is allowed, so you may not be able to throw away your
+old-good webserver.</p>
+<p>The new options:</p>
+<p><code class="docutils literal notranslate"><span class="pre">--http-keepalive</span></code> enable HTTP/1.1 keepalive connections</p>
+<p><code class="docutils literal notranslate"><span class="pre">--http-auto-chunked</span></code> for backend response without content-length (or chunked encoding already enabled), transform the output in chunked mode to maintain keepalive connections</p>
+<p><code class="docutils literal notranslate"><span class="pre">--http-auto-gzip</span></code> automatically gzip content if uWSGI-Encoding header is set to gzip, but content size (Content-Length/Transfer-Encoding) and Content-Encoding are not specified</p>
+<p><code class="docutils literal notranslate"><span class="pre">--http-websockets</span></code> automatically detect websockets connections to put the request handler in raw mode</p>
+</div>
+<div class="section" id="the-ssl-router-sslrouter">
+<h2>The SSL router (sslrouter)<a class="headerlink" href="#the-ssl-router-sslrouter" title="Permalink to this headline">¶</a></h2>
+<p>A new corerouter has been added, it works in the same way as the rawrouter one,
+but will terminate ssl connections.  The sslrouter can use sni for implementing
+virtualhosting (using the –sslrouter-sni option)</p>
+</div>
+<div class="section" id="websockets-api">
+<h2>Websockets api<a class="headerlink" href="#websockets-api" title="Permalink to this headline">¶</a></h2>
+<p>20Tab S.r.l. (a company working on HTML5 browsers game) sponsored the
+development of a fast language-independent websockets api for uWSGI. The api is
+currently in very good shape (and maybe faster than any other implementation).
+Docs still need to be completed but you may want to check the following
+examples (a simple echo):</p>
+<p><a class="reference external" href="https://github.com/unbit/uwsgi/blob/master/tests/websockets_echo.pl">https://github.com/unbit/uwsgi/blob/master/tests/websockets_echo.pl</a> (perl)</p>
+<p><a class="reference external" href="https://github.com/unbit/uwsgi/blob/master/tests/websockets_echo.py">https://github.com/unbit/uwsgi/blob/master/tests/websockets_echo.py</a> (python)</p>
+<p><a class="reference external" href="https://github.com/unbit/uwsgi/blob/master/tests/websockets_echo.ru">https://github.com/unbit/uwsgi/blob/master/tests/websockets_echo.ru</a> (ruby)</p>
+</div>
+<div class="section" id="new-internal-routing-turing-complete">
+<h2>New Internal Routing (turing complete ?)<a class="headerlink" href="#new-internal-routing-turing-complete" title="Permalink to this headline">¶</a></h2>
+<p>The internal routing subsystem has been rewritten to be ‘programmable’. You can
+see it as an apache mod_rewrite with steroids (and goto ;) Docs still need to
+be ported, but the new system allows you to modify/filter CGI vars and HTTP
+headers on the fly, as well as managing HTTP authentication and caching.</p>
+<p>Updated docs here (still work in progress) <a class="reference internal" href="InternalRouting.html"><span class="doc">uWSGI internal routing</span></a></p>
+</div>
+<div class="section" id="emperor-zmq-plugin">
+<h2>Emperor ZMQ plugin<a class="headerlink" href="#emperor-zmq-plugin" title="Permalink to this headline">¶</a></h2>
+<p>A new imperial monitor has been added allowing vassals to be governed over zeromq messages:</p>
+<p><a class="reference external" href="https://uwsgi-docs.readthedocs.io/en/latest/ImperialMonitors.html#zmq-zeromq">https://uwsgi-docs.readthedocs.io/en/latest/ImperialMonitors.html#zmq-zeromq</a></p>
+</div>
+<div class="section" id="total-introspection-via-the-stats-server">
+<h2>Total introspection via the stats server<a class="headerlink" href="#total-introspection-via-the-stats-server" title="Permalink to this headline">¶</a></h2>
+<p>The stats server now exports all of the request variables of the currently
+running requests for each core, so it works in multithread mode too. This is a
+great way to inspect what your instance is doing and how it does it In the
+future, uwsgitop could be extended to show the currently running request in
+realtime.</p>
+</div>
+<div class="section" id="nagios-plugin">
+<h2>Nagios plugin<a class="headerlink" href="#nagios-plugin" title="Permalink to this headline">¶</a></h2>
+<p>Ping requests sent using nagios plugin will no longer be counted in apps
+request stats.  This means that if application had –idle option enabled nagios
+pings will no longer prevent app from going to idle state, so starting with 1.9
+–idle should be disabled when nagios plugin is used. Otherwise app may be put
+in idle state just before nagios ping request, when ping arrives it needs to
+wake from idle and this might take longer than ping timeout, causing nagios
+alerts.</p>
+</div>
+<div class="section" id="removed-and-deprecated-features">
+<h2>Removed and deprecated features<a class="headerlink" href="#removed-and-deprecated-features" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>The –app option has been removed. To load applications on specific mountpoints use the –mount option</p></li>
+<li><p>The –static-offload-to-thread option has been removed. Use the more versatile –offload-threads</p></li>
+<li><p>The grunt mode has been removed. To accomplish the same behaviour just use threads or directly call fork() and uwsgi.disconnect()</p></li>
+<li><p>The send_message/recv_message api has been removed (use language-supplied functions)</p></li>
+</ul>
+</div>
+<div class="section" id="working-on-issues-and-regressions">
+<h2>Working On, Issues and regressions<a class="headerlink" href="#working-on-issues-and-regressions" title="Permalink to this headline">¶</a></h2>
+<p>We missed the timeline for a bunch of expected features:</p>
+<ul class="simple">
+<li><p>SPNEGO support, this is an internal routing instruction to implement SPNEGO authentication support</p></li>
+<li><p>Ruby 1.9 fibers support has been rewritten, but need tests</p></li>
+<li><p>Erlang support did not got required attention, very probably will be post-poned to 2.0</p></li>
+<li><p>Async sleep api is incomplete</p></li>
+<li><p>SPDY push is still not implemented</p></li>
+<li><p>RADIUS and LDAP internal routing instructions are unimplemented</p></li>
+<li><p>The channel subsystem (required for easy websockets communications) is still unimplemented</p></li>
+</ul>
+<p>In addition to this we have issues that will be resolved in upcoming minor releases:</p>
+<ul class="simple">
+<li><p>the –lazy mode lost usefulness, now it is like –lazy-apps but with workers-reload only policy on SIGHUP</p></li>
+<li><p>it looks like the JVM does not cooperate well with coroutine engines, maybe we should add a check for it</p></li>
+<li><p>Solaris and Solaris-like systems did not get heavy testing</p></li>
+</ul>
+</div>
+<div class="section" id="special-thanks">
+<h2>Special thanks<a class="headerlink" href="#special-thanks" title="Permalink to this headline">¶</a></h2>
+<p>A number of users/developers helped during the 1.9 development cycle. We would like to make special thanks to:</p>
+<p>Łukasz Mierzwa (fastrouters scalability tests)</p>
+<p>Guido Berhoerster (making the internal routing the new skynet)</p>
+<p>Riccardo Magliocchetti (static analysis)</p>
+<p>André Cruz (HTTPS and gevent battle tests)</p>
+<p>Mingli Yuan (Clojure/Ring support and test suite)</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">uWSGI 1.9</a><ul>
+<li><a class="reference internal" href="#non-blocking-for-all">Non-blocking for all</a></li>
+<li><a class="reference internal" href="#coro-anyevent">Coro::AnyEvent</a></li>
+<li><a class="reference internal" href="#the-jvm-plugin">The JVM plugin</a></li>
+<li><a class="reference internal" href="#the-mono-asp-net-plugin">The Mono ASP.NET plugin</a></li>
+<li><a class="reference internal" href="#language-independent-http-body-management">Language independent HTTP body management</a></li>
+<li><a class="reference internal" href="#faster-uwsgi-http-fastcgi-scgi-native-sockets">Faster uwsgi/HTTP/FastCGI/SCGI native sockets</a></li>
+<li><a class="reference internal" href="#request-logging-vs-err-logging">Request logging VS err logging</a></li>
+<li><a class="reference internal" href="#chain-reloading">Chain reloading</a></li>
+<li><a class="reference internal" href="#offloading-improvements">Offloading improvements</a></li>
+<li><a class="reference internal" href="#better-static-files-management-serving">Better static files management/serving</a></li>
+<li><a class="reference internal" href="#the-new-generation-cache-subsystem-cache2">The New Generation Cache subsystem (cache2)</a></li>
+<li><a class="reference internal" href="#the-legion-subsystem">The Legion subsystem</a></li>
+<li><a class="reference internal" href="#cygwin-windows-support">Cygwin (windows) support</a></li>
+<li><a class="reference internal" href="#advanced-exceptions-subsystem">Advanced Exceptions subsystem</a></li>
+<li><a class="reference internal" href="#spdy-ssl-and-sni">SPDY, SSL and SNI</a></li>
+<li><a class="reference internal" href="#http-router-keepalive-auto-chunking-auto-gzip-and-transparent-websockets">HTTP router keepalive, auto-chunking, auto-gzip and transparent websockets</a></li>
+<li><a class="reference internal" href="#the-ssl-router-sslrouter">The SSL router (sslrouter)</a></li>
+<li><a class="reference internal" href="#websockets-api">Websockets api</a></li>
+<li><a class="reference internal" href="#new-internal-routing-turing-complete">New Internal Routing (turing complete ?)</a></li>
+<li><a class="reference internal" href="#emperor-zmq-plugin">Emperor ZMQ plugin</a></li>
+<li><a class="reference internal" href="#total-introspection-via-the-stats-server">Total introspection via the stats server</a></li>
+<li><a class="reference internal" href="#nagios-plugin">Nagios plugin</a></li>
+<li><a class="reference internal" href="#removed-and-deprecated-features">Removed and deprecated features</a></li>
+<li><a class="reference internal" href="#working-on-issues-and-regressions">Working On, Issues and regressions</a></li>
+<li><a class="reference internal" href="#special-thanks">Special thanks</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Changelog-1.9.1.html"
+                        title="previous chapter">uWSGI 1.9.1</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Changelog-1.9.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.1.html" title="uWSGI 1.9.1"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

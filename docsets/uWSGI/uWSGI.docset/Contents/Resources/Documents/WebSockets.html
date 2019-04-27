@@ -1,0 +1,246 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>WebSocket support &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The Metrics subsystem" href="Metrics.html" />
+    <link rel="prev" title="uWSGI Transformations" href="Transformations.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Metrics.html" title="The Metrics subsystem"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Transformations.html" title="uWSGI Transformations"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="websocket-support">
+<h1>WebSocket support<a class="headerlink" href="#websocket-support" title="Permalink to this headline">¶</a></h1>
+<p>In uWSGI 1.9, a high performance websocket (RFC 6455) implementation has been added.</p>
+<p>Although many different solutions exist for WebSockets, most of them rely on a higher-level language implementation, that rarely is good enough for topics like gaming or streaming.</p>
+<p>The uWSGI websockets implementation is compiled in by default.</p>
+<p>Websocket support is sponsored by 20Tab S.r.l. <a class="reference external" href="http://20tab.com/">http://20tab.com/</a></p>
+<p>They released a full game (a bomberman clone based on uWSGI websockets api): <a class="reference external" href="https://github.com/20tab/Bombertab">https://github.com/20tab/Bombertab</a></p>
+<div class="section" id="an-echo-server">
+<h2>An echo server<a class="headerlink" href="#an-echo-server" title="Permalink to this headline">¶</a></h2>
+<p>This is how a uWSGI websockets application looks like:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">application</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">start_response</span><span class="p">):</span>
+    <span class="c1"># complete the handshake</span>
+    <span class="n">uwsgi</span><span class="o">.</span><span class="n">websocket_handshake</span><span class="p">(</span><span class="n">env</span><span class="p">[</span><span class="s1">&#39;HTTP_SEC_WEBSOCKET_KEY&#39;</span><span class="p">],</span> <span class="n">env</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;HTTP_ORIGIN&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">uwsgi</span><span class="o">.</span><span class="n">websocket_recv</span><span class="p">()</span>
+        <span class="n">uwsgi</span><span class="o">.</span><span class="n">websocket_send</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You do not need to worry about keeping the connection alive or reject dead peers. The <code class="docutils literal notranslate"><span class="pre">uwsgi.websocket_recv()</span></code> function will do all of the dirty work for you in background.</p>
+</div>
+<div class="section" id="handshaking">
+<h2>Handshaking<a class="headerlink" href="#handshaking" title="Permalink to this headline">¶</a></h2>
+<p>Handshaking is the first phase of a websocket connection.</p>
+<p>To send a full handshake response you can use the <code class="docutils literal notranslate"><span class="pre">uwsgi.websocket_handshake([key,origin,</span> <span class="pre">proto])</span></code> function. Without a correct handshake the connection will never complete.</p>
+<p>In the 1.9 series, the key parameter is required. In 2.0+ you can call websocket_handshake without arguments (the response will be built automatically from request’s data).</p>
+</div>
+<div class="section" id="sending">
+<h2>Sending<a class="headerlink" href="#sending" title="Permalink to this headline">¶</a></h2>
+<p>Sending data to the browser is really easy. <code class="docutils literal notranslate"><span class="pre">uwsgi.websocket_send(msg)</span></code> – nothing more.</p>
+</div>
+<div class="section" id="receiving">
+<h2>Receiving<a class="headerlink" href="#receiving" title="Permalink to this headline">¶</a></h2>
+<p>This is the real core of the whole implementation.</p>
+<p>This function actually lies about its real purpose. It does return a websocket message, but it really also holds the connection
+opened (using the ping/pong subsystem) and monitors the stream’s status.</p>
+<p><code class="docutils literal notranslate"><span class="pre">msg</span> <span class="pre">=</span> <span class="pre">uwsgi.websocket_recv()</span></code></p>
+<p>The function can receive messages from a named channel (see below) and automatically forward them to your websocket connection.</p>
+<p>It will always return only websocket messages sent from the browser – any other communication happens in the background.</p>
+<p>There is a non-blocking variant too – <code class="docutils literal notranslate"><span class="pre">msg</span> <span class="pre">=</span> <span class="pre">uwsgi.websocket_recv_nb()</span></code>. See: <a class="reference external" href="https://github.com/unbit/uwsgi/blob/master/tests/websockets_chat_async.py">https://github.com/unbit/uwsgi/blob/master/tests/websockets_chat_async.py</a></p>
+</div>
+<div class="section" id="ping-pong">
+<h2>PING/PONG<a class="headerlink" href="#ping-pong" title="Permalink to this headline">¶</a></h2>
+<p>To keep a websocket connection opened, you should constantly send ping (or pong, see later) to the browser and expect
+a response from it. If the response from the browser/client does not arrive in a timely fashion the connection is closed (<code class="docutils literal notranslate"><span class="pre">uwsgi.websocket_recv()</span></code> will raise an exception). In addition to ping, the <code class="docutils literal notranslate"><span class="pre">uwsgi.websocket_recv()</span></code> function send the so called ‘gratuitous pong’. They are used
+to inform the client of server availability.</p>
+<p>All of these tasks happen in background. YOU DO NOT NEED TO MANAGE THEM!</p>
+</div>
+<div class="section" id="available-proxies">
+<h2>Available proxies<a class="headerlink" href="#available-proxies" title="Permalink to this headline">¶</a></h2>
+<p>Unfortunately not all of the HTTP webserver/proxies work flawlessly with websockets.</p>
+<ul>
+<li><p>The uWSGI HTTP/HTTPS/SPDY router supports them without problems. Just remember to add the <code class="docutils literal notranslate"><span class="pre">--http-websockets</span></code> option.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --http :8080 --http-websockets --wsgi-file myapp.py
+</pre></div>
+</div>
+</li>
+</ul>
+<p>or</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --http :8080 --http-raw-body --wsgi-file myapp.py
+</pre></div>
+</div>
+<p>This is slightly more “raw”, but supports things like chunked input.</p>
+<ul class="simple">
+<li><p>Haproxy works fine.</p></li>
+<li><p>nginx &gt;= 1.4 using the <code class="docutils literal notranslate"><span class="pre">uwsgi_pass</span></code> directive needs no additional config.</p></li>
+</ul>
+</div>
+<div class="section" id="language-support">
+<h2>Language support<a class="headerlink" href="#language-support" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Python <a class="reference external" href="https://github.com/unbit/uwsgi/blob/master/tests/websockets_echo.py">https://github.com/unbit/uwsgi/blob/master/tests/websockets_echo.py</a></p></li>
+<li><p>Perl <a class="reference external" href="https://github.com/unbit/uwsgi/blob/master/tests/websockets_echo.pl">https://github.com/unbit/uwsgi/blob/master/tests/websockets_echo.pl</a></p></li>
+<li><p>PyPy <a class="reference external" href="https://github.com/unbit/uwsgi/blob/master/tests/websockets_chat_async.py">https://github.com/unbit/uwsgi/blob/master/tests/websockets_chat_async.py</a></p></li>
+<li><p>Ruby <a class="reference external" href="https://github.com/unbit/uwsgi/blob/master/tests/websockets_echo.ru">https://github.com/unbit/uwsgi/blob/master/tests/websockets_echo.ru</a></p></li>
+<li><p>Lua <a class="reference external" href="https://github.com/unbit/uwsgi/blob/master/tests/websockets_echo.lua">https://github.com/unbit/uwsgi/blob/master/tests/websockets_echo.lua</a></p></li>
+</ul>
+</div>
+<div class="section" id="supported-concurrency-models">
+<h2>Supported concurrency models<a class="headerlink" href="#supported-concurrency-models" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Multiprocess</p></li>
+<li><p>Multithreaded</p></li>
+<li><p>uWSGI native async api</p></li>
+<li><p>Coro::AnyEvent</p></li>
+<li><p>gevent</p></li>
+<li><p>Ruby fibers + uWSGI async</p></li>
+<li><p>Ruby threads</p></li>
+<li><p>greenlet + uWSGI async</p></li>
+<li><p>uGreen + uWSGI async</p></li>
+<li><p>PyPy continulets</p></li>
+</ul>
+</div>
+<div class="section" id="wss-websockets-over-https">
+<h2>wss:// (websockets over https)<a class="headerlink" href="#wss-websockets-over-https" title="Permalink to this headline">¶</a></h2>
+<p>The uWSGI HTTPS router works without problems with websockets. Just remember to use wss:// as the connection scheme in your client code.</p>
+</div>
+<div class="section" id="websockets-over-spdy">
+<h2>Websockets over SPDY<a class="headerlink" href="#websockets-over-spdy" title="Permalink to this headline">¶</a></h2>
+<p>n/a</p>
+</div>
+<div class="section" id="routing">
+<h2>Routing<a class="headerlink" href="#routing" title="Permalink to this headline">¶</a></h2>
+<p>The http proxy internal router supports websocket out of the box (assuming your front-line proxy already supports them)</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/websocket uwsgi:127.0.0.1:3032,0,0</span>
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/websocket http:127.0.0.1:8080</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="api">
+<h2>Api<a class="headerlink" href="#api" title="Permalink to this headline">¶</a></h2>
+<p>uwsgi.websocket_handshake([key, origin, proto])</p>
+<p>uwsgi.websocket_recv()</p>
+<p>uwsgi.websocket_send(msg)</p>
+<p>uwsgi.websocket_send_binary(msg) (added in 1.9.21 to support binary messages)</p>
+<p>uwsgi.websocket_recv_nb()</p>
+<p>uwsgi.websocket_send_from_sharedarea(id, pos) (added in 1.9.21, allows sending directly from a <a class="reference internal" href="SharedArea.html"><span class="doc">SharedArea – share memory pages between uWSGI components</span></a>)</p>
+<p>uwsgi.websocket_send_binary_from_sharedarea(id, pos) (added in 1.9.21, allows sending directly from a <a class="reference internal" href="SharedArea.html"><span class="doc">SharedArea – share memory pages between uWSGI components</span></a>)</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">WebSocket support</a><ul>
+<li><a class="reference internal" href="#an-echo-server">An echo server</a></li>
+<li><a class="reference internal" href="#handshaking">Handshaking</a></li>
+<li><a class="reference internal" href="#sending">Sending</a></li>
+<li><a class="reference internal" href="#receiving">Receiving</a></li>
+<li><a class="reference internal" href="#ping-pong">PING/PONG</a></li>
+<li><a class="reference internal" href="#available-proxies">Available proxies</a></li>
+<li><a class="reference internal" href="#language-support">Language support</a></li>
+<li><a class="reference internal" href="#supported-concurrency-models">Supported concurrency models</a></li>
+<li><a class="reference internal" href="#wss-websockets-over-https">wss:// (websockets over https)</a></li>
+<li><a class="reference internal" href="#websockets-over-spdy">Websockets over SPDY</a></li>
+<li><a class="reference internal" href="#routing">Routing</a></li>
+<li><a class="reference internal" href="#api">Api</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Transformations.html"
+                        title="previous chapter">uWSGI Transformations</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Metrics.html"
+                        title="next chapter">The Metrics subsystem</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/WebSockets.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Metrics.html" title="The Metrics subsystem"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Transformations.html" title="uWSGI Transformations"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

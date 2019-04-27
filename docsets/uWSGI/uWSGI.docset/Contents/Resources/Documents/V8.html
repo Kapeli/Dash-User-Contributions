@@ -1,0 +1,199 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>uWSGI V8 support &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The GridFS plugin" href="GridFS.html" />
+    <link rel="prev" title="SSI (Server Side Includes) plugin" href="SSI.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="GridFS.html" title="The GridFS plugin"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="SSI.html" title="SSI (Server Side Includes) plugin"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="uwsgi-v8-support">
+<h1>uWSGI V8 support<a class="headerlink" href="#uwsgi-v8-support" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="building">
+<h2>Building<a class="headerlink" href="#building" title="Permalink to this headline">¶</a></h2>
+<p>You will need the <code class="docutils literal notranslate"><span class="pre">libv8</span></code> headers to build the plugin. The official modifier1 value for V8 is ‘24’.</p>
+</div>
+<div class="section" id="rpc">
+<h2>RPC<a class="headerlink" href="#rpc" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">function</span> <span class="nx">part1</span><span class="p">(</span><span class="nx">request_uri</span><span class="p">,</span> <span class="nx">remote_addr</span><span class="p">)</span> <span class="p">{</span>
+     <span class="k">return</span> <span class="s1">&#39;&lt;h1&gt;i am part1 for &#39;</span> <span class="o">+</span> <span class="nx">request_uri</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="nx">remote_addr</span> <span class="o">+</span> <span class="s2">&quot;&lt;/h1&gt;&quot;</span> <span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kd">function</span> <span class="nx">part2</span><span class="p">(</span><span class="nx">request_uri</span><span class="p">,</span> <span class="nx">remote_addr</span><span class="p">)</span> <span class="p">{</span>
+     <span class="k">return</span> <span class="s1">&#39;&lt;h2&gt;i am part2 for &#39;</span> <span class="o">+</span> <span class="nx">request_uri</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="nx">remote_addr</span> <span class="o">+</span> <span class="s2">&quot;&lt;/h2&gt;&quot;</span> <span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kd">function</span> <span class="nx">part3</span><span class="p">(</span><span class="nx">request_uri</span><span class="p">,</span> <span class="nx">remote_addr</span><span class="p">)</span> <span class="p">{</span>
+     <span class="k">return</span> <span class="s1">&#39;&lt;h3&gt;i am part3 for &#39;</span> <span class="o">+</span> <span class="nx">request_uri</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="nx">remote_addr</span> <span class="o">+</span> <span class="s2">&quot;&lt;/h3&gt;&quot;</span> <span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nx">uwsgi</span><span class="p">.</span><span class="nx">register_rpc</span><span class="p">(</span><span class="s1">&#39;part1&#39;</span><span class="p">,</span> <span class="nx">part1</span><span class="p">);</span>
+<span class="nx">uwsgi</span><span class="p">.</span><span class="nx">register_rpc</span><span class="p">(</span><span class="s1">&#39;part2&#39;</span><span class="p">,</span> <span class="nx">part2</span><span class="p">);</span>
+<span class="nx">uwsgi</span><span class="p">.</span><span class="nx">register_rpc</span><span class="p">(</span><span class="s1">&#39;part3&#39;</span><span class="p">,</span> <span class="nx">part3</span><span class="p">);</span>
+
+<span class="nx">ciao</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">saluta</span><span class="p">)</span> <span class="p">{</span>
+     <span class="nx">uwsgi</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;I have no idea what&#39;s going on.&quot;</span><span class="p">);</span>
+     <span class="k">return</span> <span class="s2">&quot;Ciao Ciao&quot;</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="nx">uwsgi</span><span class="p">.</span><span class="nx">register_rpc</span><span class="p">(</span><span class="s1">&#39;hello&#39;</span><span class="p">,</span> <span class="nx">ciao</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="signal-handlers">
+<h2>Signal handlers<a class="headerlink" href="#signal-handlers" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="kd">function</span> <span class="nx">tempo</span><span class="p">(</span><span class="nx">signum</span><span class="p">)</span> <span class="p">{</span>
+     <span class="nx">uwsgi</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;e&#39; passato 1 secondo&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="nx">uwsgi</span><span class="p">.</span><span class="nx">register_signal</span><span class="p">(</span><span class="mi">17</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="nx">tempo</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="multitheading-and-multiprocess">
+<h2>Multitheading and multiprocess<a class="headerlink" href="#multitheading-and-multiprocess" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="mules">
+<h2>Mules<a class="headerlink" href="#mules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="the-uwsgi-api">
+<h2>The uWSGI API<a class="headerlink" href="#the-uwsgi-api" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="jsgi-3-0">
+<h2>JSGI 3.0<a class="headerlink" href="#jsgi-3-0" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="nx">exports</span><span class="p">.</span><span class="nx">app</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">request</span><span class="p">)</span> <span class="p">{</span>
+ <span class="nx">uwsgi</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">&quot;Hello! I am the app.\n&quot;</span><span class="p">);</span>
+ <span class="nx">uwsgi</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">request</span><span class="p">.</span><span class="nx">scheme</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="nx">request</span><span class="p">.</span><span class="nx">method</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="nx">request</span><span class="p">.</span><span class="nx">scriptName</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="nx">request</span><span class="p">.</span><span class="nx">pathInfo</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="nx">request</span><span class="p">.</span><span class="nx">queryString</span> <span class="o">+</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="nx">request</span><span class="p">.</span><span class="nx">host</span><span class="p">);</span>
+ <span class="nx">uwsgi</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">request</span><span class="p">.</span><span class="nx">serverSoftware</span><span class="p">);</span>
+ <span class="k">return</span> <span class="p">{</span>
+     <span class="nx">status</span><span class="o">:</span> <span class="mi">200</span><span class="p">,</span>
+     <span class="nx">headers</span><span class="o">:</span> <span class="p">{</span><span class="s2">&quot;Content-Type&quot;</span><span class="o">:</span> <span class="s2">&quot;text/plain&quot;</span><span class="p">,</span> <span class="s2">&quot;Server&quot;</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;uWSGI&quot;</span><span class="p">,</span> <span class="s2">&quot;v8/plugin&quot;</span><span class="p">]},</span>
+     <span class="nx">body</span><span class="o">:</span> <span class="p">[</span><span class="s2">&quot;Hello World!&quot;</span><span class="p">,</span> <span class="s2">&quot;I am V8&quot;</span><span class="p">]</span>
+ <span class="p">};</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --plugin v8 --v8-jsgi myapp.js --http-socket :8080 --http-socket-modifier1 <span class="m">24</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="commonjs">
+<h2>CommonJS<a class="headerlink" href="#commonjs" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Require: OK</p></li>
+<li><p>Binary/B: NO</p></li>
+<li><p>System/1.0: in progress</p></li>
+<li><p>IO/A: NO</p></li>
+<li><p>Filesystem/A: NO</p></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">uWSGI V8 support</a><ul>
+<li><a class="reference internal" href="#building">Building</a></li>
+<li><a class="reference internal" href="#rpc">RPC</a></li>
+<li><a class="reference internal" href="#signal-handlers">Signal handlers</a></li>
+<li><a class="reference internal" href="#multitheading-and-multiprocess">Multitheading and multiprocess</a></li>
+<li><a class="reference internal" href="#mules">Mules</a></li>
+<li><a class="reference internal" href="#the-uwsgi-api">The uWSGI API</a></li>
+<li><a class="reference internal" href="#jsgi-3-0">JSGI 3.0</a></li>
+<li><a class="reference internal" href="#commonjs">CommonJS</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="SSI.html"
+                        title="previous chapter">SSI (Server Side Includes) plugin</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="GridFS.html"
+                        title="next chapter">The GridFS plugin</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/V8.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="GridFS.html" title="The GridFS plugin"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="SSI.html" title="SSI (Server Side Includes) plugin"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

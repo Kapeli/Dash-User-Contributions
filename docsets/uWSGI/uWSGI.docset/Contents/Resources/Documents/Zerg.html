@@ -1,0 +1,195 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Zerg mode &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Adding applications dynamically" href="DynamicApps.html" />
+    <link rel="prev" title="Auto-scaling with Broodlord mode" href="Broodlord.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="DynamicApps.html" title="Adding applications dynamically"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Broodlord.html" title="Auto-scaling with Broodlord mode"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="zerg-mode">
+<h1>Zerg mode<a class="headerlink" href="#zerg-mode" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Yes, that’s Zerg as in the “quantity-over-quality” Starcraft race. If you haven’t played Starcraft, be prepared for some nonsense.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Also note that this nonsense is mostly limited to the nomenclature. Zerg Mode is serious business.</p>
+</div>
+</div>
+<p>When your site load is variable, it would be nice to be able to add workers dynamically.</p>
+<p>You can obviously edit your configuration to hike up <code class="docutils literal notranslate"><span class="pre">workers</span></code> and reload your uWSGI instance, but for very loaded apps this is undesirable, and frankly – who wants to do manual work like that to scale an app?</p>
+<p>Enabling Zerg mode you can allow “uwsgi-zerg” instances to attach to your already running server and help it in the work.</p>
+<p>Zerg mode is obviously local only. You cannot use it to add remote instances – this is a job better done by the <a class="reference internal" href="Fastrouter.html"><span class="doc">The uWSGI FastRouter</span></a>, the <a class="reference internal" href="HTTP.html"><span class="doc">HTTP plugin</span></a> or your web server’s load balancer.</p>
+<div class="section" id="enabling-the-zerg-server">
+<h2>Enabling the zerg server<a class="headerlink" href="#enabling-the-zerg-server" title="Permalink to this headline">¶</a></h2>
+<p>If you want an uWSGI instance to be rushed by zerg, you have to enable the Zerg server. It will be bound to an UNIX socket and will pass uwsgi socket file descriptors to the Zerg workers connecting to it.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The socket must be an UNIX socket because it must be capable of passing through file descriptors. A TCP socket simply will not work.</p>
+</div>
+<p>For security reasons the UNIX socket does not inherit the <code class="docutils literal notranslate"><span class="pre">chmod-socket</span></code> option, but will always use the current umask.</p>
+<p>If you have filesystem permission issues, on Linux you can use the UNIX sockets in abstract namespace, by prepending an <code class="docutils literal notranslate"><span class="pre">&#64;</span></code> to the socket name.</p>
+<ul>
+<li><p>A normal UNIX socket:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi -M -p <span class="m">8</span> --module welcome --zerg-server /var/run/mutalisk
+</pre></div>
+</div>
+</li>
+<li><p>A socket in a Linux abstract namespace:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi -M -p <span class="m">8</span> --module welcome --zerg-server @nydus
+</pre></div>
+</div>
+</li>
+</ul>
+</div>
+<div class="section" id="attaching-zergs-to-the-zerg-server">
+<h2>Attaching zergs to the zerg server<a class="headerlink" href="#attaching-zergs-to-the-zerg-server" title="Permalink to this headline">¶</a></h2>
+<p>To add a new instance to your zerg pool, simply use the –zerg option</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi --zerg /var/run/mutalisk --master --processes <span class="m">4</span> --module welcome
+<span class="c1"># (or --zerg @nydus, following the example above)</span>
+</pre></div>
+</div>
+<p>In this way 4 new workers will start serving requests.</p>
+<p>When your load returns to normal values, you can simply shutdown all of the uwsgi-zerg instances without problems.</p>
+<p>You can attach an unlimited number of uwsgi-zerg instances.</p>
+</div>
+<div class="section" id="fallback-if-a-zerg-server-is-not-available">
+<h2>Fallback if a zerg server is not available<a class="headerlink" href="#fallback-if-a-zerg-server-is-not-available" title="Permalink to this headline">¶</a></h2>
+<p>By default a Zerg client will not run if the Zerg server is not available. Thus, if your zerg server dies, and you reload the zerg client, it will simply shutdown.</p>
+<p>If you want to avoid that behaviour, add a <code class="docutils literal notranslate"><span class="pre">--socket</span></code> directive mapping to the required socket (the one that should be managed by the zerg server) and add the <code class="docutils literal notranslate"><span class="pre">--zerg-fallback</span></code> option.</p>
+<p>With this setup, if a Zerg server is not available, the Zerg client will continue binding normally to the specified socket(s).</p>
+</div>
+<div class="section" id="using-zerg-as-testers">
+<h2>Using Zerg as testers<a class="headerlink" href="#using-zerg-as-testers" title="Permalink to this headline">¶</a></h2>
+<p>A good trick you can use, is suspending the main instance with the <code class="docutils literal notranslate"><span class="pre">SIGTSTP</span></code> signal and loading a new version of your app in a Zerg. If the code is not ok you can simply shutdown the Zerg and resume the main instance.</p>
+</div>
+<div class="section" id="zerg-pools">
+<h2>Zerg Pools<a class="headerlink" href="#zerg-pools" title="Permalink to this headline">¶</a></h2>
+<p>Zergpools are special Zerg servers that only serve Zerg clients, nothing more.</p>
+<p>You can use them to build high-availability systems that reduce downtime during tests/reloads.</p>
+<p>You can run an unlimited number of zerg pools (on several UNIX sockets) and map an unlimited number of sockets to them.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">zergpool</span> <span class="o">=</span> <span class="s">/tmp/zergpool_1:127.0.0.1:3031,127.0.0.1:3032</span>
+<span class="na">zergpool</span> <span class="o">=</span> <span class="s">/tmp/zergpool_2:192.168.173.22:3031,192.168.173.22:3032</span>
+</pre></div>
+</div>
+<p>With a config like this, you will have two zergpools, each serving two sockets.</p>
+<p>You can now attach instances to them.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --zerg /tmp/zergpool_1 --wsgi-file myapp.wsgi --master --processes <span class="m">8</span>
+uwsgi --zerg /tmp/zergpool_2 --rails /var/www/myapp --master --processes <span class="m">4</span>
+</pre></div>
+</div>
+<p>or you can attach a single instance to multiple Zerg servers.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --zerg /tmp/zergpool_1 --zerg /tmp/zergpool_2 --wsgi-file myapp.wsgi --master --processes <span class="m">8</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Zerg mode</a><ul>
+<li><a class="reference internal" href="#enabling-the-zerg-server">Enabling the zerg server</a></li>
+<li><a class="reference internal" href="#attaching-zergs-to-the-zerg-server">Attaching zergs to the zerg server</a></li>
+<li><a class="reference internal" href="#fallback-if-a-zerg-server-is-not-available">Fallback if a zerg server is not available</a></li>
+<li><a class="reference internal" href="#using-zerg-as-testers">Using Zerg as testers</a></li>
+<li><a class="reference internal" href="#zerg-pools">Zerg Pools</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Broodlord.html"
+                        title="previous chapter">Auto-scaling with Broodlord mode</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="DynamicApps.html"
+                        title="next chapter">Adding applications dynamically</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Zerg.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="DynamicApps.html" title="Adding applications dynamically"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Broodlord.html" title="Auto-scaling with Broodlord mode"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

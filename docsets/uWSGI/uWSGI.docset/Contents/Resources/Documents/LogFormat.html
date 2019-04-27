@@ -1,0 +1,247 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Formatting uWSGI requests logs &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Log encoders" href="LogEncoders.html" />
+    <link rel="prev" title="Logging" href="Logging.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="LogEncoders.html" title="Log encoders"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Logging.html" title="Logging"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="formatting-uwsgi-requests-logs">
+<h1>Formatting uWSGI requests logs<a class="headerlink" href="#formatting-uwsgi-requests-logs" title="Permalink to this headline">¶</a></h1>
+<p>uWSGI has a <code class="docutils literal notranslate"><span class="pre">--logformat</span></code> option for building custom request loglines. The
+syntax is simple:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">logformat</span> <span class="o">=</span> <span class="s">i am a logline reporting &quot;%(method) %(uri) %(proto)&quot; returning with status %(status)</span>
+</pre></div>
+</div>
+<p>All of the variables marked with <code class="docutils literal notranslate"><span class="pre">%()</span></code> are substituted using specific rules.
+Three kinds of logvars are defined (“offsetof”, functions, and user-defined).</p>
+<div class="section" id="offsetof">
+<h2>offsetof<a class="headerlink" href="#offsetof" title="Permalink to this headline">¶</a></h2>
+<p>These are taken blindly from the internal <code class="docutils literal notranslate"><span class="pre">wsgi_request</span></code> structure of the current request.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">%(uri)</span></code> -&gt; REQUEST_URI</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(method)</span></code> -&gt; REQUEST_METHOD</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(user)</span></code> -&gt; REMOTE_USER</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(addr)</span></code> -&gt; REMOTE_ADDR</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(host)</span></code> -&gt; HTTP_HOST</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(proto)</span></code> -&gt; SERVER_PROTOCOL</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(uagent)</span></code> -&gt; HTTP_USER_AGENT (starting from 1.4.5)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(referer)</span></code> -&gt; HTTP_REFERER (starting from 1.4.5)</p></li>
+</ul>
+</div>
+<div class="section" id="functions">
+<h2>functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h2>
+<p>These are simple functions called for generating the logvar value:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">%(status)</span></code> -&gt; HTTP response status code</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(micros)</span></code> -&gt; response time in microseconds</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(msecs)</span></code> -&gt; response time in milliseconds</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(secs)</span></code> -&gt; response time in seconds</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(time)</span></code> -&gt; timestamp of the start of the request</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(ctime)</span></code> -&gt; ctime of the start of the request</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(epoch)</span></code> -&gt; the current time in Unix format</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(size)</span></code> -&gt; response body size + response headers size (since 1.4.5)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(ltime)</span> <span class="pre">-&gt;</span> <span class="pre">human-formatted</span> <span class="pre">(Apache</span> <span class="pre">style)</span></code> request time (since 1.4.5)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(hsize)</span></code> -&gt; response headers size (since 1.4.5)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(rsize)</span></code> -&gt; response body size (since 1.4.5)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(cl)</span></code> -&gt; request content body size (since 1.4.5)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(pid)</span></code> -&gt; pid of the worker handling the request (since 1.4.6)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(wid)</span></code> -&gt; id of the worker handling the request (since 1.4.6)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(switches)</span></code> -&gt; number of async switches (since 1.4.6)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(vars)</span></code> -&gt; number of CGI vars in the request (since 1.4.6)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(headers)</span></code> -&gt; number of generated response headers (since 1.4.6)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(core)</span></code> -&gt; the core running the request (since 1.4.6)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(vsz)</span></code> -&gt; address space/virtual memory usage (in bytes) (since 1.4.6)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(rss)</span></code> -&gt; RSS memory usage (in bytes) (since 1.4.6)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(vszM)</span></code> -&gt; address space/virtual memory usage (in megabytes) (since 1.4.6)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(rssM)</span></code> -&gt; RSS memory usage (in megabytes) (since 1.4.6)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(pktsize)</span></code> -&gt; size of the internal request uwsgi packet (since 1.4.6)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(modifier1)</span></code> -&gt; modifier1 of the request (since 1.4.6)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(modifier2)</span></code> -&gt; modifier2 of the request (since 1.4.6)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(metric.XXX)</span></code> -&gt; access the XXX metric value (see <a class="reference internal" href="Metrics.html"><span class="doc">The Metrics subsystem</span></a>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(rerr)</span></code> -&gt; number of read errors for the request (since 1.9.21)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(werr)</span></code> -&gt; number of write errors for the request (since 1.9.21)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(ioerr)</span></code> -&gt; number of write and read errors for the request (since 1.9.21)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(tmsecs)</span></code> -&gt; timestamp of the start of the request in milliseconds since the epoch (since 1.9.21)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(tmicros)</span></code> -&gt; timestamp of the start of the request in microseconds since the epoch (since 1.9.21)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">%(var.XXX)</span></code> -&gt; the content of request variable XXX (like var.PATH_INFO or var.HTTP_X_MY_HEADER for headers from request, available from 1.9.21)</p></li>
+</ul>
+</div>
+<div class="section" id="user-defined-logvars">
+<h2>User-defined logvars<a class="headerlink" href="#user-defined-logvars" title="Permalink to this headline">¶</a></h2>
+<p>You can define logvars within your request handler. These variables live only
+per-request.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">uwsgi</span>
+<span class="k">def</span> <span class="nf">application</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">start_response</span><span class="p">):</span>
+    <span class="n">uwsgi</span><span class="o">.</span><span class="n">set_logvar</span><span class="p">(</span><span class="s1">&#39;foo&#39;</span><span class="p">,</span> <span class="s1">&#39;bar&#39;</span><span class="p">)</span>
+    <span class="c1"># returns &#39;bar&#39;</span>
+    <span class="k">print</span> <span class="n">uwsgi</span><span class="o">.</span><span class="n">get_logvar</span><span class="p">(</span><span class="s1">&#39;foo&#39;</span><span class="p">)</span>
+    <span class="n">uwsgi</span><span class="o">.</span><span class="n">set_logvar</span><span class="p">(</span><span class="s1">&#39;worker_id&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">uwsgi</span><span class="o">.</span><span class="n">worker_id</span><span class="p">()))</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<p>With the following log format you will be able to access code-defined logvars:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --logformat <span class="s1">&#39;worker id = %(worker_id) for request &quot;%(method) %(uri) %(proto)&quot; test = %(foo)&#39;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="uwsgi-default-logging">
+<h2>uWSGI default logging<a class="headerlink" href="#uwsgi-default-logging" title="Permalink to this headline">¶</a></h2>
+<p>To generate uWSGI-compatible logs:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="na">log-format</span> <span class="o">=</span> <span class="s">[pid: %(pid)|app: -|req: -/-] %(addr) (%(user)) {%(vars) vars in %(pktsize) bytes} [%(ctime)] %(method) %(uri) =&gt; generated %(rsize) bytes in %(msecs) msecs (%(proto) %(status)) %(headers) headers in %(hsize) bytes (%(switches) switches on core %(core))</span>
+
+<span class="na">...</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="apache-style-combined-request-logging">
+<h2>Apache-style combined request logging<a class="headerlink" href="#apache-style-combined-request-logging" title="Permalink to this headline">¶</a></h2>
+<p>To generate Apache-compatible logs:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="na">log-format</span> <span class="o">=</span> <span class="s">%(addr) - %(user) [%(ltime)] &quot;%(method) %(uri) %(proto)&quot; %(status) %(size) &quot;%(referer)&quot; &quot;%(uagent)&quot;</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="hacking-logformat">
+<h2>Hacking logformat<a class="headerlink" href="#hacking-logformat" title="Permalink to this headline">¶</a></h2>
+<p>(Updated to 1.9.21)</p>
+<p>You can register new “logchunk” (the function to call for each logformat symbol) with</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span> <span class="n">uwsgi_logchunk</span> <span class="o">*</span><span class="nf">uwsgi_register_logchunk</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">,</span> <span class="kt">ssize_t</span> <span class="p">(</span><span class="o">*</span><span class="n">func</span><span class="p">)(</span><span class="k">struct</span> <span class="n">wsgi_request</span> <span class="o">*</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="p">),</span> <span class="kt">int</span> <span class="n">need_free</span><span class="p">);</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code> – the name of the symbol</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">need_free</span></code> – if 1, means the pointer set by <code class="docutils literal notranslate"><span class="pre">func</span></code> must be free()d</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">func</span></code> – the function to call in the log handler</p></li>
+</ul>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">static</span> <span class="kt">ssize_t</span> <span class="nf">uwsgi_lf_foobar</span><span class="p">(</span><span class="k">struct</span> <span class="n">wsgi_request</span> <span class="o">*</span><span class="n">wsgi_req</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">buf</span><span class="p">)</span> <span class="p">{</span>
+        <span class="o">*</span><span class="n">buf</span> <span class="o">=</span> <span class="n">uwsgi_num2str</span><span class="p">(</span><span class="n">wsgi_req</span><span class="o">-&gt;</span><span class="n">status</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">strlen</span><span class="p">(</span><span class="o">*</span><span class="n">buf</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">register_logchunks</span><span class="p">()</span> <span class="p">{</span>
+        <span class="n">uwsgi_register_logchunk</span><span class="p">(</span><span class="s">&quot;foobar&quot;</span><span class="p">,</span> <span class="n">uwsgi_lf_foobar</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">struct</span> <span class="n">uwsgi_plugin</span> <span class="n">foobar_plugin</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;foobar&quot;</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">on_load</span> <span class="o">=</span> <span class="n">register_logchunks</span><span class="p">,</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<p>Now if you load the foobar plugin, you will be able to use the %(foobar) request logging variable (that would report the request status).</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Formatting uWSGI requests logs</a><ul>
+<li><a class="reference internal" href="#offsetof">offsetof</a></li>
+<li><a class="reference internal" href="#functions">functions</a></li>
+<li><a class="reference internal" href="#user-defined-logvars">User-defined logvars</a></li>
+<li><a class="reference internal" href="#uwsgi-default-logging">uWSGI default logging</a></li>
+<li><a class="reference internal" href="#apache-style-combined-request-logging">Apache-style combined request logging</a></li>
+<li><a class="reference internal" href="#hacking-logformat">Hacking logformat</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Logging.html"
+                        title="previous chapter">Logging</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="LogEncoders.html"
+                        title="next chapter">Log encoders</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/LogFormat.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="LogEncoders.html" title="Log encoders"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Logging.html" title="Logging"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,238 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>uWSGI RPC Stack &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="SharedArea – share memory pages between uWSGI components" href="SharedArea.html" />
+    <link rel="prev" title="The uWSGI queue framework" href="Queue.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="SharedArea.html" title="SharedArea – share memory pages between uWSGI components"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Queue.html" title="The uWSGI queue framework"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="uwsgi-rpc-stack">
+<h1>uWSGI RPC Stack<a class="headerlink" href="#uwsgi-rpc-stack" title="Permalink to this headline">¶</a></h1>
+<p>uWSGI contains a fast, simple, pan-and-cross-language RPC stack.</p>
+<p>Although you may fall in love with this subsystem, try to use it only when you need it. There are plenty of higher-level RPC technologies better suited for the vast majority of situations.</p>
+<p>That said, the uWSGI RPC subsystem shines with its performance and memory usage. As an example, if you need to split the load of a request to multiple servers, the uWSGI RPC is a great choice, as it allows you to offload tasks with very little effort.</p>
+<p>Its biggest limit is in its “typeless” approach.</p>
+<p>RPC functions can take up to 254 args. Each argument has to be a string with a 16 bit maximum size (65535 bytes), while the return value has to be a string (this time 64-bit, so that’s not a practical limit).</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>64 bit response length has been implemented only in uWSGI 1.9.20, older releases have 16 bit response length limit.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>RPC functions receive arguments in the form of binary strings, so every RPC exportable function must assume that each argument is a string. Every RPC function returns a binary string of 0 or more characters.</p>
+</div>
+<p>So, if you need “elegance” or strong typing, just look in another place (or roll your own typing on top of uWSGI RPC, maybe…).</p>
+<p>Since 1.9 the RPC subsystem is fully async-friendly, so you can use it with gevent and Coro::AnyEvent etc.</p>
+<div class="section" id="learning-by-example">
+<h2>Learning by example<a class="headerlink" href="#learning-by-example" title="Permalink to this headline">¶</a></h2>
+<p>Let’s start with a simple RPC call from <code class="docutils literal notranslate"><span class="pre">10.0.0.1:3031</span></code> to <code class="docutils literal notranslate"><span class="pre">10.0.0.2:3031</span></code>.</p>
+<p>So let’s export a “hello” function on <code class="docutils literal notranslate"><span class="pre">.2</span></code>.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">uwsgi</span>
+
+<span class="k">def</span> <span class="nf">hello_world</span><span class="p">():</span>
+    <span class="k">return</span> <span class="s2">&quot;Hello World&quot;</span>
+
+<span class="n">uwsgi</span><span class="o">.</span><span class="n">register_rpc</span><span class="p">(</span><span class="s2">&quot;hello&quot;</span><span class="p">,</span> <span class="n">hello_world</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This uses <a class="reference internal" href="PythonModule.html#uwsgi.register_rpc" title="uwsgi.register_rpc"><code class="xref py py-meth docutils literal notranslate"><span class="pre">uwsgi.register_rpc()</span></code></a> to declare a function called “hello” to be exported. We’ll start the server with <code class="docutils literal notranslate"><span class="pre">--socket</span> <span class="pre">:3031</span></code>.</p>
+<p>On the caller’s side, on <code class="docutils literal notranslate"><span class="pre">10.0.0.1</span></code>, let’s declare the world’s (second) simplest WSGI app.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">uwsgi</span>
+
+<span class="k">def</span> <span class="nf">application</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">start_response</span><span class="p">):</span>
+    <span class="n">start_response</span><span class="p">(</span><span class="s1">&#39;200 Ok&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="s1">&#39;Content-Type&#39;</span><span class="p">,</span> <span class="s1">&#39;text/html&#39;</span><span class="p">)])</span>
+    <span class="k">return</span> <span class="n">uwsgi</span><span class="o">.</span><span class="n">rpc</span><span class="p">(</span><span class="s1">&#39;10.0.0.2:3031&#39;</span><span class="p">,</span> <span class="s1">&#39;hello&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>That’s it!</p>
+<div class="section" id="you-need-perl">
+<h3>You need Perl?<a class="headerlink" href="#you-need-perl" title="Permalink to this headline">¶</a></h3>
+<p>Or perhaps you want to call an RPC function from a standalone perl script?</p>
+</div>
+<div class="section" id="what-about-let-s-say-lua">
+<h3>What about, let’s say, Lua?<a class="headerlink" href="#what-about-let-s-say-lua" title="Permalink to this headline">¶</a></h3>
+<p>Glad you asked. If you want to export functions in Lua, simply do:</p>
+<div class="highlight-lua notranslate"><div class="highlight"><pre><span></span><span class="kr">function</span> <span class="nf">hello_with_args</span><span class="p">(</span><span class="n">arg1</span><span class="p">,</span> <span class="n">arg2</span><span class="p">)</span>
+    <span class="kr">return</span> <span class="s1">&#39;args are &#39;</span><span class="o">..</span><span class="n">arg1</span><span class="o">..</span><span class="s1">&#39; &#39;</span><span class="o">..</span><span class="n">arg2</span>
+<span class="kr">end</span>
+
+<span class="n">uwsgi</span><span class="p">.</span><span class="n">register_rpc</span><span class="p">(</span><span class="s1">&#39;hellolua&#39;</span><span class="p">,</span> <span class="n">hello_with_args</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>And in your Python WSGI app:</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">uwsgi</span>
+
+<span class="k">def</span> <span class="nf">application</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">start_response</span><span class="p">):</span>
+    <span class="n">start_response</span><span class="p">(</span><span class="s1">&#39;200 Ok&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="s1">&#39;Content-Type&#39;</span><span class="p">,</span> <span class="s1">&#39;text/html&#39;</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">uwsgi</span><span class="o">.</span><span class="n">rpc</span><span class="p">(</span><span class="s1">&#39;10.0.0.2:3031&#39;</span><span class="p">,</span> <span class="s1">&#39;hellolua&#39;</span><span class="p">,</span> <span class="s1">&#39;foo&#39;</span><span class="p">,</span> <span class="s1">&#39;bar&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="and-other-languages-platforms">
+<h3>And other languages/platforms?<a class="headerlink" href="#and-other-languages-platforms" title="Permalink to this headline">¶</a></h3>
+<p>Check the language specific docs, basically all of them should support registering and calling RPC functions.</p>
+<p>You can build multi-languages app with really no effort at all and will be happily surprised about how easy it is to call <a class="reference internal" href="JVM.html"><span class="doc">Java</span></a> functions from Perl, JavaScript from Python and so on.</p>
+</div>
+</div>
+<div class="section" id="doing-rpc-locally">
+<h2>Doing RPC locally<a class="headerlink" href="#doing-rpc-locally" title="Permalink to this headline">¶</a></h2>
+<p>Doing RPC locally may sound a little silly, but if you need to call a Lua function from Python with the absolute least possible overhead, uWSGI RPC is your man.</p>
+<p>If you want to call a RPC defined in the same server (governed by the same master, etc.), simply set the first parameter of <code class="docutils literal notranslate"><span class="pre">uwsgi.rpc</span></code> to None or nil, or use the convenience function <a class="reference internal" href="PythonModule.html#uwsgi.call" title="uwsgi.call"><code class="xref py py-meth docutils literal notranslate"><span class="pre">uwsgi.call()</span></code></a>.</p>
+</div>
+<div class="section" id="doing-rpc-from-the-internal-routing-subsystem">
+<h2>Doing RPC from the internal routing subsystem<a class="headerlink" href="#doing-rpc-from-the-internal-routing-subsystem" title="Permalink to this headline">¶</a></h2>
+<p>The RPC plugin exports a bunch of internal routing actions:</p>
+<ul class="simple">
+<li><p><cite>rpc</cite> call the specified rpc function and send the response to the client</p></li>
+<li><p><cite>rpcnext/rpcblob</cite> call the specified rpc function, send the response to the client and continue to the next rule</p></li>
+<li><p><cite>rpcret</cite> calls the specified rpc function and uses its return value as the action return code (next, continue, goto …)</p></li>
+</ul>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/foo rpc:hello ${REQUEST_URI} ${REMOTE_ADDR}</span>
+<span class="c1">; call on remote nodes</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/multi rpcnext:part1@192.168.173.100:3031</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/multi rpcnext:part2@192.168.173.100:3031</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/multi rpcnext:part3@192.168.173.100:3031</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="doing-rpc-from-nginx">
+<h2>Doing RPC from nginx<a class="headerlink" href="#doing-rpc-from-nginx" title="Permalink to this headline">¶</a></h2>
+<p>As Nginx supports low-level manipulation of the uwsgi packets sent to upstream uWSGI servers, you can do RPC directly through it. Madness!</p>
+<div class="highlight-nginx notranslate"><div class="highlight"><pre><span></span><span class="k">location</span> <span class="s">/call</span> <span class="p">{</span>
+    <span class="kn">uwsgi_modifier1</span> <span class="mi">173</span><span class="p">;</span>
+    <span class="kn">uwsgi_modifier2</span> <span class="mi">1</span><span class="p">;</span>
+
+    <span class="kn">uwsgi_param</span> <span class="s">hellolua</span> <span class="s">foo</span>
+    <span class="s">uwsgi_param</span> <span class="s">bar</span> <span class="s">&quot;&quot;</span>
+
+    <span class="s">uwsgi_pass</span> <span class="n">10.0.0.2</span><span class="p">:</span><span class="mi">3031</span><span class="p">;</span>
+
+    <span class="kn">uwsgi_pass_request_headers</span> <span class="no">off</span><span class="p">;</span>
+    <span class="kn">uwsgi_pass_request_body</span> <span class="no">off</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Zero size strings will be ignored by the uWSGI array parser, so you can safely use them when the numbers of parameters + function_name is not even.</p>
+<p>Modifier2 is set to 1 to inform that raw strings (HTTP responses in this case) are received. Otherwise the RPC subsystem would encapsulate the output in an uwsgi protocol packet, and nginx isn’t smart enough to read those.</p>
+</div>
+<div class="section" id="http-path-info-rpc-bridge">
+<h2>HTTP PATH_INFO -&gt; RPC bridge<a class="headerlink" href="#http-path-info-rpc-bridge" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="xml-rpc-rpc-bridge">
+<h2>XML-RPC -&gt; RPC bridge<a class="headerlink" href="#xml-rpc-rpc-bridge" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">uWSGI RPC Stack</a><ul>
+<li><a class="reference internal" href="#learning-by-example">Learning by example</a><ul>
+<li><a class="reference internal" href="#you-need-perl">You need Perl?</a></li>
+<li><a class="reference internal" href="#what-about-let-s-say-lua">What about, let’s say, Lua?</a></li>
+<li><a class="reference internal" href="#and-other-languages-platforms">And other languages/platforms?</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#doing-rpc-locally">Doing RPC locally</a></li>
+<li><a class="reference internal" href="#doing-rpc-from-the-internal-routing-subsystem">Doing RPC from the internal routing subsystem</a></li>
+<li><a class="reference internal" href="#doing-rpc-from-nginx">Doing RPC from nginx</a></li>
+<li><a class="reference internal" href="#http-path-info-rpc-bridge">HTTP PATH_INFO -&gt; RPC bridge</a></li>
+<li><a class="reference internal" href="#xml-rpc-rpc-bridge">XML-RPC -&gt; RPC bridge</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Queue.html"
+                        title="previous chapter">The uWSGI queue framework</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="SharedArea.html"
+                        title="next chapter">SharedArea – share memory pages between uWSGI components</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/RPC.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="SharedArea.html" title="SharedArea – share memory pages between uWSGI components"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Queue.html" title="The uWSGI queue framework"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

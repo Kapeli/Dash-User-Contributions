@@ -1,0 +1,2 @@
+SPNEGO authentication
+=====================

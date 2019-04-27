@@ -1,0 +1,354 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>JVM in the uWSGI server (updated to 1.9) &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The JWSGI interface" href="JWSGI.html" />
+    <link rel="prev" title="Using Lua/WSAPI with uWSGI" href="Lua.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="JWSGI.html" title="The JWSGI interface"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Lua.html" title="Using Lua/WSAPI with uWSGI"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="jvm-in-the-uwsgi-server-updated-to-1-9">
+<h1>JVM in the uWSGI server (updated to 1.9)<a class="headerlink" href="#jvm-in-the-uwsgi-server-updated-to-1-9" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="JWSGI.html">The JWSGI interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Ring.html">The Clojure/Ring JVM request handler</a></li>
+</ul>
+</div>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>As of uWSGI 1.9, you can have a full, thread-safe and versatile JVM embedded in
+the core.  All of the plugins can call JVM functions (written in Java, JRuby,
+Jython, Clojure, whatever new fancy language the JVM can run) via the <a class="reference internal" href="RPC.html"><span class="doc">RPC
+subsystem</span></a> or using uWSGI <a class="reference internal" href="Signals.html"><span class="doc">The uWSGI Signal Framework</span></a> The JVM plugin itself can
+implement request handlers to host JVM-based web applications. Currently
+<a class="reference internal" href="JWSGI.html"><span class="doc">The JWSGI interface</span></a> and <a class="reference internal" href="Ring.html"><span class="doc">The Clojure/Ring JVM request handler</span></a> (Clojure) apps are supported. A long-term goal is
+supporting servlets, but it will require heavy sponsorship and funding (feel
+free to ask for more information about the project at <a class="reference external" href="mailto:info&#37;&#52;&#48;unbit&#46;it">info<span>&#64;</span>unbit<span>&#46;</span>it</a>).</p>
+</div>
+<div class="section" id="building-the-jvm-support">
+<h2>Building the JVM support<a class="headerlink" href="#building-the-jvm-support" title="Permalink to this headline">¶</a></h2>
+<p>First of all, be sure to have a full JDK distribution installed.  The uWSGI
+build system will try to detect common JDK setups (Debian, Ubuntu, Centos,
+OSX…), but if it is not able to find a JDK installation it will need some
+information from the user (see below).  To build the JVM plugin simply run:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python uwsgiconfig.py --plugin plugins/jvm default
+</pre></div>
+</div>
+<p>Change ‘default’, if needed, to your alternative build profile. For example if
+you have a Perl/PSGI monolithic build just run</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python uwsgiconfig.py --plugin plugins/jvm psgi
+</pre></div>
+</div>
+<p>or for a fully-modular build</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python uwsgiconfig.py --plugin plugins/jvm core
+</pre></div>
+</div>
+<p>If all goes well the jvm_plugin will be built.  If the build system cannot find
+a JDK installation you will ned to specify the path of the headers directory
+(the directory containing the jni.h file) and the lib directory (the directory
+containing libjvm.so).  As an example, if jni.h is in /opt/java/includes and
+libjvm.so is in /opt/java/lib/jvm/i386, run the build system in that way:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">UWSGICONFIG_JVM_INCPATH</span><span class="o">=</span>/opt/java/includes <span class="nv">UWSGICONFIG_JVM_LIBPATH</span><span class="o">=</span>/opt/java/lib/jvm/i386 python uwsgiconfig --plugin plugins/jvm
+</pre></div>
+</div>
+<p>After a successful build, you will get the path of the uwsgi.jar file.  That
+jarball contains classes to access the uWSGI API, and you should copy it into
+your CLASSPATH or at the very least manually load it from uWSGI’s
+configuration.</p>
+</div>
+<div class="section" id="exposing-functions-via-the-rpc-subsystem">
+<h2>Exposing functions via the RPC subsystem<a class="headerlink" href="#exposing-functions-via-the-rpc-subsystem" title="Permalink to this headline">¶</a></h2>
+<p>In this example we will export a “hello” Java function (returning a string) and
+we will call it from a Python WSGI application.  This is our base configuration
+(we assume a modular build).</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">python,jvm</span>
+<span class="na">http</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">wsgi-file</span> <span class="o">=</span> <span class="s">myapp.py</span>
+<span class="na">jvm-classpath</span> <span class="o">=</span> <span class="s">/opt/uwsgi/lib/uwsgi.jar</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">jvm-classpath</span></code> is an option exported by the JVM plugin that allows you
+to add directories or jarfiles to your classpath. You can specify as many
+<code class="docutils literal notranslate"><span class="pre">jvm-classpath</span></code> options you need.  Here we are manually adding <code class="docutils literal notranslate"><span class="pre">uwsgi.jar</span></code>
+as we did not copy it into our CLASSPATH.  This is our WSGI example script.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">uwsgi</span>
+
+<span class="k">def</span> <span class="nf">application</span><span class="p">(</span><span class="n">environ</span><span class="p">,</span> <span class="n">start_response</span><span class="p">):</span>
+    <span class="n">start_response</span><span class="p">(</span><span class="s1">&#39;200 OK&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="s1">&#39;Content-Type&#39;</span><span class="p">,</span><span class="s1">&#39;text/html&#39;</span><span class="p">)])</span>
+    <span class="k">yield</span> <span class="s2">&quot;&lt;h1&gt;&quot;</span>
+    <span class="k">yield</span> <span class="n">uwsgi</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="s1">&#39;hello&#39;</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="s2">&quot;&lt;/h1&gt;&quot;</span>
+</pre></div>
+</div>
+<p>Here we use <code class="docutils literal notranslate"><span class="pre">uwsgi.call()</span></code> instead of <code class="docutils literal notranslate"><span class="pre">uwsgi.rpc()</span></code> as a shortcut (little
+performance gain in options parsing).  We now create our Foobar.java class. Its
+<code class="docutils literal notranslate"><span class="pre">static</span> <span class="pre">void</span> <span class="pre">main()</span></code> function will be run by uWSGI on startup.</p>
+<div class="highlight-java notranslate"><div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Foobar</span> <span class="o">{</span>
+   <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">()</span> <span class="o">{</span>
+
+       <span class="c1">// create an anonymous function</span>
+       <span class="n">uwsgi</span><span class="o">.</span><span class="na">RpcFunction</span> <span class="n">rpc_func</span> <span class="o">=</span> <span class="k">new</span> <span class="n">uwsgi</span><span class="o">.</span><span class="na">RpcFunction</span><span class="o">()</span> <span class="o">{</span>
+           <span class="kd">public</span> <span class="n">String</span> <span class="nf">function</span><span class="o">(</span><span class="n">String</span><span class="o">...</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+               <span class="k">return</span> <span class="s">&quot;Hello World&quot;</span><span class="o">;</span>
+           <span class="o">}</span>
+       <span class="o">};</span>
+
+       <span class="c1">// register it in the uWSGI RPC subsystem</span>
+       <span class="n">uwsgi</span><span class="o">.</span><span class="na">register_rpc</span><span class="o">(</span><span class="s">&quot;hello&quot;</span><span class="o">,</span> <span class="n">rpc_func</span><span class="o">);</span>
+   <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">uwsgi.RpcFunction</span></code> interface allows you to easily write uWSGI-compliant
+RPC functions.  Now compile the Foobar.java file:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>javac Foobar.java
+</pre></div>
+</div>
+<p>(eventually fix the classpath or pass the uwsgi.jar path with the -cp option)
+You now have a Foobar.class that can be loaded by uWSGI. Let’s complete the
+configuration…</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">python,jvm</span>
+<span class="na">http</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">wsgi-file</span> <span class="o">=</span> <span class="s">myapp.py</span>
+<span class="na">jvm-classpath</span> <span class="o">=</span> <span class="s">/opt/uwsgi/lib/uwsgi.jar</span>
+<span class="na">jvm-main-class</span> <span class="o">=</span> <span class="s">Foobar</span>
+</pre></div>
+</div>
+<p>The last option (<code class="docutils literal notranslate"><span class="pre">jvm-main-class</span></code>) will load a java class and will execute
+its <code class="docutils literal notranslate"><span class="pre">main()</span></code> method.  We can now visit localhost:9090 and we should see the
+Hello World message.</p>
+</div>
+<div class="section" id="registering-signal-handlers">
+<h2>Registering signal handlers<a class="headerlink" href="#registering-signal-handlers" title="Permalink to this headline">¶</a></h2>
+<p>In the same way as the RPC subsystem you can register signal handlers.  You
+will be able to call Java functions on time events, file modifications, cron…
+Our Sigbar.java:</p>
+<div class="highlight-java notranslate"><div class="highlight"><pre><span></span><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Sigbar</span> <span class="o">{</span>
+   <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">()</span> <span class="o">{</span>
+
+       <span class="c1">// create an anonymous function</span>
+       <span class="n">uwsgi</span><span class="o">.</span><span class="na">SignalHandler</span> <span class="n">sh</span> <span class="o">=</span> <span class="k">new</span> <span class="n">uwsgi</span><span class="o">.</span><span class="na">SignalHandler</span><span class="o">()</span> <span class="o">{</span>
+           <span class="kd">public</span> <span class="kt">void</span> <span class="nf">function</span><span class="o">(</span><span class="kt">int</span> <span class="n">signum</span><span class="o">)</span> <span class="o">{</span>
+               <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;Hi, i am the signal &quot;</span> <span class="o">+</span> <span class="n">signum</span><span class="o">);</span>
+           <span class="o">}</span>
+       <span class="o">};</span>
+
+       <span class="c1">// register it in the uWSGI signal subsystem</span>
+       <span class="n">uwsgi</span><span class="o">.</span><span class="na">register_signal</span><span class="o">(</span><span class="mi">17</span><span class="o">,</span> <span class="s">&quot;&quot;</span><span class="o">,</span> <span class="n">sh</span><span class="o">);</span>
+   <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">uwsgi.SignalHandler</span></code> is the interface for signal handlers.</p>
+<p>Whenever signal 17 is rased, the corresponding JVM function will be run.
+Remember to compile the file, load it in uWSGI and to enable to master process
+(without it the signal subsystem will not work).</p>
+</div>
+<div class="section" id="the-fork-problem-and-multithreading">
+<h2>The fork() problem and multithreading<a class="headerlink" href="#the-fork-problem-and-multithreading" title="Permalink to this headline">¶</a></h2>
+<p>The JVM is not <code class="docutils literal notranslate"><span class="pre">fork()</span></code> friendly. If you load a virtual machine in the master
+and then you fork() (like generally you do in other languages) the children JVM
+will be broken (this is mainly because threads required by the JVM are not
+inherited).  For that reason a JVM for each worker, mule and spooler is
+spawned.  Fortunately enough, differently from the vast majority of other
+platforms, the JVM has truly powerful multithreading support.  uWSGI supports
+it, so if you want to run one of the request handlers (JWSGI, Clojure/Ring)
+just remember to spawn a number of threads with the <code class="docutils literal notranslate"><span class="pre">--threads</span></code> option.</p>
+</div>
+<div class="section" id="how-does-it-work">
+<h2>How does it work?<a class="headerlink" href="#how-does-it-work" title="Permalink to this headline">¶</a></h2>
+<p>uWSGI embeds the JVM using the JNI interface. Unfortunately we cannot rely on
+JVM’s automatic garbage collector, so we have to manually unreference all of
+the allocated objects. This is not a problem from a performance and usage point
+of view, but makes the development of plugins a bit more difficult compared to
+other JNI-based products.  Fortunately the current API simplifies that task.</p>
+</div>
+<div class="section" id="passing-options-to-the-jvm">
+<h2>Passing options to the JVM<a class="headerlink" href="#passing-options-to-the-jvm" title="Permalink to this headline">¶</a></h2>
+<p>You can pass specific options to the JVM using the <code class="docutils literal notranslate"><span class="pre">--jvm-opt</span></code> option.</p>
+<p>For example to limit heap usage to 10 megabytes:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="na">jvm-opt</span> <span class="o">=</span> <span class="s">-Xmx10m</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="loading-classes-without-main-method">
+<h2>Loading classes (without main method)<a class="headerlink" href="#loading-classes-without-main-method" title="Permalink to this headline">¶</a></h2>
+<p>We have already seen how to load classes and run their <code class="docutils literal notranslate"><span class="pre">main()</span></code> method on
+startup.  Often you will want to load classes only to add them to the JVM
+(allowing access to external modules needing them) To load a class you can use
+<code class="docutils literal notranslate"><span class="pre">--jvm-class</span></code>.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="na">jvm-class</span> <span class="o">=</span> <span class="s">Foobar</span>
+<span class="na">jvm-class</span> <span class="o">=</span> <span class="s">org/unbit/Unbit</span>
+</pre></div>
+</div>
+<p>Remember class names must use the ‘/’ format instead of dots! This rule applies
+to <code class="docutils literal notranslate"><span class="pre">--jvm-main-class</span></code> too.</p>
+</div>
+<div class="section" id="request-handlers">
+<h2>Request handlers<a class="headerlink" href="#request-handlers" title="Permalink to this headline">¶</a></h2>
+<p>Although the Java(TM) world has its J2EE environment for deploying web
+applications, you may want to follow a different approach.  The uWSGI project
+implements lot of features that are not part of J2EE (and does not implement
+lot of features that are a strong part of J2EE), so you may find its approach
+more suited for your setup (or taste, or skills).</p>
+<p>The JVM plugin exports an API to allow hooking web requests. This approach
+differs a bit from “classic” way uWSGI works.  The JVM plugin registers itself
+as a handler for modifier1==8, but will look at the modifier2 value to know
+which of its request handlers has to manage it.  For example the <a class="reference internal" href="Ring.html"><span class="doc">The Clojure/Ring JVM request handler</span></a>
+plugin registers itself in the JVM plugin as the modifier2 number ‘1’.  So to
+pass requests to it you need something like that:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">http</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">http-modifier1</span> <span class="o">=</span> <span class="s">8</span>
+<span class="na">http-modifier2</span> <span class="o">=</span> <span class="s">1</span>
+</pre></div>
+</div>
+<p>or with nginx:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">location</span> <span class="o">/</span> <span class="p">{</span>
+    <span class="n">include</span> <span class="n">uwsgi_params</span><span class="p">;</span>
+    <span class="n">uwsgi_modifier1</span> <span class="mi">8</span><span class="p">;</span>
+    <span class="n">uwsgi_modifier2</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="n">uwsgi_pass</span> <span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">uwsgi</span><span class="p">.</span><span class="n">socket</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Currently there are 2 JVM request handlers available:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="JWSGI.html"><span class="doc">The JWSGI interface</span></a></p></li>
+<li><p><a class="reference internal" href="Ring.html"><span class="doc">The Clojure/Ring JVM request handler</span></a> (for Clojure)</p></li>
+</ul>
+<p>As already said, the idea of developing a servlet request handler is there, but
+it will require a sponsorship (aka. money) as it’ll be a really big effort.</p>
+</div>
+<div class="section" id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>You do not need special jar files to use UNIX sockets – the JVM plugin has
+access to all of the uWSGI features.</p></li>
+<li><p>You may be addicted to the log4j module. There is nothing wrong with it, but
+do take a look at uWSGI’s logging capabilities (less resources needed, less
+configuration, and more NoEnterprise)</p></li>
+<li><p>The uWSGI API access is still incomplete (will be updated after 1.9)</p></li>
+<li><p>The JVM does not play well in environments with limited address space. Avoid
+using <code class="docutils literal notranslate"><span class="pre">--limit-as</span></code> if you load the JVM in your instances.</p></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">JVM in the uWSGI server (updated to 1.9)</a><ul>
+<li><a class="reference internal" href="#introduction">Introduction</a></li>
+<li><a class="reference internal" href="#building-the-jvm-support">Building the JVM support</a></li>
+<li><a class="reference internal" href="#exposing-functions-via-the-rpc-subsystem">Exposing functions via the RPC subsystem</a></li>
+<li><a class="reference internal" href="#registering-signal-handlers">Registering signal handlers</a></li>
+<li><a class="reference internal" href="#the-fork-problem-and-multithreading">The fork() problem and multithreading</a></li>
+<li><a class="reference internal" href="#how-does-it-work">How does it work?</a></li>
+<li><a class="reference internal" href="#passing-options-to-the-jvm">Passing options to the JVM</a></li>
+<li><a class="reference internal" href="#loading-classes-without-main-method">Loading classes (without main method)</a></li>
+<li><a class="reference internal" href="#request-handlers">Request handlers</a></li>
+<li><a class="reference internal" href="#notes">Notes</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Lua.html"
+                        title="previous chapter">Using Lua/WSAPI with uWSGI</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="JWSGI.html"
+                        title="next chapter">The JWSGI interface</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/JVM.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="JWSGI.html" title="The JWSGI interface"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Lua.html" title="Using Lua/WSAPI with uWSGI"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

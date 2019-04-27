@@ -1,0 +1,184 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>The GeoIP plugin &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="uWSGI Transformations" href="Transformations.html" />
+    <link rel="prev" title="SNI - Server Name Identification (virtual hosting for SSL nodes)" href="SNI.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Transformations.html" title="uWSGI Transformations"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="SNI.html" title="SNI - Server Name Identification (virtual hosting for SSL nodes)"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="the-geoip-plugin">
+<h1>The GeoIP plugin<a class="headerlink" href="#the-geoip-plugin" title="Permalink to this headline">¶</a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">geoip</span></code> plugin adds new routing vars to your internal routing subsystem.
+GeoIP’s vars are prefixed with the “geoip” tag.  To build the geoip plugin you
+need the official GeoIP C library and its headers.  The supported databases are
+the country and city one, and they are completely loaded on memory at startup.</p>
+<p>The country database give access to the following variables:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">${geoip[country_code]}</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${geoip[country_code3]}</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${geoip[country_name]}</span></code></p></li>
+</ul>
+<p>while the city one offers a lot more at the cost of increased memory usage for
+storing the database</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">${geoip[continent]}</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${geoip[country_code]}</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${geoip[country_code3]}</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${geoip[country_name]}</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${geoip[region]}</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${geoip[region_name]}</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${geoip[city]}</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${geoip[postal_code]}</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${geoip[latitude]}</span></code> (<code class="docutils literal notranslate"><span class="pre">${geoip[lat]}</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${geoip[longitude]}</span></code> (<code class="docutils literal notranslate"><span class="pre">${geoip[lon]}</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${geoip[dma]}</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">${geoip[area]}</span></code></p></li>
+</ul>
+<div class="section" id="enabling-geoip-lookup">
+<h2>Enabling geoip lookup<a class="headerlink" href="#enabling-geoip-lookup" title="Permalink to this headline">¶</a></h2>
+<p>To enable the GeoIP lookup system you need to load at least one database. After
+having loaded the geoip plugin you will get 2 new options:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--geoip-country</span></code> specifies a country database</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--geoip-city</span></code> specifies a city database</p></li>
+</ul>
+<p>If you do not specify at least one of them, the system will always return empty strings.</p>
+</div>
+<div class="section" id="an-example">
+<h2>An example<a class="headerlink" href="#an-example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugin</span> <span class="o">=</span> <span class="s">geoip</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="c1">; load the geoip city database</span>
+<span class="na">geoip-city</span> <span class="o">=</span> <span class="s">GeoLiteCity.dat</span>
+<span class="na">module</span> <span class="o">=</span> <span class="s">werkzeug.testapp:test_app</span>
+<span class="c1">; first some debug info (addvar will ad WSGI variables you will see in the werkzeug testapp)</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">log:${geoip[country_name]}/${geoip[country_code3]}</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">addvar:COUNTRY=${geoip[country_name]}</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">log:${geoip[city]}/${geoip[region]}/${geoip[continent]}</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">addvar:COORDS=${geoip[lon]}/${geoip[lat]}</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">log:${geoip[region_name]}</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">log:${geoip[dma]}/${geoip[area]}</span>
+
+<span class="c1">; then something more useful</span>
+<span class="c1">; block access to all of the italians (hey i am italian do not start blasting me...)</span>
+<span class="na">route-if</span> <span class="o">=</span> <span class="s">equal:${geoip[country_name]};Italy break:403 Italians cannot see this site :P</span>
+<span class="c1">; try to serve a specific page translation</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/foo/bar/test.html static:/var/www/${geoip[country_code]}/test.html</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="memory-usage">
+<h2>Memory usage<a class="headerlink" href="#memory-usage" title="Permalink to this headline">¶</a></h2>
+<p>The country database is tiny so you will generally have no problem in using it.
+Instead, the city database can be huge (from 20MB to more than 40MB).  If you
+have lot of instances using the GeoIP city database and you are on a recent
+Linux system, consider using <a class="reference internal" href="KSM.html"><span class="doc">Using Linux KSM in uWSGI</span></a> to reduce memory usage. All of the
+memory used by the GeoIP database can be shared by all instances with it.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">The GeoIP plugin</a><ul>
+<li><a class="reference internal" href="#enabling-geoip-lookup">Enabling geoip lookup</a></li>
+<li><a class="reference internal" href="#an-example">An example</a></li>
+<li><a class="reference internal" href="#memory-usage">Memory usage</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="SNI.html"
+                        title="previous chapter">SNI - Server Name Identification (virtual hosting for SSL nodes)</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Transformations.html"
+                        title="next chapter">uWSGI Transformations</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/GeoIP.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Transformations.html" title="uWSGI Transformations"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="SNI.html" title="SNI - Server Name Identification (virtual hosting for SSL nodes)"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

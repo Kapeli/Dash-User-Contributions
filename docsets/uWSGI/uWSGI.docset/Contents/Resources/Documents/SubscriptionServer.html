@@ -1,0 +1,262 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>uWSGI Subscription Server &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Serving static files with uWSGI (updated to 1.9)" href="StaticFiles.html" />
+    <link rel="prev" title="The uWSGI Spooler" href="Spooler.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="StaticFiles.html" title="Serving static files with uWSGI (updated to 1.9)"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Spooler.html" title="The uWSGI Spooler"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="uwsgi-subscription-server">
+<h1>uWSGI Subscription Server<a class="headerlink" href="#uwsgi-subscription-server" title="Permalink to this headline">¶</a></h1>
+<p>Some components of the uWSGI stack require a key-value mapping system.</p>
+<p>For example the <a class="reference internal" href="Fastrouter.html"><span class="doc">The uWSGI FastRouter</span></a> needs to know which server to contact for a specific request.</p>
+<p>In big networks with a lot of nodes manually managing this configuration could be a real hell.
+uWSGI implements a subscription system where the node itself announces its presence to Subscription Servers, which will in turn populate their internal dictionaries.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --fastrouter :1717 --fastrouter-subscription-server <span class="m">192</span>.168.0.100:2626
+</pre></div>
+</div>
+<p>This will run an uWSGI fastrouter on port 1717 and create an empty dictionary where the hostname is the key and the uwsgi address is the value.</p>
+<p>To populate this dictionary you can contact 192.168.0.100:2626, the address of the subscription server.</p>
+<p>For every key multiple addresses can exist, enabling load balancing (various algorithms are available).</p>
+<p>A node can announce its presence to a Subscription Server using the <code class="docutils literal notranslate"><span class="pre">subscribe-to</span></code> or <code class="docutils literal notranslate"><span class="pre">subscribe2</span></code> options.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket <span class="m">192</span>.168.0.10:3031 --wsgi myapp -M --subscribe-to <span class="m">192</span>.168.0.100:2626:uwsgi.it
+</pre></div>
+</div>
+<p>The FastRouter will map every request for uwsgi.it to 192.168.0.10:3031.</p>
+<p>To now add a second node for uwsgi.it simply run it and subscribe:</p>
+<div class="highlight-xxx notranslate"><div class="highlight"><pre><span></span>uwsgi --socket 192.168.0.11:3031 --wsgi myapp --master --subscribe-to 192.168.0.100:2626:uwsgi.it
+</pre></div>
+</div>
+<p>Dead nodes are automatically removed from the pool.</p>
+<p>The syntax for <code class="docutils literal notranslate"><span class="pre">subscribe2</span></code> is similar but it allows far more control since it allows to specify additional options like the address to which all requests should be forwarded. Its value syntax is a string with “key=value” pairs, each separated by a comma.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi -s <span class="m">192</span>.168.0.10:3031 --wsgi myapp --master --subscribe2 <span class="nv">server</span><span class="o">=</span><span class="m">192</span>.168.0.100:2626,key<span class="o">=</span>uwsgi.it,addr<span class="o">=</span><span class="m">192</span>.168.0.10:3031
+</pre></div>
+</div>
+<p>For a list of the available <code class="docutils literal notranslate"><span class="pre">subscribe2</span></code> keys, see below.</p>
+<p>The subscription system is currently available for cluster joining (when multicast/broadcast is not available), the Fastrouter, the HTTP/HTTPS/SPDY router, the rawrouter and the sslrouter.</p>
+<p>That said, you can create an evented/fast_as_hell HTTP load balancer in no time.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --http :80 --http-subscription-server <span class="m">192</span>.168.0.100:2626 --master
+</pre></div>
+</div>
+<p>Now simply subscribe your nodes to the HTTP subscription server.</p>
+<p>You can check the subscription server stats and/or the subscribed nodes through the <code class="docutils literal notranslate"><span class="pre">http-stats-server</span></code> option.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --http :80 --http-subscription-server <span class="m">192</span>.168.0.100:2626 --http-stats-server <span class="m">192</span>.168.0.100:5004 --master
+</pre></div>
+</div>
+<p>You can also forward subscription requests to another server with the option <code class="docutils literal notranslate"><span class="pre">http-resubscribe</span></code>.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --http :80 --http-subscription-server <span class="m">192</span>.168.0.100:2626 --http-resubscribe <span class="m">192</span>.168.0.101:2627 --master
+</pre></div>
+</div>
+<div class="section" id="securing-the-subscription-system">
+<h2>Securing the Subscription System<a class="headerlink" href="#securing-the-subscription-system" title="Permalink to this headline">¶</a></h2>
+<p>The subscription system is meant for “trusted” networks. All of the nodes in your network can potentially make a total mess with it.</p>
+<p>If you are building an infrastructure for untrusted users or you simply need more control over who can subscribe to a Subscription Server you can use openssl rsa public/private key pairs for “signing” you subscription requests.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># First, create the private key for the subscriber. DO NOT SET A PASSPHRASE FOR THIS KEY.</span>
+openssl genrsa -out private.pem
+<span class="c1"># Generate the public key for the subscription server:</span>
+openssl rsa -pubout -out test.uwsgi.it_8000.pem -in private.pem
+</pre></div>
+</div>
+<p>The keys must be named after the domain/key we are subscribing to serve, plus the .pem extension.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you’re subscribing to a pool for an application listening on a specified port you need to use the <code class="docutils literal notranslate"><span class="pre">domain_port.pem</span></code> scheme for your key files. Generally all of the DNS-allowed chars are supported, all of the others are mapped to an underscore.</p>
+</div>
+<p>An example of an RSA protected server looks like this:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">1</span>
+<span class="na">http</span> <span class="o">=</span> <span class="s">:8000</span>
+<span class="na">http-subscription-server</span> <span class="o">=</span> <span class="s">127.0.0.1:2626</span>
+<span class="na">subscriptions-sign-check</span> <span class="o">=</span> <span class="s">SHA1:/etc/uwsgi/keys</span>
+</pre></div>
+</div>
+<p>The last line tells uWSGI that public key files will be stored in /etc/uwsgi/keys.</p>
+<p>At each subscription request the server will check for the availability of the public key file and use it, if available, to verify the signature of the packet. Packets that do not correctly verify are rejected.</p>
+<p>On the client side you need to pass your private key along with other <code class="docutils literal notranslate"><span class="pre">subscribe-to</span></code> options. Here’s an example:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:8080</span>
+<span class="na">subscribe-to</span> <span class="o">=</span> <span class="s">127.0.0.1:2626:test.uwsgi.it:8000,5,SHA1:/home/foobar/private.pem</span>
+<span class="na">psgi</span> <span class="o">=</span> <span class="s">test.psgi</span>
+</pre></div>
+</div>
+<p>Let’s analyze the <code class="docutils literal notranslate"><span class="pre">subscribe-to</span></code> usage:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">127.0.0.1:2626</span></code> is the subscription server we want to subscribe to.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">test.uwsgi.it:8000</span></code> is the subscription key.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">5</span></code> is the modifier1 value for our psgi app</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SHA1:/home/private/test.uwsgi.it_8000.pem</span></code> is the &lt;digest&gt;:&lt;rsa&gt; couple for authenticating to the server (the &lt;rsa&gt; field is the private key path).</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Please make sure you’re using the same digest method (SHA1 in the examples above) both on the server and on the client.</p>
+</div>
+<p>To avoid replay attacks, each subscription packet has an increasing number (normally the unix time) avoiding the allowance of duplicated packets.
+Even if an attacker manages to sniff a subscription packet it will be unusable as it is already processed previously.
+Obviously if someone manages to steal your private key he will be able to build forged packets.</p>
+<div class="section" id="using-ssh-keys">
+<h3>Using SSH keys<a class="headerlink" href="#using-ssh-keys" title="Permalink to this headline">¶</a></h3>
+<p>SSH-formatted keys are generally loved by developers (well, more than classic PEM files).</p>
+<p>Both –subscribe-to and –subscribe2 (see below) support SSH private keys, while for the server part you have the encode the public key in pkcs8:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>ssh-keygen -f chiavessh001.pub -e -m pkcs8
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="subscribe2">
+<h2>–subscribe2<a class="headerlink" href="#subscribe2" title="Permalink to this headline">¶</a></h2>
+<p>This is the keyval version of –subscribe-to. It supports more tricks and a (generally) more readable syntax:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket <span class="m">127</span>.*:0 --subscribe2 <span class="nv">server</span><span class="o">=</span><span class="m">127</span>.0.0.1:7171,key<span class="o">=</span>ubuntu64.local:9090,sign<span class="o">=</span>SHA1:chiavessh001
+</pre></div>
+</div>
+<p>Supported fields are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">server</span></code> the address of the subscription server</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">key</span></code> the key to subscribe (generally the domain name)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">addr</span></code> the address to subscribe (the value of the item)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">socket</span></code> the socket number (zero-based), this is like ‘addr’ by take the uWSGI internal socket number</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">weight</span></code> the load balancing value</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">modifier1</span></code> and <code class="docutils literal notranslate"><span class="pre">modifier2</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sign</span></code> &lt;algo&gt;:&lt;file&gt; the signature for the secured system</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">check</span></code> it takes a file as argument. If it exists the packet is sent, otherwise it is skipped</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sni_key</span></code> set the keyfile to use for SNI proxy management</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sni_crt</span></code> set the crt file to use for SNI proxy management</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sni_ca</span></code> set the ca file to use for SNI proxy management</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">algo</span></code> (uWSGI 2.1) set the load balancing algorithm to use (they are pluggable, included are wrr, lrc, wlrc and iphash)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">proto</span></code> (uWSGI 2.1) the protocol to use, by default it is ‘uwsgi’</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">backup</span></code> (uWSGI 2.1) set the backup level (change meaning based on algo)</p></li>
+</ul>
+</div>
+<div class="section" id="notifications">
+<h2>Notifications<a class="headerlink" href="#notifications" title="Permalink to this headline">¶</a></h2>
+<p>When you subscribe to a server, you can ask it to “acknowledge” the acceptance of your request.</p>
+<p>Just add <code class="docutils literal notranslate"><span class="pre">--subscription-notify-socket</span> <span class="pre">&lt;addr&gt;</span></code> pointing to a datagram (Unix or UDP) address, on which your instance will bind and the subscription server will send acknowledgements to.</p>
+</div>
+<div class="section" id="mountpoints-uwsgi-2-1">
+<h2>Mountpoints (uWSGI 2.1)<a class="headerlink" href="#mountpoints-uwsgi-2-1" title="Permalink to this headline">¶</a></h2>
+<p>Generally you subscribe your apps to specific domains.</p>
+<p>Thanks to the mountpoint support introduced in uWSGI 2.1, you can now subscribe each node to a specific directory (you need to specify how much levels you want to support):</p>
+<p>First of all you need to tell the subscription server to accept (and manage) mountpoint requests:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --master --http :8080 --http-subscription-server <span class="m">127</span>.0.0.1:4040 --subscription-mountpoints <span class="m">1</span>
+</pre></div>
+</div>
+<p>Then you can start subscribing to mountpoints.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket <span class="m">127</span>.0.0.1:0 --subscribe2 <span class="nv">server</span><span class="o">=</span><span class="m">127</span>.0.0.1:4040,key<span class="o">=</span>mydomain.it/foo
+uwsgi --socket <span class="m">127</span>.0.0.1:0 --subscribe2 <span class="nv">server</span><span class="o">=</span><span class="m">127</span>.0.0.1:4040,key<span class="o">=</span>mydomain.it/bar
+uwsgi --socket <span class="m">127</span>.0.0.1:0 --subscribe2 <span class="nv">server</span><span class="o">=</span><span class="m">127</span>.0.0.1:4040,key<span class="o">=</span>mydomain.it/foo
+uwsgi --socket <span class="m">127</span>.0.0.1:0 --subscribe2 <span class="nv">server</span><span class="o">=</span><span class="m">127</span>.0.0.1:4040,key<span class="o">=</span>mydomain.it
+</pre></div>
+</div>
+<p>The first and the third instance will answer to all of the requests for /foo, the second will answer for /bar and the last one will manage all of the others.</p>
+<p>For the secured subscription system, you only need to use the domain key (you do not need to generate a certificate for each mountpoint).</p>
+<p>If you want to support mountpoints in the form /one/two instead of /one, just pass ‘2’ to –subscription-mountpoints and so on. For performance reason you need to choose how much elements your path can support, and you cannot mix them (read: if –subscription-mountpoints is 2 you can support /one/two or /foo/bar but not /foobar)</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">uWSGI Subscription Server</a><ul>
+<li><a class="reference internal" href="#securing-the-subscription-system">Securing the Subscription System</a><ul>
+<li><a class="reference internal" href="#using-ssh-keys">Using SSH keys</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#subscribe2">–subscribe2</a></li>
+<li><a class="reference internal" href="#notifications">Notifications</a></li>
+<li><a class="reference internal" href="#mountpoints-uwsgi-2-1">Mountpoints (uWSGI 2.1)</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Spooler.html"
+                        title="previous chapter">The uWSGI Spooler</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="StaticFiles.html"
+                        title="next chapter">Serving static files with uWSGI (updated to 1.9)</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/SubscriptionServer.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="StaticFiles.html" title="Serving static files with uWSGI (updated to 1.9)"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Spooler.html" title="The uWSGI Spooler"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

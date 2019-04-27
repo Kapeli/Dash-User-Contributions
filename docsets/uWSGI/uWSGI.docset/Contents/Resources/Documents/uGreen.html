@@ -1,0 +1,180 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>uGreen – uWSGI Green Threads &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The asyncio loop engine (CPython &gt;= 3.4, uWSGI &gt;= 2.0.4)" href="asyncio.html" />
+    <link rel="prev" title="The Tornado loop engine" href="Tornado.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="asyncio.html" title="The asyncio loop engine (CPython &gt;= 3.4, uWSGI &gt;= 2.0.4)"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Tornado.html" title="The Tornado loop engine"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="ugreen-uwsgi-green-threads">
+<h1>uGreen – uWSGI Green Threads<a class="headerlink" href="#ugreen-uwsgi-green-threads" title="Permalink to this headline">¶</a></h1>
+<p>uGreen is an implementation of <a class="reference external" href="http://en.wikipedia.org/wiki/Green_threads">green threads</a> on top of the <a class="reference internal" href="Async.html"><span class="doc">uWSGI async platform</span></a>.</p>
+<p>It is very similar to Python’s greenlet but built on top of the POSIX <code class="docutils literal notranslate"><span class="pre">swapcontext()</span></code> function. To take advantage of uGreen you have to set the number of async cores that will be mapped to green threads.</p>
+<p>For example if you want to spawn 30 green threads:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi -w tests.cpubound_green -s :3031 --async <span class="m">30</span> --ugreen
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">ugreen</span></code> option will enable uGreen on top of async mode.</p>
+<p>Now when you call <a class="reference internal" href="PythonModule.html#uwsgi.suspend" title="uwsgi.suspend"><code class="xref py py-func docutils literal notranslate"><span class="pre">uwsgi.suspend()</span></code></a> in your app, you’ll be switched off to another green thread.</p>
+<div class="section" id="security-and-performance">
+<h2>Security and performance<a class="headerlink" href="#security-and-performance" title="Permalink to this headline">¶</a></h2>
+<p>To ensure (relative) isolation of green threads, every stack area is protected by so called “guard pages”.</p>
+<p>An attempt to write out of the stack area of a green thread will result in a segmentation fault/bus error (and the process manager, if enabled, will respawn the worker without too much damage).</p>
+<p>The context switch is very fast, we can see it as:</p>
+<ul class="simple">
+<li><p>On switch</p>
+<ol class="arabic simple">
+<li><p>Save the Python Frame pointer</p></li>
+<li><p>Save the recursion depth of the Python environment (it is simply an int)</p></li>
+<li><p>Switch to the main stack</p></li>
+</ol>
+</li>
+<li><p>On return</p>
+<ol class="arabic simple">
+<li><p>Re-set the uGreen stack</p></li>
+<li><p>Re-set the recursion depth</p></li>
+<li><p>Re-set the frame pointer</p></li>
+</ol>
+</li>
+</ul>
+<p>The stack/registers switch is done by the POSIX <code class="docutils literal notranslate"><span class="pre">swapcontext()</span></code> call and we don’t have to worry about it.</p>
+</div>
+<div class="section" id="async-i-o">
+<h2>Async I/O<a class="headerlink" href="#async-i-o" title="Permalink to this headline">¶</a></h2>
+<p>For managing async I/O you can use the Async mode FD wait functions <a class="reference internal" href="PythonModule.html#uwsgi.wait_fd_read" title="uwsgi.wait_fd_read"><code class="xref py py-func docutils literal notranslate"><span class="pre">uwsgi.wait_fd_read()</span></code></a> and <a class="reference internal" href="PythonModule.html#uwsgi.wait_fd_write" title="uwsgi.wait_fd_write"><code class="xref py py-func docutils literal notranslate"><span class="pre">uwsgi.wait_fd_write()</span></code></a>.</p>
+</div>
+<div class="section" id="stack-size">
+<h2>Stack size<a class="headerlink" href="#stack-size" title="Permalink to this headline">¶</a></h2>
+<p>You can choose the uGreen stack size using the <code class="docutils literal notranslate"><span class="pre">ugreen-stacksize</span> <span class="pre">&lt;pages&gt;</span></code> option. The argument is in pages, not bytes.</p>
+</div>
+<div class="section" id="is-this-better-than-greenlet-or-stackless-python">
+<h2>Is this better than Greenlet or Stackless Python?<a class="headerlink" href="#is-this-better-than-greenlet-or-stackless-python" title="Permalink to this headline">¶</a></h2>
+<p>Weeeeelll… it depends. uGreen is faster (the stack is preallocated) but requires more memory (to allocate a stack area for every core). Stackless and Greenlet probably require less memory… but Stackless requires a heavily patched version of Python.</p>
+<p>If you’re heavily invested in making your app as async-snappy as possible, it’s always best to do some tests to choose the best one for you. As far as uWSGI is concerned, you can move from async engine to another without changing your code.</p>
+</div>
+<div class="section" id="what-about-python-coev">
+<h2>What about <code class="docutils literal notranslate"><span class="pre">python-coev</span></code>?<a class="headerlink" href="#what-about-python-coev" title="Permalink to this headline">¶</a></h2>
+<p>Lots of uGreen has been inspired by it. The author’s way to map Python threads to their implementation allows <code class="docutils literal notranslate"><span class="pre">python-coev</span></code> to be a little more “trustworthy” than Stackless Python. However, like Stackless, it requires a patched version of Python… :(</p>
+</div>
+<div class="section" id="can-i-use-ugreen-to-write-comet-apps">
+<h2>Can I use uGreen to write Comet apps?<a class="headerlink" href="#can-i-use-ugreen-to-write-comet-apps" title="Permalink to this headline">¶</a></h2>
+<p>Yeah! Sure! Go ahead. In the distribution you will find the <code class="docutils literal notranslate"><span class="pre">ugreenchat.py</span></code> script. It is a simple/dumb multiuser Comet chat. If you want to test it (for example 30 users) run it with</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi -s :3031 -w ugreenchat --async <span class="m">30</span> --ugreen
+</pre></div>
+</div>
+<p>The code has comments for every ugreen-related line. You’ll need <a class="reference external" href="http://bottlepy.org/docs/dev/">Bottle</a>, an amazing Python web micro framework to use it.</p>
+</div>
+<div class="section" id="psycopg2-improvements">
+<h2>Psycopg2 improvements<a class="headerlink" href="#psycopg2-improvements" title="Permalink to this headline">¶</a></h2>
+<p>uGreen can benefit from the new psycopg2 async extensions and the psycogreen project. See the <code class="file docutils literal notranslate"><span class="pre">tests/psycopg2_green.py</span></code> and <code class="file docutils literal notranslate"><span class="pre">tests/psycogreen_green.py</span></code> files for examples.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">uGreen – uWSGI Green Threads</a><ul>
+<li><a class="reference internal" href="#security-and-performance">Security and performance</a></li>
+<li><a class="reference internal" href="#async-i-o">Async I/O</a></li>
+<li><a class="reference internal" href="#stack-size">Stack size</a></li>
+<li><a class="reference internal" href="#is-this-better-than-greenlet-or-stackless-python">Is this better than Greenlet or Stackless Python?</a></li>
+<li><a class="reference internal" href="#what-about-python-coev">What about <code class="docutils literal notranslate"><span class="pre">python-coev</span></code>?</a></li>
+<li><a class="reference internal" href="#can-i-use-ugreen-to-write-comet-apps">Can I use uGreen to write Comet apps?</a></li>
+<li><a class="reference internal" href="#psycopg2-improvements">Psycopg2 improvements</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Tornado.html"
+                        title="previous chapter">The Tornado loop engine</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="asyncio.html"
+                        title="next chapter">The asyncio loop engine (CPython &gt;= 3.4, uWSGI &gt;= 2.0.4)</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/uGreen.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="asyncio.html" title="The asyncio loop engine (CPython &gt;= 3.4, uWSGI &gt;= 2.0.4)"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Tornado.html" title="The Tornado loop engine"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

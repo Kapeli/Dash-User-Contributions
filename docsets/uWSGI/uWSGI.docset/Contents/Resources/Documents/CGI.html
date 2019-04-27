@@ -1,0 +1,340 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Running CGI scripts on uWSGI &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The GCCGO plugin" href="GCCGO.html" />
+    <link rel="prev" title="The Mono ASP.NET plugin" href="Mono.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="GCCGO.html" title="The GCCGO plugin"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Mono.html" title="The Mono ASP.NET plugin"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="running-cgi-scripts-on-uwsgi">
+<h1>Running CGI scripts on uWSGI<a class="headerlink" href="#running-cgi-scripts-on-uwsgi" title="Permalink to this headline">¶</a></h1>
+<p>The CGI plugin provides the ability to run CGI scripts using the uWSGI server.</p>
+<p>Web servers/clients/load balancers send requests to the uWSGI server using modifier <code class="docutils literal notranslate"><span class="pre">9</span></code>. uWSGI then uses the variables passed from the client as CGI variables (on occasion fixing them) and calls the corresponding script/executable, re-forwarding its output to the client.</p>
+<p>The plugin tries to resemble Apache’s behavior, allowing you to run CGI scripts even on webservers that do not support CGI natively, such as Nginx.</p>
+<div class="section" id="enabling-the-plugin">
+<h2>Enabling the plugin<a class="headerlink" href="#enabling-the-plugin" title="Permalink to this headline">¶</a></h2>
+<p>The CGI plugin is by default not built in to the core. You need to build a binary with cgi embedded or build the cgi plugin.</p>
+<p>To build a single binary with CGI support:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>curl http://uwsgi.it/install <span class="p">|</span> bash -s cgi /tmp/uwsgi
+</pre></div>
+</div>
+<p>To compile it as a plugin,</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python uwsgiconfig.py --plugin plugins/cgi
+</pre></div>
+</div>
+<p>or, from sources directory:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>make <span class="nv">PROFILE</span><span class="o">=</span>cgi
+</pre></div>
+</div>
+</div>
+<div class="section" id="configuring-cgi-mode">
+<h2>Configuring CGI mode<a class="headerlink" href="#configuring-cgi-mode" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">cgi</span> <span class="pre">&lt;[mountpoint=]path&gt;</span></code> option is the main entry point for configuring your CGI environment.</p>
+<p><code class="docutils literal notranslate"><span class="pre">path</span></code> may be a directory or an executable file.
+In the case of a directory, the CGI plugin will use the URI to find the path of the script. If an executable is passed, it will be run, with <code class="docutils literal notranslate"><span class="pre">SCRIPT_NAME</span></code>, <code class="docutils literal notranslate"><span class="pre">SCRIPT_FILENAME</span></code> and <code class="docutils literal notranslate"><span class="pre">PATH_INFO</span></code> set in its environment.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">mountpoint</span></code> is optional. You can use it to map different URIs to different CGI directories/scripts.</p>
+</div>
+<div class="section" id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Remember to use uWSGI’s resource limiting and jailing techniques (namespaces, chroot, capability, unshare….) with your CGI apps to limit the damage they might cause.</p></li>
+<li><p>Starting from uWSGI 2.0.2 you can have even more cheap concurrency by using async mode.</p></li>
+<li><p>If not mapped to a helper, each CGI script must have read and execution permissions.</p></li>
+</ul>
+</div>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="example-1-dumb-cgi-enabled-directory">
+<h3>Example 1: Dumb CGI-enabled directory<a class="headerlink" href="#example-1-dumb-cgi-enabled-directory" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">cgi</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">uwsgi.sock</span>
+<span class="na">cgi</span> <span class="o">=</span> <span class="s">/var/www/cgi-bin</span>
+</pre></div>
+</div>
+<p>Each request will search for the specified file in <code class="file docutils literal notranslate"><span class="pre">/var/www/cgi-bin</span></code> and execute it.</p>
+<p>A request to <code class="docutils literal notranslate"><span class="pre">http://example.com/foo.cgi</span></code> would run <code class="docutils literal notranslate"><span class="pre">/var/www/cgi-bin/foo.cgi</span></code>.</p>
+</div>
+<div class="section" id="example-2-old-style-cgi-bin-directory">
+<h3>Example 2: old-style cgi-bin directory<a class="headerlink" href="#example-2-old-style-cgi-bin-directory" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">cgi</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">uwsgi.sock</span>
+<span class="na">cgi</span> <span class="o">=</span> <span class="s">/cgi-bin=/var/lib/cgi-bin</span>
+</pre></div>
+</div>
+<p>A call to <code class="docutils literal notranslate"><span class="pre">http://example.com/cgi-bin/foo</span></code> will run <code class="docutils literal notranslate"><span class="pre">/var/lib/cgi-bin/foo</span></code>.</p>
+</div>
+<div class="section" id="example-3-restricting-usage-to-certain-extensions">
+<h3>Example 3: restricting usage to certain extensions<a class="headerlink" href="#example-3-restricting-usage-to-certain-extensions" title="Permalink to this headline">¶</a></h3>
+<p>We want only .cgi and .pl files to be executed:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">cgi</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">uwsgi.sock</span>
+<span class="na">cgi</span> <span class="o">=</span> <span class="s">/cgi-bin=/var/lib/cgi-bin</span>
+<span class="na">cgi-allowed-ext</span> <span class="o">=</span> <span class="s">.cgi</span>
+<span class="na">cgi-allowed-ext</span> <span class="o">=</span> <span class="s">.pl</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="example-4-mapping-scripts-to-interpreters-using-their-extension">
+<h3>Example 4: mapping scripts to interpreters using their extension<a class="headerlink" href="#example-4-mapping-scripts-to-interpreters-using-their-extension" title="Permalink to this headline">¶</a></h3>
+<p>We want to run files ending with <code class="docutils literal notranslate"><span class="pre">.php</span></code> in the directory <code class="docutils literal notranslate"><span class="pre">/var/www</span></code> via the <code class="docutils literal notranslate"><span class="pre">php5-cgi</span></code> binary:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">cgi</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">uwsgi.sock</span>
+<span class="na">cgi</span> <span class="o">=</span> <span class="s">/var/www</span>
+<span class="na">cgi-allowed-ext</span> <span class="o">=</span> <span class="s">.php</span>
+<span class="na">cgi-helper</span> <span class="o">=</span> <span class="s">.php=php5-cgi</span>
+</pre></div>
+</div>
+<p>If a file is run with an helper, the file to be run will not require the execute permission bit. The helper of course does.</p>
+<p>Extension comparison is not case sensitive.</p>
+</div>
+<div class="section" id="example-5-running-php-scripts-as-cgi-via-nginx">
+<h3>Example 5: running PHP scripts as CGI via Nginx<a class="headerlink" href="#example-5-running-php-scripts-as-cgi-via-nginx" title="Permalink to this headline">¶</a></h3>
+<p>Configure Nginx to pass .php requests to uWSGI, with <code class="file docutils literal notranslate"><span class="pre">/var/www/foo</span></code> as the document root.</p>
+<div class="highlight-nginx notranslate"><div class="highlight"><pre><span></span><span class="k">location</span> <span class="p">~</span> <span class="sr">.php$</span> <span class="p">{</span>
+  <span class="kn">include</span> <span class="s">uwsgi_params</span><span class="p">;</span>
+  <span class="kn">uwsgi_param</span> <span class="s">REDIRECT_STATUS</span> <span class="mi">200</span><span class="p">;</span> <span class="c1"># required by php 5.3</span>
+  <span class="kn">uwsgi_modifier1</span> <span class="mi">9</span><span class="p">;</span>
+  <span class="kn">uwsgi_pass</span> <span class="n">127.0.0.1</span><span class="p">:</span><span class="mi">3031</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>And configure uWSGI like this:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">cgi</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+<span class="na">cgi</span> <span class="o">=</span> <span class="s">/var/www/foo</span>
+<span class="na">cgi-allowed-ext</span> <span class="o">=</span> <span class="s">.php</span>
+<span class="na">cgi-helper</span> <span class="o">=</span> <span class="s">.php=php5-cgi</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="example-6-concurrency">
+<h3>Example 6: Concurrency<a class="headerlink" href="#example-6-concurrency" title="Permalink to this headline">¶</a></h3>
+<p>By default each uWSGI worker will be able to run a single CGI script.
+This mean that using one process, will block your incoming requests until the first request has been ended.</p>
+<p>Adding more workers will mitigate the problem, but will consume a lot of memory.</p>
+<p>Threads are a better choice. Let’s configure each worker process to run 20 worker threads and thus run 20 CGI scripts concurrently.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">cgi</span>
+<span class="na">threads</span> <span class="o">=</span> <span class="s">20</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+<span class="na">cgi</span> <span class="o">=</span> <span class="s">/var/www/foo</span>
+<span class="na">cgi-allowed-ext</span> <span class="o">=</span> <span class="s">.php</span>
+<span class="na">cgi-helper</span> <span class="o">=</span> <span class="s">.php=php5-cgi</span>
+</pre></div>
+</div>
+<p>Using async mode to have even more cheap concurrency:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">cgi</span>
+<span class="na">async</span> <span class="o">=</span> <span class="s">200</span>
+<span class="na">ugreen</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+<span class="na">cgi</span> <span class="o">=</span> <span class="s">/var/www/foo</span>
+<span class="na">cgi-allowed-ext</span> <span class="o">=</span> <span class="s">.php</span>
+<span class="na">cgi-helper</span> <span class="o">=</span> <span class="s">.php=php5-cgi</span>
+</pre></div>
+</div>
+<p>this will spawn 200 coroutines, each able to manage a CGI script (with few K of memory)</p>
+</div>
+<div class="section" id="example-7-mailman-web-interface-behind-nginx">
+<h3>Example 7: Mailman web interface behind Nginx<a class="headerlink" href="#example-7-mailman-web-interface-behind-nginx" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-nginx notranslate"><div class="highlight"><pre><span></span><span class="k">location</span> <span class="s">/cgi-bin/mailman</span> <span class="p">{</span>
+    <span class="kn">include</span> <span class="s">uwsgi_params</span><span class="p">;</span>
+    <span class="kn">uwsgi_modifier1</span> <span class="mi">9</span><span class="p">;</span>
+    <span class="kn">uwsgi_pass</span> <span class="n">127.0.0.1</span><span class="p">:</span><span class="mi">3031</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">cgi</span>
+<span class="na">threads</span> <span class="o">=</span> <span class="s">20</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+<span class="na">cgi</span> <span class="o">=</span> <span class="s">/cgi-bin/mailman=/usr/lib/cgi-bin/mailman</span>
+<span class="na">cgi-index</span> <span class="o">=</span> <span class="s">listinfo</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">cgi-index</span></code> directive specifies which script is run when a path ending with a slash is requested. This way <code class="docutils literal notranslate"><span class="pre">/cgi-bin/mailman/</span></code> will be mapped to the <code class="docutils literal notranslate"><span class="pre">/cgi-bin/mailman/listinfo</span></code> script.</p>
+</div>
+<div class="section" id="example-8-viewvc-as-cgi-in-a-subdir">
+<h3>Example 8: Viewvc as CGI in a subdir<a class="headerlink" href="#example-8-viewvc-as-cgi-in-a-subdir" title="Permalink to this headline">¶</a></h3>
+<p>Using the Mountpoint option.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">cgi</span>
+<span class="na">threads</span> <span class="o">=</span> <span class="s">20</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+<span class="na">cgi</span> <span class="o">=</span> <span class="s">/viewvc=/usr/lib/cgi-bin/viewvc.cgi</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="example-9-using-the-uwsgi-http-router-and-the-check-static-option">
+<h3>Example 9: using the uWSGI HTTP router and the <code class="docutils literal notranslate"><span class="pre">check-static</span></code> option<a class="headerlink" href="#example-9-using-the-uwsgi-http-router-and-the-check-static-option" title="Permalink to this headline">¶</a></h3>
+<p>This is pretty much a full-stack solution using only uWSGI running on port 8080.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">http, cgi</span>
+
+<span class="c1">; bind on port 8080 and use the modifier 9</span>
+<span class="na">http</span> <span class="o">=</span> <span class="s">:8080</span>
+<span class="na">http-modifier1</span> <span class="o">=</span> <span class="s">9</span>
+
+<span class="c1">; set the document_root as a placeholder</span>
+<span class="na">my_document_root</span> <span class="o">=</span> <span class="s">/var/www</span>
+
+<span class="c1">; serve static files, skipping .pl and .cgi files</span>
+<span class="na">check-static</span> <span class="o">=</span> <span class="s">%(my_document_root)</span>
+<span class="na">static-skip-ext</span> <span class="o">=</span> <span class="s">.pl</span>
+<span class="na">static-skip-ext</span> <span class="o">=</span> <span class="s">.cgi</span>
+
+<span class="c1">; run cgi (ending in .pl or .cgi) in the document_root</span>
+<span class="na">cgi</span> <span class="o">=</span> <span class="s">%(my_document_root)</span>
+<span class="na">cgi-index</span> <span class="o">=</span> <span class="s">index.pl</span>
+<span class="na">cgi-index</span> <span class="o">=</span> <span class="s">index.cgi</span>
+<span class="na">cgi-allowed-ext</span> <span class="o">=</span> <span class="s">.pl</span>
+<span class="na">cgi-allowed-ext</span> <span class="o">=</span> <span class="s">.cgi</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="example-10-optimizing-cgis-advanced">
+<h3>Example 10: optimizing CGIs (advanced)<a class="headerlink" href="#example-10-optimizing-cgis-advanced" title="Permalink to this headline">¶</a></h3>
+<p>You can avoid the overhead of re-running interpreters at each request, loading the interpreter(s) on startup and calling a function in them instead of <code class="docutils literal notranslate"><span class="pre">execve()</span></code> ing the interpreter itself.</p>
+<p>The <code class="file docutils literal notranslate"><span class="pre">contrib/cgi_python.c</span></code> file in the source distribution is a tiny example on how to optimize Python CGI scripts.</p>
+<p>The Python interpreter is loaded on startup, and after each <code class="docutils literal notranslate"><span class="pre">fork()</span></code>,  <code class="docutils literal notranslate"><span class="pre">uwsgi_cgi_run_python</span></code> is called.</p>
+<p>To compile the library you can use something like this:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>gcc -shared -o cgi_python.so -fPIC -I /usr/include/python2.7/ cgi_python.c -lpython2.7
+</pre></div>
+</div>
+<p>And then map <code class="docutils literal notranslate"><span class="pre">.py</span></code> files to the <code class="docutils literal notranslate"><span class="pre">uwsgi_cgi_run_python</span></code> function.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">cgi</span>
+
+<span class="na">cgi</span> <span class="o">=</span> <span class="s">/var/www</span>
+<span class="na">cgi-loadlib</span> <span class="o">=</span> <span class="s">./cgi_python.so:uwsgi_cgi_load_python</span>
+<span class="na">cgi-helper</span> <span class="o">=</span> <span class="s">.py=sym://uwsgi_cgi_run_python</span>
+</pre></div>
+</div>
+<p>}}}</p>
+<p>Remember to prefix the symbol in the helper with <code class="docutils literal notranslate"><span class="pre">sym://</span></code> to enable uWSGI to find it as a loaded symbol instead of a disk file.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Running CGI scripts on uWSGI</a><ul>
+<li><a class="reference internal" href="#enabling-the-plugin">Enabling the plugin</a></li>
+<li><a class="reference internal" href="#configuring-cgi-mode">Configuring CGI mode</a></li>
+<li><a class="reference internal" href="#notes">Notes</a></li>
+<li><a class="reference internal" href="#examples">Examples</a><ul>
+<li><a class="reference internal" href="#example-1-dumb-cgi-enabled-directory">Example 1: Dumb CGI-enabled directory</a></li>
+<li><a class="reference internal" href="#example-2-old-style-cgi-bin-directory">Example 2: old-style cgi-bin directory</a></li>
+<li><a class="reference internal" href="#example-3-restricting-usage-to-certain-extensions">Example 3: restricting usage to certain extensions</a></li>
+<li><a class="reference internal" href="#example-4-mapping-scripts-to-interpreters-using-their-extension">Example 4: mapping scripts to interpreters using their extension</a></li>
+<li><a class="reference internal" href="#example-5-running-php-scripts-as-cgi-via-nginx">Example 5: running PHP scripts as CGI via Nginx</a></li>
+<li><a class="reference internal" href="#example-6-concurrency">Example 6: Concurrency</a></li>
+<li><a class="reference internal" href="#example-7-mailman-web-interface-behind-nginx">Example 7: Mailman web interface behind Nginx</a></li>
+<li><a class="reference internal" href="#example-8-viewvc-as-cgi-in-a-subdir">Example 8: Viewvc as CGI in a subdir</a></li>
+<li><a class="reference internal" href="#example-9-using-the-uwsgi-http-router-and-the-check-static-option">Example 9: using the uWSGI HTTP router and the <code class="docutils literal notranslate"><span class="pre">check-static</span></code> option</a></li>
+<li><a class="reference internal" href="#example-10-optimizing-cgis-advanced">Example 10: optimizing CGIs (advanced)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Mono.html"
+                        title="previous chapter">The Mono ASP.NET plugin</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="GCCGO.html"
+                        title="next chapter">The GCCGO plugin</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/CGI.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="GCCGO.html" title="The GCCGO plugin"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Mono.html" title="The Mono ASP.NET plugin"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

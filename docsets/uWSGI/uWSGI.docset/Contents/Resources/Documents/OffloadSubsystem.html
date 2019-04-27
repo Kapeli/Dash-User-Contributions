@@ -1,0 +1,166 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>The uWSGI offloading subsystem &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The uWSGI queue framework" href="Queue.html" />
+    <link rel="prev" title="uWSGI Mules" href="Mules.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Queue.html" title="The uWSGI queue framework"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Mules.html" title="uWSGI Mules"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="the-uwsgi-offloading-subsystem">
+<h1>The uWSGI offloading subsystem<a class="headerlink" href="#the-uwsgi-offloading-subsystem" title="Permalink to this headline">¶</a></h1>
+<p>Offloading is a way to optimize tiny tasks, delegating them to one or more threads.</p>
+<p>These threads run such tasks in a non-blocking/evented way allowing for a huge amount of concurrency.</p>
+<p>Various components of the uWSGI stack are offload-friendly, and the long-term target is to allow
+application code to abuse them.</p>
+<p>To start the offloading subsystem just add –offload-threads &lt;n&gt;, where &lt;n&gt; is the number of threads (per-worker) to spawn.
+They are native threads, they are lock-free (no shared resources), thundering-herd free (requests to the system
+are made in round-robin) and they are the best way to abuse your CPU cores.</p>
+<p>The number of offloaded requests is accounted in the “offloaded_requests” metric of the stats subsystem.</p>
+<div class="section" id="offloading-static-files">
+<h2>Offloading static files<a class="headerlink" href="#offloading-static-files" title="Permalink to this headline">¶</a></h2>
+<p>The first offload-aware component is the static file serving system.</p>
+<p>When offload threads are available, the whole transfer of the file is delegated to one of those threads, freeing your worker
+suddenly (so it will be ready to accept new requests)</p>
+<p>Example:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:3031</span>
+<span class="na">check-static</span> <span class="o">=</span> <span class="s">/var/www</span>
+<span class="na">offload-threads</span> <span class="o">=</span> <span class="s">4</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="offloading-internal-routing">
+<h2>Offloading internal routing<a class="headerlink" href="#offloading-internal-routing" title="Permalink to this headline">¶</a></h2>
+<p>The router_uwsgi and router_http plugins are offload-friendly.</p>
+<p>You can route requests to external uwsgi/HTTP servers without being worried about having a blocked worker during
+the response generation.</p>
+<p>Example:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:3031</span>
+<span class="na">offload-threads</span> <span class="o">=</span> <span class="s">8</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/foo http:127.0.0.1:8080</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/bar http:127.0.0.1:8181</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/node http:127.0.0.1:9090</span>
+</pre></div>
+</div>
+<p>Since 1.9.11 the <code class="docutils literal notranslate"><span class="pre">cache</span></code> router is offload friendly too.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:3031</span>
+<span class="na">offload-threads</span> <span class="o">=</span> <span class="s">8</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">cache:key=${REQUEST_URI}</span>
+</pre></div>
+</div>
+<p>As soon as the object is retrieved from the cache, it will be transferred in one of the offload threads.</p>
+</div>
+<div class="section" id="the-future">
+<h2>The Future<a class="headerlink" href="#the-future" title="Permalink to this headline">¶</a></h2>
+<p>The offloading subsystem has a great potential, you can think of it as a software DMA: you program it, and then it goes alone.</p>
+<p>Currently it is pretty monolithic, but the idea is to allow more complex plugins (a redis one is in the works).</p>
+<p>Next step is allowing the user to “program” it via the uwsgi api.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">The uWSGI offloading subsystem</a><ul>
+<li><a class="reference internal" href="#offloading-static-files">Offloading static files</a></li>
+<li><a class="reference internal" href="#offloading-internal-routing">Offloading internal routing</a></li>
+<li><a class="reference internal" href="#the-future">The Future</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Mules.html"
+                        title="previous chapter">uWSGI Mules</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Queue.html"
+                        title="next chapter">The uWSGI queue framework</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/OffloadSubsystem.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Queue.html" title="The uWSGI queue framework"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Mules.html" title="uWSGI Mules"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

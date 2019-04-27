@@ -1,0 +1,186 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>uWSGI 2.0.3 &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="uWSGI 2.0.2" href="Changelog-2.0.2.html" />
+    <link rel="prev" title="uWSGI 2.0.4" href="Changelog-2.0.4.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-2.0.2.html" title="uWSGI 2.0.2"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-2.0.4.html" title="uWSGI 2.0.4"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="uwsgi-2-0-3">
+<h1>uWSGI 2.0.3<a class="headerlink" href="#uwsgi-2-0-3" title="Permalink to this headline">¶</a></h1>
+<p>Changelog 20140317</p>
+<div class="section" id="bugfixes">
+<h2>Bugfixes<a class="headerlink" href="#bugfixes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>fixed spooler ‘at’ key usage</p></li>
+<li><p>fixed a memory and fd leak with on-demand Emperor sokets</p></li>
+<li><p>on __APPLE__ use LOG_NOTICE for syslog plugin</p></li>
+<li><p>fixed mongrel2 support</p></li>
+<li><p>hack for avoiding libmongoclient to crash on broken cursor</p></li>
+<li><p>log alarm is now a uwsgi_log_verbose() wrapper</p></li>
+<li><p>fixed tuntap router memory corruption</p></li>
+<li><p>Set ECDHE curve independently from DHE parameters (Hynek Schlawack)</p></li>
+<li><p>do not wait for a whole Emperor cycle before checking for each waitpid</p></li>
+<li><p>fix a regression with caller() not indicating the starting <a href="#id1"><span class="problematic" id="id2">*</span></a>.psgi program (Ævar Arnfjörð Bjarmason)</p></li>
+</ul>
+</div>
+<div class="section" id="new-features">
+<h2>New features<a class="headerlink" href="#new-features" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="emperor-sigwinch-and-sigurg">
+<h3>Emperor SIGWINCH and SIGURG<a class="headerlink" href="#emperor-sigwinch-and-sigurg" title="Permalink to this headline">¶</a></h3>
+<p>The Emperor now responds to two new signals:</p>
+<p>SIGWINCH: force an emperor rescan of vassals</p>
+<p>SIGURG: cleanup the Emperor states (for now it only clears its blacklist)</p>
+</div>
+<div class="section" id="building-plugins-on-the-fly-from-git-repositories">
+<h3>Building plugins on-the-fly from git repositories<a class="headerlink" href="#building-plugins-on-the-fly-from-git-repositories" title="Permalink to this headline">¶</a></h3>
+<p>You can now build plugins stored on git servers:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --build-plugin https://github.com/unbit/uwsgi-bonjour
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">UWSGI_EMBED_PLUGINS</span><span class="o">=</span><span class="s2">&quot;bonjour=https://github.com/unbit/uwsgi-bonjour&quot;</span> pip install uwsgi
+</pre></div>
+</div>
+</div>
+<div class="section" id="uwsgi-add-var-key-value">
+<h3>uwsgi.add_var(key, value)<a class="headerlink" href="#uwsgi-add-var-key-value" title="Permalink to this headline">¶</a></h3>
+<p>You can now set request variables direcly from your app, for better integration with the internal routing subsystem</p>
+<div class="highlight-pl notranslate"><div class="highlight"><pre><span></span><span class="k">my</span> <span class="nv">$app</span> <span class="o">=</span> <span class="k">sub</span> <span class="p">{</span>
+     <span class="nn">uwsgi::</span><span class="n">add_var</span><span class="p">(</span><span class="s">&quot;newvar&quot;</span><span class="p">,</span><span class="s">&quot;newvalue&quot;</span><span class="p">);</span>
+     <span class="k">return</span> <span class="p">[</span><span class="mi">200</span><span class="p">,</span> <span class="p">[</span><span class="s">&#39;Content-Type&#39;</span> <span class="o">=&gt;</span> <span class="s">&#39;text/html&#39;</span><span class="p">],</span> <span class="p">[</span><span class="s">&quot;Hello&quot;</span><span class="p">]];</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --http-socket :9090 --psgi hello.pl --response-route-run <span class="s2">&quot;log:\${newvar}&quot;</span>
+</pre></div>
+</div>
+<p>add_var has been implemented in the CPython and Perl plugins</p>
+</div>
+<div class="section" id="disableheaders-routing-action">
+<h3>‘disableheaders’ routing action<a class="headerlink" href="#disableheaders-routing-action" title="Permalink to this headline">¶</a></h3>
+<p>This new action disables the sending of response headers, independently by the current request state</p>
+</div>
+<div class="section" id="smarter-emperor-on-bad-conditions">
+<h3>Smarter Emperor on bad conditions<a class="headerlink" href="#smarter-emperor-on-bad-conditions" title="Permalink to this headline">¶</a></h3>
+<p>Now the Emperor completely destroys internal vassal-related structures when it is impossible to correctly kill a broken vassal
+(both for inconsistent Emperor state or for internal system problems)</p>
+</div>
+</div>
+<div class="section" id="availability">
+<h2>Availability<a class="headerlink" href="#availability" title="Permalink to this headline">¶</a></h2>
+<p>You can download uWSGI 2.0.3 from: <a class="reference external" href="https://projects.unbit.it/downloads/uwsgi-2.0.3.tar.gz">https://projects.unbit.it/downloads/uwsgi-2.0.3.tar.gz</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">uWSGI 2.0.3</a><ul>
+<li><a class="reference internal" href="#bugfixes">Bugfixes</a></li>
+<li><a class="reference internal" href="#new-features">New features</a><ul>
+<li><a class="reference internal" href="#emperor-sigwinch-and-sigurg">Emperor SIGWINCH and SIGURG</a></li>
+<li><a class="reference internal" href="#building-plugins-on-the-fly-from-git-repositories">Building plugins on-the-fly from git repositories</a></li>
+<li><a class="reference internal" href="#uwsgi-add-var-key-value">uwsgi.add_var(key, value)</a></li>
+<li><a class="reference internal" href="#disableheaders-routing-action">‘disableheaders’ routing action</a></li>
+<li><a class="reference internal" href="#smarter-emperor-on-bad-conditions">Smarter Emperor on bad conditions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#availability">Availability</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Changelog-2.0.4.html"
+                        title="previous chapter">uWSGI 2.0.4</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Changelog-2.0.2.html"
+                        title="next chapter">uWSGI 2.0.2</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Changelog-2.0.3.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-2.0.2.html" title="uWSGI 2.0.2"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-2.0.4.html" title="uWSGI 2.0.4"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

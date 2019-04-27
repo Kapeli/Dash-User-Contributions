@@ -1,0 +1,362 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Imperial monitors &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The Emperor protocol" href="EmperorProtocol.html" />
+    <link rel="prev" title="The uWSGI Emperor – multi-app deployment" href="Emperor.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="EmperorProtocol.html" title="The Emperor protocol"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Emperor.html" title="The uWSGI Emperor – multi-app deployment"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="Emperor.html" accesskey="U">The uWSGI Emperor – multi-app deployment</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="imperial-monitors">
+<h1>Imperial monitors<a class="headerlink" href="#imperial-monitors" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="dir-scan-a-directory-for-uwsgi-config-files">
+<h2><code class="docutils literal notranslate"><span class="pre">dir://</span></code> – scan a directory for uWSGI config files<a class="headerlink" href="#dir-scan-a-directory-for-uwsgi-config-files" title="Permalink to this headline">¶</a></h2>
+<p>Simply put all of your config files in a directory, then point the uWSGI
+emperor to it. The Emperor will start scanning this directory. When it finds
+a valid config file it will spawn a new uWSGI instance.</p>
+<p>For our example, we’re deploying a <a class="reference external" href="http://werkzeug.pocoo.org/">Werkzeug</a> test app, a <a class="reference external" href="http://trac.edgewall.org/">Trac</a> instance, a Ruby
+on Rails app and a <a class="reference external" href="http://djangoproject.com/">Django</a> app.</p>
+<p>werkzeug.xml</p>
+<div class="highlight-xml notranslate"><div class="highlight"><pre><span></span><span class="nt">&lt;uwsgi&gt;</span>
+    <span class="nt">&lt;module&gt;</span>werkzeug.testapp:test_app<span class="nt">&lt;/module&gt;</span>
+    <span class="nt">&lt;master/&gt;</span>
+    <span class="nt">&lt;processes&gt;</span>4<span class="nt">&lt;/processes&gt;</span>
+    <span class="nt">&lt;socket&gt;</span>127.0.0.1:3031<span class="nt">&lt;/socket&gt;</span>
+<span class="nt">&lt;/uwsgi&gt;</span>
+</pre></div>
+</div>
+<p>trac.ini</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">2</span>
+<span class="na">module</span> <span class="o">=</span> <span class="s">trac.web.main:dispatch_request</span>
+<span class="na">env</span> <span class="o">=</span> <span class="s">TRAC_ENV=/opt/project001</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3032</span>
+</pre></div>
+</div>
+<p>rails.yml</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">uwsgi</span><span class="p">:</span>
+    <span class="nt">plugins</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">rack</span>
+    <span class="nt">rack</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">config.ru</span>
+    <span class="nt">master</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+    <span class="nt">processes</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">8</span>
+    <span class="nt">socket</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">127.0.0.1:3033</span>
+    <span class="nt">post-buffering</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">4096</span>
+    <span class="nt">chdir</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/opt/railsapp001</span>
+</pre></div>
+</div>
+<p>django.ini</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3034</span>
+<span class="na">threads</span> <span class="o">=</span> <span class="s">40</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">1</span>
+<span class="na">env</span> <span class="o">=</span> <span class="s">DJANGO_SETTINGS_MODULE=myapp.settings</span>
+<span class="na">module</span> <span class="o">=</span> <span class="s">django.core.handlers.wsgi:WSGIHandler()</span>
+<span class="na">chdir</span> <span class="o">=</span> <span class="s">/opt/djangoapp001</span>
+</pre></div>
+</div>
+<p>Put these 4 files in a directory, for instance <code class="file docutils literal notranslate"><span class="pre">/etc/uwsgi/vassals</span></code> in our example, then spawn the Emperor:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --emperor /etc/uwsgi/vassals
+</pre></div>
+</div>
+<p>The emperor will find the uWSGI instance configuration files in that directory
+(the <code class="docutils literal notranslate"><span class="pre">dir://</span></code> plugin declaration is implicit) and start the daemons needed to
+run them.</p>
+</div>
+<div class="section" id="glob-monitor-a-shell-pattern">
+<h2><code class="docutils literal notranslate"><span class="pre">glob://</span></code> – monitor a shell pattern<a class="headerlink" href="#glob-monitor-a-shell-pattern" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">glob://</span></code> is similar to <code class="docutils literal notranslate"><span class="pre">dir://</span></code>, but a glob expression must be specified:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --emperor <span class="s2">&quot;/etc/vassals/domains/*/conf/uwsgi.xml&quot;</span>
+uwsgi --emperor <span class="s2">&quot;/etc/vassals/*.ini&quot;</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Remember to quote the pattern, otherwise your shell will most likely
+interpret it and expand it at invocation time, which is not what you want.</p>
+</div>
+<p>As the Emperor can search for configuration files in subdirectory hierarchies,
+you could have a structure like this:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>/opt/apps/app1/app1.xml
+/opt/apps/app1/...all the app files...
+/opt/apps/app2/app2.ini
+/opt/apps/app2/...all the app files...
+</pre></div>
+</div>
+<p>and run uWSGI with:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --emperor /opt/apps/app*/app*.*
+</pre></div>
+</div>
+</div>
+<div class="section" id="pg-scan-a-postgresql-table-for-configuration">
+<h2><code class="docutils literal notranslate"><span class="pre">pg://</span></code> – scan a PostgreSQL table for configuration<a class="headerlink" href="#pg-scan-a-postgresql-table-for-configuration" title="Permalink to this headline">¶</a></h2>
+<p>You can specify a query to run against a PostgreSQL database. Its result must
+be a list of 3 to 6 fields defining a vassal:</p>
+<ol class="arabic simple">
+<li><p>The instance name, including a valid uWSGI config file extension. (Such as
+<code class="docutils literal notranslate"><span class="pre">django-001.ini</span></code>)</p></li>
+<li><p>A <code class="docutils literal notranslate"><span class="pre">TEXT</span></code> blob containing the vassal configuration, in the format based on
+the extension in field 1</p></li>
+<li><p>A number representing the modification time of this row in UNIX format
+(seconds since the epoch).</p></li>
+<li><p>The UID of the vassal instance. Required in <a class="reference internal" href="Emperor.html#tyrant"><span class="std std-ref">Tyrant mode (secure multi-user hosting)</span></a> mode only.</p></li>
+<li><p>The GID of the vassal instance. Required in <a class="reference internal" href="Emperor.html#tyrant"><span class="std std-ref">Tyrant mode (secure multi-user hosting)</span></a> mode only.</p></li>
+<li><p>Socket for on demand vassal activation. If specified, vassal will be run
+in on demand mode. If omitted or empty, vassal will be run normally. Go to
+<a class="reference internal" href="OnDemandVassals.html"><span class="doc">On demand vassals (socket activation)</span></a> for more information.</p></li>
+</ol>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --plugin emperor_pg --emperor <span class="s2">&quot;pg://host=127.0.0.1 user=foobar dbname=emperor;SELECT name,config,ts FROM vassals&quot;</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Whenever a new tuple is added a new instance is created and spawned with the
+config specified in the second field.</p></li>
+<li><p>Whenever the modification time field changes, the instance is reloaded.</p></li>
+<li><p>If a tuple is removed, the corresponding vassal will be destroyed.</p></li>
+</ul>
+</div>
+<div class="section" id="mongodb-scan-mongodb-collections-for-configuration">
+<h2><code class="docutils literal notranslate"><span class="pre">mongodb://</span></code> – Scan MongoDB collections for configuration<a class="headerlink" href="#mongodb-scan-mongodb-collections-for-configuration" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --plugin emperor_mongodb --emperor <span class="s2">&quot;mongodb://127.0.0.1:27107,emperor.vassals,{enabled:1}&quot;</span>
+</pre></div>
+</div>
+<p>This will scan all of the documents in the <code class="docutils literal notranslate"><span class="pre">emperor.vassals</span></code> collection
+having the field <code class="docutils literal notranslate"><span class="pre">enabled</span></code> set to 1.  An Emperor-compliant document must
+define three fields: <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">config</span></code> and <code class="docutils literal notranslate"><span class="pre">ts</span></code>. In <a class="reference internal" href="Emperor.html#tyrant"><span class="std std-ref">Tyrant mode (secure multi-user hosting)</span></a> mode, 2
+more fields are required. There is also optional <code class="docutils literal notranslate"><span class="pre">socket</span></code> field for on
+demand vassal mode.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code> (string) is the name of the vassal (remember to give it a valid extension, like .ini)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">config</span></code> (multiline string) is the vassal config in the format described by the <code class="docutils literal notranslate"><span class="pre">name</span></code>’s extension.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ts</span></code> (date) is the timestamp of the config (Note: MongoDB internally stores the timestamp in milliseconds.)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">uid</span></code> (number) is the UID to run the vassal as. Required in <a class="reference internal" href="Emperor.html#tyrant"><span class="std std-ref">Tyrant mode (secure multi-user hosting)</span></a> mode only.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gid</span></code> (number) is the GID to run the vassal as. Required in <a class="reference internal" href="Emperor.html#tyrant"><span class="std std-ref">Tyrant mode (secure multi-user hosting)</span></a> mode only.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">socket</span></code> (string) Socket for on demand vassal activation. If specified,
+vassal will be run in on demand mode. If omitted or empty, vassal will be run
+normally. Go to <a class="reference internal" href="OnDemandVassals.html"><span class="doc">On demand vassals (socket activation)</span></a> for more information.</p></li>
+</ul>
+</div>
+<div class="section" id="amqp-use-an-amqp-compliant-message-queue-to-announce-events">
+<h2><code class="docutils literal notranslate"><span class="pre">amqp://</span></code> – Use an AMQP compliant message queue to announce events<a class="headerlink" href="#amqp-use-an-amqp-compliant-message-queue-to-announce-events" title="Permalink to this headline">¶</a></h2>
+<p>Set your AMQP (RabbitMQ, for instance) server address as the –emperor argument:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --plugin emperor_amqp --emperor amqp://192.168.0.1:5672
+</pre></div>
+</div>
+<p>Now the Emperor will wait for messages in the <code class="docutils literal notranslate"><span class="pre">uwsgi.emperor</span></code> exchange. This
+should be a <cite>fanout</cite> type exchange, but you can use other systems for your
+specific needs.  Messages are simple strings containing the absolute path of a
+valid uWSGI config file.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># The pika module is used in this example, but you&#39;re free to use whatever adapter you like.</span>
+<span class="kn">import</span> <span class="nn">pika</span>
+<span class="c1"># connect to RabbitMQ server</span>
+<span class="n">connection</span> <span class="o">=</span> <span class="n">pika</span><span class="o">.</span><span class="n">BlockingConnection</span><span class="p">(</span><span class="n">pika</span><span class="o">.</span><span class="n">ConnectionParameters</span><span class="p">(</span><span class="s1">&#39;192.168.0.1&#39;</span><span class="p">))</span>
+<span class="c1"># get the channel</span>
+<span class="n">channel</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">channel</span><span class="p">()</span>
+<span class="c1"># create the exchange (if not already available)</span>
+<span class="n">channel</span><span class="o">.</span><span class="n">exchange_declare</span><span class="p">(</span><span class="n">exchange</span><span class="o">=</span><span class="s1">&#39;uwsgi.emperor&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s1">&#39;fanout&#39;</span><span class="p">)</span>
+<span class="c1"># publish a new config file</span>
+<span class="n">channel</span><span class="o">.</span><span class="n">basic_publish</span><span class="p">(</span><span class="n">exchange</span><span class="o">=</span><span class="s1">&#39;uwsgi.emperor&#39;</span><span class="p">,</span> <span class="n">routing_key</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="s1">&#39;/etc/vassals/mydjangoapp.xml&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The first time you launch the script, the emperor will add the new instance (if
+the config file is available).  From now on every time you re-publish the
+message the app will be reloaded. When you remove the config file the app is
+removed too.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>You can subscribe all of your emperors in the various servers to this
+exchange to allow cluster-synchronized reloading/deploy.</p>
+</div>
+<div class="section" id="amqp-with-http">
+<h3>AMQP with HTTP<a class="headerlink" href="#amqp-with-http" title="Permalink to this headline">¶</a></h3>
+<p>uWSGI <a class="reference internal" href="Configuration.html#loadingconfig"><span class="std std-ref">is capable of loading configuration files over
+HTTP</span></a>. This is a very handy way to dynamically generate
+configuration files for massive hosting.  Simply declare the HTTP URL of the
+config file in the AMQP message. Remember that it must end with one of the
+valid config extensions, but under the hood it can be generated by a script.
+If the HTTP URL returns a non-200 status code, the instance will be removed.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">channel</span><span class="o">.</span><span class="n">basic_publish</span><span class="p">(</span><span class="n">exchange</span><span class="o">=</span><span class="s1">&#39;uwsgi.emperor&#39;</span><span class="p">,</span> <span class="n">routing_key</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="s1">&#39;http://example.com/confs/trac.ini&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="direct-amqp-configuration">
+<h3>Direct AMQP configuration<a class="headerlink" href="#direct-amqp-configuration" title="Permalink to this headline">¶</a></h3>
+<p>Configuration files may also be served directly over AMQP. The <code class="docutils literal notranslate"><span class="pre">routing_key</span></code>
+will be the (virtual) config filename, and the message will be the content of
+the config file.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">channel</span><span class="o">.</span><span class="n">basic_publish</span><span class="p">(</span>
+  <span class="n">exchange</span><span class="o">=</span><span class="s1">&#39;uwsgi.emperor&#39;</span><span class="p">,</span>
+  <span class="n">routing_key</span><span class="o">=</span><span class="s1">&#39;mydomain_trac_config.ini&#39;</span><span class="p">,</span>
+  <span class="n">body</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">[uwsgi]</span>
+<span class="s2">socket=:3031</span>
+<span class="s2">env = TRAC_ENV=/accounts/unbit/trac/uwsgi</span>
+<span class="s2">module = trac.web.main:dispatch_request</span>
+<span class="s2">processes = 4&quot;&quot;&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The same reloading rules of previous modes are valid. When you want to remove
+an instance simply set an empty body as the “configuration”.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">channel</span><span class="o">.</span><span class="n">basic_publish</span><span class="p">(</span><span class="n">exchange</span><span class="o">=</span><span class="s1">&#39;uwsgi.emperor&#39;</span><span class="p">,</span> <span class="n">routing_key</span><span class="o">=</span><span class="s1">&#39;mydomain_trac_config.ini&#39;</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="zmq-zeromq">
+<h2><code class="docutils literal notranslate"><span class="pre">zmq://</span></code> – ZeroMQ<a class="headerlink" href="#zmq-zeromq" title="Permalink to this headline">¶</a></h2>
+<p>The Emperor binds itself to a ZeroMQ PULL socket, ready to receive commands.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --plugin emperor_zeromq --emperor zmq://tcp://127.0.0.1:5252
+</pre></div>
+</div>
+<p>Each command is a multipart message sent over a PUSH zmq socket.  A command is
+composed by at least 2 parts: <code class="docutils literal notranslate"><span class="pre">command</span></code> and <code class="docutils literal notranslate"><span class="pre">name</span></code>. <code class="docutils literal notranslate"><span class="pre">command</span></code> is the
+action to execute, while <code class="docutils literal notranslate"><span class="pre">name</span></code> is the name of the vassal. 4 optional parts
+can be specified.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">config</span></code> (a string containing the vassal config)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">uid</span></code> (the user id to drop priviliges to in case of tyrant mode)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gid</span></code> (the group id to drop priviliges to in case of tyrant mode)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">socket</span></code> (socket for on demand vassal activation. If specified,
+vassal will be run in on demand mode. If omitted or empty, vassal will be run
+normally. Go to <a class="reference internal" href="OnDemandVassals.html"><span class="doc">On demand vassals (socket activation)</span></a> for more information)</p></li>
+</ul>
+<p>There are 2 kind of commands (for now):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">touch</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">destroy</span></code></p></li>
+</ul>
+<p>The first one is used for creating and reloading instances while the second is
+for destroying.  If you do not specify a config string, the Emperor will assume
+you are referring to a static file available in the Emperor current directory.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">zmq</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">zmq</span><span class="o">.</span><span class="n">Context</span><span class="p">()</span>
+<span class="n">s</span> <span class="o">=</span> <span class="n">zmq</span><span class="o">.</span><span class="n">Socket</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">zmq</span><span class="o">.</span><span class="n">PUSH</span><span class="p">)</span>
+<span class="n">s</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s1">&#39;tcp://127.0.0.1:5252&#39;</span><span class="p">)</span>
+<span class="n">s</span><span class="o">.</span><span class="n">send_multipart</span><span class="p">([</span><span class="s1">&#39;touch&#39;</span><span class="p">,</span><span class="s1">&#39;foo.ini&#39;</span><span class="p">,</span><span class="s2">&quot;[uwsgi]</span><span class="se">\n</span><span class="s2">socket=:4142&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="zoo-zookeeper">
+<h2><code class="docutils literal notranslate"><span class="pre">zoo://</span></code> – Zookeeper<a class="headerlink" href="#zoo-zookeeper" title="Permalink to this headline">¶</a></h2>
+<p>Currently in development.</p>
+</div>
+<div class="section" id="ldap-ldap">
+<h2><code class="docutils literal notranslate"><span class="pre">ldap://</span></code> – LDAP<a class="headerlink" href="#ldap-ldap" title="Permalink to this headline">¶</a></h2>
+<p>Currently in development.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Imperial monitors</a><ul>
+<li><a class="reference internal" href="#dir-scan-a-directory-for-uwsgi-config-files"><code class="docutils literal notranslate"><span class="pre">dir://</span></code> – scan a directory for uWSGI config files</a></li>
+<li><a class="reference internal" href="#glob-monitor-a-shell-pattern"><code class="docutils literal notranslate"><span class="pre">glob://</span></code> – monitor a shell pattern</a></li>
+<li><a class="reference internal" href="#pg-scan-a-postgresql-table-for-configuration"><code class="docutils literal notranslate"><span class="pre">pg://</span></code> – scan a PostgreSQL table for configuration</a></li>
+<li><a class="reference internal" href="#mongodb-scan-mongodb-collections-for-configuration"><code class="docutils literal notranslate"><span class="pre">mongodb://</span></code> – Scan MongoDB collections for configuration</a></li>
+<li><a class="reference internal" href="#amqp-use-an-amqp-compliant-message-queue-to-announce-events"><code class="docutils literal notranslate"><span class="pre">amqp://</span></code> – Use an AMQP compliant message queue to announce events</a><ul>
+<li><a class="reference internal" href="#amqp-with-http">AMQP with HTTP</a></li>
+<li><a class="reference internal" href="#direct-amqp-configuration">Direct AMQP configuration</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#zmq-zeromq"><code class="docutils literal notranslate"><span class="pre">zmq://</span></code> – ZeroMQ</a></li>
+<li><a class="reference internal" href="#zoo-zookeeper"><code class="docutils literal notranslate"><span class="pre">zoo://</span></code> – Zookeeper</a></li>
+<li><a class="reference internal" href="#ldap-ldap"><code class="docutils literal notranslate"><span class="pre">ldap://</span></code> – LDAP</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Emperor.html"
+                        title="previous chapter">The uWSGI Emperor – multi-app deployment</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="EmperorProtocol.html"
+                        title="next chapter">The Emperor protocol</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/ImperialMonitors.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="EmperorProtocol.html" title="The Emperor protocol"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Emperor.html" title="The uWSGI Emperor – multi-app deployment"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="Emperor.html" >The uWSGI Emperor – multi-app deployment</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

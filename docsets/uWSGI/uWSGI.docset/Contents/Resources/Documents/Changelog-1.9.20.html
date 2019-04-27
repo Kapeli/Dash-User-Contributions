@@ -1,0 +1,234 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>uWSGI 1.9.20 &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="uWSGI 1.9.19" href="Changelog-1.9.19.html" />
+    <link rel="prev" title="uWSGI 1.9.21" href="Changelog-1.9.21.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.19.html" title="uWSGI 1.9.19"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.21.html" title="uWSGI 1.9.21"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="uwsgi-1-9-20">
+<h1>uWSGI 1.9.20<a class="headerlink" href="#uwsgi-1-9-20" title="Permalink to this headline">¶</a></h1>
+<p>Changelog [20131117]</p>
+<div class="section" id="first-round-of-deprecations-and-removals-for-2-0">
+<h2>First round of deprecations and removals for 2.0<a class="headerlink" href="#first-round-of-deprecations-and-removals-for-2-0" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>The Go plugin is now considered “broken” and has been moved away from the <code class="docutils literal notranslate"><span class="pre">plugins</span></code> directory. The new blessed way for running Go apps in uWSGI is using <a class="reference internal" href="GCCGO.html"><span class="doc">The GCCGO plugin</span></a> plugin.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">--auto-snapshot</span></code> option has been removed, advanced management of instances now happens via <a class="reference internal" href="MasterFIFO.html"><span class="doc">The Master FIFO</span></a>.</p></li>
+<li><p>The matheval support has been removed, while a generic “matheval” plugin (for internal routing) is available (but not compiled in by default). See below for the new way for making “math” in config files.</p></li>
+<li><p>The “erlang” and “pyerl” plugins are broken and has been moved out of the <code class="docutils literal notranslate"><span class="pre">plugins</span></code> directory. Erlang support will be completely rewritten after 2.0 release.</p></li>
+</ul>
+</div>
+<div class="section" id="next-scheduled-deprecations-and-removals">
+<h2>Next scheduled deprecations and removals<a class="headerlink" href="#next-scheduled-deprecations-and-removals" title="Permalink to this headline">¶</a></h2>
+<p>The ZeroMQ API (a single function indeed) will be removed. Each plugin using ZeroMQ will create its own <code class="docutils literal notranslate"><span class="pre">zmq</span></code> context (no need to share it). This means libzmq will no more be linked in the uWSGI core binary.</p>
+<p>Mongrel2 protocol support will be moved to a “mongrel2” plugin instead of being embedded in the core.</p>
+</div>
+<div class="section" id="bugfixes">
+<h2>Bugfixes<a class="headerlink" href="#bugfixes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Fixed master hang when gracefully reloading in lazy mode.</p></li>
+<li><p>Fixed <code class="docutils literal notranslate"><span class="pre">default_app</span></code> usage.</p></li>
+<li><p>Another round of coverity fixes by Riccardo Magliocchetti.</p></li>
+<li><p>Fixed <code class="docutils literal notranslate"><span class="pre">EAGAIN</span></code> management when reading the body.</p></li>
+</ul>
+</div>
+<div class="section" id="new-features">
+<h2>New features<a class="headerlink" href="#new-features" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="bit-return-values-for-the-rpc-subsystem">
+<h3>64bit return values for the RPC subsystem<a class="headerlink" href="#bit-return-values-for-the-rpc-subsystem" title="Permalink to this headline">¶</a></h3>
+<p>Before this release every RPC response was limited to a size of 64k (16bit).</p>
+<p>Now the RPC protocol automatically detects if more space is needed and can scale up to 64bit.</p>
+<p>Another advantage of this approach is that only the required amount of memory per-response is allocated instead of blindly
+creating a 64k chunk every time.</p>
+</div>
+<div class="section" id="the-new-gccgo-plugin">
+<h3>The new GCCGO plugin<a class="headerlink" href="#the-new-gccgo-plugin" title="Permalink to this headline">¶</a></h3>
+<p>Check official docs: <a class="reference internal" href="GCCGO.html"><span class="doc">The GCCGO plugin</span></a></p>
+<p>The plugin is in early stage of development but it’s already quite solid.</p>
+</div>
+<div class="section" id="simple-math-in-configuration-files">
+<h3>Simple math in configuration files<a class="headerlink" href="#simple-math-in-configuration-files" title="Permalink to this headline">¶</a></h3>
+<p>As seen before, we have removed matheval support in favor of a simplified interface:</p>
+<p><a class="reference external" href="https://uwsgi-docs.readthedocs.io/en/latest/Configuration.html#placeholders-math-from-uwsgi-1-9-20-dev">https://uwsgi-docs.readthedocs.io/en/latest/Configuration.html#placeholders-math-from-uwsgi-1-9-20-dev</a></p>
+<p>For example, now you can automatically set the number of threads to:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; %k is a magic var translated to the number of cpu cores</span>
+<span class="na">threads</span> <span class="o">=</span> <span class="s">%(%k * 3)</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+<p>(<code class="docutils literal notranslate"><span class="pre">%k</span> <span class="pre">*</span> <span class="pre">3</span></code> is <code class="docutils literal notranslate"><span class="pre">number_of_cpu_cores</span> <span class="pre">*</span> <span class="pre">3</span></code>).</p>
+</div>
+<div class="section" id="new-magic-vars">
+<h3>New magic vars<a class="headerlink" href="#new-magic-vars" title="Permalink to this headline">¶</a></h3>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">%t</span></code></dt><dd><p>Unix time (in seconds, gathered at instance startup).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">%T</span></code></dt><dd><p>Unix time (in microseconds, gathered at instance startup).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">%k</span></code></dt><dd><p>Number of detected CPU cores.</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="perl-psgi-improvements">
+<h3>Perl/PSGI improvements<a class="headerlink" href="#perl-psgi-improvements" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p><a class="reference internal" href="Chunked.html"><span class="doc">The Chunked input API</span></a>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">psgix.io</span></code> is a <code class="docutils literal notranslate"><span class="pre">Socket::IO</span></code> object mapped to the connection file descriptor (you need to enable it with <code class="docutils literal notranslate"><span class="pre">--psgi-enable-psgix-io</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">uwsgi::rpc</span></code> and <code class="docutils literal notranslate"><span class="pre">uwsgi::connection_fd</span></code> from the API.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--plshell</span></code> will invoke an interactive shell (based on <code class="docutils literal notranslate"><span class="pre">Devel::REPL</span></code>).</p></li>
+</ul>
+</div>
+<div class="section" id="new-native-protocols-https-socket-and-ssl-socket">
+<h3>New native protocols: <code class="docutils literal notranslate"><span class="pre">--https-socket</span></code> and <code class="docutils literal notranslate"><span class="pre">--ssl-socket</span></code><a class="headerlink" href="#new-native-protocols-https-socket-and-ssl-socket" title="Permalink to this headline">¶</a></h3>
+<p>When built with SSL support, uWSGI exposes two new native socket protocols: HTTPS and uwsgi over SSL.</p>
+<p>Both options take the following value: <code class="docutils literal notranslate"><span class="pre">&lt;addr&gt;,&lt;cert&gt;,&lt;key&gt;[,ciphers,ca]</span></code>.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">https-socket</span> <span class="o">=</span> <span class="s">:8443,foobar.crt,foobar.key</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+<p>Currently none of the mainstream webservers support uwsgi over SSL, a patch for nginx will be sent for approval in the next few hours.</p>
+</div>
+<div class="section" id="proxy-version1-protocol-support">
+<h3>PROXY (version1) protocol support<a class="headerlink" href="#proxy-version1-protocol-support" title="Permalink to this headline">¶</a></h3>
+<p>Recently Amazon ELB added support for HAProxy PROXY (version 1) protocol support. This simple protocol allows the frontend to pass
+the real IP of the client to the backend.</p>
+<p>Adding <code class="docutils literal notranslate"><span class="pre">--enable-proxy-protocol</span></code> will force the <code class="docutils literal notranslate"><span class="pre">--http-socket</span></code> to check for a PROXY protocol request for setting the <code class="docutils literal notranslate"><span class="pre">REMOTE_ADDR</span></code> and <code class="docutils literal notranslate"><span class="pre">REMOTE_PORT</span></code> fields.</p>
+</div>
+<div class="section" id="new-metrics-collectors">
+<h3>New metrics collectors<a class="headerlink" href="#new-metrics-collectors" title="Permalink to this headline">¶</a></h3>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">avg</span></code></dt><dd><p>Compute the math average of children: <code class="docutils literal notranslate"><span class="pre">--metric</span> <span class="pre">name=foobar,collector=avg,children=metric1;metric2</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">accumulator</span></code></dt><dd><p>Always add the value of the specified children to the final value.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">multiplier</span></code></dt><dd><p>Multiply the sum of the specified children for the value specified in <code class="docutils literal notranslate"><span class="pre">arg1n</span></code>.</p>
+</dd>
+</dl>
+<p>Check <a class="reference internal" href="Metrics.html"><span class="doc">The Metrics subsystem</span></a>.</p>
+</div>
+</div>
+<div class="section" id="availability">
+<h2>Availability<a class="headerlink" href="#availability" title="Permalink to this headline">¶</a></h2>
+<p>uWSGI 1.9.20 has been released on 20131117 and can be downloaded from
+<a class="reference external" href="https://projects.unbit.it/downloads/uwsgi-1.9.20.tar.gz">https://projects.unbit.it/downloads/uwsgi-1.9.20.tar.gz</a>.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">uWSGI 1.9.20</a><ul>
+<li><a class="reference internal" href="#first-round-of-deprecations-and-removals-for-2-0">First round of deprecations and removals for 2.0</a></li>
+<li><a class="reference internal" href="#next-scheduled-deprecations-and-removals">Next scheduled deprecations and removals</a></li>
+<li><a class="reference internal" href="#bugfixes">Bugfixes</a></li>
+<li><a class="reference internal" href="#new-features">New features</a><ul>
+<li><a class="reference internal" href="#bit-return-values-for-the-rpc-subsystem">64bit return values for the RPC subsystem</a></li>
+<li><a class="reference internal" href="#the-new-gccgo-plugin">The new GCCGO plugin</a></li>
+<li><a class="reference internal" href="#simple-math-in-configuration-files">Simple math in configuration files</a></li>
+<li><a class="reference internal" href="#new-magic-vars">New magic vars</a></li>
+<li><a class="reference internal" href="#perl-psgi-improvements">Perl/PSGI improvements</a></li>
+<li><a class="reference internal" href="#new-native-protocols-https-socket-and-ssl-socket">New native protocols: <code class="docutils literal notranslate"><span class="pre">--https-socket</span></code> and <code class="docutils literal notranslate"><span class="pre">--ssl-socket</span></code></a></li>
+<li><a class="reference internal" href="#proxy-version1-protocol-support">PROXY (version1) protocol support</a></li>
+<li><a class="reference internal" href="#new-metrics-collectors">New metrics collectors</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#availability">Availability</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Changelog-1.9.21.html"
+                        title="previous chapter">uWSGI 1.9.21</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Changelog-1.9.19.html"
+                        title="next chapter">uWSGI 1.9.19</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Changelog-1.9.20.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.19.html" title="uWSGI 1.9.19"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.21.html" title="uWSGI 1.9.21"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

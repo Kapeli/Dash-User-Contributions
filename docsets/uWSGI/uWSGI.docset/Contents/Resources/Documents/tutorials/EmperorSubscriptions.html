@@ -1,0 +1,109 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>On demand vassals via subscriptions &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="on-demand-vassals-via-subscriptions">
+<h1>On demand vassals via subscriptions<a class="headerlink" href="#on-demand-vassals-via-subscriptions" title="Permalink to this headline">¶</a></h1>
+<p>Spawn an Emperor with a command socket (it is a channel allowing external process to govern vassals) and instruct it to not spawn vassals until a ‘spawn’ command is received.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">emperor</span> <span class="o">=</span> <span class="s">/etc/uwsgi/vassals</span>
+<span class="na">emperor-command-socket</span> <span class="o">=</span> <span class="s">/run/emperor.socket</span>
+<span class="na">emperor-wait-for-command</span> <span class="o">=</span> <span class="s">true</span>
+</pre></div>
+</div>
+<p>Spawn a Fastrouter on port :3031 with a subscription server on port :4041 and instruct it to contact the specific emperor socket whenever an inactive instance is found:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">fastrouter</span> <span class="o">=</span> <span class="s">:3031</span>
+<span class="na">fastrouter-subscription-server</span> <span class="o">=</span> <span class="s">127.0.0.1:4041</span>
+<span class="c1">; the emperor socket to contact</span>
+<span class="na">fastrouter-emperor-socket</span> <span class="o">=</span> <span class="s">/tmp/emperor.socket</span>
+<span class="na">fastrouter-stats-server</span> <span class="o">=</span> <span class="s">127.0.0.1:4040</span>
+</pre></div>
+</div>
+<p>Place your vassals in /etc/uwsgi/vassals ensuring each of them correctly subscribe to the fastrouter (this subscription is required to mark ‘inactive subscruptions’ as ‘active’</p>
+<p>Now you can start putting ‘inactive’ subscriptions in the fastrouter, using raw datagrams. An example inactive subscription packets can be something like this in the –subscribe2 way:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">addr</span><span class="o">=</span><span class="m">127</span>.0.0.1:3036,vassal<span class="o">=</span>one.ini,inactive<span class="o">=</span><span class="m">1</span>,server<span class="o">=</span><span class="m">127</span>.0.0.1:4041,key<span class="o">=</span><span class="m">127</span>.0.0.1:9090
+</pre></div>
+</div>
+<p>this will instruct the fastrouter to map the Host 127.0.0.1:9090 to the inactive uWSGI server that will run on 127.0.0.1:3036 and to run the one.ini vassal at the first request.</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/tutorials/EmperorSubscriptions.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

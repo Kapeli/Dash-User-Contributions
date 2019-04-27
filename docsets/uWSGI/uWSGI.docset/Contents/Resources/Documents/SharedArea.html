@@ -1,0 +1,208 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>SharedArea – share memory pages between uWSGI components &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The uWSGI Signal Framework" href="Signals.html" />
+    <link rel="prev" title="uWSGI RPC Stack" href="RPC.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Signals.html" title="The uWSGI Signal Framework"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="RPC.html" title="uWSGI RPC Stack"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="sharedarea-share-memory-pages-between-uwsgi-components">
+<h1>SharedArea – share memory pages between uWSGI components<a class="headerlink" href="#sharedarea-share-memory-pages-between-uwsgi-components" title="Permalink to this headline">¶</a></h1>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>SharedArea is a very low-level mechanism.
+For an easier-to-use alternative, see the <a class="reference internal" href="Caching.html"><span class="doc">Caching</span></a> and <a class="reference internal" href="Queue.html"><span class="doc">Queue</span></a> frameworks.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This page refers to “new generation” sharedarea introduced in uWSGI 1.9.21, the older API is no longer supported.</p>
+</div>
+<p>The sharedarea subsystem allows you to share pages of memory between your uWSGI components (workers, spoolers, mules, etc.)
+in a very fast (and safe) way.</p>
+<p>Contrary to the higher-level <a class="reference internal" href="Caching.html"><span class="doc">caching framework</span></a>, sharedarea operations are way faster (a single copy instead of the double, as required by caching) and offers
+various optimizations for specific needs.</p>
+<p>Each sharedarea (yes, you can have multiple areas) has a size (generally specified in the number of pages), so if you need an 8 KiB shared area on a system with 4 KiB pages, you would use <code class="docutils literal notranslate"><span class="pre">sharedarea=2</span></code>.</p>
+<p>The sharedarea subsystem is fully thread-safe.</p>
+<div class="section" id="simple-option-vs-keyval">
+<h2>Simple option VS keyval<a class="headerlink" href="#simple-option-vs-keyval" title="Permalink to this headline">¶</a></h2>
+<p>The sharedarea subsystem exposes (for now) a single option: <code class="docutils literal notranslate"><span class="pre">--sharedarea</span></code>.</p>
+<p>It takes two kinds of arguments: the number of pages (simple approach) or a keyval arg (for advanced tuning).</p>
+<p>The following keyval keys are available:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pages</span></code> – set the number of pages</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">file</span></code> – create the sharedarea from a file that will be <code class="docutils literal notranslate"><span class="pre">mmap</span></code>ed</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">fd</span></code> – create the sharedarea from a file descriptor that will be <code class="docutils literal notranslate"><span class="pre">mmap</span></code>ed</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">size</span></code> – mainly useful with the <code class="docutils literal notranslate"><span class="pre">fd</span></code> and <code class="docutils literal notranslate"><span class="pre">ptr</span></code> keys to specify the size of the map (can be used as a shortcut to avoid calculation of the <code class="docutils literal notranslate"><span class="pre">pages</span></code> value too)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ptr</span></code> – directly map the area to the specified memory pointer.</p></li>
+</ul>
+</div>
+<div class="section" id="the-api">
+<h2>The API<a class="headerlink" href="#the-api" title="Permalink to this headline">¶</a></h2>
+<p>The API is pretty big, the sharedarea will be the de-facto toy for writing highly optimized web apps (especially for embedded systems).</p>
+<p>Most of the documented uses make sense on systems with slow CPUs or very small amounts of memory.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">sharedarea_read(id,</span> <span class="pre">pos[,</span> <span class="pre">len])</span></code></dt><dd><p>Read <code class="docutils literal notranslate"><span class="pre">len</span></code> bytes from the specified sharedarea starting at offset <code class="docutils literal notranslate"><span class="pre">pos</span></code>. If <code class="docutils literal notranslate"><span class="pre">len</span></code> is not specified, the memory will be read til the end (starting from <code class="docutils literal notranslate"><span class="pre">pos</span></code>).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sharedarea_write(id,</span> <span class="pre">pos,</span> <span class="pre">string)</span></code></dt><dd><p>Write the specified <code class="docutils literal notranslate"><span class="pre">string</span></code> (it is language-dependent, obviously) to the specified sharedarea at offset <code class="docutils literal notranslate"><span class="pre">pos</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sharedarea_read8|16|32|64(id,</span> <span class="pre">pos)</span></code></dt><dd><p>Read a signed integer (8, 16, 32 or 64 bit) from the specified position.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sharedarea_write8|16|32|64(id,</span> <span class="pre">pos)</span></code></dt><dd><p>Write a signed integer (8, 16, 32 or 64 bit) to the specified position.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sharedarea_inc8|16|32|64(id,</span> <span class="pre">pos)</span></code></dt><dd><p>Increment the signed integer (8, 16, 32 or 64 bit) at the specified position.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sharedarea_dec8|16|32|64(id,</span> <span class="pre">pos)</span></code></dt><dd><p>Decrement the signed integer (8, 16, 32 or 64 bit) at the specified position.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sharedarea_wait(id[,</span> <span class="pre">freq,</span> <span class="pre">timeout])</span></code></dt><dd><p>Wait for modifications of the specified sharedarea (see below).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sharedarea_rlock(id)</span></code></dt><dd><p>lock a shared area for read (use only if you know what you are doing, generally the sharedarea api functions implement locking by themselves)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sharedarea_wlock(id)</span></code></dt><dd><p>lock a shared area for write (use only if you know what you are doing, generally the sharedarea api functions implement locking by themselves)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sharedarea_unlock(id)</span></code></dt><dd><p>unlock a shared area (use only if you know what you are doing, generally the sharedarea api functions implement locking by themselves)</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="waiting-for-updates">
+<h2>Waiting for updates<a class="headerlink" href="#waiting-for-updates" title="Permalink to this headline">¶</a></h2>
+<p>One of the most powerful features of sharedareas (compared to caching) is “waiting for updates”. Your worker/thread/async_core can be suspended
+until a sharedarea is modified.</p>
+<p>Technically, a millisecond-resolution timer is triggered, constantly checking for updates (the operation is very fast, as the sharedarea object has an update counter, so we only need to check that value for changes).</p>
+</div>
+<div class="section" id="optional-api">
+<h2>Optional API<a class="headerlink" href="#optional-api" title="Permalink to this headline">¶</a></h2>
+<p>The following functions require specific features from the language, so not all of the language plugins are able to support them.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">sharedarea_readfast(id,</span> <span class="pre">pos,</span> <span class="pre">object,</span> <span class="pre">[,</span> <span class="pre">len])</span></code></dt><dd><p>Read <code class="docutils literal notranslate"><span class="pre">len</span></code> bytes from the specified sharedarea starting at offset <code class="docutils literal notranslate"><span class="pre">pos</span></code> to the specified object. If <code class="docutils literal notranslate"><span class="pre">len</span></code> is not specified, the memory will be read til the end (starting from <code class="docutils literal notranslate"><span class="pre">pos</span></code>).
+Currently is implemented only for Perl.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sharedarea_memoryview(id)</span></code></dt><dd><p>returns python memoryview object you can directly manipulate (works only on CPython)</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sharedarea_object(id)</span></code></dt><dd><p>some plugin exposes an alternative way to create sharedareas from internal objects. This functions returns the original object (currently implemented only on CPython on top of bytearrays using <code class="docutils literal notranslate"><span class="pre">--py-sharedarea</span> <span class="pre">&lt;size&gt;</span></code> option)</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="websockets-integration-api">
+<h2>Websockets integration API<a class="headerlink" href="#websockets-integration-api" title="Permalink to this headline">¶</a></h2>
+<p>This is currently supported only in the psgi/perl plugin:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">websocket_send_from_sharedarea(id,</span> <span class="pre">pos)</span></code></dt><dd><p>send a websocket message directly from the specified sharedarea</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">websocket_send_binary_from_sharedarea(id,</span> <span class="pre">pos)</span></code></dt><dd><p>send a websocket binary message directly from the specified sharedarea</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="advanced-usage-from-c">
+<h2>Advanced usage (from C)<a class="headerlink" href="#advanced-usage-from-c" title="Permalink to this headline">¶</a></h2>
+<p>Work in progress.</p>
+<p>Check <a class="reference external" href="https://github.com/unbit/uwsgi-capture">https://github.com/unbit/uwsgi-capture</a> for an example of sharedarea managed from C</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">SharedArea – share memory pages between uWSGI components</a><ul>
+<li><a class="reference internal" href="#simple-option-vs-keyval">Simple option VS keyval</a></li>
+<li><a class="reference internal" href="#the-api">The API</a></li>
+<li><a class="reference internal" href="#waiting-for-updates">Waiting for updates</a></li>
+<li><a class="reference internal" href="#optional-api">Optional API</a></li>
+<li><a class="reference internal" href="#websockets-integration-api">Websockets integration API</a></li>
+<li><a class="reference internal" href="#advanced-usage-from-c">Advanced usage (from C)</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="RPC.html"
+                        title="previous chapter">uWSGI RPC Stack</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Signals.html"
+                        title="next chapter">The uWSGI Signal Framework</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/SharedArea.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Signals.html" title="The uWSGI Signal Framework"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="RPC.html" title="uWSGI RPC Stack"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

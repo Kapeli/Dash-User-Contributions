@@ -1,0 +1,261 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Python support &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The uwsgi Python module" href="PythonModule.html" />
+    <link rel="prev" title="Using OpenBSD httpd as proxy" href="OpenBSDhttpd.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="PythonModule.html" title="The uwsgi Python module"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="OpenBSDhttpd.html" title="Using OpenBSD httpd as proxy"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="python-support">
+<h1>Python support<a class="headerlink" href="#python-support" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="PythonModule.html">The uwsgi Python module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PythonDecorators.html">uWSGI API - Python decorators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PythonPump.html">Pump support</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Tracebacker.html">Python Tracebacker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PythonModuleAlias.html">Aliasing Python modules</a></li>
+</ul>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><span class="xref std std-ref">Python configuration options</span></p>
+</div>
+<div class="section" id="application-dictionary">
+<span id="pythonappdict"></span><h2>Application dictionary<a class="headerlink" href="#application-dictionary" title="Permalink to this headline">¶</a></h2>
+<p>You can use the application dictionary mechanism to avoid setting up your application in your configuration.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">uwsgi</span>
+<span class="kn">import</span> <span class="nn">django.core.handlers.wsgi</span>
+
+<span class="n">application</span> <span class="o">=</span> <span class="n">django</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">handlers</span><span class="o">.</span><span class="n">wsgi</span><span class="o">.</span><span class="n">WSGIHandler</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">myapp</span><span class="p">(</span><span class="n">environ</span><span class="p">,</span> <span class="n">start_response</span><span class="p">):</span>
+  <span class="n">start_response</span><span class="p">(</span><span class="s1">&#39;200 OK&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="s1">&#39;Content-Type&#39;</span><span class="p">,</span> <span class="s1">&#39;text/plain&#39;</span><span class="p">)])</span>
+  <span class="k">yield</span> <span class="s1">&#39;Hello World</span><span class="se">\n</span><span class="s1">&#39;</span>
+
+<span class="n">uwsgi</span><span class="o">.</span><span class="n">applications</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="s1">&#39;&#39;</span><span class="p">:</span> <span class="n">application</span><span class="p">,</span>
+  <span class="s1">&#39;/django&#39;</span><span class="p">:</span> <span class="s1">&#39;application&#39;</span><span class="p">,</span>
+  <span class="s1">&#39;/myapp&#39;</span><span class="p">:</span> <span class="n">myapp</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Passing this Python module name (that is, it should be importable and without the <code class="docutils literal notranslate"><span class="pre">.py</span></code> extension) to uWSGI’s <code class="docutils literal notranslate"><span class="pre">module</span></code> / <code class="docutils literal notranslate"><span class="pre">wsgi</span></code> option, uWSGI will search the <code class="docutils literal notranslate"><span class="pre">uwsgi.applications</span></code> dictionary for the URL prefix/callable mappings.</p>
+<p>The value of every item can be a callable, or its name as a string.</p>
+</div>
+<div class="section" id="virtualenv-support">
+<span id="virtualenv"></span><h2>Virtualenv support<a class="headerlink" href="#virtualenv-support" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="http://www.virtualenv.org/">virtualenv</a> is a mechanism that lets you isolate one (or more) Python applications’ libraries (and interpreters, when not using uWSGI) from each other.
+Virtualenvs should be used by any respectable modern Python application.</p>
+<div class="section" id="quickstart">
+<h3>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic">
+<li><p>Create your virtualenv:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ virtualenv myenv
+New python executable in myenv/bin/python
+Installing setuptools...............done.
+Installing pip.........done.
+</pre></div>
+</div>
+</li>
+<li><p>Install all the modules you need (using <a class="reference external" href="http://flask.pocoo.org/">Flask</a> as an example):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ ./myenv/bin/pip install flask
+$ # Many modern Python projects ship with a `requirements.txt` file that you can use with pip like this:
+$ ./myenv/bin/pip install -r requirements.txt
+</pre></div>
+</div>
+</li>
+<li><p>Copy your WSGI module into this new environment (under <code class="file docutils literal notranslate"><span class="pre">lib/python2.</span><em><span class="pre">x</span></em></code> if you do not want to modify your <code class="docutils literal notranslate"><span class="pre">PYTHONPATH</span></code>).</p></li>
+</ol>
+<blockquote>
+<div><div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It’s common for many deployments that your application will live outside the virtualenv. How to configure this is not quite documented yet, but it’s probably very easy.</p>
+</div>
+<p>Run the uwsgi server using the <code class="docutils literal notranslate"><span class="pre">home</span></code>/<code class="docutils literal notranslate"><span class="pre">virtualenv</span></code> option (<code class="docutils literal notranslate"><span class="pre">-H</span></code> for short):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ uwsgi -H myenv -s 127.0.0.1:3031 -M -w envapp
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+</div>
+<div class="section" id="python-3">
+<span id="python3"></span><h2>Python 3<a class="headerlink" href="#python-3" title="Permalink to this headline">¶</a></h2>
+<p>The WSGI specification was updated for Python 3 as <a class="reference external" href="http://www.python.org/dev/peps/pep-3333/">PEP3333</a>.</p>
+<p>One major change is that applications are required to respond only with <code class="docutils literal notranslate"><span class="pre">bytes</span></code> instances, not (Unicode) strings, back to the WSGI stack.</p>
+<p>You should encode strings or use bytes literals:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">application</span><span class="p">(</span><span class="n">environ</span><span class="p">,</span> <span class="n">start_response</span><span class="p">):</span>
+  <span class="n">start_response</span><span class="p">(</span><span class="s1">&#39;200 OK&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="s1">&#39;Content-Type&#39;</span><span class="p">,</span> <span class="s1">&#39;text/plain&#39;</span><span class="p">)])</span>
+  <span class="k">yield</span> <span class="s1">&#39;Hello &#39;</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+  <span class="k">yield</span> <span class="sa">b</span><span class="s1">&#39;World</span><span class="se">\n</span><span class="s1">&#39;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="paste-support">
+<span id="pythonpaste"></span><h2>Paste support<a class="headerlink" href="#paste-support" title="Permalink to this headline">¶</a></h2>
+<p>If you are a user or developer of Paste-compatible frameworks, such as <a class="reference external" href="http://docs.pylonsproject.org/projects/pyramid/en/latest/">Pyramid</a>, <a class="reference external" href="http://www.pylonsproject.org">Pylons</a> and <a class="reference external" href="http://turbogears.org">Turbogears</a> or applications using them, you can use the uWSGI <code class="docutils literal notranslate"><span class="pre">--paste</span></code> option to conveniently deploy your application.</p>
+<p>For example, if you have a virtualenv in <code class="file docutils literal notranslate"><span class="pre">/opt/tg2env</span></code> containing a Turbogears app called <code class="docutils literal notranslate"><span class="pre">addressbook</span></code> configured in <code class="file docutils literal notranslate"><span class="pre">/opt/tg2env/addressbook/development.ini</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">uwsgi</span> <span class="o">--</span><span class="n">paste</span> <span class="n">config</span><span class="p">:</span><span class="o">/</span><span class="n">opt</span><span class="o">/</span><span class="n">tg2env</span><span class="o">/</span><span class="n">addressbook</span><span class="o">/</span><span class="n">development</span><span class="o">.</span><span class="n">ini</span> <span class="o">--</span><span class="n">socket</span> <span class="p">:</span><span class="mi">3031</span> <span class="o">-</span><span class="n">H</span> <span class="o">/</span><span class="n">opt</span><span class="o">/</span><span class="n">tg2env</span>
+</pre></div>
+</div>
+<p>That’s it! No additional configuration or Python modules to write.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you setup multiple process/workers (<a class="reference internal" href="Glossary.html#term-master"><span class="xref std std-term">master</span></a> mode) you will receive an error:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="ne">AssertionError</span><span class="p">:</span> <span class="n">The</span> <span class="n">EvalException</span> <span class="n">middleware</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">usable</span> <span class="ow">in</span> <span class="n">a</span> <span class="n">multi</span><span class="o">-</span><span class="n">process</span> <span class="n">environment</span>
+</pre></div>
+</div>
+<p>in which case you’ll have to set the <code class="docutils literal notranslate"><span class="pre">debug</span></code> option in your paste configuration file to False – or revert to single process environment.</p>
+</div>
+</div>
+<div class="section" id="pecan-support">
+<span id="pythonpecan"></span><h2>Pecan support<a class="headerlink" href="#pecan-support" title="Permalink to this headline">¶</a></h2>
+<p>If you are a user or developer of the <a class="reference external" href="http://pecanpy.org">Pecan</a> WSGI framework, you can use the uWSGI <code class="docutils literal notranslate"><span class="pre">--pecan</span></code> option to conveniently deploy your application.</p>
+<p>For example, if you have a virtualenv in <code class="file docutils literal notranslate"><span class="pre">/opt/pecanenv</span></code> containing a Pecan app called <code class="docutils literal notranslate"><span class="pre">addressbook</span></code> configured in <code class="file docutils literal notranslate"><span class="pre">/opt/pecanenv/addressbook/development.py</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">uwsgi</span> <span class="o">--</span><span class="n">pecan</span> <span class="o">/</span><span class="n">opt</span><span class="o">/</span><span class="n">pecanenv</span><span class="o">/</span><span class="n">addressbook</span><span class="o">/</span><span class="n">development</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">socket</span> <span class="p">:</span><span class="mi">3031</span> <span class="o">-</span><span class="n">H</span> <span class="o">/</span><span class="n">opt</span><span class="o">/</span><span class="n">pecanenv</span>
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you setup multiple process/workers (<a class="reference internal" href="Glossary.html#term-master"><span class="xref std std-term">master</span></a> mode) you will receive an error:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="ne">AssertionError</span><span class="p">:</span> <span class="n">The</span> <span class="n">DebugMiddleware</span> <span class="n">middleware</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">usable</span> <span class="ow">in</span> <span class="n">a</span> <span class="n">multi</span><span class="o">-</span><span class="n">process</span> <span class="n">environment</span>
+</pre></div>
+</div>
+<p>in which case you’ll have to set the <code class="docutils literal notranslate"><span class="pre">debug</span></code> option in your pecan configuration file to False – or revert to single process environment.</p>
+</div>
+</div>
+<div class="section" id="using-the-django-uwsgi-django-app">
+<h2>Using the django-uwsgi Django app<a class="headerlink" href="#using-the-django-uwsgi-django-app" title="Permalink to this headline">¶</a></h2>
+<p>First of all you need to get the <code class="docutils literal notranslate"><span class="pre">django_uwsgi</span></code> app from <a class="reference external" href="https://github.com/unbit/django-uwsgi">https://github.com/unbit/django-uwsgi</a> (once it was in the <code class="docutils literal notranslate"><span class="pre">django</span></code> directory of the distribution).</p>
+<p>Install it with <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">django-uwsgi</span></code> and add it into your <code class="docutils literal notranslate"><span class="pre">INSTALLED_APPS</span></code>.</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="n">INSTALLED_APPS</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="c1"># ...</span>
+    <span class="s1">&#39;django.contrib.admin&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;django_uwsgi&#39;</span><span class="p">,</span>
+    <span class="c1"># ...</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Then modify your <code class="docutils literal notranslate"><span class="pre">urls.py</span></code> accordingly. For example:</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="c1"># ...</span>
+<span class="n">url</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^admin/uwsgi/&#39;</span><span class="p">,</span> <span class="n">include</span><span class="p">(</span><span class="s1">&#39;django_uwsgi.urls&#39;</span><span class="p">)),</span>
+<span class="n">url</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^admin/&#39;</span><span class="p">,</span> <span class="n">include</span><span class="p">(</span><span class="n">admin</span><span class="o">.</span><span class="n">site</span><span class="o">.</span><span class="n">urls</span><span class="p">)),</span>
+<span class="c1"># ...</span>
+</pre></div>
+</div>
+<p>Be sure to place the URL pattern for django_uwsgi <em>before</em> the one for the admin site, or it will never match.</p>
+<p><code class="docutils literal notranslate"><span class="pre">/admin/uwsgi/</span></code> will then serve uWSGI statistics and has a button for graceful reloading of the server (when running under a Master). Note that memory usage is reported only when the <code class="docutils literal notranslate"><span class="pre">memory-report</span></code> option is enabled.</p>
+<p><a class="reference external" href="http://django-uwsgi.rtfd.org/">Read the documentation for django-uwsgi at rtfd.org</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Python support</a><ul>
+<li><a class="reference internal" href="#application-dictionary">Application dictionary</a></li>
+<li><a class="reference internal" href="#virtualenv-support">Virtualenv support</a><ul>
+<li><a class="reference internal" href="#quickstart">Quickstart</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#python-3">Python 3</a></li>
+<li><a class="reference internal" href="#paste-support">Paste support</a></li>
+<li><a class="reference internal" href="#pecan-support">Pecan support</a></li>
+<li><a class="reference internal" href="#using-the-django-uwsgi-django-app">Using the django-uwsgi Django app</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="OpenBSDhttpd.html"
+                        title="previous chapter">Using OpenBSD httpd as proxy</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="PythonModule.html"
+                        title="next chapter">The uwsgi Python module</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Python.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="PythonModule.html" title="The uwsgi Python module"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="OpenBSDhttpd.html" title="Using OpenBSD httpd as proxy"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

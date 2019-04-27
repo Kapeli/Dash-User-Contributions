@@ -1,0 +1,87 @@
+uWSGI V8 support
+================
+
+Building
+********
+
+You will need the ``libv8`` headers to build the plugin. The official modifier1 value for V8 is '24'.
+
+RPC
+***
+
+.. code-block:: js
+
+   function part1(request_uri, remote_addr) {
+        return '<h1>i am part1 for ' + request_uri + ' ' + remote_addr + "</h1>" ;
+   }
+
+   function part2(request_uri, remote_addr) {
+        return '<h2>i am part2 for ' + request_uri + ' ' + remote_addr + "</h2>" ;
+   }
+
+   function part3(request_uri, remote_addr) {
+        return '<h3>i am part3 for ' + request_uri + ' ' + remote_addr + "</h3>" ;
+   }
+
+   uwsgi.register_rpc('part1', part1);
+   uwsgi.register_rpc('part2', part2);
+   uwsgi.register_rpc('part3', part3);
+
+   ciao = function(saluta) {
+        uwsgi.log("I have no idea what's going on.");
+        return "Ciao Ciao";
+   }
+
+   uwsgi.register_rpc('hello', ciao);
+
+
+Signal handlers
+***************
+
+.. code-block:: js
+
+   function tempo(signum) {
+        uwsgi.log("e' passato 1 secondo");
+   }
+
+   uwsgi.register_signal(17, '', tempo);
+
+Multitheading and multiprocess
+******************************
+
+Mules
+*****
+
+
+The uWSGI API
+*************
+
+JSGI 3.0
+********
+
+.. code-block:: js
+
+   exports.app = function (request) {
+    uwsgi.log("Hello! I am the app.\n");
+    uwsgi.log(request.scheme + ' ' + request.method + ' ' + request.scriptName + ' ' + request.pathInfo + ' ' + request.queryString + ' ' + request.host);
+    uwsgi.log(request.serverSoftware);
+    return {
+        status: 200,
+        headers: {"Content-Type": "text/plain", "Server": ["uWSGI", "v8/plugin"]},
+        body: ["Hello World!", "I am V8"]
+    };
+   }
+
+.. code-block:: sh
+
+   uwsgi --plugin v8 --v8-jsgi myapp.js --http-socket :8080 --http-socket-modifier1 24
+
+CommonJS
+********
+
+* Require: OK
+* Binary/B: NO
+* System/1.0: in progress
+* IO/A: NO
+* Filesystem/A: NO
+

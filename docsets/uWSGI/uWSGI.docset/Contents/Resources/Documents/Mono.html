@@ -1,0 +1,229 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>The Mono ASP.NET plugin &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Running CGI scripts on uWSGI" href="CGI.html" />
+    <link rel="prev" title="The Clojure/Ring JVM request handler" href="Ring.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="CGI.html" title="Running CGI scripts on uWSGI"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Ring.html" title="The Clojure/Ring JVM request handler"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="the-mono-asp-net-plugin">
+<h1>The Mono ASP.NET plugin<a class="headerlink" href="#the-mono-asp-net-plugin" title="Permalink to this headline">¶</a></h1>
+<p>uWSGI 1.9 added support for the Mono platform, especially for the ASP.NET infrastructure.</p>
+<p>The most common way to deploy Mono ASP.NET applications is with the XSP project, a simple web server gateway
+implementing HTTP and FastCGI protocols.</p>
+<p>With the Mono plugin you will be able to host ASP.net applications directly in uWSGI, gaining all of its features in your application for free.</p>
+<p>As all of the other uWSGI plugin you can call functions exported from the other languages using the <a class="reference internal" href="RPC.html"><span class="doc">uWSGI RPC Stack</span></a> subsystem.</p>
+<div class="section" id="building-uwsgi-mono">
+<h2>Building uWSGI + Mono<a class="headerlink" href="#building-uwsgi-mono" title="Permalink to this headline">¶</a></h2>
+<p>You can build Mono support as a plugin or in a monolithic build.</p>
+<p>A build profile named “mono” is available, making the task pretty simple.</p>
+<p>Be sure to have mono installed in your system. You need the Mono headers, the <code class="docutils literal notranslate"><span class="pre">mcs</span></code> compiler and the System.Web assembly. They are available in standard mono distributions.</p>
+<p>On recent Debian/Ubuntu systems you can use</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>apt-get install build-essential python mono-xsp4 asp.net-examples
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">mono-xsp4</span></code> is a trick to install all we need in a single shot, as ASP.net examples will be used for testing our setup.</p>
+<p>We can build a monolithic uWSGI distribution with Mono embedded:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">UWSGI_PROFILE</span><span class="o">=</span>mono make
+</pre></div>
+</div>
+<p>At the end of the procedure (if all goes well) you will get the path to the <code class="docutils literal notranslate"><span class="pre">uwsgi.dll</span></code> assembly.</p>
+<p>You may want to install it in your GAC (with gacutil -i &lt;path&gt;) to avoid specifying its path every time. This library allows access to the uWSGI api from Mono applications.</p>
+</div>
+<div class="section" id="starting-the-server">
+<h2>Starting the server<a class="headerlink" href="#starting-the-server" title="Permalink to this headline">¶</a></h2>
+<p>The Mono plugin has an official <code class="docutils literal notranslate"><span class="pre">modifier1</span></code>, 15.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">http</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">http-modifier1</span> <span class="o">=</span> <span class="s">15</span>
+<span class="na">mono-app</span> <span class="o">=</span> <span class="s">/usr/share/asp.net-demos</span>
+<span class="na">mono-index</span> <span class="o">=</span> <span class="s">index.asp</span>
+</pre></div>
+</div>
+<p>The previous setup assumes uwsgi.dll has been installed in the GAC, if it is not your case you can force its path with:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">http</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">http-modifier1</span> <span class="o">=</span> <span class="s">15</span>
+<span class="na">mono-app</span> <span class="o">=</span> <span class="s">/usr/share/asp.net-demos</span>
+<span class="na">mono-index</span> <span class="o">=</span> <span class="s">index.asp</span>
+<span class="na">mono-assembly</span> <span class="o">=</span> <span class="s">/usr/lib/uwsgi/uwsgi.dll</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">/usr/share/asp.net-demos</span></code> is the directory containing Mono’s example ASP.net applications.</p>
+<p>If starting uWSGI you get an error about not being able to find uwsgi.dll, you can enforce a specific search path with</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">http</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">http-modifier1</span> <span class="o">=</span> <span class="s">15</span>
+<span class="na">mono-app</span> <span class="o">=</span> <span class="s">/usr/share/asp.net-demos</span>
+<span class="na">mono-index</span> <span class="o">=</span> <span class="s">index.asp</span>
+<span class="na">mono-assembly</span> <span class="o">=</span> <span class="s">/usr/lib/uwsgi/uwsgi.dll</span>
+<span class="na">env</span> <span class="o">=</span> <span class="s">MONO_PATH=/usr/lib/uwsgi/</span>
+</pre></div>
+</div>
+<p>Or you can simply copy uwsgi.dll into the <code class="docutils literal notranslate"><span class="pre">/bin</span></code> directory of your site directory (<code class="docutils literal notranslate"><span class="pre">/usr/share/asp.net-demos</span></code> in this case).</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">mono-index</span></code> option is used to set the file to search when a directory is requested. You can specify it multiple times.</p>
+</div>
+<div class="section" id="under-the-hood-the-mono-key">
+<h2>Under the hood: the mono key<a class="headerlink" href="#under-the-hood-the-mono-key" title="Permalink to this headline">¶</a></h2>
+<p>The previous example should have worked flawlessly, but internally lot of assumptions have been made.</p>
+<p>The whole mono plugin relies on the “key” concept. A key is a unique identifier for a .net application. In the example case the key for the application
+is “/usr/share/asp.net-demos”. This is a case where the key maps 1:1 with the virtualhost map. To map a virtualhost path to a specific key you can use the form</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">http</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">http-modifier1</span> <span class="o">=</span> <span class="s">15</span>
+<span class="na">mono-app</span> <span class="o">=</span> <span class="s">/foobar=/usr/share/asp.net-demos</span>
+</pre></div>
+</div>
+<p>now the /foobar key maps to the /usr/share/asp.net-demos .net app.</p>
+<p>By default the requested key is mapped to the DOCUMENT_ROOT variable. So in this new case /foobar should be the DOCUMENT_ROOT value.</p>
+<p>But the uWSGI http router has no concept of DOCUMENT_ROOT so how the previous example could work ? This is because the first loaded app is generally the default one, so the mono plugin, being not able to
+find an app returned the default one.</p>
+<p>Using DOCUMENT_ROOT as the key could be quite limiting. So the –mono-key option is available. Let’s build a massive virtualhosting stack using uWSGI internal routing</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">http</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">http-modifier1</span> <span class="o">=</span> <span class="s">15</span>
+<span class="na">mono-key</span> <span class="o">=</span> <span class="s">MONO_APP</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">addvar:MONO_APP=/var/www/asp/${HTTP_HOST}</span>
+</pre></div>
+</div>
+<p>MONO_APP is not the variable the mono plugin will search for applications (instead of DOCUMENT_ROOT).</p>
+<p>Thanks to internal routing we set it (dynamically) to the path of host-specific application root, so a request to example.com
+will map to /var/www/asp/example.com</p>
+</div>
+<div class="section" id="concurrency-and-fork-unfriendliness">
+<h2>Concurrency and fork() unfriendliness<a class="headerlink" href="#concurrency-and-fork-unfriendliness" title="Permalink to this headline">¶</a></h2>
+<p>As the Mono VM is not <code class="docutils literal notranslate"><span class="pre">fork()</span></code> friendly, a new VM is spawned for each worker. This ensures you can run your application in multiprocessing mode.</p>
+<p>Mono has really solid multithreading support and it works great with uWSGI’s thread support.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">http</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">http-modifier1</span> <span class="o">=</span> <span class="s">15</span>
+<span class="na">mono-app</span> <span class="o">=</span> <span class="s">/usr/share/asp.net-demos</span>
+<span class="na">mono-index</span> <span class="o">=</span> <span class="s">index.asp</span>
+<span class="na">mono-assembly</span> <span class="o">=</span> <span class="s">/usr/lib/uwsgi/uwsgi.dll</span>
+<span class="na">env</span> <span class="o">=</span> <span class="s">MONO_PATH=/usr/lib/uwsgi/</span>
+
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">4</span>
+<span class="na">threads</span> <span class="o">=</span> <span class="s">20</span>
+</pre></div>
+</div>
+<p>With this setup you will spawn 4 processes each with 20 threads. Try to not rely on a single process. Albeit it is a common setup in the so-called “Enterprise environments”, having multiple processes ensures you greater availability (thanks to the master work).
+This rule (as an example) applies even to the <a class="reference internal" href="JVM.html"><span class="doc">JVM in the uWSGI server (updated to 1.9)</span></a> plugin.</p>
+</div>
+<div class="section" id="api-access">
+<h2>API access<a class="headerlink" href="#api-access" title="Permalink to this headline">¶</a></h2>
+<p>This is a work in progress. Currently only a couple of functions are exported. High precedence will be given to the <a class="reference internal" href="RPC.html"><span class="doc">uWSGI RPC Stack</span></a> and Signal subsystem and to the <a class="reference internal" href="Caching.html"><span class="doc">The uWSGI caching framework</span></a> framework.</p>
+</div>
+<div class="section" id="tricks">
+<h2>Tricks<a class="headerlink" href="#tricks" title="Permalink to this headline">¶</a></h2>
+<p>As always uWSGI tries to optimize (where possible) the “common” operations of your applications. Serving static files is automatically accelerated (or offloaded if offloading is enabled) and all of the path resolutions are cached.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">The Mono ASP.NET plugin</a><ul>
+<li><a class="reference internal" href="#building-uwsgi-mono">Building uWSGI + Mono</a></li>
+<li><a class="reference internal" href="#starting-the-server">Starting the server</a></li>
+<li><a class="reference internal" href="#under-the-hood-the-mono-key">Under the hood: the mono key</a></li>
+<li><a class="reference internal" href="#concurrency-and-fork-unfriendliness">Concurrency and fork() unfriendliness</a></li>
+<li><a class="reference internal" href="#api-access">API access</a></li>
+<li><a class="reference internal" href="#tricks">Tricks</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Ring.html"
+                        title="previous chapter">The Clojure/Ring JVM request handler</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="CGI.html"
+                        title="next chapter">Running CGI scripts on uWSGI</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Mono.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="CGI.html" title="Running CGI scripts on uWSGI"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Ring.html" title="The Clojure/Ring JVM request handler"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

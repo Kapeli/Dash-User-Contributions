@@ -1,0 +1,191 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>uWSGI 2.0.11 &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="uWSGI 2.0.10" href="Changelog-2.0.10.html" />
+    <link rel="prev" title="uWSGI 2.0.11.1" href="Changelog-2.0.11.1.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-2.0.10.html" title="uWSGI 2.0.10"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-2.0.11.1.html" title="uWSGI 2.0.11.1"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="uwsgi-2-0-11">
+<h1>uWSGI 2.0.11<a class="headerlink" href="#uwsgi-2-0-11" title="Permalink to this headline">¶</a></h1>
+<p>[20150701]</p>
+<div class="section" id="bugfixes">
+<h2>Bugfixes<a class="headerlink" href="#bugfixes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>[pypy] fixed misuse of ffi.string</p></li>
+<li><p>fixed detection for gcc 5 (jimfunk)</p></li>
+<li><p>fixed shared sockets for gateways</p></li>
+<li><p>[psgi] Changed abs to labs because offset is declared as a long (Peter H. Ezetta)</p></li>
+<li><p>add null terminator to uwsgi_get_dot_h() and uwsgi_config_py() (Jay Oster)</p></li>
+<li><p>fixed thread waiting during stop/restart (Kaiwen Xu)</p></li>
+<li><p>fixed chain reloading verbosity</p></li>
+<li><p>[python] fixed spooler job reference counting (Curtis Maloney)</p></li>
+<li><p>various static analysis improvements (Riccardo Magliocchetti)</p></li>
+<li><p>fixed sharedarea support for very big ranges</p></li>
+<li><p>fixed gzip transformation for zero-sized responses (Curtis Maloney)</p></li>
+<li><p>fixed management of https client certificate authentication (Vladimir Didenko)</p></li>
+<li><p>fixed OpenBSD build</p></li>
+<li><p>fixed TMPFILE permissions</p></li>
+</ul>
+</div>
+<div class="section" id="new-features">
+<h2>New Features<a class="headerlink" href="#new-features" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="the-mem-collector-thread">
+<h3>The mem_collector thread<a class="headerlink" href="#the-mem-collector-thread" title="Permalink to this headline">¶</a></h3>
+<p>Evil memory monitors (like –evil-reload-on-rss) are now asynchronously managed by a dedicated thread.</p>
+<p>This solves the issue of runaway processes not catched by the master.</p>
+</div>
+<div class="section" id="fixpathinfo-routing-action">
+<h3>fixpathinfo routing action<a class="headerlink" href="#fixpathinfo-routing-action" title="Permalink to this headline">¶</a></h3>
+<p>This is another step in removing the need of the infamous uwsgi_modifier1 30 relic.</p>
+<p>This routing action assumes the PATH_INFO cgi var has the SCRIPT_NAME part included.</p>
+<p>This action allows you to set SCRIPT_NAME in nginx without bothering to rewrite the PATH_INFO (something nginx cannot afford)</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; blindly assumes PATH_INFO is clobbered with SCRIPT_NAME</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">fixpathinfo:</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="uwsgi-sor-and-time-micros-routing-vars">
+<h3>uwsgi[sor] and time[micros] routing vars<a class="headerlink" href="#uwsgi-sor-and-time-micros-routing-vars" title="Permalink to this headline">¶</a></h3>
+<p>This two new vars exposes the start of the current request (in micros) and the current time (again in micros)</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">log:request started at ${uwsgi[sor]}</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">log:current micros time is ${time[micros]}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="wait-for-socket">
+<h3>wait-for-socket<a class="headerlink" href="#wait-for-socket" title="Permalink to this headline">¶</a></h3>
+<p>This works like wait-for-fs/iface/file/dir</p>
+<p>The spawn of the instance is suspended until the specified tcp/unix socket is ready.</p>
+<p>You can use it to synchronize vassals spawn (like stopping a vassal until a postgresql server has been spawned)</p>
+</div>
+<div class="section" id="wait-for-hooks">
+<h3>wait_for hooks<a class="headerlink" href="#wait-for-hooks" title="Permalink to this headline">¶</a></h3>
+<p>All of the wait-for-* functions can now be used as a hook:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; wait for postgres soon after privileges drop</span>
+<span class="na">hook-as-user</span> <span class="o">=</span> <span class="s">wait_for_socket:127.0.0.1:5432</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="availability">
+<h2>Availability<a class="headerlink" href="#availability" title="Permalink to this headline">¶</a></h2>
+<p>You can download uWSGI 2.0.11 from</p>
+<p><a class="reference external" href="https://projects.unbit.it/downloads/uwsgi-2.0.11.tar.gz">https://projects.unbit.it/downloads/uwsgi-2.0.11.tar.gz</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">uWSGI 2.0.11</a><ul>
+<li><a class="reference internal" href="#bugfixes">Bugfixes</a></li>
+<li><a class="reference internal" href="#new-features">New Features</a><ul>
+<li><a class="reference internal" href="#the-mem-collector-thread">The mem_collector thread</a></li>
+<li><a class="reference internal" href="#fixpathinfo-routing-action">fixpathinfo routing action</a></li>
+<li><a class="reference internal" href="#uwsgi-sor-and-time-micros-routing-vars">uwsgi[sor] and time[micros] routing vars</a></li>
+<li><a class="reference internal" href="#wait-for-socket">wait-for-socket</a></li>
+<li><a class="reference internal" href="#wait-for-hooks">wait_for hooks</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#availability">Availability</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Changelog-2.0.11.1.html"
+                        title="previous chapter">uWSGI 2.0.11.1</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Changelog-2.0.10.html"
+                        title="next chapter">uWSGI 2.0.10</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Changelog-2.0.11.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-2.0.10.html" title="uWSGI 2.0.10"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-2.0.11.1.html" title="uWSGI 2.0.11.1"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

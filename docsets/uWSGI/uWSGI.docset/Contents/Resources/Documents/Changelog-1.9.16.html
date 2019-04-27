@@ -1,0 +1,252 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>uWSGI 1.9.16 &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="uWSGI 1.9.15" href="Changelog-1.9.15.html" />
+    <link rel="prev" title="uWSGI 1.9.17" href="Changelog-1.9.17.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.15.html" title="uWSGI 1.9.15"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.17.html" title="uWSGI 1.9.17"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="uwsgi-1-9-16">
+<h1>uWSGI 1.9.16<a class="headerlink" href="#uwsgi-1-9-16" title="Permalink to this headline">¶</a></h1>
+<p>Changelog [20130914]</p>
+<div class="section" id="important-change-in-the-gevent-plugin-shutdown-reload-procedure">
+<h2>Important change in the gevent plugin shutdown/reload procedure !!!<a class="headerlink" href="#important-change-in-the-gevent-plugin-shutdown-reload-procedure" title="Permalink to this headline">¶</a></h2>
+<p>The shutdown/reload phase when in gevent mode has been changed to better integrate
+with multithreaded (and multigreenlet) environments (most notably the newrelic agent).</p>
+<p>Instead of “joining” the gevent hub, a new “dummy” greenlet is spawned and “joined”.</p>
+<p>During shutdown only the greenlets spawned by uWSGI are taken in account, and after all of them are destroyed
+the process will exit. This is different from the old approach where the process wait for ALL the currently available greenlets
+(and monkeypatched threads).</p>
+<p>If you prefer the old behaviout just specify the option –gevent-wait-for-hub</p>
+</div>
+<div class="section" id="bugfixes-improvements">
+<h2>Bugfixes/Improvements<a class="headerlink" href="#bugfixes-improvements" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>fixed CPython reference counting bug in rpc and signal handlers</p></li>
+<li><p>improved smart-attach-daemon for slow processes</p></li>
+<li><p>follow Rack specifications for QUERY_STRING,SCRIPT_NAME,SERVER_NAME and SERVER_PORT</p></li>
+<li><p>report missing internal routing support (it is only a warning when libpcre is missing)</p></li>
+<li><p>better ipcsem support during shutdown and zerg mode (added –persistent-ipcsem as special case)</p></li>
+<li><p>fixed fastcgi bug exposed by apache mod_fastcgi</p></li>
+<li><p>do not call pre-jail hook on reload</p></li>
+<li><p>force linking with -lrt on solaris</p></li>
+<li><p>report thunder lock status</p></li>
+<li><p>allow custom priority in rsyslog plugin</p></li>
+</ul>
+</div>
+<div class="section" id="new-features">
+<h2>New features<a class="headerlink" href="#new-features" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="freebsd-jails-native-support">
+<h3>FreeBSD jails native support<a class="headerlink" href="#freebsd-jails-native-support" title="Permalink to this headline">¶</a></h3>
+<p>uWSGI got nativr FreeBSD jails support. Official documentation is here <a class="reference internal" href="FreeBSDJails.html"><span class="doc">FreeBSD Jails</span></a></p>
+</div>
+<div class="section" id="the-rados-plugin">
+<h3>The Rados plugin<a class="headerlink" href="#the-rados-plugin" title="Permalink to this headline">¶</a></h3>
+<p>Author: Javier Guerra</p>
+<p>Based on the <a class="reference internal" href="GlusterFS.html"><span class="doc">The GlusterFS plugin</span></a> plugin, a new one allowing access to Rados object storage is available:</p>
+<blockquote>
+<div><p><a class="reference internal" href="Rados.html"><span class="doc">The RADOS plugin</span></a></p>
+</div></blockquote>
+</div>
+<div class="section" id="the-tuntap-router">
+<h3>The TunTap router<a class="headerlink" href="#the-tuntap-router" title="Permalink to this headline">¶</a></h3>
+<p>This new gateway is the result of tons of headaches while trying to build better (read: solid) infrastructures with Linux namespaces.</p>
+<p>While dealing with uts, ipc, pid and filesystem namespaces is pretty handy, managing networking is a real pain.</p>
+<p>We introduced lot of workaroud in uWSGI 1.9.15 (especially to simplify the veth management) but finally we realized
+that those systems do not scale in terms of management.</p>
+<p>The TunTap router tries to solve the issue moving the networking part of jailed vassals in user space.</p>
+<p>Basically each vassal create one or more tuntap devices. This devices are connected (via a unix socket) to the “tuntap router”
+allowing access from the vassal to the external network.</p>
+<p>That means a single network interface in the main namespace and one for each vassal.</p>
+<p>The performance are already quite good (we are only losing about 10% in respect of kernel-level routing) but can be optimized.</p>
+<p>In addition to this the tuntap router has a simple userspace firewall you can use to manage complex routing rules.</p>
+<p>Documentation is still in progress, but you can configure a tuntap router following the big comment on top of this file:</p>
+<p><a class="reference external" href="https://github.com/unbit/uwsgi/blob/master/plugins/tuntap/tuntap.c">https://github.com/unbit/uwsgi/blob/master/plugins/tuntap/tuntap.c</a></p>
+<p>while you can connect to it with <code class="docutils literal notranslate"><span class="pre">--tuntap-device</span> <span class="pre">&lt;dev&gt;</span> <span class="pre">&lt;socket&gt;</span></code> where &lt;dev&gt; is the tuntap device to create in the vassal/client and &lt;socket&gt; is the unix address
+of the tuntap router</p>
+<p>An Example Emperor</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">tuntap-router</span> <span class="o">=</span> <span class="s">emperor0 /tmp/tuntap.socket</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">ifconfig emperor0 192.168.0.1 netmask 255.255.255.0 up</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">iptables -t nat -F</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">echo 1 &gt;/proc/sys/net/ipv4/ip_forward</span>
+<span class="na">emperor-use-clone</span> <span class="o">=</span> <span class="s">ipc,uts,fs,pid,net</span>
+<span class="na">emperor</span> <span class="o">=</span> <span class="s">/etc/vassals</span>
+</pre></div>
+</div>
+<p>and one of its vassals:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">tuntap-device</span> <span class="o">=</span> <span class="s">uwsgi0 /tmp/tuntap.socket</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">ifconfig lo up</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">ifconfig uwsgi0 192.168.0.2 netmask 255.255.255.0 up</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">route add default gw 192.168.0.1</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">hostname foobar</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">/var/www/foobar.socket</span>
+<span class="na">psgi-file</span> <span class="o">=</span> <span class="s">foobar.pl</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="linux-o-tmpfile">
+<h3>Linux O_TMPFILE<a class="headerlink" href="#linux-o-tmpfile" title="Permalink to this headline">¶</a></h3>
+<p>Latest Linux kernel support a new operational mode for opening files: O_TMPFILE</p>
+<p>this flag open a temporary file (read: unlinked) without any kind of race conditions.</p>
+<p>This mode is automatically used if available (no options needed)</p>
+</div>
+<div class="section" id="linux-pivot-root">
+<h3>Linux pivot-root<a class="headerlink" href="#linux-pivot-root" title="Permalink to this headline">¶</a></h3>
+<p>When dealing with Linux namespaces, changing the root filesystem is one of the main task.</p>
+<p>chroot() is generally too simple, while pivot-root allows you more advanced setup</p>
+<p>The syntax is <code class="docutils literal notranslate"><span class="pre">--pivot-root</span> <span class="pre">&lt;new_root&gt;</span> <span class="pre">&lt;old_root&gt;</span></code></p>
+</div>
+<div class="section" id="cheaper-memlimit">
+<h3>Cheaper memlimit<a class="headerlink" href="#cheaper-memlimit" title="Permalink to this headline">¶</a></h3>
+<p>Author: Łukasz Mierzwa</p>
+<p>This new check allows control of dynamic process spawning based on the RSS usage:</p>
+<p><a class="reference external" href="https://uwsgi-docs.readthedocs.io/en/latest/Cheaper.html#setting-memory-limits">https://uwsgi-docs.readthedocs.io/en/latest/Cheaper.html#setting-memory-limits</a></p>
+</div>
+<div class="section" id="log-encoders">
+<h3>Log encoders<a class="headerlink" href="#log-encoders" title="Permalink to this headline">¶</a></h3>
+<p>There are dozens of log engines and storage system nowadays. The original uWSGI approach was developing a plugin for every engine.</p>
+<p>While working with logstash and fluentd we realized that most of the logging pluging are reimplementations of the same concept over and over again.</p>
+<p>We followed an even more modular approach introducing log encoders:</p>
+<p><a class="reference internal" href="LogEncoders.html"><span class="doc">Log encoders</span></a></p>
+<p>They are basically patterns you can apply to each logline</p>
+</div>
+<div class="section" id="new-advanced-hooks">
+<h3>New “advanced” Hooks<a class="headerlink" href="#new-advanced-hooks" title="Permalink to this headline">¶</a></h3>
+<p>A new series of hooks for developers needing little modifications to the uWSGI cores are available.</p>
+<p>Documention about the whole hooks subsystem is now available (it is a work in progress):</p>
+<p><a class="reference internal" href="Hooks.html"><span class="doc">Hooks</span></a></p>
+</div>
+<div class="section" id="new-mount-umount-hooks">
+<h3>New mount/umount hooks<a class="headerlink" href="#new-mount-umount-hooks" title="Permalink to this headline">¶</a></h3>
+<p>When dealing with namespaces and jails, mounting and unmounting filesystems is one of the most common tasks.</p>
+<p>As the mount and umount commands could not be available during the setup phase, these 2 hooks have been added directly calling the
+syscalls.</p>
+<p>Check <a class="reference internal" href="Hooks.html"><span class="doc">Hooks</span></a></p>
+</div>
+</div>
+<div class="section" id="availability">
+<h2>Availability<a class="headerlink" href="#availability" title="Permalink to this headline">¶</a></h2>
+<p>uWSGI 1.9.16 has been released on September 14th 2013. You can download it from:</p>
+<p><a class="reference external" href="https://projects.unbit.it/downloads/uwsgi-1.9.16.tar.gz">https://projects.unbit.it/downloads/uwsgi-1.9.16.tar.gz</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">uWSGI 1.9.16</a><ul>
+<li><a class="reference internal" href="#important-change-in-the-gevent-plugin-shutdown-reload-procedure">Important change in the gevent plugin shutdown/reload procedure !!!</a></li>
+<li><a class="reference internal" href="#bugfixes-improvements">Bugfixes/Improvements</a></li>
+<li><a class="reference internal" href="#new-features">New features</a><ul>
+<li><a class="reference internal" href="#freebsd-jails-native-support">FreeBSD jails native support</a></li>
+<li><a class="reference internal" href="#the-rados-plugin">The Rados plugin</a></li>
+<li><a class="reference internal" href="#the-tuntap-router">The TunTap router</a></li>
+<li><a class="reference internal" href="#linux-o-tmpfile">Linux O_TMPFILE</a></li>
+<li><a class="reference internal" href="#linux-pivot-root">Linux pivot-root</a></li>
+<li><a class="reference internal" href="#cheaper-memlimit">Cheaper memlimit</a></li>
+<li><a class="reference internal" href="#log-encoders">Log encoders</a></li>
+<li><a class="reference internal" href="#new-advanced-hooks">New “advanced” Hooks</a></li>
+<li><a class="reference internal" href="#new-mount-umount-hooks">New mount/umount hooks</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#availability">Availability</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Changelog-1.9.17.html"
+                        title="previous chapter">uWSGI 1.9.17</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Changelog-1.9.15.html"
+                        title="next chapter">uWSGI 1.9.15</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Changelog-1.9.16.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.15.html" title="uWSGI 1.9.15"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.17.html" title="uWSGI 1.9.17"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

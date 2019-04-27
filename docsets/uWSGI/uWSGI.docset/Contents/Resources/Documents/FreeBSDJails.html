@@ -1,0 +1,334 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>FreeBSD Jails &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The Forkpty Router" href="ForkptyRouter.html" />
+    <link rel="prev" title="Jailing your apps using Linux Namespaces" href="Namespaces.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="ForkptyRouter.html" title="The Forkpty Router"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Namespaces.html" title="Jailing your apps using Linux Namespaces"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="freebsd-jails">
+<h1>FreeBSD Jails<a class="headerlink" href="#freebsd-jails" title="Permalink to this headline">¶</a></h1>
+<p>uWSGI 1.9.16 introduced native FreeBSD jails support.</p>
+<p>FreeBSD jails can be seen as new-generation chroot() with fine-grained tuning of what this “jail” can see.</p>
+<p>They are very similar to Linux namespaces even if a bit higher-level (from the API point of view).</p>
+<p>Jails are available since FreeBSD 4</p>
+<div class="section" id="why-managing-jails-with-uwsgi">
+<h2>Why managing jails with uWSGI ?<a class="headerlink" href="#why-managing-jails-with-uwsgi" title="Permalink to this headline">¶</a></h2>
+<p>Generally jails are managed using the system tool “jail” and its utilities.</p>
+<p>Til now running uWSGI in FreeBSD jails was pretty common, but for really massive setups (read: hosting business)
+where an Emperor (for example) manages hundreds of unrelated uWSGI instances, the setup could be really overkill.</p>
+<p>Managing jails directly in uWSGI config files highly reduce sysadmin costs and helps having a better organization of the whole infrastructure.</p>
+</div>
+<div class="section" id="old-style-jails-freebsd-8">
+<h2>Old-style jails (FreeBSD &lt; 8)<a class="headerlink" href="#old-style-jails-freebsd-8" title="Permalink to this headline">¶</a></h2>
+<p>FreeBSD exposes two main api for managing jails. The old (and easier) one is based on the jail() function.</p>
+<p>It is available since FreeBSD 4 and allows you to set the rootfs, the hostname and one ore more ipv4/ipv6 addresses</p>
+<p>Two options are needed for running a uWSGI instance in a jail: –jail and –jail-ip4/–jail-ip6 (effectively they are 3 if you use IPv6)</p>
+<p><code class="docutils literal notranslate"><span class="pre">--jail</span> <span class="pre">&lt;rootfs&gt;</span> <span class="pre">[hostname]</span> <span class="pre">[jailname]</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">--jail-ip4</span> <span class="pre">&lt;address&gt;</span></code> (can be specified multiple times)</p>
+<p><code class="docutils literal notranslate"><span class="pre">--jail-ip6</span> <span class="pre">&lt;address&gt;</span></code> (can be specified multiple times)</p>
+<p>Showing how to create the rootfs for your jail is not the objective of this document, but personally i hate rebuilding from sources, so generally
+i simply explode the base.tgz file from an official repository and chroot() to it to make the fine tuning.</p>
+<p>An important thing you have to remember is that the ip addresses you attach to a jail must be available in the system (as aliases). As always we tend to abuse uWSGI facilities.
+In our case the –exec-pre-jail hook will do the trick</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; create the jail with /jails/001 as rootfs and &#39;foobar&#39; as hostname</span>
+<span class="na">jail</span> <span class="o">=</span> <span class="s">/jails/001 foobar</span>
+<span class="c1">; create the alias on &#39;em0&#39;</span>
+<span class="na">exec-pre-jail</span> <span class="o">=</span> <span class="s">ifconfig em0 192.168.0.40 alias</span>
+<span class="c1">; attach the alias to the jail</span>
+<span class="na">jail-ip4</span> <span class="o">=</span> <span class="s">192.168.0.40</span>
+
+<span class="c1">; bind the http-socket (we are now in the jail)</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">192.168.0.40:8080</span>
+
+<span class="c1">; load the application (remember we are in the jail)</span>
+<span class="na">wsgi-file</span> <span class="o">=</span> <span class="s">myapp.wsgi</span>
+
+<span class="c1">; drop privileges</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">kratos</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">kratos</span>
+
+<span class="c1">; common options</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">2</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="new-style-jails-freebsd-8">
+<h2>New style jails (FreeBSD &gt;= 8)<a class="headerlink" href="#new-style-jails-freebsd-8" title="Permalink to this headline">¶</a></h2>
+<p>FreeBSD 8 introdiced a new advanced api for managing jails. Based on the jail_set() syscall, libjail exposes dozens of features
+and allows fine-tuning of your jails. To use the new api you need the –jail2 option (aliased as –libjail)</p>
+<p><code class="docutils literal notranslate"><span class="pre">--jail2</span> <span class="pre">&lt;key&gt;[=value]</span></code></p>
+<p>Each –jail2 option maps 1:1 with a jail attribute so you can basically tune everything !</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; create the jail with /jails/001 as rootfs</span>
+<span class="na">jail2</span> <span class="o">=</span> <span class="s">path=/jails/001</span>
+<span class="c1">; set hostname to &#39;foobar&#39;</span>
+<span class="na">jail2</span> <span class="o">=</span> <span class="s">host.hostname=foobar</span>
+<span class="c1">; create the alias on &#39;em0&#39;</span>
+<span class="na">exec-pre-jail</span> <span class="o">=</span> <span class="s">ifconfig em0 192.168.0.40 alias</span>
+<span class="c1">; attach the alias to the jail</span>
+<span class="na">jail2</span> <span class="o">=</span> <span class="s">ip4.addr=192.168.0.40</span>
+
+<span class="c1">; bind the http-socket (we are now in the jail)</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">192.168.0.40:8080</span>
+
+<span class="c1">; load the application (remember we are in the jail)</span>
+<span class="na">wsgi-file</span> <span class="o">=</span> <span class="s">myapp.wsgi</span>
+
+<span class="c1">; drop privileges</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">kratos</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">kratos</span>
+
+<span class="c1">; common options</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">2</span>
+</pre></div>
+</div>
+<div class="section" id="note-for-freebsd-8-4-but-9-0">
+<h3>Note for FreeBSD &gt;= 8.4 but &lt; 9.0<a class="headerlink" href="#note-for-freebsd-8-4-but-9-0" title="Permalink to this headline">¶</a></h3>
+<p>uWSGI uses ipc semaphores on FreeBSD &lt; 9 (newer FreeBSD releases have POSIX semaphores support).</p>
+<p>Since FreeBSD 8.4 you need to explicitely allows sysvipc in jails. So be sure to have</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="na">jail2</span> <span class="o">=</span> <span class="s">allow.sysvipc=1</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="devfs">
+<h2>DevFS<a class="headerlink" href="#devfs" title="Permalink to this headline">¶</a></h2>
+<p>The DevFS virtual filesystem manages the /dev directory on FreeBSD.</p>
+<p>The /dev filesystem is not mounted in the jail, but you can need it for literally hundreds of reasons.</p>
+<p>Two main approaches are available: mounting it in the /dev/ directory of the roots before creating the jail, or allowing the jail to mount it</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; avoid re-mounting the file system every time</span>
+<span class="na">if-not-exists</span> <span class="o">=</span> <span class="s">/jails/001/dev/zero</span>
+<span class="s">  exec-pre-jail = mount -t devfs devfs /jails/001/dev</span>
+<span class="na">endif</span> <span class="o">=</span>
+<span class="c1">; create the jail with /jails/001 as rootfs</span>
+<span class="na">jail2</span> <span class="o">=</span> <span class="s">path=/jails/001</span>
+<span class="c1">; set hostname to &#39;foobar&#39;</span>
+<span class="na">jail2</span> <span class="o">=</span> <span class="s">host.hostname=foobar</span>
+<span class="c1">; create the alias on &#39;em0&#39;</span>
+<span class="na">exec-pre-jail</span> <span class="o">=</span> <span class="s">ifconfig em0 192.168.0.40 alias</span>
+<span class="c1">; attach the alias to the jail</span>
+<span class="na">jail2</span> <span class="o">=</span> <span class="s">ip4.addr=192.168.0.40</span>
+
+<span class="c1">; bind the http-socket (we are now in the jail)</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">192.168.0.40:8080</span>
+
+<span class="c1">; load the application (remember we are in the jail)</span>
+<span class="na">wsgi-file</span> <span class="o">=</span> <span class="s">myapp.wsgi</span>
+
+<span class="c1">; drop privileges</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">kratos</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">kratos</span>
+
+<span class="c1">; common options</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">2</span>
+</pre></div>
+</div>
+<p>or (allow the jail itself to mount it)</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; create the jail with /jails/001 as rootfs</span>
+<span class="na">jail2</span> <span class="o">=</span> <span class="s">path=/jails/001</span>
+<span class="c1">; set hostname to &#39;foobar&#39;</span>
+<span class="na">jail2</span> <span class="o">=</span> <span class="s">host.hostname=foobar</span>
+<span class="c1">; create the alias on &#39;em0&#39;</span>
+<span class="na">exec-pre-jail</span> <span class="o">=</span> <span class="s">ifconfig em0 192.168.0.40 alias</span>
+<span class="c1">; attach the alias to the jail</span>
+<span class="na">jail2</span> <span class="o">=</span> <span class="s">ip4.addr=192.168.0.40</span>
+
+<span class="c1">; allows mount of devfs in the jail</span>
+<span class="na">jail2</span> <span class="o">=</span> <span class="s">enforce_statfs=1</span>
+<span class="na">jail2</span> <span class="o">=</span> <span class="s">allow.mount</span>
+<span class="na">jail2</span> <span class="o">=</span> <span class="s">allow.mount.devfs</span>
+<span class="c1">; ... and mount it</span>
+<span class="na">if-not-exists</span> <span class="o">=</span> <span class="s">/dev/zero</span>
+<span class="s">  exec-post-jail = mount -t devfs devfs /dev</span>
+<span class="na">endif</span> <span class="o">=</span>
+
+<span class="c1">; bind the http-socket (we are now in the jail)</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">192.168.0.40:8080</span>
+
+<span class="c1">; load the application (remember we are in the jail)</span>
+<span class="na">wsgi-file</span> <span class="o">=</span> <span class="s">myapp.wsgi</span>
+
+<span class="c1">; drop privileges</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">kratos</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">kratos</span>
+
+<span class="c1">; common options</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">2</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="reloading">
+<h2>Reloading<a class="headerlink" href="#reloading" title="Permalink to this headline">¶</a></h2>
+<p>Reloading (or binary patching) is a bit annoying to manage as uWSGI need to re-exec itself, so you need a copy of the binary, plugins and the config file
+in your jail (unless you can sacrifice graceful reload and simply delegate the Emperor to respawn the instance)</p>
+<p>Another approach is (like with devfs) mounting the directory with the uwsgi binary (and the eventual plugins) in the jail itself and instruct
+uWSGI to use this new path with –binary-path</p>
+</div>
+<div class="section" id="the-jidfile">
+<h2>The jidfile<a class="headerlink" href="#the-jidfile" title="Permalink to this headline">¶</a></h2>
+<p>Each jail can be referenced by a unique name (optional) or its “jid”. This is similar to a “pid”, as you can use it
+to send commands (and updates) to an already running jail. The –jidfile &lt;file&gt; option allows you to store the jid in a file
+for use with external applications.</p>
+</div>
+<div class="section" id="attaching-to-a-jail">
+<h2>Attaching to a jail<a class="headerlink" href="#attaching-to-a-jail" title="Permalink to this headline">¶</a></h2>
+<p>You can attach uWSGI instances to already running jails (they can be standard persistent jail too) using –jail-attach &lt;id&gt;</p>
+<p>The id argument can be a jid or the name of the jail.</p>
+<p>This feature requires FreeBSD 8</p>
+</div>
+<div class="section" id="debian-kfreebsd">
+<h2>Debian/kFreeBSD<a class="headerlink" href="#debian-kfreebsd" title="Permalink to this headline">¶</a></h2>
+<p>This is an official Debian project aiming at building an os with FreeBSD kernel and common Debian userspace.</p>
+<p>It works really well, and it has support for jails too.</p>
+<p>Let’s create a jail with debootstrap</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>debootstrap wheezy /jails/wheezy
+</pre></div>
+</div>
+<p>add a network alias</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>ifconfig em0 <span class="m">192</span>.168.173.105 netmask <span class="m">255</span>.255.255.0 <span class="nb">alias</span>
+</pre></div>
+</div>
+<p>(change em0 with your network interface name)</p>
+<p>and run it</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --http-socket <span class="m">192</span>.168.173.105:8080 --jail /jails/wheezy -jail-ip4 <span class="m">192</span>.168.173.105
+</pre></div>
+</div>
+</div>
+<div class="section" id="jails-with-forkpty-router">
+<h2>Jails with Forkpty Router<a class="headerlink" href="#jails-with-forkpty-router" title="Permalink to this headline">¶</a></h2>
+<p>You can easily attach to FreeBSD jails with <a class="reference internal" href="ForkptyRouter.html"><span class="doc">The Forkpty Router</span></a></p>
+<p>Just remember to have /dev (well, /dev/ptmx) mounted in your jail to allow the forkpty() call</p>
+<p>Learn how to deal with devfs_ruleset to increase security of your devfs</p>
+</div>
+<div class="section" id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
+<p>A jail is destroyed when the last process running in it dies</p>
+<p>By default everything mounted under the rootfs (before entering the jail) will be seen by the jail it self (we have seen it before when dealing with devfs)</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">FreeBSD Jails</a><ul>
+<li><a class="reference internal" href="#why-managing-jails-with-uwsgi">Why managing jails with uWSGI ?</a></li>
+<li><a class="reference internal" href="#old-style-jails-freebsd-8">Old-style jails (FreeBSD &lt; 8)</a></li>
+<li><a class="reference internal" href="#new-style-jails-freebsd-8">New style jails (FreeBSD &gt;= 8)</a><ul>
+<li><a class="reference internal" href="#note-for-freebsd-8-4-but-9-0">Note for FreeBSD &gt;= 8.4 but &lt; 9.0</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#devfs">DevFS</a></li>
+<li><a class="reference internal" href="#reloading">Reloading</a></li>
+<li><a class="reference internal" href="#the-jidfile">The jidfile</a></li>
+<li><a class="reference internal" href="#attaching-to-a-jail">Attaching to a jail</a></li>
+<li><a class="reference internal" href="#debian-kfreebsd">Debian/kFreeBSD</a></li>
+<li><a class="reference internal" href="#jails-with-forkpty-router">Jails with Forkpty Router</a></li>
+<li><a class="reference internal" href="#notes">Notes</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Namespaces.html"
+                        title="previous chapter">Jailing your apps using Linux Namespaces</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="ForkptyRouter.html"
+                        title="next chapter">The Forkpty Router</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/FreeBSDJails.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="ForkptyRouter.html" title="The Forkpty Router"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Namespaces.html" title="Jailing your apps using Linux Namespaces"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

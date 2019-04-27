@@ -1,0 +1,162 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>The embedded SNMP server &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Pushing statistics (from 1.4)" href="PushingStats.html" />
+    <link rel="prev" title="Monitoring uWSGI with Nagios" href="Nagios.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="PushingStats.html" title="Pushing statistics (from 1.4)"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Nagios.html" title="Monitoring uWSGI with Nagios"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="the-embedded-snmp-server">
+<h1>The embedded SNMP server<a class="headerlink" href="#the-embedded-snmp-server" title="Permalink to this headline">¶</a></h1>
+<p>The uWSGI server embeds a tiny SNMP server that you can use to integrate your web apps with your monitoring infrastructure.</p>
+<p>To enable SNMP support, you must run the uWSGI UDP server and choose a SNMP community string (which is the rudimentary authentication system used by SNMP).</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi -s :3031 -w staticfilesnmp --udp <span class="m">192</span>.168.0.1:2222 --snmp --snmp-community foo
+<span class="c1"># or the following. Using the SNMP option to pass the UDP address is a lot more elegant. ;)</span>
+./uwsgi -s :3031 -w myapp --master --processes <span class="m">4</span> --snmp<span class="o">=</span><span class="m">192</span>.168.0.1:2222 --snmp-community foo
+</pre></div>
+</div>
+<p>This will run the uWSGI server on TCP port 3031 and UDP port 2222 with SNMP enabled with “foo” as the community string.</p>
+<p>Please note that the SNMP server is started in the master process after dropping the privileges. If you want it to listen on a privileged port, you can either use <a class="reference internal" href="Capabilities.html"><span class="doc">Capabilities</span></a> on Linux, or use the <code class="docutils literal notranslate"><span class="pre">master-as-root</span></code> option to run the master process as root. The <code class="file docutils literal notranslate"><span class="pre">staticfilesnmp.py</span></code> file is included in the distribution and is a simple app that exports a counter via SNMP.</p>
+<p>The uWSGI SNMP server exports 2 group of information:</p>
+<ul class="simple">
+<li><p>General information is managed by the uWSGI server itself. The base OID to access uWSGI SNMP information is <code class="docutils literal notranslate"><span class="pre">1.3.6.1.4.1.35156.17</span></code> (<code class="docutils literal notranslate"><span class="pre">iso.org.dod.internet.private.enterprise.unbit.uwsgi</span></code>). General options are mapped to <code class="docutils literal notranslate"><span class="pre">1.3.6.1.4.1.35156.17.1.x</span></code>.</p></li>
+<li><p>Custom information is managed by the apps and accessed via <code class="docutils literal notranslate"><span class="pre">1.3.6.1.4.1.35156.17.2.x</span></code></p></li>
+</ul>
+<p>So, to get the number of requests managed by the uWSGI server, you could do</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>snmpget -v2c -c foo <span class="m">192</span>.168.0.1:2222 <span class="m">1</span>.3.6.1.4.1.35156.17.1.1 <span class="c1"># 1.1 corresponds to ``general.requests``</span>
+</pre></div>
+</div>
+<div class="section" id="exporting-custom-values">
+<h2>Exporting custom values<a class="headerlink" href="#exporting-custom-values" title="Permalink to this headline">¶</a></h2>
+<p>To manage custom values from your app you have these Python functions,</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="PythonModule.html#uwsgi.snmp_set_counter32" title="uwsgi.snmp_set_counter32"><code class="xref py py-func docutils literal notranslate"><span class="pre">uwsgi.snmp_set_counter32()</span></code></a></p></li>
+<li><p><a class="reference internal" href="PythonModule.html#uwsgi.snmp_set_counter64" title="uwsgi.snmp_set_counter64"><code class="xref py py-func docutils literal notranslate"><span class="pre">uwsgi.snmp_set_counter64()</span></code></a></p></li>
+<li><p><a class="reference internal" href="PythonModule.html#uwsgi.snmp_set_gauge" title="uwsgi.snmp_set_gauge"><code class="xref py py-func docutils literal notranslate"><span class="pre">uwsgi.snmp_set_gauge()</span></code></a></p></li>
+<li><p><a class="reference internal" href="PythonModule.html#uwsgi.snmp_incr_counter32" title="uwsgi.snmp_incr_counter32"><code class="xref py py-func docutils literal notranslate"><span class="pre">uwsgi.snmp_incr_counter32()</span></code></a></p></li>
+<li><p><a class="reference internal" href="PythonModule.html#uwsgi.snmp_incr_counter64" title="uwsgi.snmp_incr_counter64"><code class="xref py py-func docutils literal notranslate"><span class="pre">uwsgi.snmp_incr_counter64()</span></code></a></p></li>
+<li><p><a class="reference internal" href="PythonModule.html#uwsgi.snmp_incr_gauge" title="uwsgi.snmp_incr_gauge"><code class="xref py py-func docutils literal notranslate"><span class="pre">uwsgi.snmp_incr_gauge()</span></code></a></p></li>
+<li><p><a class="reference internal" href="PythonModule.html#uwsgi.snmp_decr_counter32" title="uwsgi.snmp_decr_counter32"><code class="xref py py-func docutils literal notranslate"><span class="pre">uwsgi.snmp_decr_counter32()</span></code></a></p></li>
+<li><p><a class="reference internal" href="PythonModule.html#uwsgi.snmp_decr_counter64" title="uwsgi.snmp_decr_counter64"><code class="xref py py-func docutils literal notranslate"><span class="pre">uwsgi.snmp_decr_counter64()</span></code></a></p></li>
+<li><p><a class="reference internal" href="PythonModule.html#uwsgi.snmp_decr_gauge" title="uwsgi.snmp_decr_gauge"><code class="xref py py-func docutils literal notranslate"><span class="pre">uwsgi.snmp_decr_gauge()</span></code></a></p></li>
+</ul>
+<p>So if you wanted to export the number of users currently logged in (this is a gauge as it can lower) as custom OID 40, you’d call</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">users_logged_in</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1024</span><span class="p">)</span> <span class="c1"># a more predictable source of information would be better.</span>
+<span class="n">uwsgi</span><span class="o">.</span><span class="n">snmp_set_gauge</span><span class="p">(</span><span class="mi">40</span><span class="p">,</span> <span class="n">users_logged_in</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>and to look it up,</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>snmpget -v2c -c foo <span class="m">192</span>.168.0.1:2222 <span class="m">1</span>.3.6.1.4.1.35156.17.2.40
+</pre></div>
+</div>
+<p>The system snmp daemon (net-snmp) can be configured to proxy SNMP requests to uwsgi. This allows you to run the system daemon and uwsgi at the same time, and runs all SNMP requests through the system daemon first. To configure the system snmp daemon (net-snmp) to proxy connections to uwsgi, add these lines to the bottom of /etc/snmp/snmpd.conf and restart the daemon:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>proxy -v 2c -c foo <span class="m">127</span>.0.0.1:2222 .1.3.6.1.4.1.35156.17
+view    systemview    included   .1.3.6.1.4.1.35156.17
+</pre></div>
+</div>
+<p>Replace ‘foo’ and ‘2222’ with the community and port configured in uwsgi.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">The embedded SNMP server</a><ul>
+<li><a class="reference internal" href="#exporting-custom-values">Exporting custom values</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Nagios.html"
+                        title="previous chapter">Monitoring uWSGI with Nagios</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="PushingStats.html"
+                        title="next chapter">Pushing statistics (from 1.4)</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/SNMP.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="PushingStats.html" title="Pushing statistics (from 1.4)"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Nagios.html" title="Monitoring uWSGI with Nagios"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

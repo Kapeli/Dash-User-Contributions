@@ -1,0 +1,162 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Aliasing Python modules &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The PyPy plugin" href="PyPy.html" />
+    <link rel="prev" title="Python Tracebacker" href="Tracebacker.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="PyPy.html" title="The PyPy plugin"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Tracebacker.html" title="Python Tracebacker"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="Python.html" accesskey="U">Python support</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="aliasing-python-modules">
+<h1>Aliasing Python modules<a class="headerlink" href="#aliasing-python-modules" title="Permalink to this headline">¶</a></h1>
+<p>Having multiple version of a Python package/module/file is very common.</p>
+<p>Manipulating PYTHONPATH or using virtualenvs are a way to use various versions without changing your code.</p>
+<p>But hey, why not have an aliasing system that lets you arbitrarily map module names to files? That’s why we have the <code class="docutils literal notranslate"><span class="pre">pymodule-alias</span></code> option!</p>
+<div class="section" id="case-1-mapping-a-simple-file-to-a-virtual-module">
+<h2>Case 1 - Mapping a simple file to a virtual module<a class="headerlink" href="#case-1-mapping-a-simple-file-to-a-virtual-module" title="Permalink to this headline">¶</a></h2>
+<p>Let’s say we have <code class="docutils literal notranslate"><span class="pre">swissknife.py</span></code> that contains lots of useful classes and functions.</p>
+<p>It’s imported in gazillions of places in your app. Now, we’ll want to modify it, but keep the original file intact for whichever reason, and call it <code class="docutils literal notranslate"><span class="pre">swissknife_mk2</span></code>.</p>
+<p>Your options would be</p>
+<ol class="arabic simple">
+<li><p>to modify all of your code to import and use swissknife_mk2 instead of swissknife. Yeah, no, not’s going to happen.</p></li>
+<li><p>modify the first line of all your files to read <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">swissknife_mk2</span> <span class="pre">as</span> <span class="pre">swissknife</span></code>. A lot better but you make software for money… and time is money, so why the fuck not use something more powerful?</p></li>
+</ol>
+<p>So don’t touch your files – just remap!</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi -s :3031 -w myproject --pymodule-alias <span class="nv">swissknife</span><span class="o">=</span>swissknife_mk2
+<span class="c1"># Kapow! uWSGI one-two ninja punch right there!</span>
+<span class="c1"># You can put the module wherever you like, too:</span>
+./uwsgi -s :3031 -w myproject --pymodule-alias <span class="nv">swissknife</span><span class="o">=</span>/mnt/floppy/KNIFEFAC/SWISSK~1.PY
+<span class="c1"># Or hey, why not use HTTP?</span>
+./uwsgi -s :3031 -w myproject --pymodule-alias <span class="nv">swissknife</span><span class="o">=</span>http://uwsgi.it/modules/swissknife_extreme.py
+</pre></div>
+</div>
+<p>You can specify multiple <code class="docutils literal notranslate"><span class="pre">pymodule-alias</span></code> directives.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">uwsgi</span><span class="p">:</span>
+  <span class="nt">socket</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">:3031</span>
+  <span class="nt">module</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">myproject</span>
+  <span class="nt">pymodule-alias</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">funnymodule=/opt/foo/experimentalfunnymodule.py</span>
+  <span class="nt">pymodule-alias</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">uglymodule=/opt/foo/experimentaluglymodule.py</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="case-2-mapping-a-packages-to-directories">
+<h2>Case 2 - mapping a packages to directories<a class="headerlink" href="#case-2-mapping-a-packages-to-directories" title="Permalink to this headline">¶</a></h2>
+<p>You have this shiny, beautiful Django project and something occurs to you: Would it work with Django trunk? On to set up a new virtualenv… nah. Let’s just use <code class="docutils literal notranslate"><span class="pre">pymodule-alias</span></code>!</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="o">./</span><span class="n">uwsgi</span> <span class="o">-</span><span class="n">s</span> <span class="p">:</span><span class="mi">3031</span> <span class="o">-</span><span class="n">w</span> <span class="n">django_uwsgi</span> <span class="o">--</span><span class="n">pymodule</span><span class="o">-</span><span class="n">alias</span> <span class="n">django</span><span class="o">=</span><span class="n">django</span><span class="o">-</span><span class="n">trunk</span><span class="o">/</span><span class="n">django</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="case-3-override-specific-submodules">
+<h2>Case 3 - override specific submodules<a class="headerlink" href="#case-3-override-specific-submodules" title="Permalink to this headline">¶</a></h2>
+<p>You have a Werkzeug project where you want to override - for whichever reason - <code class="docutils literal notranslate"><span class="pre">werkzeug.test_app</span></code> with one of your own devising. Easy, of course!</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="o">./</span><span class="n">uwsgi</span> <span class="o">-</span><span class="n">s</span> <span class="p">:</span><span class="mi">3031</span> <span class="o">-</span><span class="n">w</span> <span class="n">werkzeug</span><span class="o">.</span><span class="n">testapp</span><span class="p">:</span><span class="n">test_app</span><span class="p">()</span> <span class="o">--</span><span class="n">pymodule</span><span class="o">-</span><span class="n">alias</span> <span class="n">werkzeug</span><span class="o">.</span><span class="n">testapp</span><span class="o">=</span><span class="n">mytestapp</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Aliasing Python modules</a><ul>
+<li><a class="reference internal" href="#case-1-mapping-a-simple-file-to-a-virtual-module">Case 1 - Mapping a simple file to a virtual module</a></li>
+<li><a class="reference internal" href="#case-2-mapping-a-packages-to-directories">Case 2 - mapping a packages to directories</a></li>
+<li><a class="reference internal" href="#case-3-override-specific-submodules">Case 3 - override specific submodules</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Tracebacker.html"
+                        title="previous chapter">Python Tracebacker</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="PyPy.html"
+                        title="next chapter">The PyPy plugin</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/PythonModuleAlias.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="PyPy.html" title="The PyPy plugin"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Tracebacker.html" title="Python Tracebacker"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="Python.html" >Python support</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

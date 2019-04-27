@@ -1,0 +1,247 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>The Forkpty Router &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The TunTap Router" href="TunTapRouter.html" />
+    <link rel="prev" title="FreeBSD Jails" href="FreeBSDJails.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="TunTapRouter.html" title="The TunTap Router"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="FreeBSDJails.html" title="FreeBSD Jails"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="the-forkpty-router">
+<h1>The Forkpty Router<a class="headerlink" href="#the-forkpty-router" title="Permalink to this headline">¶</a></h1>
+<p>Dealing with containers is now a common deployment pattern. One of the most annoying tasks when dealing with jails/namespaces
+is ‘attaching’ to already running instances.</p>
+<p>The forkpty router aims at simplifyng the process giving a pseudoterminal server to your uWSGI instances.</p>
+<p>A client connect to the socket exposed by the forkpty router and get a new pseudoterminal connected to a process (generally a shell, but can be whatever you want)</p>
+<div class="section" id="uwsgi-mode-vs-raw-mode">
+<h2>uwsgi mode VS raw mode<a class="headerlink" href="#uwsgi-mode-vs-raw-mode" title="Permalink to this headline">¶</a></h2>
+<p>Clients connecting to the forkpty router can use two protocols for data exchange: uwsgi and raw mode.</p>
+<p>The raw mode simply maps the socket to the pty, for such a reason you will not be able to resize your terminal or send specific signals.
+The advantage of this mode is in performance: no overhead for each char.</p>
+<p>The uwsgi mode encapsulates every instruction (stdin, signals, window changes) in a uwsgi packet. This is very similar to how ssh works, so if you
+plan to use the forkpty router for shell sessions the uwsgi mode is the best choice (in terms of user experience).</p>
+<p>The overhead of the uwsgi protocol (worst case) is 5 bytes for each stdin event (single char)</p>
+</div>
+<div class="section" id="running-the-forkpty-router">
+<h2>Running the forkpty router<a class="headerlink" href="#running-the-forkpty-router" title="Permalink to this headline">¶</a></h2>
+<p>The plugin is not builtin by default, so you have to compile it:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --build-plugin plugins/forkptyrouter
+</pre></div>
+</div>
+<p>or, using the old plugin build system:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python uwsgiconfig.py --plugin plugins/forkptyrouter
+</pre></div>
+</div>
+<p>generally compiling the pty plugin is required too (for client access)</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --build-plugin plugins/pty
+</pre></div>
+</div>
+<p>or again, using the old build system:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python uwsgiconfig.py --plugin plugins/pty
+</pre></div>
+</div>
+<p>Alternatively, you can build all in one shot with:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">UWSGI_EMBED_PLUGINS</span><span class="o">=</span>pty,forkptyrouter make
+</pre></div>
+</div>
+<p>Now you can run the forkptyrouter as a standard gateway (we use UNIX socket as we want a communication channel with jails, and we unshare the uts namespace to give a new hostname)</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">unshare</span> <span class="o">=</span> <span class="s">uts</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">hostname iaminajail</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">kratos</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">kratos</span>
+<span class="na">forkpty-router</span> <span class="o">=</span> <span class="s">/tmp/fpty.socket</span>
+</pre></div>
+</div>
+<p>and connect with the pty client:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --pty-connect /tmp/fpty.socket
+</pre></div>
+</div>
+<p>now you have a shell (/bin/sh by default) in the uWSGI instance. Running <code class="docutils literal notranslate"><span class="pre">hostname</span></code> will give you ‘iaminajail’</p>
+<p>Eventually you can avoid using uWSGI to attacj to the pty and instead you can rely on this simple python script:</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">select</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">from</span> <span class="nn">termios</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">atexit</span>
+
+<span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_UNIX</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+<span class="n">s</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+<span class="n">tcattr</span> <span class="o">=</span> <span class="n">tcgetattr</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">orig_tcattr</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">tcattr</span><span class="p">)</span>
+<span class="n">atexit</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">tcsetattr</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">TCSANOW</span><span class="p">,</span> <span class="n">orig_tcattr</span><span class="p">)</span>
+
+<span class="n">tcattr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">|=</span> <span class="n">IGNPAR</span>
+<span class="n">tcattr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&amp;=</span> <span class="o">~</span><span class="p">(</span><span class="n">ISTRIP</span> <span class="o">|</span> <span class="n">IMAXBEL</span> <span class="o">|</span> <span class="n">BRKINT</span> <span class="o">|</span> <span class="n">INLCR</span> <span class="o">|</span> <span class="n">IGNCR</span> <span class="o">|</span> <span class="n">ICRNL</span> <span class="o">|</span> <span class="n">IXON</span> <span class="o">|</span> <span class="n">IXANY</span> <span class="o">|</span> <span class="n">IXOFF</span><span class="p">);</span>
+<span class="n">tcattr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&amp;=</span> <span class="o">~</span><span class="n">IUCLC</span><span class="p">;</span>
+<span class="n">tcattr</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">&amp;=</span> <span class="o">~</span><span class="p">(</span><span class="n">ICANON</span> <span class="o">|</span> <span class="n">ECHO</span> <span class="o">|</span> <span class="n">ECHOE</span> <span class="o">|</span> <span class="n">ECHOK</span> <span class="o">|</span> <span class="n">ECHONL</span><span class="p">);</span>
+<span class="n">tcattr</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">&amp;=</span> <span class="o">~</span><span class="n">IEXTEN</span><span class="p">;</span>
+<span class="n">tcattr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&amp;=</span> <span class="o">~</span><span class="n">OPOST</span><span class="p">;</span>
+<span class="n">tcattr</span><span class="p">[</span><span class="mi">6</span><span class="p">][</span><span class="n">VMIN</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="n">tcattr</span><span class="p">[</span><span class="mi">6</span><span class="p">][</span><span class="n">VTIME</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+<span class="n">tcsetattr</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">TCSANOW</span><span class="p">,</span> <span class="n">tcattr</span><span class="p">);</span>
+
+<span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+    <span class="p">(</span><span class="n">rl</span><span class="p">,</span> <span class="n">wl</span><span class="p">,</span> <span class="n">xl</span><span class="p">)</span> <span class="o">=</span> <span class="n">select</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="n">s</span><span class="p">],</span> <span class="p">[],</span> <span class="p">[])</span>
+    <span class="k">if</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">rl</span><span class="p">:</span>
+        <span class="n">buf</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="mi">4096</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">buf</span><span class="p">:</span> <span class="k">break</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">buf</span><span class="p">)</span>
+    <span class="k">if</span> <span class="mi">0</span> <span class="ow">in</span> <span class="n">rl</span><span class="p">:</span>
+        <span class="n">buf</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4096</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">buf</span><span class="p">:</span> <span class="k">break</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The previous example uses raw mode, if you resize the client terminal you will se no updates.</p>
+<p>To use the ‘uwsgi’ mode add a ‘u’:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">unshare</span> <span class="o">=</span> <span class="s">uts</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">hostname iaminajail</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">kratos</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">kratos</span>
+<span class="na">forkpty-urouter</span> <span class="o">=</span> <span class="s">/tmp/fpty.socket</span>
+</pre></div>
+</div>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --pty-uconnect /tmp/fpty.socket
+</pre></div>
+</div>
+<p>a single instance can expose both protocols on different sockets</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">unshare</span> <span class="o">=</span> <span class="s">uts</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">hostname iaminajail</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">kratos</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">kratos</span>
+<span class="na">forkpty-router</span> <span class="o">=</span> <span class="s">/tmp/raw.socket</span>
+<span class="na">forkpty-urouter</span> <span class="o">=</span> <span class="s">/tmp/uwsgi.socket</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="changing-the-default-command">
+<h2>Changing the default command<a class="headerlink" href="#changing-the-default-command" title="Permalink to this headline">¶</a></h2>
+<p>By default the forkpty router run /bin/sh on new connections.</p>
+<p>You can change the command using the –forkptyrouter-command</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">unshare</span> <span class="o">=</span> <span class="s">uts</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">hostname iaminajail</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">kratos</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">kratos</span>
+<span class="na">forkpty-router</span> <span class="o">=</span> <span class="s">/tmp/raw.socket</span>
+<span class="na">forkpty-urouter</span> <span class="o">=</span> <span class="s">/tmp/uwsgi.socket</span>
+<span class="na">forkptyrouter-command</span><span class="o">=</span> <span class="s">/bin/zsh</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">The Forkpty Router</a><ul>
+<li><a class="reference internal" href="#uwsgi-mode-vs-raw-mode">uwsgi mode VS raw mode</a></li>
+<li><a class="reference internal" href="#running-the-forkpty-router">Running the forkpty router</a></li>
+<li><a class="reference internal" href="#changing-the-default-command">Changing the default command</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="FreeBSDJails.html"
+                        title="previous chapter">FreeBSD Jails</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="TunTapRouter.html"
+                        title="next chapter">The TunTap Router</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/ForkptyRouter.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="TunTapRouter.html" title="The TunTap Router"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="FreeBSDJails.html" title="FreeBSD Jails"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

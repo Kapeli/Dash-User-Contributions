@@ -1,0 +1,545 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Serializing accept(), AKA Thundering Herd, AKA the Zeeg Problem &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="The Art of Graceful Reloading" href="TheArtOfGracefulReloading.html" />
+    <link rel="prev" title="Setting up Graphite on Ubuntu using the Metrics subsystem" href="../tutorials/GraphiteAndMetrics.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="TheArtOfGracefulReloading.html" title="The Art of Graceful Reloading"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../tutorials/GraphiteAndMetrics.html" title="Setting up Graphite on Ubuntu using the Metrics subsystem"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="serializing-accept-aka-thundering-herd-aka-the-zeeg-problem">
+<h1>Serializing accept(), AKA Thundering Herd, AKA the Zeeg Problem<a class="headerlink" href="#serializing-accept-aka-thundering-herd-aka-the-zeeg-problem" title="Permalink to this headline">¶</a></h1>
+<p>One of the historical problems in the UNIX world is the “thundering herd”.</p>
+<p>What is it?</p>
+<p>Take a process binding to a networking address (it could be <code class="docutils literal notranslate"><span class="pre">AF_INET</span></code>,
+<code class="docutils literal notranslate"><span class="pre">AF_UNIX</span></code> or whatever you want) and then forking itself:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span> <span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="p">(...)</span>
+<span class="n">bind</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="p">...)</span>
+<span class="n">listen</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="p">...)</span>
+<span class="n">fork</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>After having forked itself a bunch of times, each process will generally start
+blocking on <code class="docutils literal notranslate"><span class="pre">accept()</span></code></p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">for</span><span class="p">(;;)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">client</span> <span class="o">=</span> <span class="n">accept</span><span class="p">(...);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">client</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="k">continue</span><span class="p">;</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The funny problem is that on older/classic UNIX, <code class="docutils literal notranslate"><span class="pre">accept()</span></code> is woken up in
+each process blocked on it whenever a connection is attempted on the socket.</p>
+<p>Only one of those processes will be able to truly accept the connection, the
+others will get a boring <code class="docutils literal notranslate"><span class="pre">EAGAIN</span></code>.</p>
+<p>This results in a vast number of wasted cpu cycles (the kernel scheduler has to
+give control to all of the sleeping processes waiting on that socket).</p>
+<p>This behaviour (for various reasons) is amplified when instead of processes you
+use threads (so, you have multiple threads blocked on <code class="docutils literal notranslate"><span class="pre">accept()</span></code>).</p>
+<p>The de facto solution was placing a lock before the <code class="docutils literal notranslate"><span class="pre">accept()</span></code> call to serialize
+its usage:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">for</span><span class="p">(;;)</span> <span class="p">{</span>
+    <span class="n">lock</span><span class="p">();</span>
+    <span class="kt">int</span> <span class="n">client</span> <span class="o">=</span> <span class="n">accept</span><span class="p">(...);</span>
+    <span class="n">unlock</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">client</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="k">continue</span><span class="p">;</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>For threads, dealing with locks is generally easier but for processes you have
+to fight with system-specific solutions or fall back to the venerable SysV ipc
+subsystem (more on this later).</p>
+<p>In modern times, the vast majority of UNIX systems have evolved, and now the
+kernel ensures (more or less) only one process/thread is woken up on a
+connection event.</p>
+<p>Ok, problem solved, what we are talking about?</p>
+<div class="section" id="select-poll-kqueue-epoll">
+<h2>select()/poll()/kqueue()/epoll()/…<a class="headerlink" href="#select-poll-kqueue-epoll" title="Permalink to this headline">¶</a></h2>
+<p>In the pre-1.0 era, uWSGI was a lot simpler (and less interesting) than the
+current form. It did not have the signal framework and it was not able to
+listen to multiple addresses; for this reason its loop engine was only calling
+<code class="docutils literal notranslate"><span class="pre">accept()</span></code> in each process/thread, and thundering herd (thanks to modern
+kernels) was not a problem.</p>
+<p>Evolution has a price, so after a while the standard loop engine of a uWSGI
+process/thread moved from:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">for</span><span class="p">(;;)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">client</span> <span class="o">=</span> <span class="n">accept</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="p">...);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">client</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="k">continue</span><span class="p">;</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>to a more complex:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="k">for</span><span class="p">(;;)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">interesting_fd</span> <span class="o">=</span> <span class="n">wait_for_fds</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">fd_need_accept</span><span class="p">(</span><span class="n">interesting_fd</span><span class="p">))</span> <span class="p">{</span>
+        <span class="kt">int</span> <span class="n">client</span> <span class="o">=</span> <span class="n">accept</span><span class="p">(</span><span class="n">interesting_fd</span><span class="p">,</span> <span class="p">...);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">client</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="k">continue</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">fd_is_a_signal</span><span class="p">(</span><span class="n">interesting_fd</span><span class="p">))</span> <span class="p">{</span>
+        <span class="n">manage_uwsgi_signal</span><span class="p">(</span><span class="n">interesting_fd</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The problem is now the <code class="docutils literal notranslate"><span class="pre">wait_for_fds()</span></code> example function: it will call
+something like <code class="docutils literal notranslate"><span class="pre">select()</span></code>, <code class="docutils literal notranslate"><span class="pre">poll()</span></code> or the more modern <code class="docutils literal notranslate"><span class="pre">epoll()</span></code> and
+<code class="docutils literal notranslate"><span class="pre">kqueue()</span></code>.</p>
+<p>These kinds of system calls are “monitors” for file descriptors, and they are
+woken up in all of the processes/threads waiting for the same file descriptor.</p>
+<p>Before you start blaming your kernel developers, this is the right approach, as
+the kernel cannot know if you are waiting for those file descriptors to call
+<code class="docutils literal notranslate"><span class="pre">accept()</span></code> or to make something funnier.</p>
+<p>So, welcome again to the thundering herd.</p>
+</div>
+<div class="section" id="application-servers-vs-webservers">
+<h2>Application Servers VS WebServers<a class="headerlink" href="#application-servers-vs-webservers" title="Permalink to this headline">¶</a></h2>
+<p>The popular, battle tested, solid, multiprocess reference webserver is Apache
+HTTPD.</p>
+<p>It survived decades of IT evolutions and it’s still one of the most important
+technologies powering the whole Internet.</p>
+<p>Born as multiprocess-only, Apache had to always deal with the thundering herd
+problem and they solved it using SysV ipc semaphores.</p>
+<p>(Note: Apache is really smart about that, when it only needs to wait on a
+single file descriptor, it only calls <code class="docutils literal notranslate"><span class="pre">accept()</span></code> taking advantage of modern
+kernels anti-thundering herd policies)</p>
+<p>(Update: Apache 2.x even allows you to choose which lock technique to use,
+included flock/fcntl for very ancient systems, but on the vast majority of the
+system, when in multiprocess mode it will use the sysv semaphores)</p>
+<p>Even on modern Apache releases, stracing one of its process (bound to multiple
+interfaces) you will see something like that (it is a Linux system):</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">semop</span><span class="p">(...);</span> <span class="c1">// lock</span>
+<span class="n">epoll_wait</span><span class="p">(...);</span>
+<span class="n">accept</span><span class="p">(...);</span>
+<span class="n">semop</span><span class="p">(...);</span> <span class="c1">// unlock</span>
+<span class="p">...</span> <span class="c1">// manage the request</span>
+</pre></div>
+</div>
+<p>the SysV semaphore protect your epoll_wait from thundering herd.</p>
+<p>So, another problem solved, the world is a such a beautiful place… but ….</p>
+<p><strong>SysV IPC is not good for application servers :(*</strong></p>
+<p>The definition of “application server” is pretty generic, in this case we refer
+to one or more process/processes generated by an unprivileged (non-root) user
+binding on one or more network address and running custom, highly
+non-deterministic code.</p>
+<p>Even if you had a minimal/basic knowledge on how SysV IPC works, you will know
+each of its components is a limited resource in the system (and in modern BSDs
+these limits are set to ridiculously low values, PostgreSQL FreeBSD users know
+this problem very well).</p>
+<p>Just run ‘ipcs’ in your terminal to get a list of the allocated objects in your
+kernel. Yes, in your kernel. SysV ipc objects are persistent resources, they
+need to be removed manually by the user. The same user that could allocate
+hundreds of those objects and fill your limited SysV IPC memory.</p>
+<p>One of the most common problems in the Apache world caused by the SysV ipc
+usage is the leakage when you brutally kill Apache instances (yes, you should
+never do it, but you don’t have a choice if you are so brave/fool to host
+unreliable PHP apps in your webserver process).</p>
+<p>To better understand it, spawn Apache and <code class="docutils literal notranslate"><span class="pre">killall</span> <span class="pre">-9</span> <span class="pre">apache2</span></code>. Respawn it
+and run ‘ipcs’ you will get a new semaphore object every time. Do you see the
+problem? (to Apache gurus: yes I know there are hacky tricks to avoid that,
+but this is the default behaviour)</p>
+<p>Apache is generally a system service, managed by a conscious sysadmin, so
+except few cases you can continue trusting it for more decades, even if it
+decides to use more SysV ipc objects :)</p>
+<p>Your application server, sadly, is managed by different kind of users, from the
+most skilled one to the one who should change job as soon as possible to the
+one with the site cracked by a moron wanting to take control of your server.</p>
+<p>Application servers are not dangerous, users are. And application servers are
+run by users. The world is an ugly place.</p>
+</div>
+<div class="section" id="how-application-server-developers-solved-it">
+<h2>How application server developers solved it<a class="headerlink" href="#how-application-server-developers-solved-it" title="Permalink to this headline">¶</a></h2>
+<p>Fast answer: they generally do not solve/care it</p>
+<p>Note: we are talking about multiprocessing, we have already seen multithreading
+is easy to solve.</p>
+<p>Serving static files or proxying (the main activities of a webserver) is
+generally a fast, non-blocking (very deterministic under various points of view)
+activity. Instead, a web application is way slower and heavier, so, even on
+moderately loaded sites, the amount of sleeping processes is generally low.</p>
+<p>On highly loaded sites you will pray for a free process, and in non-loaded
+sites the thundering herd problem is completely irrelevant (unless you are
+running your site on a 386).</p>
+<p>Given the relatively low number of processes you generally allocate for an
+application server, we can say thundering herd is a no-problem.</p>
+<p>Another approach is dynamic process spawning. If you ensure your application
+server has always the minimum required number of processes running you will
+highly reduce the thundering herd problem. (check the family of –cheaper uWSGI
+options)</p>
+</div>
+<div class="section" id="no-problem-so-again-what-we-are-talking-about">
+<h2>No-problem ??? So, again, what we are talking about ?<a class="headerlink" href="#no-problem-so-again-what-we-are-talking-about" title="Permalink to this headline">¶</a></h2>
+<p>We are talking about “common cases”, and for common cases there are a plethora
+of valid choices (instead of uWSGI, obviously) and the vast majority of
+problems we are talking about are non-existent.</p>
+<p>Since the beginning of the uWSGI project, being developed by a hosting company
+where “common cases” do not exist, we cared a lot about corner-case problems,
+bizarre setups and those problems the vast majority of users never need to care
+about.</p>
+<p>In addition to this, uWSGI supports operational modes only common/available in
+general-purpose webservers like Apache (I have to say Apache is probably the
+only general purpose webserver as it allows basically anything in its process
+space in a relatively safe and solid way), so lot of new problems combined with
+user bad-behaviour arise.</p>
+<p>One of the most challenging development phase of uWSGI was adding
+multithreading. Threads are powerful, but are really hard to manage in the
+right way.</p>
+<p>Threads are way cheaper than processes, so you generally allocate dozens of
+them for your app (remember, not used memory is wasted memory).</p>
+<p>Dozens (or hundreds) of threads waiting for the same set of file descriptors
+bring us back to a thundering herd problem (unless all of your threads are
+constantly used).</p>
+<p>For such a reason when you enable multiple threads in uWSGI a pthread mutex is
+allocated, serializing epoll()/kqueue()/poll()/select()… usage in each
+thread.</p>
+<p>Another problem solved (and strange for uWSGI, without the need of an option ;)</p>
+<p>But…</p>
+</div>
+<div class="section" id="the-zeeg-problem-multiple-processes-with-multiple-threads">
+<h2>The Zeeg problem: Multiple processes with multiple threads<a class="headerlink" href="#the-zeeg-problem-multiple-processes-with-multiple-threads" title="Permalink to this headline">¶</a></h2>
+<p>On June 27, 2013, David Cramer wrote an interesting blog post (you may not
+agree with its conclusions, but it does not matter now, you can continue hating
+uWSGI safely or making funny jokes about its naming choices or the number of
+options).</p>
+<p><a class="reference external" href="http://cramer.io/2013/06/27/serving-python-web-applications">http://cramer.io/2013/06/27/serving-python-web-applications</a></p>
+<p>The problem David faced was such a strong thundering herd that its response
+time was damaged by it (non constant performance was the main result of its
+tests).</p>
+<p>Why did it happen? Wasn’t the mutex allocated by uWSGI solving it?</p>
+<p>David is (was) running uWSGI with 10 process and each of them with 10 threads:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --processes <span class="m">10</span> --threads <span class="m">10</span> ...
+</pre></div>
+</div>
+<p>While the mutex protects each thread in a single process to call <code class="docutils literal notranslate"><span class="pre">accept()</span></code>
+on the same request, there is no such mechanism (or better, it is not enabled
+by default, see below) to protect multiple processes from doing it, so given
+the number of threads (100) available for managing requests, it is unlikely
+that a single process is completely blocked (read: with all of its 10 threads
+blocked in a request) so welcome back to the thundering herd.</p>
+</div>
+<div class="section" id="how-david-solved-it">
+<h2>How David solved it ?<a class="headerlink" href="#how-david-solved-it" title="Permalink to this headline">¶</a></h2>
+<p>uWSGI is a controversial piece of software, no shame in that. There are users
+fiercely hating it and others morbidly loving it, but all agree that docs could
+be way better ([OT] it is good when all the people agree on something, but pull
+requests on uwsgi-docs are embarrassingly low and all from the same people….
+come on, help us !!!)</p>
+<p>David used an empirical approach, spotted its problem and decided to solve it
+running independent uwsgi processes bound on different sockets and configured
+nginx to round robin between them.</p>
+<p>It is a very elegant approach, but it has a problem: nginx cannot know if the
+process on which is sending the request has all of its thread busy. It is a
+working but suboptimal solution.</p>
+<p>The best way would be having an inter-process locking (like Apache),
+serializing all of the <code class="docutils literal notranslate"><span class="pre">accept()</span></code> in both threads and processes</p>
+</div>
+<div class="section" id="uwsgi-docs-sucks-thunder-lock">
+<h2>uWSGI docs sucks: –thunder-lock<a class="headerlink" href="#uwsgi-docs-sucks-thunder-lock" title="Permalink to this headline">¶</a></h2>
+<p>Michael Hood (you will find his name in the comments of David’s post, too)
+signalled the problem in the uWSGI mailing-list/issue tracker some time ago, he
+even came out with an initial patch that ended with the <code class="docutils literal notranslate"><span class="pre">--thunder-lock</span></code>
+option (this is why open-source is better ;)</p>
+<p><code class="docutils literal notranslate"><span class="pre">--thunder-lock</span></code> is available since uWSGI 1.4.6 but never got documentation (of
+any kind)</p>
+<p>Only the people following the mailing-list (or facing the specific problem)
+know about it.</p>
+</div>
+<div class="section" id="sysv-ipc-semaphores-are-bad-how-you-solved-it">
+<h2>SysV IPC semaphores are bad how you solved it ?<a class="headerlink" href="#sysv-ipc-semaphores-are-bad-how-you-solved-it" title="Permalink to this headline">¶</a></h2>
+<p>Interprocess locking has been an issue since uWSGI 0.0.0.0.0.1, but we solved
+it in the first public release of the project (in 2009).</p>
+<p>We basically checked each operating system capabilities and chose the
+best/fastest ipc locking they could offer, filling our code with dozens of
+#ifdef.</p>
+<p>When you start uWSGI you should see in its logs which “lock engine” has been
+chosen.</p>
+<p>There is support for a lot of them:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>pthread mutexes with _PROCESS_SHARED and _ROBUST attributes (modern Linux and Solaris)</p></li>
+<li><p>pthread mutexes with _PROCESS_SHARED (older Linux)</p></li>
+<li><p>OSX Spinlocks (MacOSX, Darwin)</p></li>
+<li><p>Posix semaphores (FreeBSD &gt;= 9)</p></li>
+<li><p>Windows mutexes (Windows/Cygwin)</p></li>
+<li><p>SysV IPC semaphores (fallback for all the other systems)</p></li>
+</ul>
+</div></blockquote>
+<p>Their usage is required for uWSGI-specific features like caching, rpc and all
+of those features requiring changing shared memory structures (allocated with
+mmap() + _SHARED)</p>
+<p>Each of these engines is different from the others and dealing with them has
+been a pain and (more important) some of them are not “ROBUST”.</p>
+<p>The “ROBUST” term is pthread-borrowed. If a lock is “robust”, it means if the
+process locking it dies, the lock is released.</p>
+<p>You would expect it from all of the lock engines, but sadly only few of them
+works reliably.</p>
+<p>For this reason the uWSGI master process has to allocate an additional thread
+(the ‘deadlock’ detector) constantly checking for non-robust unreleased locks
+mapped to dead processes.</p>
+<p>It is a pain, however, anyone will tell you IPC locking is easy should be
+accepted in a JEDI school…</p>
+</div>
+<div class="section" id="uwsgi-developers-are-fu-ing-cowards">
+<h2>uWSGI developers are fu*!ing cowards<a class="headerlink" href="#uwsgi-developers-are-fu-ing-cowards" title="Permalink to this headline">¶</a></h2>
+<p>Both David Cramer and Graham Dumpleton (yes, he is the mod_wsgi author but
+heavily contributed to uWSGI development as well to the other WSGI servers,
+this is another reason why open source is better) asked why <code class="docutils literal notranslate"><span class="pre">--thunder-lock</span></code>
+is not the default when multiprocess + multithread is requested.</p>
+<p>This is a good question with a simple answer: we are cowards who only care
+about money.</p>
+<p>uWSGI is completely open source, but its development is sponsored (in various
+way) by the companies using it and by Unbit.it customers.</p>
+<p>Enabling “risky” features by default for a “common” usage (like
+multiprocess+multithread) is too much for us, and in addition to this, the
+situation (especially on linux) of library/kernel incompatibilities is a real
+pain.</p>
+<p>As an example for having ROBUST pthread mutexes you need a modern kernel with a
+modern glibc, but commonly used distros (like the centos family) have a mix of
+older kernels with newer glibc and the opposite too. This leads to the
+inability to correctly detect which is the best locking engine for a platform,
+and so, when the uwsgiconfig.py script is in doubt it falls back to the safest
+approach (like non-robust pthread mutexes on linux).</p>
+<p>The deadlock-detector should save you from most of the problem, but the
+“should” word is the key. Making a test suite (or even a single unit test) on
+this kind of code is basically impossible (well, at least for me), so we
+cannot be sure all is in the right place (and reporting threading bugs is hard
+for users as well as skilled developer, unless you work on pypy ;)</p>
+<p>Linux pthread robust mutexes are solid, we are “pretty” sure about that, so you
+should be able to enable <code class="docutils literal notranslate"><span class="pre">--thunder-lock</span></code> on modern Linux systems with a
+99.999999% success rates, but we prefer (for now) users consciously enable it</p>
+</div>
+<div class="section" id="when-sysv-ipc-semaphores-are-a-better-choice">
+<h2>When SysV IPC semaphores are a better choice<a class="headerlink" href="#when-sysv-ipc-semaphores-are-a-better-choice" title="Permalink to this headline">¶</a></h2>
+<p>Yes, there are cases on which SysV IPC semaphores gives you better results than
+system-specific features.</p>
+<p>Marcin Deranek of Booking.com has been battle-testing uWSGI for months and
+helped us with fixing corner-case situations even in the locking area.</p>
+<p>He noted system-specific lock-engines tend to favour the kernel scheduler (when
+choosing which process wins the next lock after an unlock) instead of a
+round-robin distribution.</p>
+<p>As for their specific need for an equal distribution of requests among
+processes is better (they use uWSGI with perl, so no threading is in place, but
+they spawn lot of processes) they (currently) choose to use the “ipcsem” lock
+engine with:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --lock-engine ipcsem --thunder-lock --processes <span class="m">100</span> --psgi ....
+</pre></div>
+</div>
+<p>The funny thing (this time) is that you can easily test if the lock is working
+well. Just start blasting the server and you will see in the request logs how
+the reported pid is different each time, while with system-specific locking the
+pids are pretty random with a pretty heavy tendency of favouring the last used
+process.</p>
+<p>Funny enough, the first problem they faced was the ipcsem leakage (when you are
+in emergency, graceful reload/stop is your enemy and kill -9 will be your
+silver bullet)</p>
+<p>To fix it, the –ftok option is available allowing you to give a unique id to
+the semaphore object and to reuse it if it is available from a previous run:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --lock-engine ipcsem --thunder-lock --processes <span class="m">100</span> --ftok /tmp/foobar --psgi ....
+</pre></div>
+</div>
+<p>–ftok takes a file as an argument, it will use it to build the unique id. A
+common pattern is using the pidfile for it</p>
+</div>
+<div class="section" id="what-about-other-portable-lock-engines">
+<h2>What about other portable lock engines ?<a class="headerlink" href="#what-about-other-portable-lock-engines" title="Permalink to this headline">¶</a></h2>
+<p>In addition to “ipcsem”, uWSGI (where available) adds “posixsem” too.</p>
+<p>They are used by default only on FreeBSD &gt;= 9, but are available on Linux too.</p>
+<p>They are not “ROBUST”, but they do not need shared kernel resources, so if you
+trust our deadlock detector they are a pretty-good approach. (Note: Graham
+Dumpleton pointed me to the fact they can be enabled on Apache 2.x too)</p>
+</div>
+<div class="section" id="conclusions">
+<h2>Conclusions<a class="headerlink" href="#conclusions" title="Permalink to this headline">¶</a></h2>
+<p>You can have the best (or the worst) software of the whole universe, but
+without docs it does not exist.</p>
+<p>The Apache team still slam the face of the vast majority of us trying to touch
+their market share :)</p>
+</div>
+<div class="section" id="bonus-chapter-using-the-zeeg-approach-in-a-uwsgi-friendly-way">
+<h2>Bonus chapter: using the Zeeg approach in a uWSGI friendly way<a class="headerlink" href="#bonus-chapter-using-the-zeeg-approach-in-a-uwsgi-friendly-way" title="Permalink to this headline">¶</a></h2>
+<p>I have to admit, I am not a big fan of supervisord. It is a good software
+without doubts, but I consider the Emperor and the –attach-daemon facilities a
+better approach to the deployment problems. In addition to this, if you want to
+have a “scriptable”/”extendable” process supervisor I think Circus
+(<a class="reference external" href="https://circus.readthedocs.io/">https://circus.readthedocs.io/</a>) is a lot more fun and capable (the first thing
+I have done after implementing socket activation in the uWSGI Emperor was
+making a pull request [merged, if you care] for the same feature in Circus).</p>
+<p>Obviously supervisord works and is used by lot of people, but as a heavy uWSGI
+user I tend to abuse its features to accomplish a result.</p>
+<p>The first approach I would use is binding to 10 different ports and mapping
+each of them to a specific process:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">5</span>
+<span class="na">threads</span> <span class="o">=</span> <span class="s">5</span>
+
+<span class="c1">; create 5 sockets</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:9091</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:9092</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:9093</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:9094</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:9095</span>
+
+<span class="c1">; map each socket (zero-indexed) to the specific worker</span>
+<span class="na">map-socket</span> <span class="o">=</span> <span class="s">0:1</span>
+<span class="na">map-socket</span> <span class="o">=</span> <span class="s">1:2</span>
+<span class="na">map-socket</span> <span class="o">=</span> <span class="s">2:3</span>
+<span class="na">map-socket</span> <span class="o">=</span> <span class="s">3:4</span>
+<span class="na">map-socket</span> <span class="o">=</span> <span class="s">4:5</span>
+</pre></div>
+</div>
+<p>Now you have a master monitoring 5 processes, each one bound to a different
+address (no <code class="docutils literal notranslate"><span class="pre">--thunder-lock</span></code> needed)</p>
+<p>For the Emperor fanboys you can make such a template (call it foo.template):</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">1</span>
+<span class="na">threads</span> <span class="o">=</span> <span class="s">10</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:%n</span>
+</pre></div>
+</div>
+<p>Now make a symbolic link for each instance+port you want to spawn:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>ln -s foo.template <span class="m">9091</span>.ini
+ln -s foo.template <span class="m">9092</span>.ini
+ln -s foo.template <span class="m">9093</span>.ini
+ln -s foo.template <span class="m">9094</span>.ini
+ln -s foo.template <span class="m">9095</span>.ini
+ln -s foo.template <span class="m">9096</span>.ini
+</pre></div>
+</div>
+</div>
+<div class="section" id="bonus-chapter-2-securing-sysv-ipc-semaphores">
+<h2>Bonus chapter 2: securing SysV IPC semaphores<a class="headerlink" href="#bonus-chapter-2-securing-sysv-ipc-semaphores" title="Permalink to this headline">¶</a></h2>
+<p>My company hosting platform in heavily based on Linux cgroups and namespaces.</p>
+<p>The first (cgroups) are used to limit/account resource usage, while the second
+(namespaces) are used to give an “isolated” system view to users (like seeing a
+dedicated hostname or root filesystem).</p>
+<p>As we allow users to spawn PostgreSQL instances in their accounts we need to
+limit SysV objects.</p>
+<p>Luckily, modern Linux kernels have a namespace for IPC, so calling
+unshare(CLONE_NEWIPC) will create a whole new set (detached from the others) of
+IPC objects.</p>
+<p>Calling <code class="docutils literal notranslate"><span class="pre">--unshare</span> <span class="pre">ipc</span></code> in customer-dedicated Emperors is a common approach.
+When combined with memory cgroup you will end with a pretty secure setup.</p>
+</div>
+<div class="section" id="credits">
+<h2>Credits:<a class="headerlink" href="#credits" title="Permalink to this headline">¶</a></h2>
+<p>Author: Roberto De Ioris</p>
+<p>Fixed by: Honza Pokorny</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Serializing accept(), AKA Thundering Herd, AKA the Zeeg Problem</a><ul>
+<li><a class="reference internal" href="#select-poll-kqueue-epoll">select()/poll()/kqueue()/epoll()/…</a></li>
+<li><a class="reference internal" href="#application-servers-vs-webservers">Application Servers VS WebServers</a></li>
+<li><a class="reference internal" href="#how-application-server-developers-solved-it">How application server developers solved it</a></li>
+<li><a class="reference internal" href="#no-problem-so-again-what-we-are-talking-about">No-problem ??? So, again, what we are talking about ?</a></li>
+<li><a class="reference internal" href="#the-zeeg-problem-multiple-processes-with-multiple-threads">The Zeeg problem: Multiple processes with multiple threads</a></li>
+<li><a class="reference internal" href="#how-david-solved-it">How David solved it ?</a></li>
+<li><a class="reference internal" href="#uwsgi-docs-sucks-thunder-lock">uWSGI docs sucks: –thunder-lock</a></li>
+<li><a class="reference internal" href="#sysv-ipc-semaphores-are-bad-how-you-solved-it">SysV IPC semaphores are bad how you solved it ?</a></li>
+<li><a class="reference internal" href="#uwsgi-developers-are-fu-ing-cowards">uWSGI developers are fu*!ing cowards</a></li>
+<li><a class="reference internal" href="#when-sysv-ipc-semaphores-are-a-better-choice">When SysV IPC semaphores are a better choice</a></li>
+<li><a class="reference internal" href="#what-about-other-portable-lock-engines">What about other portable lock engines ?</a></li>
+<li><a class="reference internal" href="#conclusions">Conclusions</a></li>
+<li><a class="reference internal" href="#bonus-chapter-using-the-zeeg-approach-in-a-uwsgi-friendly-way">Bonus chapter: using the Zeeg approach in a uWSGI friendly way</a></li>
+<li><a class="reference internal" href="#bonus-chapter-2-securing-sysv-ipc-semaphores">Bonus chapter 2: securing SysV IPC semaphores</a></li>
+<li><a class="reference internal" href="#credits">Credits:</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../tutorials/GraphiteAndMetrics.html"
+                        title="previous chapter">Setting up Graphite on Ubuntu using the Metrics subsystem</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="TheArtOfGracefulReloading.html"
+                        title="next chapter">The Art of Graceful Reloading</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/articles/SerializingAccept.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="TheArtOfGracefulReloading.html" title="The Art of Graceful Reloading"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../tutorials/GraphiteAndMetrics.html" title="Setting up Graphite on Ubuntu using the Metrics subsystem"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

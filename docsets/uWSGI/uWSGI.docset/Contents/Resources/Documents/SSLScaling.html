@@ -1,0 +1,332 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Scaling SSL connections (uWSGI 1.9) &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Setting POSIX Capabilities" href="Capabilities.html" />
+    <link rel="prev" title="Adding applications dynamically" href="DynamicApps.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Capabilities.html" title="Setting POSIX Capabilities"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="DynamicApps.html" title="Adding applications dynamically"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="scaling-ssl-connections-uwsgi-1-9">
+<h1>Scaling SSL connections (uWSGI 1.9)<a class="headerlink" href="#scaling-ssl-connections-uwsgi-1-9" title="Permalink to this headline">¶</a></h1>
+<p>Distributing SSL servers in a cluster is a hard topic. The biggest problem is sharing SSL sessions between different nodes.</p>
+<p>The problem is amplified in non-blocking servers due to OpenSSL’s limits in the way sessions are managed.</p>
+<p>For example, you cannot share sessions in Memcached servers and access them in a non-blocking way.</p>
+<p>A common solution (well, a compromise, maybe) until now has been to use a single SSL terminator balancing requests to multiple non-encrypted backends. This solution kinda works, but obviously it does not scale.</p>
+<p>Starting from uWSGI 1.9-dev an implementation (based on the <em>stud</em> project) of distributed caching has been added.</p>
+<div class="section" id="setup-1-using-the-uwsgi-cache-for-storing-ssl-sessions">
+<h2>Setup 1: using the uWSGI cache for storing SSL sessions<a class="headerlink" href="#setup-1-using-the-uwsgi-cache-for-storing-ssl-sessions" title="Permalink to this headline">¶</a></h2>
+<p>You can configure the SSL subsystem of uWSGI to use the shared cache. The SSL sessions will time out according to the expiry value of the cache item. This way the cache sweeper thread (managed by the master) will destroy sessions in the cache.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>The order of the options is important. <code class="docutils literal notranslate"><span class="pre">cache</span></code> options must be specified BEFORE <code class="docutils literal notranslate"><span class="pre">ssl-sessions-use-cache</span></code> and <code class="docutils literal notranslate"><span class="pre">https</span></code> options.</p>
+</div>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; spawn the master process (it will run the cache sweeper thread)</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; store up to 20k sessions</span>
+<span class="na">cache</span> <span class="o">=</span> <span class="s">20000</span>
+<span class="c1">; 4k per object is enough for SSL sessions</span>
+<span class="na">cache-blocksize</span> <span class="o">=</span> <span class="s">4096</span>
+<span class="c1">; force the SSL subsystem to use the uWSGI cache as session storage</span>
+<span class="na">ssl-sessions-use-cache</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; set SSL session timeout (in seconds)</span>
+<span class="na">ssl-sessions-timeout</span> <span class="o">=</span> <span class="s">300</span>
+<span class="c1">; set the session context string (see later)</span>
+<span class="na">https-session-context</span> <span class="o">=</span> <span class="s">foobar</span>
+<span class="c1">; spawn an HTTPS router</span>
+<span class="na">https</span> <span class="o">=</span> <span class="s">192.168.173.1:8443,foobar.crt,foobar.key</span>
+<span class="c1">; spawn 8 processes for the HTTPS router (all sharing the same session cache)</span>
+<span class="na">http-processes</span> <span class="o">=</span> <span class="s">8</span>
+<span class="c1">; add a bunch of uwsgi nodes to relay traffic to</span>
+<span class="na">http-to</span> <span class="o">=</span> <span class="s">192.168.173.10:3031</span>
+<span class="na">http-to</span> <span class="o">=</span> <span class="s">192.168.173.11:3031</span>
+<span class="na">http-to</span> <span class="o">=</span> <span class="s">192.168.173.12:3031</span>
+<span class="c1">; add stats</span>
+<span class="na">stats</span> <span class="o">=</span> <span class="s">127.0.0.1:5001</span>
+</pre></div>
+</div>
+<p>Now start blasting your HTTPS router and then telnet to port 5001. Under the “cache” object of the JSON
+output you should see the values “items” and “hits” increasing. The value “miss” is increased every time a session is not found
+in the cache. It is a good metric of the SSL performance users can expect.</p>
+</div>
+<div class="section" id="setup-2-synchronize-caches-of-different-https-routers">
+<h2>Setup 2: synchronize caches of different HTTPS routers<a class="headerlink" href="#setup-2-synchronize-caches-of-different-https-routers" title="Permalink to this headline">¶</a></h2>
+<p>The objective is to synchronize each new session in each distributed cache. To accomplish that you have to spawn a special thread
+(<code class="docutils literal notranslate"><span class="pre">cache-udp-server</span></code>) in each instance and list all of the remote servers that should be synchronized.</p>
+<p>A pure-TCP load balancer (like HAProxy or uWSGI’s Rawrouter) can be used to load balance between the various HTTPS routers.</p>
+<p>Here’s a possible Rawrouter config.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">rawrouter</span> <span class="o">=</span> <span class="s">192.168.173.99:443</span>
+<span class="na">rawrouter-to</span> <span class="o">=</span> <span class="s">192.168.173.1:8443</span>
+<span class="na">rawrouter-to</span> <span class="o">=</span> <span class="s">192.168.173.2:8443</span>
+<span class="na">rawrouter-to</span> <span class="o">=</span> <span class="s">192.168.173.3:8443</span>
+</pre></div>
+</div>
+<p>Now you can configure the first node (the new options are at the end of the .ini config)</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; spawn the master process (it will run the cache sweeper thread)</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; store up to 20k sessions</span>
+<span class="na">cache</span> <span class="o">=</span> <span class="s">20000</span>
+<span class="c1">; 4k per object is enough for SSL sessions</span>
+<span class="na">cache-blocksize</span> <span class="o">=</span> <span class="s">4096</span>
+<span class="c1">; force the SSL subsystem to use the uWSGI cache as session storage</span>
+<span class="na">ssl-sessions-use-cache</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; set SSL session timeout (in seconds)</span>
+<span class="na">ssl-sessions-timeout</span> <span class="o">=</span> <span class="s">300</span>
+<span class="c1">; set the session context string (see later)</span>
+<span class="na">https-session-context</span> <span class="o">=</span> <span class="s">foobar</span>
+<span class="c1">; spawn an HTTPS router</span>
+<span class="na">https</span> <span class="o">=</span> <span class="s">192.168.173.1:8443,foobar.crt,foobar.key</span>
+<span class="c1">; spawn 8 processes for the HTTPS router (all sharing the same session cache)</span>
+<span class="na">http-processes</span> <span class="o">=</span> <span class="s">8</span>
+<span class="c1">; add a bunch of uwsgi nodes to relay traffic to</span>
+<span class="na">http-to</span> <span class="o">=</span> <span class="s">192.168.173.10:3031</span>
+<span class="na">http-to</span> <span class="o">=</span> <span class="s">192.168.173.11:3031</span>
+<span class="na">http-to</span> <span class="o">=</span> <span class="s">192.168.173.12:3031</span>
+<span class="c1">; add stats</span>
+<span class="na">stats</span> <span class="o">=</span> <span class="s">127.0.0.1:5001</span>
+
+<span class="c1">; spawn the cache-udp-server</span>
+<span class="na">cache-udp-server</span> <span class="o">=</span> <span class="s">192.168.173.1:7171</span>
+<span class="c1">; propagate updates to the other nodes</span>
+<span class="na">cache-udp-node</span> <span class="o">=</span> <span class="s">192.168.173.2:7171</span>
+<span class="na">cache-udp-node</span> <span class="o">=</span> <span class="s">192.168.173.3:7171</span>
+</pre></div>
+</div>
+<p>and the other two…</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; spawn the master process (it will run the cache sweeper thread)</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; store up to 20k sessions</span>
+<span class="na">cache</span> <span class="o">=</span> <span class="s">20000</span>
+<span class="c1">; 4k per object is enough for SSL sessions</span>
+<span class="na">cache-blocksize</span> <span class="o">=</span> <span class="s">4096</span>
+<span class="c1">; force the SSL subsystem to use the uWSGI cache as session storage</span>
+<span class="na">ssl-sessions-use-cache</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; set SSL session timeout (in seconds)</span>
+<span class="na">ssl-sessions-timeout</span> <span class="o">=</span> <span class="s">300</span>
+<span class="c1">; set the session context string (see later)</span>
+<span class="na">https-session-context</span> <span class="o">=</span> <span class="s">foobar</span>
+<span class="c1">; spawn an HTTPS router</span>
+<span class="na">https</span> <span class="o">=</span> <span class="s">192.168.173.1:8443,foobar.crt,foobar.key</span>
+<span class="c1">; spawn 8 processes for the HTTPS router (all sharing the same session cache)</span>
+<span class="na">http-processes</span> <span class="o">=</span> <span class="s">8</span>
+<span class="c1">; add a bunch of uwsgi nodes to relay traffic to</span>
+<span class="na">http-to</span> <span class="o">=</span> <span class="s">192.168.173.10:3031</span>
+<span class="na">http-to</span> <span class="o">=</span> <span class="s">192.168.173.11:3031</span>
+<span class="na">http-to</span> <span class="o">=</span> <span class="s">192.168.173.12:3031</span>
+<span class="c1">; add stats</span>
+<span class="na">stats</span> <span class="o">=</span> <span class="s">127.0.0.1:5001</span>
+
+<span class="c1">; spawn the cache-udp-server</span>
+<span class="na">cache-udp-server</span> <span class="o">=</span> <span class="s">192.168.173.2:7171</span>
+<span class="c1">; propagate updates to the other nodes</span>
+<span class="na">cache-udp-node</span> <span class="o">=</span> <span class="s">192.168.173.1:7171</span>
+<span class="na">cache-udp-node</span> <span class="o">=</span> <span class="s">192.168.173.3:7171</span>
+</pre></div>
+</div>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; spawn the master process (it will run the cache sweeper thread)</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; store up to 20k sessions</span>
+<span class="na">cache</span> <span class="o">=</span> <span class="s">20000</span>
+<span class="c1">; 4k per object is enough for SSL sessions</span>
+<span class="na">cache-blocksize</span> <span class="o">=</span> <span class="s">4096</span>
+<span class="c1">; force the SSL subsystem to use the uWSGI cache as session storage</span>
+<span class="na">ssl-sessions-use-cache</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; set SSL session timeout (in seconds)</span>
+<span class="na">ssl-sessions-timeout</span> <span class="o">=</span> <span class="s">300</span>
+<span class="c1">; set the session context string (see later)</span>
+<span class="na">https-session-context</span> <span class="o">=</span> <span class="s">foobar</span>
+<span class="c1">; spawn an HTTPS router</span>
+<span class="na">https</span> <span class="o">=</span> <span class="s">192.168.173.1:8443,foobar.crt,foobar.key</span>
+<span class="c1">; spawn 8 processes for the HTTPS router (all sharing the same session cache)</span>
+<span class="na">http-processes</span> <span class="o">=</span> <span class="s">8</span>
+<span class="c1">; add a bunch of uwsgi nodes to relay traffic to</span>
+<span class="na">http-to</span> <span class="o">=</span> <span class="s">192.168.173.10:3031</span>
+<span class="na">http-to</span> <span class="o">=</span> <span class="s">192.168.173.11:3031</span>
+<span class="na">http-to</span> <span class="o">=</span> <span class="s">192.168.173.12:3031</span>
+<span class="c1">; add stats</span>
+<span class="na">stats</span> <span class="o">=</span> <span class="s">127.0.0.1:5001</span>
+
+<span class="c1">; spawn the cache-udp-server</span>
+<span class="na">cache-udp-server</span> <span class="o">=</span> <span class="s">192.168.173.3:7171</span>
+<span class="c1">; propagate updates to the other nodes</span>
+<span class="na">cache-udp-node</span> <span class="o">=</span> <span class="s">192.168.173.1:7171</span>
+<span class="na">cache-udp-node</span> <span class="o">=</span> <span class="s">192.168.173.2:7171</span>
+</pre></div>
+</div>
+<p>Start hammering the Rawrouter (remember to use a client supporting persistent SSL sessions, like your browser) and get cache statistics
+from the stats server of each HTTPS terminator node. If the count of “hits” is a lot higher than the “miss” value the system is working well
+and your load is distributed and in awesome hyper high performance mode.</p>
+<p>So, what is <code class="docutils literal notranslate"><span class="pre">https-session-context</span></code>, you ask? Basically each SSL session before being used is checked against a fixed string (the session context). If the session does not match that string, it is rejected. By default the session context is initialized to a value built from the HTTP server address. Forcing it to a shared value will avoid a session created in a node being rejected in another one.</p>
+</div>
+<div class="section" id="using-named-caches">
+<h2>Using named caches<a class="headerlink" href="#using-named-caches" title="Permalink to this headline">¶</a></h2>
+<p>Starting from uWSGI 1.9 you can have multiple caches. This is a setup with 2 nodes using a new generation cache named “ssl”.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">cache2</span></code> option allows also to set a custom key size. Since SSL session keys are not very long, we can use it to optimize memory usage. In this example we use 128 byte key size limit, which should be enough for session IDs.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; spawn the master process (it will run the cache sweeper thread)</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; store up to 20k sessions</span>
+<span class="na">cache2</span> <span class="o">=</span> <span class="s">name=ssl,items=20000,keysize=128,blocksize=4096,node=127.0.0.1:4242,udp=127.0.0.1:4141</span>
+<span class="c1">; force the SSL subsystem to use the uWSGI cache as session storage</span>
+<span class="na">ssl-sessions-use-cache</span> <span class="o">=</span> <span class="s">ssl</span>
+<span class="c1">; set sessions timeout (in seconds)</span>
+<span class="na">ssl-sessions-timeout</span> <span class="o">=</span> <span class="s">300</span>
+<span class="c1">; set the session context string</span>
+<span class="na">https-session-context</span> <span class="o">=</span> <span class="s">foobar</span>
+<span class="c1">; spawn an HTTPS router</span>
+<span class="na">https</span> <span class="o">=</span> <span class="s">:8443,foobar.crt,foobar.key</span>
+<span class="c1">; spawn 8 processes for the HTTPS router (all sharing the same session cache)</span>
+<span class="na">http-processes</span> <span class="o">=</span> <span class="s">8</span>
+<span class="na">module</span> <span class="o">=</span> <span class="s">werkzeug.testapp:test_app</span>
+<span class="c1">; add stats</span>
+<span class="na">stats</span> <span class="o">=</span> <span class="s">:5001</span>
+</pre></div>
+</div>
+<p>and the second node…</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; spawn the master process (it will run the cache sweeper thread)</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; store up to 20k sessions</span>
+<span class="na">cache2</span> <span class="o">=</span> <span class="s">name=ssl,items=20000,blocksize=4096,node=127.0.0.1:4141,udp=127.0.0.1:4242</span>
+<span class="c1">; force the SSL subsystem to use the uWSGI cache as session storage</span>
+<span class="na">ssl-sessions-use-cache</span> <span class="o">=</span> <span class="s">ssl</span>
+<span class="c1">; set session timeout</span>
+<span class="na">ssl-sessions-timeout</span> <span class="o">=</span> <span class="s">300</span>
+<span class="c1">; set the session context string</span>
+<span class="na">https-session-context</span> <span class="o">=</span> <span class="s">foobar</span>
+<span class="c1">; spawn an HTTPS router</span>
+<span class="na">https</span> <span class="o">=</span> <span class="s">:8444,foobar.crt,foobar.key</span>
+<span class="c1">; spawn 8 processes for the HTTPS router (all sharing the same sessions cache)</span>
+<span class="na">http-processes</span> <span class="o">=</span> <span class="s">8</span>
+<span class="na">module</span> <span class="o">=</span> <span class="s">werkzeug.testapp:test_app</span>
+<span class="c1">; add stats</span>
+<span class="na">stats</span> <span class="o">=</span> <span class="s">:5002</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
+<p>If you do not want to manually configure the cache UDP nodes and your network configuration supports it, you can use UDP multicast.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="na">cache-udp-server</span> <span class="o">=</span> <span class="s">225.1.1.1:7171</span>
+<span class="na">cache-udp-node</span> <span class="o">=</span> <span class="s">225.1.1.1:7171</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>A new gateway server is in development, named “udprepeater”. It will basically forward all of UDP packets it receives to the subscribed back-end nodes. It will allow you to maintain the zero-config style of the subscription system (basically you only need to configure a single cache UDP node pointing to the repeater).</p></li>
+<li><p>Currently there is no security between the cache nodes. For some users this may be a huge problem, so a security mode (encrypting the packets) is in development.</p></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Scaling SSL connections (uWSGI 1.9)</a><ul>
+<li><a class="reference internal" href="#setup-1-using-the-uwsgi-cache-for-storing-ssl-sessions">Setup 1: using the uWSGI cache for storing SSL sessions</a></li>
+<li><a class="reference internal" href="#setup-2-synchronize-caches-of-different-https-routers">Setup 2: synchronize caches of different HTTPS routers</a></li>
+<li><a class="reference internal" href="#using-named-caches">Using named caches</a></li>
+<li><a class="reference internal" href="#notes">Notes</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="DynamicApps.html"
+                        title="previous chapter">Adding applications dynamically</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Capabilities.html"
+                        title="next chapter">Setting POSIX Capabilities</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/SSLScaling.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Capabilities.html" title="Setting POSIX Capabilities"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="DynamicApps.html" title="Adding applications dynamically"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

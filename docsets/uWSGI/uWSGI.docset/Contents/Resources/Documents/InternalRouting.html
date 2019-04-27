@@ -1,0 +1,982 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>uWSGI internal routing &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The uWSGI Legion subsystem" href="Legion.html" />
+    <link rel="prev" title="The uWSGI FastRouter" href="Fastrouter.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Legion.html" title="The uWSGI Legion subsystem"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Fastrouter.html" title="The uWSGI FastRouter"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="uwsgi-internal-routing">
+<h1>uWSGI internal routing<a class="headerlink" href="#uwsgi-internal-routing" title="Permalink to this headline">¶</a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">Updated</span> <span class="pre">to</span> <span class="pre">1.9</span></code></p>
+<p>As of uWSGI 1.9, a programmable internal routing subsystem is available (older
+releases after 1.1 have a less featureful version).  You can use the internal
+routing subsystem to dynamically alter the way requests are handled. For
+example you can use it to trigger a 301 redirect on specific URLs, or to serve
+content from the cache on specific conditions.  The internal routing subsystem
+is inspired by Apache’s <code class="docutils literal notranslate"><span class="pre">mod_rewrite</span></code> and Linux’s <code class="docutils literal notranslate"><span class="pre">iptables</span></code> command.
+Please, before blasting it for being messy, not-elegant nor Turing-complete,
+remember that it must be FAST and only FAST.  If you need elegance and more
+complexity, do that in your code.</p>
+<div class="section" id="the-routing-chains">
+<h2>The routing chains<a class="headerlink" href="#the-routing-chains" title="Permalink to this headline">¶</a></h2>
+<p>During the request cycle, various “chains” are traversed. Each chain contains a routing table (see below).</p>
+<p>Chains can be “recursive”. A “recursive” chain can be called multiple times in a request cycle.</p>
+<p>This is the order of chains:</p>
+<p><code class="docutils literal notranslate"><span class="pre">request</span></code> it is applied before the request is passed to the plugin</p>
+<p><code class="docutils literal notranslate"><span class="pre">error</span></code> it is applied as soon as an HTTP status code is generate (recursive chain)</p>
+<p><code class="docutils literal notranslate"><span class="pre">response</span></code> it is is applied after the last response header has been generated (just before sending the body)</p>
+<p><code class="docutils literal notranslate"><span class="pre">final</span></code> it is applied after the response has been sent to the client</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">request</span></code> chain is (for convention) the ‘default’ one, so its options are not prefixed, while the others require a prefix.</p>
+<p>Example:</p>
+<p><code class="docutils literal notranslate"><span class="pre">route-user-agent</span></code> -&gt; happens in the request chain</p>
+<p>while</p>
+<p><code class="docutils literal notranslate"><span class="pre">response-route-uri</span></code> -&gt; happens in the response chain</p>
+</div>
+<div class="section" id="the-internal-routing-table">
+<h2>The internal routing table<a class="headerlink" href="#the-internal-routing-table" title="Permalink to this headline">¶</a></h2>
+<p>The internal routing table is a sequence of ‘’rules’’ executed one after
+another (forward jumps are allowed too).  Each rule is composed by a
+‘’subject’‘, a ‘’condition’’ and an ‘’action’‘. The ‘’condition’’ is generally a
+PCRE regexp applied to the subject: if it matches, the action is triggered.
+Subjects are request’s variables.  Currently the following subjects are
+supported:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">host</span></code> (check HTTP_HOST)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">uri</span></code> (check REQUEST_URI)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">qs</span></code> (check QUERY_STRING)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">remote-addr</span></code> (check REMOTE_ADDR)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">remote-user</span></code> (check REMOTE_USER)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">referer</span></code> (check HTTP_REFERER)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">user-agent</span></code> (check HTTP_USER_AGENT)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">status</span></code> (check HTTP response status code, not available in the request chain)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">default</span></code> (default subject, maps to PATH_INFO)</p></li>
+</ul>
+<p>In addition to this, a pluggable system of lower-level conditions is available.
+You can access this system using the <code class="docutils literal notranslate"><span class="pre">--route-if</span></code> option.  Currently the
+following checks are supported:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">exists</span></code> (check if the subject exists in the filesystem)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">isfile</span></code> (check if the subject is a file)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">isdir</span></code> (check if the subject is a directory)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">isexec</span></code> (check if the subject is an executable file)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">equal</span></code>/<code class="docutils literal notranslate"><span class="pre">isequal</span></code>/<code class="docutils literal notranslate"><span class="pre">eq</span></code>/<code class="docutils literal notranslate"><span class="pre">==</span></code> (check if the subject is equal to the specified pattern)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ishigherequal</span></code>/<code class="docutils literal notranslate"><span class="pre">&gt;=</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ishigher</span></code>/<code class="docutils literal notranslate"><span class="pre">&gt;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">islower</span></code>/<code class="docutils literal notranslate"><span class="pre">&lt;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">islowerequal</span></code>/<code class="docutils literal notranslate"><span class="pre">&lt;=</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">startswith</span></code> (check if the subject starts with the specified pattern)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">endswith</span></code> (check if the subject ends with the specified pattern)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">regexp</span></code>/re (check if the subject matches the specified regexp)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">empty</span></code> (check if the subject is empty)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">contains</span></code></p></li>
+</ul>
+<p>When a check requires a pattern (like with ‘equal’ or ‘regexp’) you split it
+from the subject with a semicolon:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="c1">; never matches</span>
+<span class="na">route-if</span> <span class="o">=</span> <span class="s">equal:FOO;BAR log:never here</span>
+<span class="c1">; matches</span>
+<span class="na">route-if</span> <span class="o">=</span> <span class="s">regexp:FOO;^F log:starts with F</span>
+</pre></div>
+</div>
+<p>Actions are the functions to run if a rule matches. These actions are exported
+by plugins and have a return value.</p>
+</div>
+<div class="section" id="action-return-values">
+<h2>Action return values<a class="headerlink" href="#action-return-values" title="Permalink to this headline">¶</a></h2>
+<p>Each action has a return value which tells the routing engine what to do next.
+The following return codes are supported:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">NEXT</span></code> (continue to the next rule)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CONTINUE</span></code> (stop scanning the internal routing table and run the request)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BREAK</span></code> (stop scanning the internal routing table and close the request)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">GOTO</span> <span class="pre">x</span></code> (go to rule <code class="docutils literal notranslate"><span class="pre">x</span></code>)</p></li>
+</ul>
+<p>When a rule does not match, <code class="docutils literal notranslate"><span class="pre">NEXT</span></code> is assumed.</p>
+</div>
+<div class="section" id="the-first-example">
+<h2>The first example<a class="headerlink" href="#the-first-example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route-user-agent</span> <span class="o">=</span> <span class="s">.*curl.* redirect:http://uwsgi.it</span>
+<span class="na">route-remote-addr</span> <span class="o">=</span> <span class="s">^127\.0\.0\.1$ break:403 Forbidden</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/test log:someone called /test</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">\.php$ rewrite:/index.php</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">.* addheader:Server: my uWSGI server</span>
+<span class="na">route-host</span> <span class="o">=</span> <span class="s">^localhost$ logvar:local=1</span>
+<span class="na">route-uri</span> <span class="o">=</span> <span class="s">^/foo/(.*)\.jpg$ cache:key=$1.jpg</span>
+<span class="na">route-if</span> <span class="o">=</span> <span class="s">equal:${PATH_INFO};/bad break:500 Internal Server Error</span>
+</pre></div>
+</div>
+<p>The previous rules build the following table:</p>
+<ul class="simple">
+<li><p>if the <code class="docutils literal notranslate"><span class="pre">HTTP_USER_AGENT</span></code> var contains ‘curl’ redirect the request to
+<a class="reference external" href="http://uwsgi.it">http://uwsgi.it</a> (code 302, action returns BREAK)</p></li>
+<li><p>if <code class="docutils literal notranslate"><span class="pre">REMOTE_ADDR</span></code> is ‘127.0.0.1’ returns a 403 Forbidden (action returns
+BREAK)</p></li>
+<li><p>if <code class="docutils literal notranslate"><span class="pre">PATH_INFO</span></code> starts with /test print the string ‘someone called /test’ in
+the logs (action returns NEXT)</p></li>
+<li><p>if <code class="docutils literal notranslate"><span class="pre">PATH_INFO</span></code> ends with ‘.php’ rewrite it to /index.php (action returns
+NEXT)</p></li>
+<li><p>for all of the <code class="docutils literal notranslate"><span class="pre">PATH_INFO</span></code> add the HTTP header ‘Server: my uWSGI server’ to
+the response (action returns NEXT)</p></li>
+<li><p>if <code class="docutils literal notranslate"><span class="pre">HTTP_HOST</span></code> is localhost add the logvar ‘local’ setting it to ‘1’</p></li>
+<li><p>if <code class="docutils literal notranslate"><span class="pre">REQUEST_URI</span></code> starts with /foo and ends with .jpg get it from the uWSGI
+cache using the supplied key (built over regexp grouping) (action returns
+BREAK)</p></li>
+<li><p>if the <code class="docutils literal notranslate"><span class="pre">PATH_INFO</span></code> is equal to /bad throws a 500 error</p></li>
+</ul>
+</div>
+<div class="section" id="accessing-request-vars">
+<h2>Accessing request vars<a class="headerlink" href="#accessing-request-vars" title="Permalink to this headline">¶</a></h2>
+<p>In addition to PCRE placeholders/groups (using $1 to $9) you can access request
+variables (PATH_INFO, SCRIPT_NAME, REQUEST_METHOD…) using the ${VAR} syntax.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route-user-agent</span> <span class="o">=</span> <span class="s">.*curl.* redirect:http://uwsgi.it${REQUEST_URI}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="accessing-cookies">
+<h2>Accessing cookies<a class="headerlink" href="#accessing-cookies" title="Permalink to this headline">¶</a></h2>
+<p>You can access a cookie value using the ${cookie[name]} syntax:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/foo log:${cookie[foobar]}</span>
+</pre></div>
+</div>
+<p>This will log the content of the ‘foobar’ cookie of the current request</p>
+</div>
+<div class="section" id="accessing-query-string-items">
+<h2>Accessing query string items<a class="headerlink" href="#accessing-query-string-items" title="Permalink to this headline">¶</a></h2>
+<p>You can access the value of the HTTP query string using the ${qs[name]} syntax:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/foo log:${qs[foobar]}</span>
+</pre></div>
+</div>
+<p>This will log the content of the ‘foobar’ item of the current request’s query string</p>
+</div>
+<div class="section" id="pluggable-routing-variables">
+<h2>Pluggable routing variables<a class="headerlink" href="#pluggable-routing-variables" title="Permalink to this headline">¶</a></h2>
+<p>Both the cookie and qs vars, are so-called “routing vars”. They are pluggable,
+so external plugins can add new vars to add new features to your application.
+(Check the <a class="reference internal" href="GeoIP.html"><span class="doc">The GeoIP plugin</span></a> plugin for an example of this.) A number of embedded
+routing variables are also available.</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">mime</span></code> – returns the mime type of the specified var: ${mime[REQUEST_URI]}</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/images/(.+) addvar:MYFILE=$1.jpg</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/images/ addheader:Content-Type: ${mime[MYFILE]}</span>
+</pre></div>
+</div>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">time</span></code> – returns time/date in various forms. The only supported (for now) is time[unix] returning the epoch</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">httptime</span></code> – return http date adding the numeric argument (if specified) to the current time (use empty arg for current server time)</p></li>
+</ul>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; add Date header</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">addheader:Date ${httptime[]}</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">math</span></code> – requires matheval support. Example: math[CONTENT_LENGTH+1]</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">base64</span></code> – encode the specified var in base64</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">hex</span></code> – encode the specified var in hex</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">upper</span></code> – uppercase the specified var</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lower</span></code> – lowercase the specified var</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">uwsgi</span></code> – return internal uWSGI information, uwsgi[wid], uwsgi[pid], uwsgi[uuid] and uwsgi[status] are currently supported</p></li>
+</ul>
+</div>
+<div class="section" id="is-route-if-not-enough-why-route-uri-and-friends">
+<h2>Is –route-if not enough? Why –route-uri and friends?<a class="headerlink" href="#is-route-if-not-enough-why-route-uri-and-friends" title="Permalink to this headline">¶</a></h2>
+<p>This is a good question. You just need to always remember that uWSGI is about
+versatility and <em>performance</em>. Gaining cycles is always good. The
+<code class="docutils literal notranslate"><span class="pre">--route-if</span></code> option, while versatile, cannot be optimized as all of its parts
+have to be recomputed on every request.  This is obviously very fast, but the
+<code class="docutils literal notranslate"><span class="pre">--route-uri</span></code> option (and friends) can be pre-optimized (during startup) to
+directly map to the request memory areas, so if you can use them, you
+definitely should. :)</p>
+</div>
+<div class="section" id="goto">
+<h2>GOTO<a class="headerlink" href="#goto" title="Permalink to this headline">¶</a></h2>
+<p>Yes, the most controversial construct of the whole information technology
+industry (and history) is here. You can make forward (only forward!) jumps to
+specific points of the internal routing table. You can set labels to mark
+specific point of the table, or if you are brave (or foolish) jump directly to
+a rule number. Rule numbers are printed on server startup, but please use
+labels.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+
+<span class="na">route-host</span> <span class="o">=</span> <span class="s">^localhost$ goto:localhost</span>
+<span class="na">route-host</span> <span class="o">=</span> <span class="s">^sid\.local$ goto:sid.local</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">.* last:</span>
+
+<span class="na">route-label</span> <span class="o">=</span> <span class="s">sid.local</span>
+<span class="na">route-user-agent</span> <span class="o">=</span> <span class="s">.*curl.* redirect:http://uwsgi.it</span>
+<span class="na">route-remote-addr</span> <span class="o">=</span> <span class="s">^192\.168\..* break:403 Forbidden</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/test log:someone called /test</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">\.php$ rewrite:/index.php</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">.* addheader:Server: my sid.local server</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">.* logvar:local=0</span>
+<span class="na">route-uri</span> <span class="o">=</span> <span class="s">^/foo/(.*)\.jpg$ cache:key=$1.jpg</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">.* last:</span>
+
+<span class="na">route-label</span> <span class="o">=</span> <span class="s">localhost</span>
+<span class="na">route-user-agent</span> <span class="o">=</span> <span class="s">.*curl.* redirect:http://uwsgi.it</span>
+<span class="na">route-remote-addr</span> <span class="o">=</span> <span class="s">^127\.0\.0\.1$ break:403 Forbidden</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/test log:someone called /test</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">\.php$ rewrite:/index.php</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">.* addheader:Server: my uWSGI server</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">.* logvar:local=1</span>
+<span class="na">route-uri</span> <span class="o">=</span> <span class="s">^/foo/(.*)\.jpg$ cache:key=$1.jpg</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">.* last:</span>
+</pre></div>
+</div>
+<p>The example is like the previous one, but with some differences between
+domains. Check the use of “last:”, to interrupt the routing table scan. You can
+rewrite the first 2 rules as one:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+
+<span class="na">route-host</span> <span class="o">=</span> <span class="s">(.*) goto:$1</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="collecting-response-headers">
+<h2>Collecting response headers<a class="headerlink" href="#collecting-response-headers" title="Permalink to this headline">¶</a></h2>
+<p>As we have already seen, each uWSGI request has a set of variables associated. They are generally the CGI vars passed by the webserver, but you can
+extend them with other variables too (check the ‘addvar’ action).</p>
+<p>uWSGI 1.9.16 added a new feature allowing you to store the content of a response header in a request var. This makes writing more advanced rules much simpler.</p>
+<p>For example you may want to gzip all of the text/html responses:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; store Content-Type response header in MY_CONTENT_TYPE var</span>
+<span class="na">collect-header</span> <span class="o">=</span> <span class="s">Content-Type MY_CONTENT_TYPE</span>
+<span class="c1">; if response is text/html, and client supports it, gzip it</span>
+<span class="na">response-route-if</span> <span class="o">=</span> <span class="s">equal:${MY_CONTENT_TYPE};text/html goto:gzipme</span>
+<span class="na">response-route-run</span> <span class="o">=</span> <span class="s">last:</span>
+
+<span class="na">response-route-label</span> <span class="o">=</span> <span class="s">gzipme</span>
+<span class="c1">; gzip only if the client support it</span>
+<span class="na">response-route-if</span> <span class="o">=</span> <span class="s">contains:${HTTP_ACCEPT_ENCODING};gzip gzip:</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="the-available-actions">
+<h2>The available actions<a class="headerlink" href="#the-available-actions" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="continue-last">
+<h3><code class="docutils literal notranslate"><span class="pre">continue</span></code>/<code class="docutils literal notranslate"><span class="pre">last</span></code><a class="headerlink" href="#continue-last" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">CONTINUE</span></code></p>
+<p>Stop scanning the internal routing table and continue to the selected request
+handler.</p>
+</div>
+<div class="section" id="break">
+<h3><code class="docutils literal notranslate"><span class="pre">break</span></code><a class="headerlink" href="#break" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">BREAK</span></code></p>
+<p>Stop scanning the internal routing table and close the request. Can optionally
+return the specified HTTP status code:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/notfound break:404 Not Found</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/bad break:</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/error break:500</span>
+</pre></div>
+</div>
+<p>Note: <code class="docutils literal notranslate"><span class="pre">break</span></code> doesn’t support request variables because it’s intended to notify
+browser about the error, not the end user. That said, we can tell following code
+will send what it reads to browser (i.e. without <code class="docutils literal notranslate"><span class="pre">${REMOTE_ADDR}</span></code> being
+translated to the remote IP address).</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route-remote-addr</span> <span class="o">=</span> <span class="s">^127\.0\.0\.1$ break:403 Forbidden for ip ${REMOTE_ADDR}</span>
+</pre></div>
+</div>
+<p>If you really do want to do wacky stuff, see <code class="docutils literal notranslate"><span class="pre">clearheaders</span></code>.</p>
+</div>
+<div class="section" id="return-break-with-status">
+<h3><code class="docutils literal notranslate"><span class="pre">return</span></code>/<code class="docutils literal notranslate"><span class="pre">break-with-status</span></code><a class="headerlink" href="#return-break-with-status" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">BREAK</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">return</span></code> uses uWSGI’s built-in status code and returns both status code and
+message body. It’s similar to <code class="docutils literal notranslate"><span class="pre">break</span></code>, but as mentioned above <code class="docutils literal notranslate"><span class="pre">break</span></code>
+doesn’t have the error message body. <code class="docutils literal notranslate"><span class="pre">return:403</span></code> is equivalent to following:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+ <span class="na">route-run</span> <span class="o">=</span> <span class="s">clearheaders:403 Forbidden</span>
+<span class="s"> route-run = addheader:Content-Type: text/plain</span>
+<span class="s"> route-run = addheader:Content-Length: 9</span>
+<span class="s"> route-run = send:Forbidden</span>
+<span class="s"> route-run = break:</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="log">
+<h3><code class="docutils literal notranslate"><span class="pre">log</span></code><a class="headerlink" href="#log" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">NEXT</span></code></p>
+<p>Print the specified message in the logs.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/logme/(.) log:hey i am printing $1</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="logvar">
+<h3><code class="docutils literal notranslate"><span class="pre">logvar</span></code><a class="headerlink" href="#logvar" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">NEXT</span></code></p>
+<p>Add the specified logvar.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/logme/(.) logvar:item=$1</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="id1">
+<h3><code class="docutils literal notranslate"><span class="pre">goto</span></code><a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">NEXT</span></code></p>
+<p>Make a forward jump to the specified label or rule position.</p>
+</div>
+<div class="section" id="addvar">
+<h3><code class="docutils literal notranslate"><span class="pre">addvar</span></code><a class="headerlink" href="#addvar" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">NEXT</span></code></p>
+<p>Add the specified CGI (environment) variable to the request.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/foo/(.) addvar:FOOVAR=prefix$1suffix</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="addheader">
+<h3><code class="docutils literal notranslate"><span class="pre">addheader</span></code><a class="headerlink" href="#addheader" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">NEXT</span></code></p>
+<p>Add the specified HTTP header to the response.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/foo/(.) addheader:Foo: Bar</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="delheader-remheader">
+<h3><code class="docutils literal notranslate"><span class="pre">delheader</span></code>//<code class="docutils literal notranslate"><span class="pre">remheader</span></code><a class="headerlink" href="#delheader-remheader" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">NEXT</span></code></p>
+<p>Remove the specified HTTP header from the response.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/foo/(.) delheader:Foo</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="signal">
+<h3><code class="docutils literal notranslate"><span class="pre">signal</span></code><a class="headerlink" href="#signal" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">NEXT</span></code></p>
+<p>Raise the specified uwsgi signal.</p>
+</div>
+<div class="section" id="send">
+<h3><code class="docutils literal notranslate"><span class="pre">send</span></code><a class="headerlink" href="#send" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">NEXT</span></code></p>
+<p>Extremely advanced (and dangerous) function allowing you to add raw data to the
+response.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/foo/(.) send:destroy the world</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="send-crnl">
+<h3><code class="docutils literal notranslate"><span class="pre">send-crnl</span></code><a class="headerlink" href="#send-crnl" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">NEXT</span></code></p>
+<p>Extremely advanced (and dangerous) function allowing you to add raw data to the
+response, suffixed with rn.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/foo/(.) send-crnl:HTTP/1.0 100 Continue</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="redirect-redirect-302">
+<h3><code class="docutils literal notranslate"><span class="pre">redirect</span></code>/<code class="docutils literal notranslate"><span class="pre">redirect-302</span></code><a class="headerlink" href="#redirect-redirect-302" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">BREAK</span></code></p>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_redirect</span></code></p>
+<p>Return a HTTP 302 Redirect to the specified URL.</p>
+</div>
+<div class="section" id="redirect-permanent-redirect-301">
+<h3><code class="docutils literal notranslate"><span class="pre">redirect-permanent</span></code>/<code class="docutils literal notranslate"><span class="pre">redirect-301</span></code><a class="headerlink" href="#redirect-permanent-redirect-301" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">BREAK</span></code></p>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_redirect</span></code></p>
+<p>Return a HTTP 301 Permanent Redirect to the specified URL.</p>
+</div>
+<div class="section" id="rewrite">
+<h3><code class="docutils literal notranslate"><span class="pre">rewrite</span></code><a class="headerlink" href="#rewrite" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">NEXT</span></code></p>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_rewrite</span></code></p>
+<p>A rewriting engine inspired by Apache mod_rewrite. Rebuild PATH_INFO and
+QUERY_STRING according to the specified rules before the request is dispatched
+to the request handler.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route-uri</span> <span class="o">=</span> <span class="s">^/foo/(.*) rewrite:/index.php?page=$1.php</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="rewrite-last">
+<h3><code class="docutils literal notranslate"><span class="pre">rewrite-last</span></code><a class="headerlink" href="#rewrite-last" title="Permalink to this headline">¶</a></h3>
+<p>Alias for rewrite but with a return value of <code class="docutils literal notranslate"><span class="pre">CONTINUE</span></code>, directly passing the
+request to the request handler next.</p>
+</div>
+<div class="section" id="uwsgi">
+<h3><code class="docutils literal notranslate"><span class="pre">uwsgi</span></code><a class="headerlink" href="#uwsgi" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">BREAK</span></code></p>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_uwsgi</span></code></p>
+<p>Rewrite the modifier1, modifier2 and optionally <code class="docutils literal notranslate"><span class="pre">UWSGI_APPID</span></code> values of a
+request or route the request to an external uwsgi server.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/psgi uwsgi:127.0.0.1:3031,5,0</span>
+</pre></div>
+</div>
+<p>This configuration routes all of the requests starting with <code class="docutils literal notranslate"><span class="pre">/psgi</span></code> to the
+uwsgi server running on 127.0.0.1:3031 setting modifier1 to 5 and modifier2 to
+0.  If you only want to change the modifiers without routing the request to an
+external server, use the following syntax.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/psgi uwsgi:,5,0</span>
+</pre></div>
+</div>
+<p>To set a specific <code class="docutils literal notranslate"><span class="pre">UWSGI_APPID</span></code> value, append it.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/psgi uwsgi:127.0.0.1:3031,5,0,fooapp</span>
+</pre></div>
+</div>
+<p>The subrequest is async-friendly (engines such as gevent or ugreen are
+supported) and if offload threads are available they will be used.</p>
+</div>
+<div class="section" id="http">
+<h3><code class="docutils literal notranslate"><span class="pre">http</span></code><a class="headerlink" href="#http" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">BREAK</span></code></p>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_http</span></code></p>
+<p>Route the request to an external HTTP server.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/zope http:127.0.0.1:8181</span>
+</pre></div>
+</div>
+<p>You can substitute an alternative Host header with the following syntax:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/zope http:127.0.0.1:8181,myzope.uwsgi.it</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="static">
+<h3><code class="docutils literal notranslate"><span class="pre">static</span></code><a class="headerlink" href="#static" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">BREAK</span></code></p>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_static</span></code></p>
+<p>Serve a static file from the specified physical path.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/logo static:/var/www/logo.png</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="basicauth">
+<h3><code class="docutils literal notranslate"><span class="pre">basicauth</span></code><a class="headerlink" href="#basicauth" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">NEXT</span></code> or <code class="docutils literal notranslate"><span class="pre">BREAK</span> <span class="pre">401</span></code> on failed authentication</p>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_basicauth</span></code></p>
+<p>Four syntaxes are supported.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">basicauth:realm,user:password</span></code> – a simple user:password mapping</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">basicauth:realm,user:</span></code> – only authenticates username</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">basicauth:realm,htpasswd</span></code> – use a htpasswd-like file. All POSIX
+crypt() algorithms are supported. This is _not_ the same behavior as
+Apache’s traditional htpasswd files, so use the <code class="docutils literal notranslate"><span class="pre">-d</span></code> flag of the htpasswd
+utility to create compatible files.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">basicauth:realm,</span></code> – Useful to cause a HTTP 401 response immediately.
+As routes are parsed top-bottom, you may want to raise that to avoid bypassing
+rules.</p></li>
+</ul>
+<p>Example:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/foo basicauth-next:My Realm,foo:bar</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/foo basicauth:My Realm,foo2:bar2</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/bar basicauth:Another Realm,kratos:</span>
+</pre></div>
+</div>
+<p>Example: using basicauth for Trac</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; load plugins (if required)</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">python,router_basicauth</span>
+
+<span class="c1">; bind to port 9090 using http protocol</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+
+<span class="c1">; set trac instance path</span>
+<span class="na">env</span> <span class="o">=</span> <span class="s">TRAC_ENV=myinstance</span>
+<span class="c1">; load trac</span>
+<span class="na">module</span> <span class="o">=</span> <span class="s">trac.web.main:dispatch_request</span>
+
+<span class="c1">; trigger authentication on /login</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/login basicauth-next:Trac Realm,pippo:pluto</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/login basicauth:Trac Realm,foo:bar</span>
+
+<span class="c1">;high performance file serving</span>
+<span class="na">static-map</span> <span class="o">=</span> <span class="s">/chrome/common=/usr/local/lib/python2.7/dist-packages/trac/htdocs</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="basicauth-next">
+<h3><code class="docutils literal notranslate"><span class="pre">basicauth-next</span></code><a class="headerlink" href="#basicauth-next" title="Permalink to this headline">¶</a></h3>
+<p>Same as <code class="docutils literal notranslate"><span class="pre">basicauth</span></code> but returns <code class="docutils literal notranslate"><span class="pre">NEXT</span></code> on failed authentication.</p>
+</div>
+<div class="section" id="ldapauth">
+<h3><code class="docutils literal notranslate"><span class="pre">ldapauth</span></code><a class="headerlink" href="#ldapauth" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">NEXT</span></code> or <code class="docutils literal notranslate"><span class="pre">BREAK</span> <span class="pre">401</span></code> on failed authentication</p>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">ldap</span></code></p>
+<p>This auth router is part of the LDAP plugin, so it has to be loaded in order
+for this to be available.  It’s like the basicauth router, but uses an LDAP
+server for authentication, syntax: <code class="docutils literal notranslate"><span class="pre">ldapauth:realm,options</span></code> Available
+options:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">url</span></code> - LDAP server URI (required)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">binddn</span></code> - DN used for binding. Required if the LDAP server does not allow
+anonymous searches.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bindpw</span></code> - password for the <code class="docutils literal notranslate"><span class="pre">binddn</span></code> user.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">basedn</span></code> - base DN used when searching for users (required)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">filter</span></code> - filter used when searching for users (default is
+“(objectClass=*)”)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">attr</span></code> - LDAP attribute that holds user login (default is “uid”)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">loglevel</span></code> - 0 - don’t log any binds, 1 - log authentication errors, 2 -
+log both successful and failed binds</p></li>
+</ul>
+<p>Example:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="na">route</span> <span class="o">=</span> <span class="s">^/protected ldapauth:LDAP auth realm,url=ldap://ldap.domain.com;basedn=ou=users,dc=domain;binddn=uid=proxy,ou=users,dc=domain;bindpw=password;loglevel=1;filter=(objectClass=posixAccount)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="ldapauth-next">
+<h3><code class="docutils literal notranslate"><span class="pre">ldapauth-next</span></code><a class="headerlink" href="#ldapauth-next" title="Permalink to this headline">¶</a></h3>
+<p>Same as ldapauth but returns <code class="docutils literal notranslate"><span class="pre">NEXT</span></code> on failed authentication.</p>
+</div>
+<div class="section" id="cache">
+<h3><code class="docutils literal notranslate"><span class="pre">cache</span></code><a class="headerlink" href="#cache" title="Permalink to this headline">¶</a></h3>
+<p>Return value: <code class="docutils literal notranslate"><span class="pre">BREAK</span></code></p>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_cache</span></code></p>
+</div>
+<div class="section" id="cachestore-cache-store">
+<h3><code class="docutils literal notranslate"><span class="pre">cachestore</span></code>/<code class="docutils literal notranslate"><span class="pre">cache-store</span></code><a class="headerlink" href="#cachestore-cache-store" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="cachevar">
+<h3><code class="docutils literal notranslate"><span class="pre">cachevar</span></code><a class="headerlink" href="#cachevar" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="cacheset">
+<h3><code class="docutils literal notranslate"><span class="pre">cacheset</span></code><a class="headerlink" href="#cacheset" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="memcached">
+<h3><code class="docutils literal notranslate"><span class="pre">memcached</span></code><a class="headerlink" href="#memcached" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="rpc">
+<h3><code class="docutils literal notranslate"><span class="pre">rpc</span></code><a class="headerlink" href="#rpc" title="Permalink to this headline">¶</a></h3>
+<p>The “rpc” routing instruction allows you to call uWSGI RPC functions directly
+from the routing subsystem and forward their output to the client.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/foo addheader:Content-Type: text/html</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/foo rpc:hello ${REQUEST_URI} ${HTTP_USER_AGENT}</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/bar/(.+)$ rpc:test $1 ${REMOTE_ADDR} uWSGI %V</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/pippo/(.+)$ rpc:test@127.0.0.1:4141 $1 ${REMOTE_ADDR} uWSGI %V</span>
+<span class="na">import</span> <span class="o">=</span> <span class="s">funcs.py</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="call">
+<h3><code class="docutils literal notranslate"><span class="pre">call</span></code><a class="headerlink" href="#call" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">rpc</span></code></p>
+</div>
+<div class="section" id="rpcret">
+<h3><code class="docutils literal notranslate"><span class="pre">rpcret</span></code><a class="headerlink" href="#rpcret" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">rpc</span></code></p>
+<p><cite>rpcret</cite> calls the specified rpc function and uses its return value as the
+action return code (next, continue, goto, etc)</p>
+</div>
+<div class="section" id="rpcblob-rpcnext">
+<h3><code class="docutils literal notranslate"><span class="pre">rpcblob</span></code>//<code class="docutils literal notranslate"><span class="pre">rpcnext</span></code><a class="headerlink" href="#rpcblob-rpcnext" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">rpc</span></code></p>
+<p><cite>rpcnext/rpcblob</cite> calls the specified RPC function, sends the response to the
+client and continues to the next rule.</p>
+</div>
+<div class="section" id="rpcraw">
+<h3><code class="docutils literal notranslate"><span class="pre">rpcraw</span></code><a class="headerlink" href="#rpcraw" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">rpc</span></code></p>
+</div>
+<div class="section" id="rpcvar">
+<h3><code class="docutils literal notranslate"><span class="pre">rpcvar</span></code><a class="headerlink" href="#rpcvar" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">rpc</span></code></p>
+<p>Calls the specified rpc function and assigns its return value to the specified CGI environ variable.</p>
+</div>
+<div class="section" id="access">
+<h3><code class="docutils literal notranslate"><span class="pre">access</span></code><a class="headerlink" href="#access" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="spnego">
+<h3><code class="docutils literal notranslate"><span class="pre">spnego</span></code><a class="headerlink" href="#spnego" title="Permalink to this headline">¶</a></h3>
+<p>In development…</p>
+</div>
+<div class="section" id="radius">
+<h3><code class="docutils literal notranslate"><span class="pre">radius</span></code><a class="headerlink" href="#radius" title="Permalink to this headline">¶</a></h3>
+<p>In development…</p>
+</div>
+<div class="section" id="xslt">
+<h3><code class="docutils literal notranslate"><span class="pre">xslt</span></code><a class="headerlink" href="#xslt" title="Permalink to this headline">¶</a></h3>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="XSLT.html"><span class="doc">The XSLT plugin</span></a></p>
+</div>
+</div>
+<div class="section" id="ssi">
+<h3>ssi<a class="headerlink" href="#ssi" title="Permalink to this headline">¶</a></h3>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="SSI.html"><span class="doc">SSI (Server Side Includes) plugin</span></a></p>
+</div>
+</div>
+<div class="section" id="gridfs">
+<h3>gridfs<a class="headerlink" href="#gridfs" title="Permalink to this headline">¶</a></h3>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="GridFS.html"><span class="doc">The GridFS plugin</span></a></p>
+</div>
+</div>
+<div class="section" id="donotlog">
+<h3><code class="docutils literal notranslate"><span class="pre">donotlog</span></code><a class="headerlink" href="#donotlog" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="chdir">
+<h3><code class="docutils literal notranslate"><span class="pre">chdir</span></code><a class="headerlink" href="#chdir" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="seturi">
+<h3><code class="docutils literal notranslate"><span class="pre">seturi</span></code><a class="headerlink" href="#seturi" title="Permalink to this headline">¶</a></h3>
+<p>Updates <cite>REQUEST_URI</cite></p>
+</div>
+<div class="section" id="setapp">
+<h3><code class="docutils literal notranslate"><span class="pre">setapp</span></code><a class="headerlink" href="#setapp" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="setuser">
+<h3><code class="docutils literal notranslate"><span class="pre">setuser</span></code><a class="headerlink" href="#setuser" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="sethome">
+<h3><code class="docutils literal notranslate"><span class="pre">sethome</span></code><a class="headerlink" href="#sethome" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="setfile">
+<h3><code class="docutils literal notranslate"><span class="pre">setfile</span></code><a class="headerlink" href="#setfile" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="setscriptname">
+<h3><code class="docutils literal notranslate"><span class="pre">setscriptname</span></code><a class="headerlink" href="#setscriptname" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="setprocname">
+<h3><code class="docutils literal notranslate"><span class="pre">setprocname</span></code><a class="headerlink" href="#setprocname" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="alarm">
+<h3><code class="docutils literal notranslate"><span class="pre">alarm</span></code><a class="headerlink" href="#alarm" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="flush">
+<h3><code class="docutils literal notranslate"><span class="pre">flush</span></code><a class="headerlink" href="#flush" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="fixcl">
+<h3><code class="docutils literal notranslate"><span class="pre">fixcl</span></code><a class="headerlink" href="#fixcl" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="cgi">
+<h3><code class="docutils literal notranslate"><span class="pre">cgi</span></code><a class="headerlink" href="#cgi" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">cgi</span></code></p>
+</div>
+<div class="section" id="cgihelper">
+<h3><code class="docutils literal notranslate"><span class="pre">cgihelper</span></code><a class="headerlink" href="#cgihelper" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">cgi</span></code></p>
+</div>
+<div class="section" id="id2">
+<h3><code class="docutils literal notranslate"><span class="pre">access</span></code><a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_access</span></code></p>
+</div>
+<div class="section" id="cache-continue">
+<h3><code class="docutils literal notranslate"><span class="pre">cache-continue</span></code><a class="headerlink" href="#cache-continue" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_cache</span></code></p>
+</div>
+<div class="section" id="id3">
+<h3><code class="docutils literal notranslate"><span class="pre">cachevar</span></code><a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_cache</span></code></p>
+</div>
+<div class="section" id="cacheinc">
+<h3><code class="docutils literal notranslate"><span class="pre">cacheinc</span></code><a class="headerlink" href="#cacheinc" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_cache</span></code></p>
+</div>
+<div class="section" id="cachedec">
+<h3><code class="docutils literal notranslate"><span class="pre">cachedec</span></code><a class="headerlink" href="#cachedec" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_cache</span></code></p>
+</div>
+<div class="section" id="cachemul">
+<h3><code class="docutils literal notranslate"><span class="pre">cachemul</span></code><a class="headerlink" href="#cachemul" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_cache</span></code></p>
+</div>
+<div class="section" id="cachediv">
+<h3><code class="docutils literal notranslate"><span class="pre">cachediv</span></code><a class="headerlink" href="#cachediv" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_cache</span></code></p>
+</div>
+<div class="section" id="proxyhttp">
+<h3><code class="docutils literal notranslate"><span class="pre">proxyhttp</span></code><a class="headerlink" href="#proxyhttp" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_http</span></code></p>
+</div>
+<div class="section" id="id4">
+<h3><code class="docutils literal notranslate"><span class="pre">memcached</span></code><a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_memcached</span></code></p>
+</div>
+<div class="section" id="memcached-continue">
+<h3><code class="docutils literal notranslate"><span class="pre">memcached-continue</span></code><a class="headerlink" href="#memcached-continue" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_memcached</span></code></p>
+</div>
+<div class="section" id="memcachedstore">
+<h3><code class="docutils literal notranslate"><span class="pre">memcachedstore</span></code><a class="headerlink" href="#memcachedstore" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_memcached</span></code></p>
+</div>
+<div class="section" id="memcached-store">
+<h3><code class="docutils literal notranslate"><span class="pre">memcached-store</span></code><a class="headerlink" href="#memcached-store" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_memcached</span></code></p>
+</div>
+<div class="section" id="redis">
+<h3><code class="docutils literal notranslate"><span class="pre">redis</span></code><a class="headerlink" href="#redis" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_redis</span></code></p>
+</div>
+<div class="section" id="redis-continue">
+<h3><code class="docutils literal notranslate"><span class="pre">redis-continue</span></code><a class="headerlink" href="#redis-continue" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_redis</span></code></p>
+</div>
+<div class="section" id="redisstore">
+<h3><code class="docutils literal notranslate"><span class="pre">redisstore</span></code><a class="headerlink" href="#redisstore" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_redis</span></code></p>
+</div>
+<div class="section" id="redis-store">
+<h3><code class="docutils literal notranslate"><span class="pre">redis-store</span></code><a class="headerlink" href="#redis-store" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_redis</span></code></p>
+</div>
+<div class="section" id="proxyuwsgi">
+<h3><code class="docutils literal notranslate"><span class="pre">proxyuwsgi</span></code><a class="headerlink" href="#proxyuwsgi" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">router_uwsgi</span></code></p>
+</div>
+<div class="section" id="harakiri">
+<h3><code class="docutils literal notranslate"><span class="pre">harakiri</span></code><a class="headerlink" href="#harakiri" title="Permalink to this headline">¶</a></h3>
+<p>Set harakiri for the current request.</p>
+</div>
+<div class="section" id="file">
+<h3><code class="docutils literal notranslate"><span class="pre">file</span></code><a class="headerlink" href="#file" title="Permalink to this headline">¶</a></h3>
+<p>Directly transfer the specified filename <em>without</em> using acceleration (sendfile, offloading, etc.).</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">file:filename=/var/www/${PATH_INFO}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="clearheaders">
+<h3><code class="docutils literal notranslate"><span class="pre">clearheaders</span></code><a class="headerlink" href="#clearheaders" title="Permalink to this headline">¶</a></h3>
+<p>Clear the response headers, setting a new HTTP status code, useful for resetting a response</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="na">response-route</span> <span class="o">=</span> <span class="s">^/foo goto:foobar</span>
+<span class="na">response-route-run</span> <span class="o">=</span> <span class="s">last:</span>
+
+<span class="na">response-route-label</span> <span class="o">=</span> <span class="s">foobar</span>
+<span class="na">response-route-run</span> <span class="o">=</span> <span class="s">clearheaders:404 Not Found</span>
+<span class="na">response-route-run</span> <span class="o">=</span> <span class="s">addheader:Content-Type: text/html</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="resetheaders">
+<h3><code class="docutils literal notranslate"><span class="pre">resetheaders</span></code><a class="headerlink" href="#resetheaders" title="Permalink to this headline">¶</a></h3>
+<p>Alias for clearheaders</p>
+</div>
+<div class="section" id="xattr">
+<h3><code class="docutils literal notranslate"><span class="pre">xattr</span></code><a class="headerlink" href="#xattr" title="Permalink to this headline">¶</a></h3>
+<p>Plugin: <code class="docutils literal notranslate"><span class="pre">xattr</span></code></p>
+<p>The xattr plugin allows you to reference files extended attributes in the internal routing subsystem:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">addvar:MYATTR=user.uwsgi.foo.bar</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">log:The attribute is ${xattr[/tmp/foo:MYATTR]}</span>
+</pre></div>
+</div>
+<p>or (variant with 2 vars)</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">addvar:MYFILE=/tmp/foo</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">addvar:MYATTR=user.uwsgi.foo.bar</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">log:The attribute is ${xattr2[MYFILE:MYATTR]}</span>
+</pre></div>
+</div>
+<p>It work only on linux platforms.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">uWSGI internal routing</a><ul>
+<li><a class="reference internal" href="#the-routing-chains">The routing chains</a></li>
+<li><a class="reference internal" href="#the-internal-routing-table">The internal routing table</a></li>
+<li><a class="reference internal" href="#action-return-values">Action return values</a></li>
+<li><a class="reference internal" href="#the-first-example">The first example</a></li>
+<li><a class="reference internal" href="#accessing-request-vars">Accessing request vars</a></li>
+<li><a class="reference internal" href="#accessing-cookies">Accessing cookies</a></li>
+<li><a class="reference internal" href="#accessing-query-string-items">Accessing query string items</a></li>
+<li><a class="reference internal" href="#pluggable-routing-variables">Pluggable routing variables</a></li>
+<li><a class="reference internal" href="#is-route-if-not-enough-why-route-uri-and-friends">Is –route-if not enough? Why –route-uri and friends?</a></li>
+<li><a class="reference internal" href="#goto">GOTO</a></li>
+<li><a class="reference internal" href="#collecting-response-headers">Collecting response headers</a></li>
+<li><a class="reference internal" href="#the-available-actions">The available actions</a><ul>
+<li><a class="reference internal" href="#continue-last"><code class="docutils literal notranslate"><span class="pre">continue</span></code>/<code class="docutils literal notranslate"><span class="pre">last</span></code></a></li>
+<li><a class="reference internal" href="#break"><code class="docutils literal notranslate"><span class="pre">break</span></code></a></li>
+<li><a class="reference internal" href="#return-break-with-status"><code class="docutils literal notranslate"><span class="pre">return</span></code>/<code class="docutils literal notranslate"><span class="pre">break-with-status</span></code></a></li>
+<li><a class="reference internal" href="#log"><code class="docutils literal notranslate"><span class="pre">log</span></code></a></li>
+<li><a class="reference internal" href="#logvar"><code class="docutils literal notranslate"><span class="pre">logvar</span></code></a></li>
+<li><a class="reference internal" href="#id1"><code class="docutils literal notranslate"><span class="pre">goto</span></code></a></li>
+<li><a class="reference internal" href="#addvar"><code class="docutils literal notranslate"><span class="pre">addvar</span></code></a></li>
+<li><a class="reference internal" href="#addheader"><code class="docutils literal notranslate"><span class="pre">addheader</span></code></a></li>
+<li><a class="reference internal" href="#delheader-remheader"><code class="docutils literal notranslate"><span class="pre">delheader</span></code>//<code class="docutils literal notranslate"><span class="pre">remheader</span></code></a></li>
+<li><a class="reference internal" href="#signal"><code class="docutils literal notranslate"><span class="pre">signal</span></code></a></li>
+<li><a class="reference internal" href="#send"><code class="docutils literal notranslate"><span class="pre">send</span></code></a></li>
+<li><a class="reference internal" href="#send-crnl"><code class="docutils literal notranslate"><span class="pre">send-crnl</span></code></a></li>
+<li><a class="reference internal" href="#redirect-redirect-302"><code class="docutils literal notranslate"><span class="pre">redirect</span></code>/<code class="docutils literal notranslate"><span class="pre">redirect-302</span></code></a></li>
+<li><a class="reference internal" href="#redirect-permanent-redirect-301"><code class="docutils literal notranslate"><span class="pre">redirect-permanent</span></code>/<code class="docutils literal notranslate"><span class="pre">redirect-301</span></code></a></li>
+<li><a class="reference internal" href="#rewrite"><code class="docutils literal notranslate"><span class="pre">rewrite</span></code></a></li>
+<li><a class="reference internal" href="#rewrite-last"><code class="docutils literal notranslate"><span class="pre">rewrite-last</span></code></a></li>
+<li><a class="reference internal" href="#uwsgi"><code class="docutils literal notranslate"><span class="pre">uwsgi</span></code></a></li>
+<li><a class="reference internal" href="#http"><code class="docutils literal notranslate"><span class="pre">http</span></code></a></li>
+<li><a class="reference internal" href="#static"><code class="docutils literal notranslate"><span class="pre">static</span></code></a></li>
+<li><a class="reference internal" href="#basicauth"><code class="docutils literal notranslate"><span class="pre">basicauth</span></code></a></li>
+<li><a class="reference internal" href="#basicauth-next"><code class="docutils literal notranslate"><span class="pre">basicauth-next</span></code></a></li>
+<li><a class="reference internal" href="#ldapauth"><code class="docutils literal notranslate"><span class="pre">ldapauth</span></code></a></li>
+<li><a class="reference internal" href="#ldapauth-next"><code class="docutils literal notranslate"><span class="pre">ldapauth-next</span></code></a></li>
+<li><a class="reference internal" href="#cache"><code class="docutils literal notranslate"><span class="pre">cache</span></code></a></li>
+<li><a class="reference internal" href="#cachestore-cache-store"><code class="docutils literal notranslate"><span class="pre">cachestore</span></code>/<code class="docutils literal notranslate"><span class="pre">cache-store</span></code></a></li>
+<li><a class="reference internal" href="#cachevar"><code class="docutils literal notranslate"><span class="pre">cachevar</span></code></a></li>
+<li><a class="reference internal" href="#cacheset"><code class="docutils literal notranslate"><span class="pre">cacheset</span></code></a></li>
+<li><a class="reference internal" href="#memcached"><code class="docutils literal notranslate"><span class="pre">memcached</span></code></a></li>
+<li><a class="reference internal" href="#rpc"><code class="docutils literal notranslate"><span class="pre">rpc</span></code></a></li>
+<li><a class="reference internal" href="#call"><code class="docutils literal notranslate"><span class="pre">call</span></code></a></li>
+<li><a class="reference internal" href="#rpcret"><code class="docutils literal notranslate"><span class="pre">rpcret</span></code></a></li>
+<li><a class="reference internal" href="#rpcblob-rpcnext"><code class="docutils literal notranslate"><span class="pre">rpcblob</span></code>//<code class="docutils literal notranslate"><span class="pre">rpcnext</span></code></a></li>
+<li><a class="reference internal" href="#rpcraw"><code class="docutils literal notranslate"><span class="pre">rpcraw</span></code></a></li>
+<li><a class="reference internal" href="#rpcvar"><code class="docutils literal notranslate"><span class="pre">rpcvar</span></code></a></li>
+<li><a class="reference internal" href="#access"><code class="docutils literal notranslate"><span class="pre">access</span></code></a></li>
+<li><a class="reference internal" href="#spnego"><code class="docutils literal notranslate"><span class="pre">spnego</span></code></a></li>
+<li><a class="reference internal" href="#radius"><code class="docutils literal notranslate"><span class="pre">radius</span></code></a></li>
+<li><a class="reference internal" href="#xslt"><code class="docutils literal notranslate"><span class="pre">xslt</span></code></a></li>
+<li><a class="reference internal" href="#ssi">ssi</a></li>
+<li><a class="reference internal" href="#gridfs">gridfs</a></li>
+<li><a class="reference internal" href="#donotlog"><code class="docutils literal notranslate"><span class="pre">donotlog</span></code></a></li>
+<li><a class="reference internal" href="#chdir"><code class="docutils literal notranslate"><span class="pre">chdir</span></code></a></li>
+<li><a class="reference internal" href="#seturi"><code class="docutils literal notranslate"><span class="pre">seturi</span></code></a></li>
+<li><a class="reference internal" href="#setapp"><code class="docutils literal notranslate"><span class="pre">setapp</span></code></a></li>
+<li><a class="reference internal" href="#setuser"><code class="docutils literal notranslate"><span class="pre">setuser</span></code></a></li>
+<li><a class="reference internal" href="#sethome"><code class="docutils literal notranslate"><span class="pre">sethome</span></code></a></li>
+<li><a class="reference internal" href="#setfile"><code class="docutils literal notranslate"><span class="pre">setfile</span></code></a></li>
+<li><a class="reference internal" href="#setscriptname"><code class="docutils literal notranslate"><span class="pre">setscriptname</span></code></a></li>
+<li><a class="reference internal" href="#setprocname"><code class="docutils literal notranslate"><span class="pre">setprocname</span></code></a></li>
+<li><a class="reference internal" href="#alarm"><code class="docutils literal notranslate"><span class="pre">alarm</span></code></a></li>
+<li><a class="reference internal" href="#flush"><code class="docutils literal notranslate"><span class="pre">flush</span></code></a></li>
+<li><a class="reference internal" href="#fixcl"><code class="docutils literal notranslate"><span class="pre">fixcl</span></code></a></li>
+<li><a class="reference internal" href="#cgi"><code class="docutils literal notranslate"><span class="pre">cgi</span></code></a></li>
+<li><a class="reference internal" href="#cgihelper"><code class="docutils literal notranslate"><span class="pre">cgihelper</span></code></a></li>
+<li><a class="reference internal" href="#id2"><code class="docutils literal notranslate"><span class="pre">access</span></code></a></li>
+<li><a class="reference internal" href="#cache-continue"><code class="docutils literal notranslate"><span class="pre">cache-continue</span></code></a></li>
+<li><a class="reference internal" href="#id3"><code class="docutils literal notranslate"><span class="pre">cachevar</span></code></a></li>
+<li><a class="reference internal" href="#cacheinc"><code class="docutils literal notranslate"><span class="pre">cacheinc</span></code></a></li>
+<li><a class="reference internal" href="#cachedec"><code class="docutils literal notranslate"><span class="pre">cachedec</span></code></a></li>
+<li><a class="reference internal" href="#cachemul"><code class="docutils literal notranslate"><span class="pre">cachemul</span></code></a></li>
+<li><a class="reference internal" href="#cachediv"><code class="docutils literal notranslate"><span class="pre">cachediv</span></code></a></li>
+<li><a class="reference internal" href="#proxyhttp"><code class="docutils literal notranslate"><span class="pre">proxyhttp</span></code></a></li>
+<li><a class="reference internal" href="#id4"><code class="docutils literal notranslate"><span class="pre">memcached</span></code></a></li>
+<li><a class="reference internal" href="#memcached-continue"><code class="docutils literal notranslate"><span class="pre">memcached-continue</span></code></a></li>
+<li><a class="reference internal" href="#memcachedstore"><code class="docutils literal notranslate"><span class="pre">memcachedstore</span></code></a></li>
+<li><a class="reference internal" href="#memcached-store"><code class="docutils literal notranslate"><span class="pre">memcached-store</span></code></a></li>
+<li><a class="reference internal" href="#redis"><code class="docutils literal notranslate"><span class="pre">redis</span></code></a></li>
+<li><a class="reference internal" href="#redis-continue"><code class="docutils literal notranslate"><span class="pre">redis-continue</span></code></a></li>
+<li><a class="reference internal" href="#redisstore"><code class="docutils literal notranslate"><span class="pre">redisstore</span></code></a></li>
+<li><a class="reference internal" href="#redis-store"><code class="docutils literal notranslate"><span class="pre">redis-store</span></code></a></li>
+<li><a class="reference internal" href="#proxyuwsgi"><code class="docutils literal notranslate"><span class="pre">proxyuwsgi</span></code></a></li>
+<li><a class="reference internal" href="#harakiri"><code class="docutils literal notranslate"><span class="pre">harakiri</span></code></a></li>
+<li><a class="reference internal" href="#file"><code class="docutils literal notranslate"><span class="pre">file</span></code></a></li>
+<li><a class="reference internal" href="#clearheaders"><code class="docutils literal notranslate"><span class="pre">clearheaders</span></code></a></li>
+<li><a class="reference internal" href="#resetheaders"><code class="docutils literal notranslate"><span class="pre">resetheaders</span></code></a></li>
+<li><a class="reference internal" href="#xattr"><code class="docutils literal notranslate"><span class="pre">xattr</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Fastrouter.html"
+                        title="previous chapter">The uWSGI FastRouter</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Legion.html"
+                        title="next chapter">The uWSGI Legion subsystem</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/InternalRouting.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Legion.html" title="The uWSGI Legion subsystem"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Fastrouter.html" title="The uWSGI FastRouter"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

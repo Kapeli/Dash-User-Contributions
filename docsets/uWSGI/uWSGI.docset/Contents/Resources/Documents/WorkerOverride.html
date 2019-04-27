@@ -1,0 +1,181 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Overriding Workers &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Glossary" href="Glossary.html" />
+    <link rel="prev" title="Hooks" href="Hooks.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Glossary.html" title="Glossary"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Hooks.html" title="Hooks"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="overriding-workers">
+<h1>Overriding Workers<a class="headerlink" href="#overriding-workers" title="Permalink to this headline">¶</a></h1>
+<p>You can override the code run by each uWSGI worker thanks to the “worker” hook exposed to plugins.</p>
+<p>Currently the python plugin is the only one exposing it:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; create a bunch of sockets</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3031</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">127.0.0.1:3032</span>
+<span class="c1">; spawn the master</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="c1">; spawn 4 processes</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">4</span>
+<span class="c1">; load a python script as the worker code</span>
+<span class="na">python-worker-override</span> <span class="o">=</span> <span class="s">aioserver.py</span>
+</pre></div>
+</div>
+<p>The python script has access to the uwsgi module so it can control/change its internals.</p>
+<p>The following examples shows the use of aiohttp (requires python 3.5)</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">asyncio</span>
+<span class="kn">from</span> <span class="nn">aiohttp</span> <span class="kn">import</span> <span class="n">web</span>
+
+<span class="kn">import</span> <span class="nn">uwsgi</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">signal</span>
+
+<span class="n">async</span> <span class="k">def</span> <span class="nf">handle</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+   <span class="n">name</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">match_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s2">&quot;Anonymous&quot;</span><span class="p">)</span>
+   <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;Hello, &quot;</span> <span class="o">+</span> <span class="n">name</span>
+   <span class="k">return</span> <span class="n">web</span><span class="o">.</span><span class="n">Response</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="n">text</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+
+<span class="n">async</span> <span class="k">def</span> <span class="nf">wshandler</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+   <span class="n">ws</span> <span class="o">=</span> <span class="n">web</span><span class="o">.</span><span class="n">WebSocketResponse</span><span class="p">()</span>
+   <span class="n">await</span> <span class="n">ws</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+
+   <span class="n">async</span> <span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="n">ws</span><span class="p">:</span>
+     <span class="k">if</span> <span class="n">msg</span><span class="o">.</span><span class="n">tp</span> <span class="o">==</span> <span class="n">web</span><span class="o">.</span><span class="n">MsgType</span><span class="o">.</span><span class="n">text</span><span class="p">:</span>
+         <span class="n">ws</span><span class="o">.</span><span class="n">send_str</span><span class="p">(</span><span class="s2">&quot;Hello, {}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
+     <span class="k">elif</span> <span class="n">msg</span><span class="o">.</span><span class="n">tp</span> <span class="o">==</span> <span class="n">web</span><span class="o">.</span><span class="n">MsgType</span><span class="o">.</span><span class="n">binary</span><span class="p">:</span>
+         <span class="n">ws</span><span class="o">.</span><span class="n">send_bytes</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+     <span class="k">elif</span> <span class="n">msg</span><span class="o">.</span><span class="n">tp</span> <span class="o">==</span> <span class="n">web</span><span class="o">.</span><span class="n">MsgType</span><span class="o">.</span><span class="n">close</span><span class="p">:</span>
+         <span class="k">break</span>
+
+   <span class="k">return</span> <span class="n">ws</span>
+
+ <span class="n">async</span> <span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="n">loop</span><span class="p">,</span> <span class="n">fd</span><span class="p">):</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">web</span><span class="o">.</span><span class="n">Application</span><span class="p">(</span><span class="n">loop</span><span class="o">=</span><span class="n">loop</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">router</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="s1">&#39;/echo&#39;</span><span class="p">,</span> <span class="n">wshandler</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">router</span><span class="o">.</span><span class="n">add_route</span><span class="p">(</span><span class="s1">&#39;GET&#39;</span><span class="p">,</span> <span class="s1">&#39;/{name}&#39;</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span>
+
+    <span class="n">srv</span> <span class="o">=</span> <span class="n">await</span> <span class="n">loop</span><span class="o">.</span><span class="n">create_server</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">make_handler</span><span class="p">(),</span>
+                                   <span class="n">sock</span><span class="o">=</span><span class="n">socket</span><span class="o">.</span><span class="n">fromfd</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">))</span>
+    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;asyncio server started on uWSGI {0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">uwsgi</span><span class="o">.</span><span class="n">version</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">srv</span>
+
+<span class="k">def</span> <span class="nf">destroy</span><span class="p">():</span>
+   <span class="k">print</span><span class="p">(</span><span class="s2">&quot;destroy worker {0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">uwsgi</span><span class="o">.</span><span class="n">worker_id</span><span class="p">()))</span>
+   <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">graceful_reload</span><span class="p">():</span>
+   <span class="k">print</span><span class="p">(</span><span class="s2">&quot;graceful reload for worker {0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">uwsgi</span><span class="o">.</span><span class="n">worker_id</span><span class="p">()))</span>
+   <span class="c1"># TODO do somethign meaningful</span>
+   <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_event_loop</span><span class="p">()</span>
+<span class="n">loop</span><span class="o">.</span><span class="n">add_signal_handler</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="n">destroy</span><span class="p">)</span>
+<span class="n">loop</span><span class="o">.</span><span class="n">add_signal_handler</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGHUP</span><span class="p">,</span> <span class="n">graceful_reload</span><span class="p">)</span>
+<span class="c1"># spawn a handler for every uWSGI socket</span>
+<span class="k">for</span> <span class="n">fd</span> <span class="ow">in</span> <span class="n">uwsgi</span><span class="o">.</span><span class="n">sockets</span><span class="p">:</span>
+   <span class="n">loop</span><span class="o">.</span><span class="n">run_until_complete</span><span class="p">(</span><span class="n">init</span><span class="p">(</span><span class="n">loop</span><span class="p">,</span> <span class="n">fd</span><span class="p">))</span>
+<span class="n">uwsgi</span><span class="o">.</span><span class="n">accepting</span><span class="p">()</span>
+<span class="n">loop</span><span class="o">.</span><span class="n">run_forever</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>In the example (taken from the official aiohttp docs) we see the uwsgi.sockets list (holding the list of uWSGI sockets file descriptors), and the override of SIGINT and SIGHUP to support reloading (SIGHUP should be adapted to support waiting for all the queued requests)</p>
+<p><a class="reference internal" href="PythonModule.html#uwsgi.accepting" title="uwsgi.accepting"><code class="xref py py-func docutils literal notranslate"><span class="pre">uwsgi.accepting()</span></code></a> is called to notify the master that the worker is accepting requests, this is required for touch-chain-reload to work.</p>
+<p>The script should be extended to call uwsgi.log(…) after every request and to (eventually) update some metrics</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Hooks.html"
+                        title="previous chapter">Hooks</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Glossary.html"
+                        title="next chapter">Glossary</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/WorkerOverride.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Glossary.html" title="Glossary"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Hooks.html" title="Hooks"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

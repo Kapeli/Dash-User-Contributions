@@ -1,0 +1,427 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>uWSGI 1.9.15 &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="uWSGI 1.9.14" href="Changelog-1.9.14.html" />
+    <link rel="prev" title="uWSGI 1.9.16" href="Changelog-1.9.16.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.14.html" title="uWSGI 1.9.14"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.16.html" title="uWSGI 1.9.16"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="uwsgi-1-9-15">
+<h1>uWSGI 1.9.15<a class="headerlink" href="#uwsgi-1-9-15" title="Permalink to this headline">¶</a></h1>
+<p>Changelog [20130829]</p>
+<div class="section" id="bugfixes">
+<h2>Bugfixes<a class="headerlink" href="#bugfixes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>fixed jvm options hashmap (#364)</p></li>
+<li><p>fixed python3 wsgi.file_wrapper</p></li>
+<li><p>fixed python3 –catch-exceptions</p></li>
+<li><p>fixed type in pypy wsgi.input.read</p></li>
+<li><p>better symbol detection for pypy</p></li>
+<li><p>improved ruby libraries management on heroku</p></li>
+<li><p>fixed http-keepalive memleak</p></li>
+<li><p>fixed spooler body management under CPython</p></li>
+<li><p>fixed unshare() usage of ‘fs’</p></li>
+<li><p>fixed UWSGI_PROFILE usage when building plugins with –plugin</p></li>
+<li><p>improved SmartOS support and added OmniOS support</p></li>
+</ul>
+</div>
+<div class="section" id="new-features">
+<h2>New features<a class="headerlink" href="#new-features" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="the-pty-plugin">
+<h3>The PTY plugin<a class="headerlink" href="#the-pty-plugin" title="Permalink to this headline">¶</a></h3>
+<p>This new plugin allows you to generate pseudoterminals and attach them to your workers.</p>
+<p>Pseudoterminals are then reachable via network (UNIX or TCP sockets).</p>
+<p>You can use them for shared debugging or to have input channels on your webapps.</p>
+<p>The plugin is in early stage of development (very few features) and it is not built in by default, but you can already make funny things like:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugin</span> <span class="o">=</span> <span class="s">pty,rack</span>
+<span class="c1">; generate a new pseudoterminal on port 5000 and map it to the first worker</span>
+<span class="na">pty-socket</span> <span class="o">=</span> <span class="s">127.0.0.1:5000</span>
+
+<span class="c1">; classic options</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">2</span>
+<span class="na">rack</span> <span class="o">=</span> <span class="s">myapp.ru</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">/tmp/uwsgi.socket</span>
+
+<span class="c1">; run a ruby interactive console (will use the pseudoterminal)</span>
+<span class="c1">; we use pry as it kick asses</span>
+<span class="na">rbshell</span> <span class="o">=</span> <span class="s">require &#39;pry&#39;;binding.pry</span>
+</pre></div>
+</div>
+<p>now you can access the pseudoterminal with</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --plugin pty --pty-connect <span class="m">127</span>.0.0.1:5000
+</pre></div>
+</div>
+<p>you can run the client in various windows, it will be shared by all of the peers (all will access the same pseudoterminal).</p>
+<p>We are sure new funny uses for it will popup pretty soon</p>
+<p>preliminary documentation is available at <a class="reference internal" href="Pty.html"><span class="doc">The Pty plugin</span></a></p>
+</div>
+<div class="section" id="strict-mode">
+<h3>strict mode<a class="headerlink" href="#strict-mode" title="Permalink to this headline">¶</a></h3>
+<p>One of the most common error when writing uWSGI config files, are typos in option names.</p>
+<p>As you can add any option in uWSGI config files, the system will accept anythyng you will write even if it is not a real uWSGI option.</p>
+<p>While this approach is very powerful and allow lot of funny hacks, it can causes lot of headaches too.</p>
+<p>If you want to check all of your options in one step, you can now add the –strict option. Unknown options will trigger a fatal error.</p>
+</div>
+<div class="section" id="fallback-configs">
+<h3>fallback configs<a class="headerlink" href="#fallback-configs" title="Permalink to this headline">¶</a></h3>
+<p>Being very cheap (in term of resources) and supporting lot of operating systems and architectures, uWSGI is heavily used in embedded systems.</p>
+<p>One of the common feature in such devices is the “reset to factory defaults”.</p>
+<p>uWSGI now natively support this kind of operation, thanks to the –fallback-config option.</p>
+<p>If a uWSGI instance dies with exit(1) and a fallback-config is specified, the binary will be re-exec()’d with the new config as the only argument.</p>
+<p>Let’s see an example of a configuration with unbindable address (unprivileged user trying to bind to privileged port)</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">1000</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">1000</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:80</span>
+</pre></div>
+</div>
+<p>and a fallback one (bind to unprivileged port 8080)</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">1000</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">1000</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:8080</span>
+</pre></div>
+</div>
+<p>run it (as root, as we want to drop privileges):</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>sudo uwsgi --ini wrong.ini --fallback-config right.ini
+</pre></div>
+</div>
+<p>you will get in your logs:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>...
+bind<span class="o">()</span>: Permission denied <span class="o">[</span>core/socket.c line <span class="m">755</span><span class="o">]</span>
+Thu Aug <span class="m">29</span> <span class="m">07</span>:26:26 <span class="m">2013</span> - !!! /Users/roberta/uwsgi/uwsgi <span class="o">(</span>pid: <span class="m">12833</span><span class="o">)</span> exited with status <span class="m">1</span> !!!
+Thu Aug <span class="m">29</span> <span class="m">07</span>:26:26 <span class="m">2013</span> - !!! Fallback config to right.ini !!!
+<span class="o">[</span>uWSGI<span class="o">]</span> getting INI configuration from right.ini
+*** Starting uWSGI <span class="m">1</span>.9.15-dev-4046f76 <span class="o">(</span>64bit<span class="o">)</span> on <span class="o">[</span>Thu Aug <span class="m">29</span> <span class="m">07</span>:26:26 <span class="m">2013</span><span class="o">]</span> ***
+...
+</pre></div>
+</div>
+</div>
+<div class="section" id="perl-exec-and-perl-exec-post-fork">
+<h3>–perl-exec and –perl-exec-post-fork<a class="headerlink" href="#perl-exec-and-perl-exec-post-fork" title="Permalink to this headline">¶</a></h3>
+<p>You can now run custom perl code before and after the fork() calls.</p>
+<p>Both options simply take the perl script as the argument</p>
+</div>
+<div class="section" id="uwsgi-cache-keys-cache">
+<h3>uwsgi.cache_keys([cache])<a class="headerlink" href="#uwsgi-cache-keys-cache" title="Permalink to this headline">¶</a></h3>
+<p>This api function has been added to the python and pypy plugins. It allows you to iterate the keys of a local uWSGI cache.</p>
+<p>It returns a list.</p>
+</div>
+<div class="section" id="added-ftime-to-logformat">
+<h3>added <cite>%(ftime)</cite> to logformat<a class="headerlink" href="#added-ftime-to-logformat" title="Permalink to this headline">¶</a></h3>
+<p>this is like ‘ltime’ but honouring the –log-date format</p>
+</div>
+<div class="section" id="protect-destruction-of-unix-sockets-when-another-instance-binds-them">
+<h3>protect destruction of UNIX sockets when another instance binds them<a class="headerlink" href="#protect-destruction-of-unix-sockets-when-another-instance-binds-them" title="Permalink to this headline">¶</a></h3>
+<p>on startup uWSGI now get the inode of the just created unix socket.</p>
+<p>On vacuum if the inode is changed the unlink of the socket is skipped.</p>
+<p>This should help avoiding sysadmin destructive race conditions or misconfigurations</p>
+</div>
+<div class="section" id="worker-exec2">
+<h3>–worker-exec2<a class="headerlink" href="#worker-exec2" title="Permalink to this headline">¶</a></h3>
+<p>this is like –worker-exec but happens after post_fork hooks</p>
+</div>
+<div class="section" id="allow-post-fork-hook-on-general-plugins">
+<h3>allow post_fork hook on general plugins<a class="headerlink" href="#allow-post-fork-hook-on-general-plugins" title="Permalink to this headline">¶</a></h3>
+<p>general plugins (the ones without the .request hook) can now expose the .post_fork hook</p>
+</div>
+<div class="section" id="call-hooks">
+<h3>–call hooks<a class="headerlink" href="#call-hooks" title="Permalink to this headline">¶</a></h3>
+<p>In the same spirit of exec-* hooks, call hooks works in the same way but directly calling functions
+in the current process address space (they have to be exposed as valid symbols)</p>
+<p>take this c source (call it hello.c):</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
+
+<span class="kt">void</span> <span class="nf">i_am_hello_world_for_uwsgi</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Hello World!!!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>and compile it as a shared library:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>gcc -o libhello.so -shared -fPIC hello.c
+</pre></div>
+</div>
+<p>now choose when (and where) to call it in uWSGI:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi --help <span class="p">|</span> grep -- --call-
+ --call-pre-jail                        call the specified <span class="k">function</span> before jailing
+ --call-post-jail                       call the specified <span class="k">function</span> after jailing
+ --call-in-jail                         call the specified <span class="k">function</span> in jail after initialization
+ --call-as-root                         call the specified <span class="k">function</span> before privileges drop
+ --call-as-user                         call the specified <span class="k">function</span> after privileges drop
+ --call-as-user-atexit                  call the specified <span class="k">function</span> before app <span class="nb">exit</span> and reload
+ --call-pre-app                         call the specified <span class="k">function</span> before app loading
+ --call-post-app                        call the specified <span class="k">function</span> after app loading
+ --call-as-vassal                       call the specified <span class="k">function</span><span class="o">()</span> before exec<span class="o">()</span>ing the vassal
+ --call-as-vassal1                      call the specified <span class="k">function</span><span class="o">(</span>char *<span class="o">)</span> before exec<span class="o">()</span>ing the vassal
+ --call-as-vassal3                      call the specified <span class="k">function</span><span class="o">(</span>char *, uid_t, gid_t<span class="o">)</span> before exec<span class="o">()</span>ing the vassal
+ --call-as-emperor                      call the specified <span class="k">function</span><span class="o">()</span> in the emperor after the vassal has been started
+ --call-as-emperor1                     call the specified <span class="k">function</span><span class="o">(</span>char *<span class="o">)</span> in the emperor after the vassal has been started
+ --call-as-emperor2                     call the specified <span class="k">function</span><span class="o">(</span>char *, pid_t<span class="o">)</span> in the emperor after the vassal has been started
+ --call-as-emperor4                     call the specified <span class="k">function</span><span class="o">(</span>char *, pid_t, uid_t, gid_t<span class="o">)</span> in the emperor after the vassal has been started
+</pre></div>
+</div>
+<p>options ending with a number are variants expecting arguments (the suffix is the number of arguments they take)</p>
+<p>we want to call our function just before our application is loaded:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; load the shared library</span>
+<span class="na">dlopen</span> <span class="o">=</span> <span class="s">./libhello.so</span>
+<span class="c1">; set the hook</span>
+<span class="na">call-pre-app</span> <span class="o">=</span> <span class="s">i_am_hello_world_for_uwsgi</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+<p>your custom function will be called just before app loading.</p>
+<p>Take in account those functions are called in the process address space, so you can make
+all sort of (black) magic with them.</p>
+<p>Note: dlopen is a wrapper for the dlopen() function, so all the same rules apply (read: USE ABSOLUTE PATHS !!!)</p>
+</div>
+<div class="section" id="init-func-support-for-plugins-and-need-plugin-variant">
+<h3>init_func support for plugins, and –need-plugin variant<a class="headerlink" href="#init-func-support-for-plugins-and-need-plugin-variant" title="Permalink to this headline">¶</a></h3>
+<p>when loading a plugin you can call a symbol defined in it soon after dlopen():</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --plugin <span class="s2">&quot;foobar|myfunc&quot;</span> ...
+</pre></div>
+</div>
+<p>uWSGI will call the ‘myfunc’ symbol exposed by the ‘foobar’ plugin</p>
+<p>–need-plugin is like –plugin but will exit(1) the process if plugin loading fails</p>
+</div>
+<div class="section" id="added-commodity-loader-for-the-pecan-framework">
+<h3>added commodity loader for the pecan framework<a class="headerlink" href="#added-commodity-loader-for-the-pecan-framework" title="Permalink to this headline">¶</a></h3>
+<p>Author: Ryan Petrello</p>
+<p>A new python loader (–pecan) has been added for the pecan WSGI framework</p>
+<p><a class="reference external" href="http://pecanpy.org/">http://pecanpy.org/</a></p>
+<p><a class="reference external" href="https://uwsgi-docs.readthedocs.io/en/latest/Python.html#pecan-support">https://uwsgi-docs.readthedocs.io/en/latest/Python.html#pecan-support</a></p>
+</div>
+<div class="section" id="uwsgi-remove-includes">
+<h3>UWSGI_REMOVE_INCLUDES<a class="headerlink" href="#uwsgi-remove-includes" title="Permalink to this headline">¶</a></h3>
+<p>during the build phase you can remove include headers with the UWSGI_REMOVE_INCLUDES environment variable.</p>
+<p>This is useful for cross-compilation where some automatically detected includes could be wrong</p>
+</div>
+<div class="section" id="router-expires">
+<h3>router_expires<a class="headerlink" href="#router-expires" title="Permalink to this headline">¶</a></h3>
+<p>We already have various options in the uWSGI core to set Expires header.</p>
+<p>This router has been added to allow customizing them:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">/^foobar1(.*)/ expires:filename=foo$1poo,value=30</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">/^foobar2(.*)/ expires:unix=${time[unix]},value=30</span>
+</pre></div>
+</div>
+<p>the router takes a filename mtime or a unix time, adds ‘value’ to it, and return it as an http date.</p>
+</div>
+<div class="section" id="announce-legion-s-death-on-reload-shutdown">
+<h3>announce Legion’s death on reload/shutdown<a class="headerlink" href="#announce-legion-s-death-on-reload-shutdown" title="Permalink to this headline">¶</a></h3>
+<p>Every legion member will now announce its death as soon as a reload (or a shutdown) of the instance is triggered</p>
+</div>
+<div class="section" id="the-glusterfs-plugin-beta">
+<h3>The GlusterFS plugin (beta)<a class="headerlink" href="#the-glusterfs-plugin-beta" title="Permalink to this headline">¶</a></h3>
+<p>This new plugin make use ot the new glusterfs c api, avoiding the overhead of fuse when serving files stored on glusterfs servers.</p>
+<p>The plugin supports the multiprocess and multithreads modes, while async modes are currently in beta.</p>
+<p>Documentation is available: <a class="reference internal" href="GlusterFS.html"><span class="doc">The GlusterFS plugin</span></a></p>
+</div>
+<div class="section" id="force-gateway">
+<h3>–force-gateway<a class="headerlink" href="#force-gateway" title="Permalink to this headline">¶</a></h3>
+<p>all of the gateways (fastrouter, httprouter, rawrouter, sslrouter …) has to be run under the master process.</p>
+<p>By specifying –force-gateway, you will bypass this limit</p>
+</div>
+<div class="section" id="preliminary-python3-profiler-beta">
+<h3>preliminary python3 profiler (beta)<a class="headerlink" href="#preliminary-python3-profiler-beta" title="Permalink to this headline">¶</a></h3>
+<p>The –profiler pycall/pyline profilers have been added to python3. They are beta quality (they leaks memory), but should be usable.</p>
+</div>
+<div class="section" id="file-monitor-support-for-openbsd-netbsd-dragonflybsd">
+<h3>file monitor support for OpenBSD,NetBSD,DragonFlyBSD<a class="headerlink" href="#file-monitor-support-for-openbsd-netbsd-dragonflybsd" title="Permalink to this headline">¶</a></h3>
+<p>Both –fs-reload and the &#64;fmon decorator now work on this operating systems.</p>
+</div>
+<div class="section" id="cwd">
+<h3>–cwd<a class="headerlink" href="#cwd" title="Permalink to this headline">¶</a></h3>
+<p>you can force the startup “current working directory” (used by –vacuum and the reloading subsystem) with this option.</p>
+<p>It is useful in chroot setups where the binary executable change its place.</p>
+</div>
+<div class="section" id="add-gid">
+<h3>–add-gid<a class="headerlink" href="#add-gid" title="Permalink to this headline">¶</a></h3>
+<p>This options allows you to add additional group ids to the current process. You can specify it multiple times.</p>
+</div>
+<div class="section" id="emperor-and-linux-namespaces-improvements">
+<h3>Emperor and Linux namespaces improvements<a class="headerlink" href="#emperor-and-linux-namespaces-improvements" title="Permalink to this headline">¶</a></h3>
+<p>Thanks to the cooperation with the pythonanywhere.com guys the Emperor has been improved for better Linux namespaces integration.</p>
+<p>The –emperor-use-clone option allows you to use clone() instead of fork() for your vassal’s spawn. In this way you can create the vassals
+directly in a new namespace. The function takes the same parameters of the –unshare one</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --emperor /etc/vassals --emperor-use-clone pid,uts
+</pre></div>
+</div>
+<p>will create each vassal in a new pid and uts namespace</p>
+<p>while</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --emperor /etc/vassals --emperor-use-clone pid,uts,net,ipc,fs
+</pre></div>
+</div>
+<p>will basically use all of the currently available namespaces.</p>
+<p>Two new exec (and call) hooks are available:</p>
+<p>–exec-as-emperor will run commands in the emperor soon after a vassal has been spawn (setting 4 env vars, UWSGI_VASSAL_CONFIG, UWSGI_VASSAL_PID, UWSGI_VASSAL_UID and UWSGI_VASSAL_GID)</p>
+<p>–exec-as-vassal will run commands in the vassal just before calling exec() (so directly in the new namespaces)</p>
+</div>
+</div>
+<div class="section" id="wait-for-interface">
+<h2>–wait-for-interface<a class="headerlink" href="#wait-for-interface" title="Permalink to this headline">¶</a></h2>
+<p>As dealing with the Linux network namespace introduces lot of race conditions (especially when working with virtual ethernets), this new option
+allows you to pause an instance until a network interface is available.</p>
+<p>This is useful when waiting for the emperor to move a veth to the vassal namespace, avoiding the vassal to run commands on the interface before is available</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">emperor</span> <span class="o">=</span> <span class="s">/etc/uwsgi/vassals</span>
+<span class="na">emperor-use-clone</span> <span class="o">=</span> <span class="s">pid,net,fs,ipc,uts</span>
+<span class="c1">; each vassal should have its veth pair, so the following commands should be improved</span>
+<span class="na">exec-as-emperor</span> <span class="o">=</span> <span class="s">ip link del veth0</span>
+<span class="na">exec-as-emperor</span> <span class="o">=</span> <span class="s">ip link add veth0 type veth peer name veth1</span>
+<span class="c1">; do not use the $(UWSGI_VASSAL_PID) form, otherwise the config parser will expand it on startup !!!</span>
+<span class="na">exec-as-emperor</span> <span class="o">=</span> <span class="s">ip link set veth1 netns $UWSGI_VASSAL_PID</span>
+</pre></div>
+</div>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; suspend until the emperor attach veth1</span>
+<span class="na">wait-for-interface</span> <span class="o">=</span> <span class="s">veth1</span>
+<span class="c1">; the following hook will be run only after veth1 is available</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">hostname vassal001</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">ifconfig lo up</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">ifconfig veth1 192.168.0.2</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">vassal001</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">vassal001</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:3031</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="availability">
+<h2>Availability<a class="headerlink" href="#availability" title="Permalink to this headline">¶</a></h2>
+<p>uWSGI 1.9.15 has been released on August 29th 2013. You can download it from:</p>
+<p><a class="reference external" href="https://projects.unbit.it/downloads/uwsgi-1.9.15.tar.gz">https://projects.unbit.it/downloads/uwsgi-1.9.15.tar.gz</a></p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">uWSGI 1.9.15</a><ul>
+<li><a class="reference internal" href="#bugfixes">Bugfixes</a></li>
+<li><a class="reference internal" href="#new-features">New features</a><ul>
+<li><a class="reference internal" href="#the-pty-plugin">The PTY plugin</a></li>
+<li><a class="reference internal" href="#strict-mode">strict mode</a></li>
+<li><a class="reference internal" href="#fallback-configs">fallback configs</a></li>
+<li><a class="reference internal" href="#perl-exec-and-perl-exec-post-fork">–perl-exec and –perl-exec-post-fork</a></li>
+<li><a class="reference internal" href="#uwsgi-cache-keys-cache">uwsgi.cache_keys([cache])</a></li>
+<li><a class="reference internal" href="#added-ftime-to-logformat">added <cite>%(ftime)</cite> to logformat</a></li>
+<li><a class="reference internal" href="#protect-destruction-of-unix-sockets-when-another-instance-binds-them">protect destruction of UNIX sockets when another instance binds them</a></li>
+<li><a class="reference internal" href="#worker-exec2">–worker-exec2</a></li>
+<li><a class="reference internal" href="#allow-post-fork-hook-on-general-plugins">allow post_fork hook on general plugins</a></li>
+<li><a class="reference internal" href="#call-hooks">–call hooks</a></li>
+<li><a class="reference internal" href="#init-func-support-for-plugins-and-need-plugin-variant">init_func support for plugins, and –need-plugin variant</a></li>
+<li><a class="reference internal" href="#added-commodity-loader-for-the-pecan-framework">added commodity loader for the pecan framework</a></li>
+<li><a class="reference internal" href="#uwsgi-remove-includes">UWSGI_REMOVE_INCLUDES</a></li>
+<li><a class="reference internal" href="#router-expires">router_expires</a></li>
+<li><a class="reference internal" href="#announce-legion-s-death-on-reload-shutdown">announce Legion’s death on reload/shutdown</a></li>
+<li><a class="reference internal" href="#the-glusterfs-plugin-beta">The GlusterFS plugin (beta)</a></li>
+<li><a class="reference internal" href="#force-gateway">–force-gateway</a></li>
+<li><a class="reference internal" href="#preliminary-python3-profiler-beta">preliminary python3 profiler (beta)</a></li>
+<li><a class="reference internal" href="#file-monitor-support-for-openbsd-netbsd-dragonflybsd">file monitor support for OpenBSD,NetBSD,DragonFlyBSD</a></li>
+<li><a class="reference internal" href="#cwd">–cwd</a></li>
+<li><a class="reference internal" href="#add-gid">–add-gid</a></li>
+<li><a class="reference internal" href="#emperor-and-linux-namespaces-improvements">Emperor and Linux namespaces improvements</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#wait-for-interface">–wait-for-interface</a></li>
+<li><a class="reference internal" href="#availability">Availability</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Changelog-1.9.16.html"
+                        title="previous chapter">uWSGI 1.9.16</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Changelog-1.9.14.html"
+                        title="next chapter">uWSGI 1.9.14</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Changelog-1.9.15.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.14.html" title="uWSGI 1.9.14"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Changelog-1.9.16.html" title="uWSGI 1.9.16"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

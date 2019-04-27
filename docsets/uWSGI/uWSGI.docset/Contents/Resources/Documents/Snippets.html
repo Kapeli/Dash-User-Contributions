@@ -1,0 +1,429 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Snippets &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Getting uWSGI" href="Download.html" />
+    <link rel="prev" title="Quickstart for ruby/Rack applications" href="RackQuickstart.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Download.html" title="Getting uWSGI"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="RackQuickstart.html" title="Quickstart for ruby/Rack applications"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="snippets">
+<h1>Snippets<a class="headerlink" href="#snippets" title="Permalink to this headline">¶</a></h1>
+<p>This is a collection of some of the most “fun” uses of uWSGI features.</p>
+<div class="section" id="x-sendfile-emulation">
+<h2>X-Sendfile emulation<a class="headerlink" href="#x-sendfile-emulation" title="Permalink to this headline">¶</a></h2>
+<p>Even if your frontend proxy/webserver does not support X-Sendfile (or cannot access your static resources) you can emulate
+it using uWSGI’s internal offloading (your process/thread will delegate the actual static file serving to offload threads).</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="c1">; load router_static plugin (compiled in by default in monolithic profiles)</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">router_static</span>
+<span class="c1">; spawn 2 offload threads</span>
+<span class="na">offload-threads</span> <span class="o">=</span> <span class="s">2</span>
+<span class="c1">; files under /private can be safely served</span>
+<span class="na">static-safe</span> <span class="o">=</span> <span class="s">/private</span>
+<span class="c1">; collect the X-Sendfile response header as X_SENDFILE var</span>
+<span class="na">collect-header</span> <span class="o">=</span> <span class="s">X-Sendfile X_SENDFILE</span>
+<span class="c1">; if X_SENDFILE is not empty, pass its value to the &quot;static&quot; routing action (it will automatically use offloading if available)</span>
+<span class="na">response-route-if-not</span> <span class="o">=</span> <span class="s">empty:${X_SENDFILE} static:${X_SENDFILE}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="force-https">
+<h2>Force HTTPS<a class="headerlink" href="#force-https" title="Permalink to this headline">¶</a></h2>
+<p>This will force HTTPS for the whole site.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="c1">; load router_redirect plugin (compiled in by default in monolithic profiles)</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">router_redirect</span>
+<span class="na">route-if-not</span> <span class="o">=</span> <span class="s">equal:${HTTPS};on redirect-permanent:https://${HTTP_HOST}${REQUEST_URI}</span>
+</pre></div>
+</div>
+<p>And this only for <code class="docutils literal notranslate"><span class="pre">/admin</span></code></p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="c1">; load router_redirect plugin (compiled in by default in monolithic profiles)</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">router_redirect</span>
+<span class="na">route</span> <span class="o">=</span> <span class="s">^/admin goto:https</span>
+<span class="c1">; stop the chain</span>
+<span class="na">route-run</span> <span class="o">=</span> <span class="s">last:</span>
+
+<span class="na">route-label</span> <span class="o">=</span> <span class="s">https</span>
+<span class="na">route-if-not</span> <span class="o">=</span> <span class="s">equal:${HTTPS};on redirect-permanent:https://${HTTP_HOST}${REQUEST_URI}</span>
+</pre></div>
+</div>
+<p>Eventually you may want to send HSTS (HTTP Strict Transport Security) header too.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="c1">; load router_redirect plugin (compiled in by default in monolithic profiles)</span>
+<span class="na">plugins</span> <span class="o">=</span> <span class="s">router_redirect</span>
+<span class="na">route-if-not</span> <span class="o">=</span> <span class="s">equal:${HTTPS};on redirect-permanent:https://${HTTP_HOST}${REQUEST_URI}</span>
+<span class="na">route-if</span> <span class="o">=</span> <span class="s">equal:${HTTPS};on addheader:Strict-Transport-Security: max-age=31536000</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="python-auto-reloading-development-only">
+<h2>Python Auto-reloading (DEVELOPMENT ONLY!)<a class="headerlink" href="#python-auto-reloading-development-only" title="Permalink to this headline">¶</a></h2>
+<p>In production you can monitor file/directory changes for triggering reloads (touch-reload, fs-reload…).</p>
+<p>During development having a monitor for all of the loaded/used python modules can be handy. But please use it only during development.</p>
+<p>The check is done by a thread that scans the modules list with the specified frequency:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="na">py-autoreload</span> <span class="o">=</span> <span class="s">2</span>
+</pre></div>
+</div>
+<p>will check for python modules changes every 2 seconds and eventually restart the instance.</p>
+<p>And again:</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Use this only in development.</p>
+</div>
+</div>
+<div class="section" id="full-stack-cgi-setup">
+<h2>Full-Stack CGI setup<a class="headerlink" href="#full-stack-cgi-setup" title="Permalink to this headline">¶</a></h2>
+<p>This example spawned from a uWSGI mailing list thread.</p>
+<p>We have static files in /var/www and cgis in /var/cgi. Cgi will be accessed using the /cgi-bin
+mountpoint. So /var/cgi/foo.lua will be run on request to /cgi-bin/foo.lua</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">workdir</span> <span class="o">=</span> <span class="s">/var</span>
+<span class="na">ipaddress</span> <span class="o">=</span> <span class="s">0.0.0.0</span>
+
+<span class="c1">; start an http router on port 8080</span>
+<span class="na">http</span> <span class="o">=</span> <span class="s">%(ipaddress):8080</span>
+<span class="c1">; enable the stats server on port 9191</span>
+<span class="na">stats</span> <span class="o">=</span> <span class="s">127.0.0.1:9191</span>
+<span class="c1">; spawn 2 threads in 4 processes (concurrency level: 8)</span>
+<span class="na">processes</span> <span class="o">=</span> <span class="s">4</span>
+<span class="na">threads</span> <span class="o">=</span> <span class="s">2</span>
+<span class="c1">; drop privileges</span>
+<span class="na">uid</span> <span class="o">=</span> <span class="s">nobody</span>
+<span class="na">gid</span> <span class="o">=</span> <span class="s">nogroup</span>
+
+<span class="c1">; serve static files in /var/www</span>
+<span class="na">static-index</span> <span class="o">=</span> <span class="s">index.html</span>
+<span class="na">static-index</span> <span class="o">=</span> <span class="s">index.htm</span>
+<span class="na">check-static</span> <span class="o">=</span> <span class="s">%(workdir)/www</span>
+
+<span class="c1">; skip serving static files ending with .lua</span>
+<span class="na">static-skip-ext</span> <span class="o">=</span> <span class="s">.lua</span>
+
+<span class="c1">; route requests to the CGI plugin</span>
+<span class="na">http-modifier1</span> <span class="o">=</span> <span class="s">9</span>
+<span class="c1">; map /cgi-bin requests to /var/cgi</span>
+<span class="na">cgi</span> <span class="o">=</span> <span class="s">/cgi-bin=%(workdir)/cgi</span>
+<span class="c1">; only .lua script can be executed</span>
+<span class="na">cgi-allowed-ext</span> <span class="o">=</span> <span class="s">.lua</span>
+<span class="c1">; .lua files are executed with the &#39;lua&#39; command (it avoids the need of giving execute permission to files)</span>
+<span class="na">cgi-helper</span> <span class="o">=</span> <span class="s">.lua=lua</span>
+<span class="c1">; search for index.lua if a directory is requested</span>
+<span class="na">cgi-index</span> <span class="o">=</span> <span class="s">index.lua</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="multiple-flask-apps-in-different-mountpoints">
+<h2>Multiple flask apps in different mountpoints<a class="headerlink" href="#multiple-flask-apps-in-different-mountpoints" title="Permalink to this headline">¶</a></h2>
+<p>Let’s write three flask apps:</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="c1">#app1.py</span>
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Flask</span>
+<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">hello</span><span class="p">():</span>
+    <span class="k">return</span> <span class="s2">&quot;Hello World! i am app1&quot;</span>
+</pre></div>
+</div>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="c1">#app2.py</span>
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Flask</span>
+<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">hello</span><span class="p">():</span>
+    <span class="k">return</span> <span class="s2">&quot;Hello World! i am app2&quot;</span>
+</pre></div>
+</div>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="c1">#app3.py</span>
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Flask</span>
+<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="nd">@app.route</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">hello</span><span class="p">():</span>
+    <span class="k">return</span> <span class="s2">&quot;Hello World! i am app3&quot;</span>
+</pre></div>
+</div>
+<p>each will be mounted respectively in /app1, /app2, /app3</p>
+<p>To mount an application with a specific “key” in uWSGI, you use the –mount option:</p>
+<p><code class="docutils literal notranslate"><span class="pre">`</span>
+<span class="pre">--mount</span> <span class="pre">&lt;mountpoint&gt;=&lt;app&gt;</span>
+<span class="pre">`</span></code></p>
+<p>in our case we want to mount 3 python apps, each keyed with what will be the WSGI SCRIPT_NAME variable:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugin</span> <span class="o">=</span> <span class="s">python</span>
+<span class="na">mount</span> <span class="o">=</span> <span class="s">/app1=app1.py</span>
+<span class="na">mount</span> <span class="o">=</span> <span class="s">/app2=app2.py</span>
+<span class="na">mount</span> <span class="o">=</span> <span class="s">/app3=app3.py</span>
+<span class="c1">; generally flask apps expose the &#39;app&#39; callable instead of &#39;application&#39;</span>
+<span class="na">callable</span> <span class="o">=</span> <span class="s">app</span>
+
+<span class="c1">; tell uWSGI to rewrite PATH_INFO and SCRIPT_NAME according to mount-points</span>
+<span class="na">manage-script-name</span> <span class="o">=</span> <span class="s">true</span>
+
+<span class="c1">; bind to a socket</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">/var/run/uwsgi.sock</span>
+</pre></div>
+</div>
+<p>now directly point your webserver.proxy to the instance socket (without doing additional configurations)</p>
+<p>Note: by default every app is loaded in a new python interpreter (that means a pretty-well isolated namespace for each app).
+If you want all of the app to be loaded in the same python vm, use the –single-interpreter option.</p>
+<p>Another note: you may find reference to an obscure “modifier1 30” trick. It is deprecated and extremely ugly. uWSGI is able to rewrite request variables in lot of advanced ways</p>
+<p>Final note: by default, the first loaded app is mounted as the “default one”. That app will be served when no mountpoint matches.</p>
+</div>
+<div class="section" id="rbenv-on-osx-should-work-on-other-platforms-too">
+<h2>rbenv on OSX (should work on other platforms too)<a class="headerlink" href="#rbenv-on-osx-should-work-on-other-platforms-too" title="Permalink to this headline">¶</a></h2>
+<p>install rbenv</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>brew update
+brew install rbenv ruby-build
+</pre></div>
+</div>
+<p>(do not set the magic line in .bash_profile as described in the classic howto, as we want to not clobber the environment, and allow uWSGI to get rid of it)</p>
+<p>get a uWSGI tarball and build the ‘nolang’ version (it is a monolithic one without language plugins compiled in)</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>wget https://projects.unbit.it/downloads/uwsgi-latest.tar.gz
+tar zxvf uwsgi-latest.tar.gz
+<span class="nb">cd</span> uwsgi-xxx
+make nolang
+</pre></div>
+</div>
+<p>now start installing the ruby versions you need</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>rbenv install <span class="m">1</span>.9.3-p551
+rbenv install <span class="m">2</span>.1.5
+</pre></div>
+</div>
+<p>and install the gems you need (sinatra in this case):</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># set the current ruby env</span>
+rbenv <span class="nb">local</span> <span class="m">1</span>.9.3-p551
+<span class="c1"># get the path of the gem binary</span>
+rbenv which gem
+<span class="c1"># /Users/roberta/.rbenv/versions/1.9.3-p551/bin/gem</span>
+/Users/roberta/.rbenv/versions/1.9.3-p551/bin/gem install sinatra
+<span class="c1"># from the uwsgi sources directory, build the rack plugin for 1.9.3-p551, naming it rack_193_plugin.so</span>
+<span class="c1"># the trick here is changing PATH to find the right ruby binary during the build procedure</span>
+<span class="nv">PATH</span><span class="o">=</span>/Users/roberta/.rbenv/versions/1.9.3-p551/bin:<span class="nv">$PATH</span> ./uwsgi --build-plugin <span class="s2">&quot;plugins/rack rack_193&quot;</span>
+<span class="c1"># set ruby 2.1.5</span>
+rbenv <span class="nb">local</span> <span class="m">2</span>.1.5
+rbenv which gem
+<span class="c1"># /Users/roberta/.rbenv/versions/2.1.5/bin/gem</span>
+/Users/roberta/.rbenv/versions/2.1.5/bin/gem install sinatra
+<span class="nv">PATH</span><span class="o">=</span>/Users/roberta/.rbenv/versions/2.1.5/bin:<span class="nv">$PATH</span> ./uwsgi --build-plugin <span class="s2">&quot;plugins/rack rack_215&quot;</span>
+</pre></div>
+</div>
+<p>now to switch from one ruby to another, just change the plugin:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugin</span> <span class="o">=</span> <span class="s">rack_193</span>
+<span class="na">rack</span> <span class="o">=</span> <span class="s">config.ru</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugin</span> <span class="o">=</span> <span class="s">rack_215</span>
+<span class="na">rack</span> <span class="o">=</span> <span class="s">config.ru</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+</pre></div>
+</div>
+<p>ensure plugins are stored in the current working directory, or set the plugins-dir directive or specify them with absolute path like</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">plugin</span> <span class="o">=</span> <span class="s">/foobar/rack_215_plugin.so</span>
+<span class="na">rack</span> <span class="o">=</span> <span class="s">config.ru</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="authenticated-websocket-proxy">
+<h2>Authenticated WebSocket Proxy<a class="headerlink" href="#authenticated-websocket-proxy" title="Permalink to this headline">¶</a></h2>
+<p>App server identifies websocket traffic, authenticates/authorizes the user using whatever CGI variables against the
+app’s own policies/infrastructure, then offloads/proxies the request to a simple kafka-websocket backend.</p>
+<p>First create <code class="docutils literal notranslate"><span class="pre">auth_kafka.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
+
+<span class="k">def</span> <span class="nf">application</span><span class="p">(</span><span class="n">environ</span><span class="p">,</span> <span class="n">start_response</span><span class="p">):</span>
+    <span class="n">start_response</span><span class="p">(</span><span class="s1">&#39;200 OK&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="s1">&#39;Content-Type&#39;</span><span class="p">,</span> <span class="s1">&#39;text/plain&#39;</span><span class="p">)])</span>
+    <span class="k">return</span> <span class="p">[</span><span class="s1">&#39;It Works!&#39;</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">auth_kafka</span><span class="p">(</span><span class="n">request_uri</span><span class="p">,</span> <span class="n">http_cookie</span><span class="p">,</span> <span class="n">http_authorization</span><span class="p">):</span>
+    <span class="n">pprint</span><span class="p">(</span><span class="nb">locals</span><span class="p">())</span>
+    <span class="k">return</span> <span class="s1">&#39;true&#39;</span>
+
+<span class="kn">import</span> <span class="nn">uwsgi</span>
+<span class="n">uwsgi</span><span class="o">.</span><span class="n">register_rpc</span><span class="p">(</span><span class="s1">&#39;auth_kafka&#39;</span><span class="p">,</span> <span class="n">auth_kafka</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Then create <code class="docutils literal notranslate"><span class="pre">auth_kafka.ini</span></code>:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+
+<span class="c1">; setup</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">127.0.0.1:8000</span>
+<span class="na">master</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">module</span> <span class="o">=</span> <span class="s">auth_kafka</span>
+
+<span class="c1">; critical! else worker timeouts apply to proxied websocket connections</span>
+<span class="na">offload-threads</span> <span class="o">=</span> <span class="s">2</span>
+
+<span class="c1">; match websocket protocol</span>
+<span class="na">kafka-ws-upgrade-regex</span> <span class="o">=</span> <span class="s">^[Ww]eb[Ss]ocket$</span>
+
+<span class="c1">; DRY place for websocket check</span>
+<span class="na">is-kafka-ws-request</span> <span class="o">=</span>  <span class="s">regexp:${HTTP_UPGRADE};%(kafka-ws-upgrade-regex)</span>
+
+<span class="c1">; location of the kafka-ws server</span>
+<span class="na">kafka-ws-host</span> <span class="o">=</span> <span class="s">127.0.0.1:7080</span>
+
+<span class="c1">; base endpoint uri for websocket server</span>
+<span class="na">kafka-ws-endpoint-uri</span> <span class="o">=</span> <span class="s">/v2/broker/</span>
+
+<span class="c1">; call auth_kafka(...); if AUTH_KAFKA gets set, request is good!</span>
+<span class="na">route-if</span> <span class="o">=</span> <span class="s">%(is-kafka-ws-request) rpcvar:AUTH_KAFKA auth_kafka ${REQUEST_URI} ${HTTP_COOKIE} ${HTTP_AUTHORIZATION}</span>
+
+<span class="c1">; update request uri to websocket endpoint (rewrite only changes PATH_INFO?)</span>
+<span class="na">route-if-not</span> <span class="o">=</span> <span class="s">empty:${AUTH_KAFKA} seturi:%(kafka-ws-endpoint-uri)?${QUERY_STRING}</span>
+
+<span class="c1">; route the request to our websocket server</span>
+<span class="na">route-if-not</span> <span class="o">=</span> <span class="s">empty:${AUTH_KAFKA} httpdumb:%(kafka-ws-host)</span>
+</pre></div>
+</div>
+<p>Start a “kafka-websocket” server:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>nc -l -k -p <span class="m">7080</span>
+</pre></div>
+</div>
+<p>Now go to <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000</span></code> in a web browser! You should see <code class="docutils literal notranslate"><span class="pre">Hello!</span></code>. Open chrome inspector or firebug and type:</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="nx">ws</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">WebSocket</span><span class="p">(</span><span class="s1">&#39;ws://127.0.0.1:8000/?subscribe=true&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You should see this request proxied to your <code class="docutils literal notranslate"><span class="pre">nc</span></code> command! This pattern allows the internal network to host a more-or-less
+wide-open/generic kafka -&gt; websocket gateway and delegates auth needs to the app server. Using <code class="docutils literal notranslate"><span class="pre">offload-threads</span></code> means
+proxied requests do <em>NOT</em> block workers; using <code class="docutils literal notranslate"><span class="pre">httpdumb</span></code> prevents mangling the request (<code class="docutils literal notranslate"><span class="pre">http</span></code> action forces <code class="docutils literal notranslate"><span class="pre">HTTP/1.0</span></code>)</p>
+</div>
+<div class="section" id="selinux-and-uwsgi">
+<h2>SELinux and uWSGI<a class="headerlink" href="#selinux-and-uwsgi" title="Permalink to this headline">¶</a></h2>
+<p>SELinux allows you to isolate web application processes from each other, and limits each program to its purpose only. The applications can be placed into strongly isolated individual sandboxes, separating them from one another and from the underlying operating system. Since SELinux is implemented within the kernel, applications do not need to be specifically written or modified to work under SELinux. There is an <a class="reference external" href="https://github.com/reinow/sepwebapp">SELinux security policy for web applications</a> at github well suited for uWSGI. This security policy also supports the uWSGI emperor process running in one domain, and each web application’s worker processes running in a separate domain, requiring only minimal privileges for the worker processes even if Linux namespaces are used. Of course, there is no requirement for emperor mode, or Linux namespaces, to use SELinux with uWSGI.</p>
+<p>On Linux it is possible to run each vassal with a dedicated view of the filesystems, ipc, uts, networking, pids and uids. Then each vassal can, for example, modify the filesystem layout, networking, and hostname without damaging the main system. With this setup, privileged tasks, like mounting filesystems, setting hostnames, configuring the network, and setting gid and uid of the worker processes can be done before changing the SELinux security context of the vassals’ process ensuring that only minimal privileges are required for the worker processes.</p>
+<p>First configure, compile and load the SELinux web application security policy. Then, relabel the application files. Further information on how to configure web application policies can be found in the README.md included in the <a class="reference external" href="https://github.com/reinow/sepwebapp">SELinux security policy for web applications</a>. Finally, in each vassall’s configuration file, call the setcon function in libselinux to set the web application’s SELinux security context:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="na">hook-as-user</span> <span class="o">=</span> <span class="s">callret:setcon system_u:system_r:webapp_id_t:s0</span>
+</pre></div>
+</div>
+<p>where id is the identity of the domain. Example, foo is the identity of the webapp_foo_t domain.</p>
+<p>It may be required to load libselinux in the uWSGI address space with the –dlopen option:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="na">/path/to/uwsgi --dlopen /path/to/libselinux.so</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Snippets</a><ul>
+<li><a class="reference internal" href="#x-sendfile-emulation">X-Sendfile emulation</a></li>
+<li><a class="reference internal" href="#force-https">Force HTTPS</a></li>
+<li><a class="reference internal" href="#python-auto-reloading-development-only">Python Auto-reloading (DEVELOPMENT ONLY!)</a></li>
+<li><a class="reference internal" href="#full-stack-cgi-setup">Full-Stack CGI setup</a></li>
+<li><a class="reference internal" href="#multiple-flask-apps-in-different-mountpoints">Multiple flask apps in different mountpoints</a></li>
+<li><a class="reference internal" href="#rbenv-on-osx-should-work-on-other-platforms-too">rbenv on OSX (should work on other platforms too)</a></li>
+<li><a class="reference internal" href="#authenticated-websocket-proxy">Authenticated WebSocket Proxy</a></li>
+<li><a class="reference internal" href="#selinux-and-uwsgi">SELinux and uWSGI</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="RackQuickstart.html"
+                        title="previous chapter">Quickstart for ruby/Rack applications</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Download.html"
+                        title="next chapter">Getting uWSGI</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Snippets.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Download.html" title="Getting uWSGI"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="RackQuickstart.html" title="Quickstart for ruby/Rack applications"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

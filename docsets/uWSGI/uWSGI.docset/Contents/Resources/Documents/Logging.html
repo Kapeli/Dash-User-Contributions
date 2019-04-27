@@ -1,0 +1,418 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Logging &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Formatting uWSGI requests logs" href="LogFormat.html" />
+    <link rel="prev" title="Embedding an application in uWSGI" href="Embed.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="LogFormat.html" title="Formatting uWSGI requests logs"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Embed.html" title="Embedding an application in uWSGI"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="logging">
+<h1>Logging<a class="headerlink" href="#logging" title="Permalink to this headline">¶</a></h1>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="LogFormat.html"><span class="doc">Formatting uWSGI requests logs</span></a></p>
+</div>
+<div class="section" id="basic-logging">
+<h2>Basic logging<a class="headerlink" href="#basic-logging" title="Permalink to this headline">¶</a></h2>
+<p>The most basic form of logging in uWSGI is writing requests, errors, and
+informational messages to stdout/stderr. This happens in the default
+configuration.  The most basic form of log redirection is the <code class="docutils literal notranslate"><span class="pre">--logto</span></code> /
+<code class="docutils literal notranslate"><span class="pre">--logto2</span></code> / <code class="docutils literal notranslate"><span class="pre">--daemonize</span></code> options which allow you to redirect logs to
+files.</p>
+<div class="section" id="basic-logging-to-files">
+<h3>Basic logging to files<a class="headerlink" href="#basic-logging-to-files" title="Permalink to this headline">¶</a></h3>
+<p>To log to files instead of stdout/stderr, use <code class="docutils literal notranslate"><span class="pre">--logto</span></code>, or to simultaneously
+daemonize uWSGI, <code class="docutils literal notranslate"><span class="pre">--daemonize</span></code>.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi -s :3031 -w simple_app --daemonize /tmp/mylog.log
+./uwsgi -s :3031 -w simple_app --logto /tmp/mylog.log
+<span class="c1"># logto2 only opens the log file after privileges have been dropped to the specified uid/gid.</span>
+./uwsgi -s :3031 -w simple_app --uid <span class="m">1001</span> --gid <span class="m">1002</span> --logto2 /tmp/mylog.log
+</pre></div>
+</div>
+</div>
+<div class="section" id="basic-logging-connected-udp-mode">
+<h3>Basic logging (connected UDP mode)<a class="headerlink" href="#basic-logging-connected-udp-mode" title="Permalink to this headline">¶</a></h3>
+<p>With UDP logging you can centralize cluster logging or redirect the persistence
+of logs to another machine to offload disk I/O. UDP logging works in both
+daemonized and interactive modes. UDP logging operaties in connected-socket
+mode, so the UDP server must be available before uWSGI starts.  For a more raw
+approach (working in unconnected mode) see the section on socket logging.</p>
+<p>To enable connected UDP mode pass the address of a UDP server to the
+<code class="docutils literal notranslate"><span class="pre">--daemonize</span></code>/<code class="docutils literal notranslate"><span class="pre">--logto</span></code> option:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi -s :3031 -w simple_app --daemonize <span class="m">192</span>.168.0.100:1717
+./uwsgi -s :3031 -w simple_app --logto <span class="m">192</span>.168.0.100:1717
+</pre></div>
+</div>
+<p>This will redirect all the stdout/stderr data to the UDP socket on
+192.168.0.100, port 1717.  Now you need an UDP server that will manage your UDP
+messages. You could use netcat, or even uWSGI:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>nc -u -p <span class="m">1717</span> -s <span class="m">192</span>.168.0.100 -l
+./uwsgi --udp <span class="m">192</span>.168.0.100:1717
+</pre></div>
+</div>
+<p>The second way is a bit more useful as it will print the source (ip:port) of
+every message. In case of multiple uWSGI server logging on the same UDP server
+it will allow you to recognize one server from another. Naturally you can
+write your own apps to manage/filter/save the logs received via udp.</p>
+</div>
+</div>
+<div class="section" id="pluggable-loggers">
+<h2>Pluggable loggers<a class="headerlink" href="#pluggable-loggers" title="Permalink to this headline">¶</a></h2>
+<p>uWSGI also supports pluggable loggers, which allow you more flexibility on
+where and what to log. Depending on the configuration of your uWSGI build,
+some loggers may or may not be available. Some may require to be loaded as
+plugins. To find out what plugins are available in your build, invoke uWSGI
+with <code class="docutils literal notranslate"><span class="pre">--logger-list</span></code>. To set up a pluggable logger, use the <code class="docutils literal notranslate"><span class="pre">--logger</span></code> or
+<code class="docutils literal notranslate"><span class="pre">--req-logger</span></code> options. <code class="docutils literal notranslate"><span class="pre">--logger</span></code> will set up a logger for every message
+while <code class="docutils literal notranslate"><span class="pre">--req-logger</span></code> will set up a logger for request information messages.</p>
+<p>This is the syntax:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>--logger &lt;plugin&gt;<span class="o">[</span>:options<span class="o">]</span>
+--logger <span class="s2">&quot;&lt;name&gt; &lt;plugin&gt;[:options]&quot;</span> <span class="c1"># The quotes are only required on the command line -- config files don&#39;t use them</span>
+</pre></div>
+</div>
+<p>You may set up as many loggers as you like. Named plugins are used for log
+routing.  A very simple example of split request/error logging using plain text
+files follows.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">req-logger</span> <span class="o">=</span> <span class="s">file:/tmp/reqlog</span>
+<span class="na">logger</span> <span class="o">=</span> <span class="s">file:/tmp/errlog</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="log-routing">
+<h2>Log routing<a class="headerlink" href="#log-routing" title="Permalink to this headline">¶</a></h2>
+<p>By default all log lines are sent to all declared loggers. If this is not what
+you want, you can use <code class="docutils literal notranslate"><span class="pre">--log-route</span></code> (and <code class="docutils literal notranslate"><span class="pre">--log-req-route</span></code> for request
+loggers) to specify a regular expression to route certain log messages to
+different destinations.</p>
+<p>For instance:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">logger</span> <span class="o">=</span> <span class="s">mylogger1 syslog</span>
+<span class="na">logger</span> <span class="o">=</span> <span class="s">theredisone redislog:127.0.0.1:6269</span>
+<span class="na">logger</span> <span class="o">=</span> <span class="s">theredistwo redislog:127.0.0.1:6270</span>
+<span class="na">logger</span> <span class="o">=</span> <span class="s">file:/tmp/foobar # This logger will log everything else, as it&#39;s not named</span>
+<span class="na">logger</span> <span class="o">=</span> <span class="s">internalservererror file:/tmp/errors</span>
+<span class="c1"># ...</span>
+<span class="na">log-route</span> <span class="o">=</span> <span class="s">internalservererror (HTTP/1.\d 500)</span>
+<span class="na">log-route</span> <span class="o">=</span> <span class="s">mylogger1 uWSGI listen queue of socket .* full</span>
+</pre></div>
+</div>
+<p>This will log each 500 level error to /tmp/errors, while listen queue full errors
+will end up in /tmp/foobar.  This is somewhat similar to the
+<a class="reference internal" href="AlarmSubsystem.html"><span class="doc">The uWSGI alarm subsystem (from 1.3)</span></a>, though alarms are usually heavier and should only be
+used for critical situations.</p>
+</div>
+<div class="section" id="logging-to-files">
+<h2>Logging to files<a class="headerlink" href="#logging-to-files" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">logfile</span></code> plugin – embedded by default.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket :3031 --logger file:/tmp/uwsgi.log
+</pre></div>
+</div>
+<p>You can optionally configure automatic log rotation:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket :3031 --logger file:logfile<span class="o">=</span>/tmp/uwsgi.log,maxsize<span class="o">=</span><span class="m">2000000</span>
+</pre></div>
+</div>
+<p>This will rotate the log file once it reaches 2 million bytes. The new name
+will be the original log file with the extension replaced with a timestamp.</p>
+<p>You can also specify the <cite>backupname</cite> instead of allowing uWSGI to autogenerate
+one.</p>
+</div>
+<div class="section" id="logging-to-sockets">
+<h2>Logging to sockets<a class="headerlink" href="#logging-to-sockets" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">logsocket</span></code> plugin – embedded by default.</p>
+<p>You can log to an unconnected UNIX or UDP socket using <code class="docutils literal notranslate"><span class="pre">--logger</span> <span class="pre">socket:...</span></code>
+(or <code class="docutils literal notranslate"><span class="pre">--log-socket</span> <span class="pre">...</span></code>).</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket :3031 --logger socket:/tmp/uwsgi.logsock
+</pre></div>
+</div>
+<p>will send log entries to the Unix socket <code class="docutils literal notranslate"><span class="pre">/tmp/uwsgi.logsock</span></code>.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket :3031 --logger socket:192.168.173.19:5050
+</pre></div>
+</div>
+<p>will send log datagrams to the UDP address 192.168.173.19 on port 5050.  You
+may also multicast logs to multiple log servers by passing the multicast
+address:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket :3031 --logger socket:225.1.1.1:1717
+</pre></div>
+</div>
+</div>
+<div class="section" id="logging-to-syslog">
+<h2>Logging to syslog<a class="headerlink" href="#logging-to-syslog" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">syslog</span></code> plugin – embedded by default</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">syslog</span></code> plugin routes logs to Unix standard syslog. You may pass an
+optional ID to send and the “facility” for the log entry.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket :3031 --logger syslog:uwsgi1234
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket :3031 --logger syslog:uwsgi1234,local6
+</pre></div>
+</div>
+<p>to send to the local6 facility</p>
+</div>
+<div class="section" id="logging-to-remote-syslog">
+<h2>Logging to remote syslog<a class="headerlink" href="#logging-to-remote-syslog" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">rsyslog</span></code> plugin – embedded by default</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">rsyslog</span></code> plugin routes logs to Unix standard syslog residing on a
+remote server. In addtition to the address+port of the remote syslog server,
+you may pass an optional ID to send as the “facility” parameter for the log
+entry.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --socket :3031 --logger rsyslog:12.34.56.78:12345,uwsgi1234
+</pre></div>
+</div>
+</div>
+<div class="section" id="redis-logger">
+<h2>Redis logger<a class="headerlink" href="#redis-logger" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">redislog</span></code> plugin – embedded by default.</p>
+<p>By default the <code class="docutils literal notranslate"><span class="pre">redislog</span></code> plugin will ‘publish’ each logline to a redis
+pub/sub queue. The logger plugin syntax is:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>--logger redislog<span class="o">[</span>:&lt;host&gt;,&lt;command&gt;,&lt;prefix&gt;<span class="o">]</span>
+</pre></div>
+</div>
+<p>By default <code class="docutils literal notranslate"><span class="pre">host</span></code> is mapped to <code class="docutils literal notranslate"><span class="pre">127.0.0.1:6379</span></code>, <code class="docutils literal notranslate"><span class="pre">command</span></code> is mapped to
+“publish uwsgi” and <code class="docutils literal notranslate"><span class="pre">prefix</span></code> is empty.  To publish to a queue called foobar,
+use <code class="docutils literal notranslate"><span class="pre">redislog:127.0.0.1:6379,publish</span> <span class="pre">foobar</span></code>.  Redis logging is not limited
+to pub/sub. You could for instance push items into a list, as in the next
+example.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>--logger redislog:/tmp/redis.sock,rpush foo,example.com
+</pre></div>
+</div>
+<p>As error situations could cause the master to block while writing a log line to
+a remote server, it’s a good idea to use <code class="docutils literal notranslate"><span class="pre">--threaded-logger</span></code> to offload log
+writes to a secondary thread.</p>
+</div>
+<div class="section" id="mongodb-logger">
+<h2>MongoDB logger<a class="headerlink" href="#mongodb-logger" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">mongodblog</span></code> plugin – embedded by default.</p>
+<p>The logger syntax for MongoDB logging (<code class="docutils literal notranslate"><span class="pre">mongodblog</span></code>) is</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>--logger mongodblog<span class="o">[</span>:&lt;host&gt;,&lt;collection&gt;,&lt;node&gt;<span class="o">]</span>
+</pre></div>
+</div>
+<p>Where <code class="docutils literal notranslate"><span class="pre">host</span></code> is the address of the MongoDB instance (default
+<code class="docutils literal notranslate"><span class="pre">127.0.0.1:27017</span></code>), <code class="docutils literal notranslate"><span class="pre">collection</span></code> names the collection to write log lines
+into (default <code class="docutils literal notranslate"><span class="pre">uwsgi.logs</span></code>) and <code class="docutils literal notranslate"><span class="pre">node</span></code> is an identification string for the
+instance sending logs (default: server hostname).</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>--logger mongodblog
+</pre></div>
+</div>
+<p>Will run the logger with default values, while</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>--logger mongodblog:127.0.0.1:9090,foo.bar
+</pre></div>
+</div>
+<p>Will write logs to the mongodb server 127.0.0.1:9090 in the collection
+<code class="docutils literal notranslate"><span class="pre">foo.bar</span></code> using the default node name.  As with the Redis logger, offloading
+log writes to a dedicated thread is a good choice.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">threaded-logger</span> <span class="o">=</span> <span class="s">true</span>
+<span class="na">logger</span> <span class="o">=</span> <span class="s">mongodblog:127.0.0.1:27017,uwsgi.logs_of_foobar</span>
+<span class="c1"># As usual, you could have multiple loggers:</span>
+<span class="c1"># logger = mongodblog:192.168.173.22:27017,uwsgi.logs_of_foobar</span>
+<span class="na">socket</span> <span class="o">=</span> <span class="s">:3031</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="zeromq-logging">
+<h2>ZeroMQ logging<a class="headerlink" href="#zeromq-logging" title="Permalink to this headline">¶</a></h2>
+<p>As with UDP logging you can centralize/distribute logging via ZeroMQ. Build
+your logger daemon using a <code class="docutils literal notranslate"><span class="pre">ZMQ_PULL</span></code> socket:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">zmq</span>
+
+<span class="n">ctx</span> <span class="o">=</span> <span class="n">zmq</span><span class="o">.</span><span class="n">Context</span><span class="p">()</span>
+
+<span class="n">puller</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">zmq</span><span class="o">.</span><span class="n">PULL</span><span class="p">)</span>
+<span class="n">puller</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="s2">&quot;tcp://192.168.173.18:9191&quot;</span><span class="p">)</span>
+
+<span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="n">puller</span><span class="o">.</span><span class="n">recv</span><span class="p">()</span>
+    <span class="k">print</span> <span class="n">message</span><span class="p">,</span>
+</pre></div>
+</div>
+<p>Now run your uWSGI server:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --logger zeromq:tcp://192.168.173.18:9191 --socket :3031 --module werkzeug.testapp:test_app
+</pre></div>
+</div>
+<p>(<code class="docutils literal notranslate"><span class="pre">--log-zeromq</span></code> is an alias for this logger.)</p>
+</div>
+<div class="section" id="crypto-logger-plugin">
+<h2>Crypto logger (plugin)<a class="headerlink" href="#crypto-logger-plugin" title="Permalink to this headline">¶</a></h2>
+<p>If you host your applications on cloud services without persistent storage you
+may want to send your logs to external systems.  However logs often contain
+sensitive information that should not be transferred in clear.  The
+<code class="docutils literal notranslate"><span class="pre">logcrypto</span></code> plugin logger attempts to solve this issue by encrypting each log
+packet before sending it over UDP to a server able to decrypt it.  The next
+example will send each log packet to a UDP server available at
+192.168.173.22:1717 encrypting the text with the secret key <code class="docutils literal notranslate"><span class="pre">ciaociao</span></code> with
+Blowfish in CBC mode.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --plugin logcrypto --logger crypto:addr<span class="o">=</span><span class="m">192</span>.168.173.22:1717,algo<span class="o">=</span>bf-cbc,secret<span class="o">=</span>ciaociao -M -p <span class="m">4</span> -s :3031
+</pre></div>
+</div>
+<p>An example server is available at
+<a class="reference external" href="https://github.com/unbit/uwsgi/blob/master/contrib/cryptologger.rb">https://github.com/unbit/uwsgi/blob/master/contrib/cryptologger.rb</a></p>
+</div>
+<div class="section" id="graylog2-logger-plugin">
+<h2>Graylog2 logger (plugin)<a class="headerlink" href="#graylog2-logger-plugin" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">graylog2</span></code> plugin – not compiled by default.</p>
+<p>This plugin will send logs to a Graylog2 server in Graylog2’s native GELF format.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --plugin graylog2 --logger graylog2:127.0.0.1:1234,dsfargeg
+</pre></div>
+</div>
+</div>
+<div class="section" id="systemd-logger-plugin">
+<h2>Systemd logger (plugin)<a class="headerlink" href="#systemd-logger-plugin" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">systemd_logger</span></code> plugin – not compiled by default.</p>
+<p>This plugin will write log entries into the Systemd journal.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --plugin systemd_logger --logger systemd
+</pre></div>
+</div>
+</div>
+<div class="section" id="writing-your-own-logger-plugins">
+<h2>Writing your own logger plugins<a class="headerlink" href="#writing-your-own-logger-plugins" title="Permalink to this headline">¶</a></h2>
+<p>This plugin, <code class="docutils literal notranslate"><span class="pre">foolog.c</span></code> will write your messages in the file specified with
+–logto/–daemonize with a simple prefix using vector IO.</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span> <span class="cpf">&lt;uwsgi.h&gt;</span><span class="cp"></span>
+
+<span class="kt">ssize_t</span> <span class="nf">uwsgi_foolog_logger</span><span class="p">(</span><span class="k">struct</span> <span class="n">uwsgi_logger</span> <span class="o">*</span><span class="n">ul</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">message</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">len</span><span class="p">)</span> <span class="p">{</span>
+
+        <span class="k">struct</span> <span class="n">iovec</span> <span class="n">iov</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
+
+        <span class="n">iov</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="n">iov_base</span> <span class="o">=</span> <span class="s">&quot;[foo] &quot;</span><span class="p">;</span>
+        <span class="n">iov</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="n">iov_len</span> <span class="o">=</span> <span class="mi">6</span><span class="p">;</span>
+
+        <span class="n">iov</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="n">iov_base</span> <span class="o">=</span> <span class="n">message</span><span class="p">;</span>
+        <span class="n">iov</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="n">iov_len</span> <span class="o">=</span> <span class="n">len</span><span class="p">;</span>
+
+        <span class="k">return</span> <span class="n">writev</span><span class="p">(</span><span class="n">uwsgi</span><span class="p">.</span><span class="n">original_log_fd</span><span class="p">,</span> <span class="n">iov</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="nf">uwsgi_foolog_register</span><span class="p">()</span> <span class="p">{</span>
+        <span class="n">uwsgi_register_logger</span><span class="p">(</span><span class="s">&quot;syslog&quot;</span><span class="p">,</span> <span class="n">uwsgi_syslog_logger</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">struct</span> <span class="n">uwsgi_plugin</span> <span class="n">foolog_plugin</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;foolog&quot;</span><span class="p">,</span>
+    <span class="p">.</span><span class="n">on_load</span> <span class="o">=</span> <span class="n">uwsgi_foolog_register</span><span class="p">,</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Logging</a><ul>
+<li><a class="reference internal" href="#basic-logging">Basic logging</a><ul>
+<li><a class="reference internal" href="#basic-logging-to-files">Basic logging to files</a></li>
+<li><a class="reference internal" href="#basic-logging-connected-udp-mode">Basic logging (connected UDP mode)</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pluggable-loggers">Pluggable loggers</a></li>
+<li><a class="reference internal" href="#log-routing">Log routing</a></li>
+<li><a class="reference internal" href="#logging-to-files">Logging to files</a></li>
+<li><a class="reference internal" href="#logging-to-sockets">Logging to sockets</a></li>
+<li><a class="reference internal" href="#logging-to-syslog">Logging to syslog</a></li>
+<li><a class="reference internal" href="#logging-to-remote-syslog">Logging to remote syslog</a></li>
+<li><a class="reference internal" href="#redis-logger">Redis logger</a></li>
+<li><a class="reference internal" href="#mongodb-logger">MongoDB logger</a></li>
+<li><a class="reference internal" href="#zeromq-logging">ZeroMQ logging</a></li>
+<li><a class="reference internal" href="#crypto-logger-plugin">Crypto logger (plugin)</a></li>
+<li><a class="reference internal" href="#graylog2-logger-plugin">Graylog2 logger (plugin)</a></li>
+<li><a class="reference internal" href="#systemd-logger-plugin">Systemd logger (plugin)</a></li>
+<li><a class="reference internal" href="#writing-your-own-logger-plugins">Writing your own logger plugins</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Embed.html"
+                        title="previous chapter">Embedding an application in uWSGI</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="LogFormat.html"
+                        title="next chapter">Formatting uWSGI requests logs</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Logging.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="LogFormat.html" title="Formatting uWSGI requests logs"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Embed.html" title="Embedding an application in uWSGI"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,290 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>The JWSGI interface &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The Clojure/Ring JVM request handler" href="Ring.html" />
+    <link rel="prev" title="JVM in the uWSGI server (updated to 1.9)" href="JVM.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Ring.html" title="The Clojure/Ring JVM request handler"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="JVM.html" title="JVM in the uWSGI server (updated to 1.9)"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="JVM.html" accesskey="U">JVM in the uWSGI server (updated to 1.9)</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="the-jwsgi-interface">
+<h1>The JWSGI interface<a class="headerlink" href="#the-jwsgi-interface" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>JWSGI is not a standard. Yet. If you like JWSGI, why not send an RFC to the uWSGI mailing list. We have no specific interest in a standard, but who knows…</p>
+</div>
+<p>JWSGI is a port of the WSGI/PSGI/Rack way of thinking for Java.</p>
+<p>If, for some obscure reason, you’d feel like developing apps with JVM languages
+and you don’t feel like deploying a huge servlet stack, JWSGI should be up your
+alley.</p>
+<p>It is a very simple protocol: you call a public method that takes a <code class="docutils literal notranslate"><span class="pre">HashMap</span></code>
+as its sole argument.  This HashMap contains CGI style variables and
+<code class="docutils literal notranslate"><span class="pre">jwsgi.input</span></code> containing a Java InputStream object.</p>
+<p>The function has to returns an array of 3 Objects:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">status</span></code> (java.lang.Integer) (example: 200)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">headers</span></code> (HashMap) (example: {“Content-type”: “text/html”, “Server”:
+“uWSGI”, “Foo”: [“one”,”two”]})</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">body</span></code> (may be a String, an array of Strings, a File or an InputStream
+object)</p></li>
+</ul>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>A simple JWSGI app looks like this:</p>
+<div class="highlight-java notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">java.util.*</span><span class="o">;</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">MyApp</span> <span class="o">{</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="n">Object</span><span class="o">[]</span> <span class="nf">application</span><span class="o">(</span><span class="n">HashMap</span> <span class="n">env</span><span class="o">)</span> <span class="o">{</span>
+
+        <span class="kt">int</span> <span class="n">status</span> <span class="o">=</span> <span class="mi">200</span><span class="o">;</span>
+
+        <span class="n">HashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span><span class="n">Object</span><span class="o">&gt;</span> <span class="n">headers</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span><span class="n">Object</span><span class="o">&gt;();</span>
+        <span class="n">headers</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s">&quot;Content-type&quot;</span><span class="o">,</span> <span class="s">&quot;text/html&quot;</span><span class="o">);</span>
+        <span class="c1">// a response header can have multiple values</span>
+        <span class="n">String</span><span class="o">[]</span> <span class="n">servers</span> <span class="o">=</span> <span class="o">{</span><span class="s">&quot;uWSGI&quot;</span><span class="o">,</span> <span class="s">&quot;Unbit&quot;</span><span class="o">};</span>
+        <span class="n">headers</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s">&quot;Server&quot;</span><span class="o">,</span> <span class="n">servers</span><span class="o">);</span>
+
+        <span class="n">String</span> <span class="n">body</span> <span class="o">=</span> <span class="s">&quot;&lt;h1&gt;Hello World&lt;/h1&gt;&quot;</span> <span class="o">+</span> <span class="n">env</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="s">&quot;REQUEST_URI&quot;</span><span class="o">);</span>
+
+        <span class="n">Object</span><span class="o">[]</span> <span class="n">response</span> <span class="o">=</span> <span class="o">{</span> <span class="n">status</span><span class="o">,</span> <span class="n">headers</span><span class="o">,</span> <span class="n">body</span> <span class="o">};</span>
+
+        <span class="k">return</span> <span class="n">response</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+<div class="section" id="how-to-use-it">
+<h3>How to use it ?<a class="headerlink" href="#how-to-use-it" title="Permalink to this headline">¶</a></h3>
+<p>You need both the ‘jvm’ plugin and the ‘jwsgi’ plugin. A build profile named
+‘jwsgi’, is available in the project to allow a monolithic build with
+jvm+jwsgi:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">UWSGI_PROFILE</span><span class="o">=</span>jwsgi make
+</pre></div>
+</div>
+<ol class="arabic">
+<li><p>Compile your class with <code class="docutils literal notranslate"><span class="pre">javac</span></code>.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>javac MyApp.java
+</pre></div>
+</div>
+</li>
+</ol>
+<ol class="arabic" start="4">
+<li><p>Run uWSGI and specify the method to run (in the form class:method)</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi --socket /tmp/uwsgi.socket --plugins jvm,jwsgi --jwsgi
+MyApp:application --threads <span class="m">40</span>
+</pre></div>
+</div>
+</li>
+</ol>
+<blockquote>
+<div><p>This will run a JWSGI application on UNIX socket /tmp/uwsgi.socket with 40
+threads.</p>
+</div></blockquote>
+</div>
+<div class="section" id="reading-request-body">
+<h3>Reading request body<a class="headerlink" href="#reading-request-body" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">jwsgi.input</span></code> item is an <code class="docutils literal notranslate"><span class="pre">uwsgi.RequestBody</span></code> object (subclass of
+java/io/InputStream). You it to access the request body.</p>
+<div class="highlight-java notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">java.util.*</span><span class="o">;</span>
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">MyApp</span> <span class="o">{</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="n">Object</span><span class="o">[]</span> <span class="nf">application</span><span class="o">(</span><span class="n">HashMap</span> <span class="n">env</span><span class="o">)</span> <span class="o">{</span>
+
+        <span class="kt">int</span> <span class="n">status</span> <span class="o">=</span> <span class="mi">200</span><span class="o">;</span>
+
+        <span class="n">HashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span><span class="n">Object</span><span class="o">&gt;</span> <span class="n">headers</span> <span class="o">=</span> <span class="k">new</span> <span class="n">HashMap</span><span class="o">&lt;</span><span class="n">String</span><span class="o">,</span><span class="n">Object</span><span class="o">&gt;();</span>
+        <span class="n">headers</span><span class="o">.</span><span class="na">put</span><span class="o">(</span><span class="s">&quot;Content-type&quot;</span><span class="o">,</span> <span class="s">&quot;text/plain&quot;</span><span class="o">);</span>
+
+        <span class="kt">int</span> <span class="n">body_len</span> <span class="o">=</span> <span class="n">Integer</span><span class="o">.</span><span class="na">parseInt</span><span class="o">((</span><span class="n">String</span><span class="o">)</span> <span class="n">env</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="s">&quot;CONTENT_LENGTH&quot;</span><span class="o">));</span>
+        <span class="kt">byte</span><span class="o">[]</span> <span class="n">chunk</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">byte</span><span class="o">[</span><span class="n">body_len</span><span class="o">];</span>
+
+        <span class="n">uwsgi</span><span class="o">.</span><span class="na">RequestBody</span> <span class="n">input</span> <span class="o">=</span> <span class="o">(</span><span class="n">uwsgi</span><span class="o">.</span><span class="na">RequestBody</span><span class="o">)</span> <span class="n">env</span><span class="o">.</span><span class="na">get</span><span class="o">(</span><span class="s">&quot;jwsgi.input&quot;</span><span class="o">);</span>
+
+        <span class="kt">int</span> <span class="n">len</span> <span class="o">=</span> <span class="n">input</span><span class="o">.</span><span class="na">read</span><span class="o">(</span><span class="n">chunk</span><span class="o">);</span>
+
+        <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">&quot;read &quot;</span> <span class="o">+</span> <span class="n">len</span> <span class="o">+</span> <span class="s">&quot; bytes&quot;</span><span class="o">);</span>
+
+        <span class="n">String</span> <span class="n">body</span> <span class="o">=</span> <span class="k">new</span> <span class="n">String</span><span class="o">(</span><span class="n">chunk</span><span class="o">,</span> <span class="mi">0</span><span class="o">,</span> <span class="n">len</span><span class="o">);</span>
+
+        <span class="n">Object</span><span class="o">[]</span> <span class="n">response</span> <span class="o">=</span> <span class="o">{</span> <span class="n">status</span><span class="o">,</span> <span class="n">headers</span><span class="o">,</span> <span class="n">body</span> <span class="o">};</span>
+
+        <span class="k">return</span> <span class="n">response</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+<p>Pay attention to the use of <code class="docutils literal notranslate"><span class="pre">read(byte[])</span></code> instead of the classical
+<code class="docutils literal notranslate"><span class="pre">read()</span></code>. The latter inefficiently reads one byte at time, while the former
+reads a larger chunk at a time.</p>
+</div>
+<div class="section" id="jwsgi-and-groovy">
+<h3>JWSGI and Groovy<a class="headerlink" href="#jwsgi-and-groovy" title="Permalink to this headline">¶</a></h3>
+<p>Being low-level, the JWSGI standard can be used as-is in other languages
+running on the JVM.  As an example this is a “Hello World” Groovy example:</p>
+<div class="highlight-groovy notranslate"><div class="highlight"><pre><span></span><span class="kd">static</span> <span class="kt">def</span> <span class="n">Object</span><span class="o">[]</span> <span class="nf">application</span><span class="o">(</span><span class="n">java</span><span class="o">.</span><span class="na">util</span><span class="o">.</span><span class="na">HashMap</span> <span class="n">env</span><span class="o">)</span> <span class="o">{</span>
+     <span class="kt">def</span> <span class="n">headers</span> <span class="o">=</span> <span class="o">[</span><span class="s2">&quot;Content-Type&quot;</span><span class="o">:</span><span class="s2">&quot;text/html&quot;</span><span class="o">,</span> <span class="s2">&quot;Server&quot;</span><span class="o">:</span><span class="s2">&quot;uWSGI&quot;</span><span class="o">]</span>
+     <span class="k">return</span> <span class="o">[</span><span class="mi">200</span><span class="o">,</span> <span class="n">headers</span><span class="o">,</span> <span class="s2">&quot;&lt;h1&gt;Hello World&lt;/h1&quot;</span><span class="o">]</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+<p>One serving a static file:</p>
+<div class="highlight-groovy notranslate"><div class="highlight"><pre><span></span><span class="kd">static</span> <span class="kt">def</span> <span class="n">Object</span><span class="o">[]</span> <span class="nf">application</span><span class="o">(</span><span class="n">java</span><span class="o">.</span><span class="na">util</span><span class="o">.</span><span class="na">HashMap</span> <span class="n">env</span><span class="o">)</span> <span class="o">{</span>
+     <span class="kt">def</span> <span class="n">headers</span> <span class="o">=</span> <span class="o">[</span><span class="s2">&quot;Content-Type&quot;</span><span class="o">:</span><span class="s2">&quot;text/plain&quot;</span><span class="o">,</span> <span class="s2">&quot;Server&quot;</span><span class="o">:</span><span class="s2">&quot;uWSGI&quot;</span><span class="o">]</span>
+     <span class="k">return</span> <span class="o">[</span><span class="mi">200</span><span class="o">,</span> <span class="n">headers</span><span class="o">,</span> <span class="k">new</span> <span class="n">File</span><span class="o">(</span><span class="s2">&quot;/etc/services&quot;</span><span class="o">)]</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+<p>The second approach is very efficient as it will abuse uWSGI internal
+facilities. For example if you have offloading enabled, your worker thread will
+be suddenly freed.  To load Groovy code, remember to compile it:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>groovyc Foobar.groovy
+</pre></div>
+</div>
+<p>Then run it:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi --socket /tmp/uwsgi.socket --plugins jvm,jwsgi --jwsgi Foobar:application --threads <span class="m">40</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="jwsgi-and-scala">
+<h3>JWSGI and Scala<a class="headerlink" href="#jwsgi-and-scala" title="Permalink to this headline">¶</a></h3>
+<p>Like Groovy, you can write JWSGI apps with Scala. You only need the entry point
+function to use native Java objects:</p>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">object</span> <span class="nc">HelloWorld</span> <span class="o">{</span>
+     <span class="k">def</span> <span class="n">application</span><span class="o">(</span><span class="n">env</span><span class="k">:</span><span class="kt">java.util.HashMap</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">Object</span><span class="o">])</span><span class="k">:</span> <span class="kt">Array</span><span class="o">[</span><span class="kt">Object</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+             <span class="k">var</span> <span class="n">headers</span> <span class="k">=</span> <span class="k">new</span> <span class="n">java</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="nc">HashMap</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">Object</span><span class="o">]()</span>
+             <span class="n">headers</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="s">&quot;Content-Type&quot;</span><span class="o">,</span> <span class="s">&quot;text/html&quot;</span><span class="o">)</span>
+             <span class="n">headers</span><span class="o">.</span><span class="n">put</span><span class="o">(</span><span class="s">&quot;Server&quot;</span><span class="o">,</span> <span class="s">&quot;uWSGI&quot;</span><span class="o">)</span>
+             <span class="k">return</span> <span class="nc">Array</span><span class="o">(</span><span class="mi">200</span><span class="k">:</span><span class="kt">java.lang.Integer</span><span class="o">,</span> <span class="n">headers</span> <span class="o">,</span> <span class="s">&quot;Hello World&quot;</span><span class="o">)</span>
+     <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+<p>Or in a more Scala-ish way:</p>
+<div class="highlight-scala notranslate"><div class="highlight"><pre><span></span><span class="k">object</span> <span class="nc">HelloWorld</span> <span class="o">{</span>
+     <span class="k">def</span> <span class="n">application</span><span class="o">(</span><span class="n">env</span><span class="k">:</span><span class="kt">java.util.HashMap</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">Object</span><span class="o">])</span><span class="k">:</span> <span class="kt">Array</span><span class="o">[</span><span class="kt">Object</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+             <span class="k">val</span> <span class="n">headers</span> <span class="k">=</span> <span class="k">new</span> <span class="n">java</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="nc">HashMap</span><span class="o">[</span><span class="kt">String</span>, <span class="kt">Object</span><span class="o">]()</span> <span class="o">{</span>
+                     <span class="n">put</span><span class="o">(</span><span class="s">&quot;Content-Type&quot;</span><span class="o">,</span> <span class="s">&quot;text/html&quot;</span><span class="o">)</span>
+                     <span class="n">put</span><span class="o">(</span><span class="s">&quot;Server&quot;</span><span class="o">,</span> <span class="nc">Array</span><span class="o">(</span><span class="s">&quot;uWSGI&quot;</span><span class="o">,</span> <span class="s">&quot;Unbit&quot;</span><span class="o">))</span>
+             <span class="o">}</span>
+             <span class="k">return</span> <span class="nc">Array</span><span class="o">(</span><span class="mi">200</span><span class="k">:</span><span class="kt">java.lang.Integer</span><span class="o">,</span> <span class="n">headers</span> <span class="o">,</span> <span class="s">&quot;Hello World&quot;</span><span class="o">)</span>
+     <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+<p>Once compiled with <code class="docutils literal notranslate"><span class="pre">scalac</span> <span class="pre">&lt;filename&gt;</span></code> you run like this:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi --socket /tmp/uwsgi.socket --plugins jvm,jwsgi --jwsgi HelloWorld:application --threads <span class="m">40</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">The JWSGI interface</a><ul>
+<li><a class="reference internal" href="#example">Example</a><ul>
+<li><a class="reference internal" href="#how-to-use-it">How to use it ?</a></li>
+<li><a class="reference internal" href="#reading-request-body">Reading request body</a></li>
+<li><a class="reference internal" href="#jwsgi-and-groovy">JWSGI and Groovy</a></li>
+<li><a class="reference internal" href="#jwsgi-and-scala">JWSGI and Scala</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="JVM.html"
+                        title="previous chapter">JVM in the uWSGI server (updated to 1.9)</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Ring.html"
+                        title="next chapter">The Clojure/Ring JVM request handler</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/JWSGI.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Ring.html" title="The Clojure/Ring JVM request handler"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="JVM.html" title="JVM in the uWSGI server (updated to 1.9)"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="JVM.html" >JVM in the uWSGI server (updated to 1.9)</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

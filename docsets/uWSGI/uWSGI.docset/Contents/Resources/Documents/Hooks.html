@@ -1,0 +1,251 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Hooks &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Overriding Workers" href="WorkerOverride.html" />
+    <link rel="prev" title="Log encoders" href="LogEncoders.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="WorkerOverride.html" title="Overriding Workers"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="LogEncoders.html" title="Log encoders"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="hooks">
+<h1>Hooks<a class="headerlink" href="#hooks" title="Permalink to this headline">¶</a></h1>
+<p>(updated to uWSGI 1.9.16)</p>
+<p>uWSGI’s main directive is being “modular”. The vast majority of its features are exposed as plugins, both to allow users to optimize
+their build and to encourage developers to extend it.</p>
+<p>Writing plugins can be an annoying task, especially if you only need to change/implement a single function.</p>
+<p>For simple tasks, uWSGI exposes an hook API you can abuse to modify uWSGI’s internal behaviors.</p>
+<div class="section" id="the-hookable-uwsgi-phases">
+<h2>The “hookable” uWSGI phases<a class="headerlink" href="#the-hookable-uwsgi-phases" title="Permalink to this headline">¶</a></h2>
+<p>Before being ready to manage requests, uWSGI goes through various “phases”. You can attach one or more “hooks” to these phases.</p>
+<p>Each phase can be “fatal”, if so, a failing hook will mean failing of the whole uWSGI instance (generally calling <code class="docutils literal notranslate"><span class="pre">exit(1)</span></code>).</p>
+<p>Currently (September 2013) the following phases are available:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">asap</span></code> run directly after configuration file has been parsed, before anything else is done. it is fatal.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pre-jail</span></code> run before any attempt to drop privileges or put the process in some form of jail. it is fatal.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">post-jail</span></code> run soon after any jailing, but before privileges drop. If jailing requires fork(), the parent process run this phase. it is fatal.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">in-jail</span></code> run soon after jayling, but after post-jail. If jailing requires fork(), the chidlren run this phase. it is fatal.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">as-root</span></code> run soon before privileges drop (last chance to run something as root). it is fatal.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">as-user</span></code> run soon after privileges drop. it is fatal.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pre-app</span></code> run before applications loading. it is fatal.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">post-app</span></code> run after applications loading. it is fatal.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">accepting</span></code> run before the each worker starts accepting requests (available from uWSGI 1.9.21).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">accepting1</span></code> run before the first worker starts accepting requests (available from uWSGI 1.9.21).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">accepting-once</span></code> run before the each worker starts accepting requests (available from uWSGI 1.9.21, runs one time per instance).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">accepting1-once</span></code> run before the first worker starts accepting requests (available from uWSGI 1.9.21, runs one time per instance).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">as-user-atexit</span></code> run before shutdown of the instance. it is non-fatal.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">as-emperor</span></code> run soon after the spawn of a vassal in the Emperor process. it is non-fatal.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">as-vassal</span></code> run in the vassal before executing the uwsgi binary. it is fatal.</p></li>
+</ul>
+</div>
+<div class="section" id="the-hardcoded-hooks">
+<h2>The “hardcoded” hooks<a class="headerlink" href="#the-hardcoded-hooks" title="Permalink to this headline">¶</a></h2>
+<p>As said before, the purpose of the hook subsystem is to allow attaching “hooks” to the various uWSGI phases.</p>
+<p>There are two kind of hooks. The simple ones are the so-called “hardcoded” ones. They expose common patterns at the cost of versatility.</p>
+<p>Currently (September 2013) the following “hardcoded” hooks are available (they run in the order they are shown below):</p>
+<div class="section" id="mount-mount-filesystems">
+<h3><code class="docutils literal notranslate"><span class="pre">mount</span></code> – mount filesystems<a class="headerlink" href="#mount-mount-filesystems" title="Permalink to this headline">¶</a></h3>
+<p>Arguments: &lt;filesystem&gt; &lt;src&gt; &lt;mountpoint&gt; [flags]</p>
+<p>The exposed flags are the ones available for the operating system. As an example on Linux you will options like bind, recursive, readonly etc.</p>
+</div>
+<div class="section" id="umount-unmount-filesystems">
+<h3><code class="docutils literal notranslate"><span class="pre">umount</span></code> – unmount filesystems<a class="headerlink" href="#umount-unmount-filesystems" title="Permalink to this headline">¶</a></h3>
+<p>Arguments: &lt;mountpoint&gt; [flags]</p>
+</div>
+<div class="section" id="exec-run-shell-commands">
+<h3><code class="docutils literal notranslate"><span class="pre">exec</span></code> run shell commands<a class="headerlink" href="#exec-run-shell-commands" title="Permalink to this headline">¶</a></h3>
+<p>Arguments: &lt;command&gt; [args…]</p>
+<p>Run the command under <code class="docutils literal notranslate"><span class="pre">/bin/sh</span></code>.</p>
+<p>If for some reason you do not want to use <code class="docutils literal notranslate"><span class="pre">/bin/sh</span></code> as the running shell, you can override it with the <code class="docutils literal notranslate"><span class="pre">--binsh</span></code> option. You can specify multiple <code class="docutils literal notranslate"><span class="pre">--binsh</span></code> options – they will be tried until one valid shell is found.</p>
+</div>
+<div class="section" id="call-call-functions-in-the-current-process-address-space">
+<h3><code class="docutils literal notranslate"><span class="pre">call</span></code> call functions in the current process address space<a class="headerlink" href="#call-call-functions-in-the-current-process-address-space" title="Permalink to this headline">¶</a></h3>
+<p>Arguments: &lt;symbol&gt; [args…]</p>
+<p>Generally the arguments are ignored (the only exceptions are the emperor/vassal phases, see below) as the system expects to call the symbol without arguments.</p>
+<p><code class="docutils literal notranslate"><span class="pre">&lt;symbol&gt;</span></code> can be any symbol currently available in the process’s address space.</p>
+<p>This allows some interesting tricks when combined with the <code class="docutils literal notranslate"><span class="pre">--dlopen</span></code> uWSGI option:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// foo.c</span>
+<span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp"></span>
+<span class="kt">void</span> <span class="nf">foo_hello</span><span class="p">()</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;I am the foo_hello function called by a hook!</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Build this as a shared library:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>gcc -o foo.so -shared -fPIC foo.c
+</pre></div>
+</div>
+<p>and load it into the uWSGI symbol table.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>uwsgi --dlopen ./foo.so ...
+</pre></div>
+</div>
+<p>From now on, the “foo_hello” symbol is available in the uWSGI symbol table, ready to be called by the ‘call’ hooks.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>As –dlopen is a wrapper for the <code class="docutils literal notranslate"><span class="pre">dlopen()</span></code> function, beware of absolute paths and library search paths. If you do not want headaches, use always absolute paths when dealing with shared libraries.</p>
+</div>
+</div>
+</div>
+<div class="section" id="attaching-hardcoded-hooks">
+<h2>Attaching “hardcoded” hooks<a class="headerlink" href="#attaching-hardcoded-hooks" title="Permalink to this headline">¶</a></h2>
+<p>Each hardcoded hook exposes a set of options for each phase (with some exceptions).</p>
+<p>Each option is composed by the name of the hook and its phase, so to run a command in the <code class="docutils literal notranslate"><span class="pre">as-root</span></code> phase you will use <code class="docutils literal notranslate"><span class="pre">--exec-as-root</span></code>, or <code class="docutils literal notranslate"><span class="pre">--exec-as-user</span></code> for the <code class="docutils literal notranslate"><span class="pre">as-user</span></code> phase.</p>
+<p>Remember, you can attach all of the hooks you need to a hook-phase pair.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">cat /proc/cpuinfo</span>
+<span class="na">exec-as-root</span> <span class="o">=</span> <span class="s">echo 1 &gt; /proc/sys/net/ipv4/ip_forward</span>
+
+<span class="na">exec-as-user</span> <span class="o">=</span> <span class="s">ls /tmp</span>
+<span class="na">exec-as-user-at-exit</span> <span class="o">=</span> <span class="s">rm /tmp/foobar</span>
+
+<span class="na">dlopen</span> <span class="o">=</span> <span class="s">./foo.so</span>
+<span class="na">call-as-user</span> <span class="o">=</span> <span class="s">foo_hello</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+<p>The only exception to the rule are the <cite>as-emperor</cite> and <cite>as-vassal</cite> phases. For various reasons they expose a bunch of handy variants – see below.</p>
+</div>
+<div class="section" id="the-advanced-hooks">
+<h2>The “advanced” hooks<a class="headerlink" href="#the-advanced-hooks" title="Permalink to this headline">¶</a></h2>
+<p>A problem that limits their versatility (a big no-no in the uWSGI state of mind) with hardcoded hooks, is that you cannot control the order of the whole chain (as each phase executes each hooks grouped by type). If you want more control, “advanced” hooks are the best choice.</p>
+<p>Each phase has a single chain in which you specify the hook the call and which handler.</p>
+<p>Handlers specify how to run hooks. New handlers can be registered by plugins.</p>
+<p>Currently the handlers exposed by the core are:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">exec</span></code> - same as the ‘exec’ hardcoded options</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">call</span></code> - call the specified symbol ignoring return value</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">callret</span></code> - call the specified symbol expecting an int return. anything != 0 means failure</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">callint</span></code> - call the specified symbol parsing the argument as an int</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">callintret</span></code> - call the specified symbol parsing the argument as an int and expecting an int return.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mount</span></code> - same as ‘mount’ hardcoded options</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">umount</span></code> - same as ‘umount’ hardcoded options</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cd</span></code> - convenience handler, same as <code class="docutils literal notranslate"><span class="pre">call:chdir</span> <span class="pre">&lt;directory&gt;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">exit</span></code> - convenience handler, same as <code class="docutils literal notranslate"><span class="pre">callint:exit</span> <span class="pre">[num]</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">print</span></code> - convenience handler, same as calling the <code class="docutils literal notranslate"><span class="pre">uwsgi_log</span></code> symbol</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">write</span></code> - (from uWSGI 1.9.21), write a string to the specified file using write:&lt;file&gt; &lt;string&gt;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">writefifo</span></code> - (from uWSGI 1.9.21), write a string to the specified FIFO using writefifo:&lt;file&gt; &lt;string&gt;</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">unlink</span></code> - (from uWSGI 1.9.21), unlink the specified file</p></li>
+</ul>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="na">hook-as-root</span> <span class="o">=</span> <span class="s">mount:proc none /proc</span>
+<span class="na">hook-as-root</span> <span class="o">=</span> <span class="s">exec:cat /proc/self/mounts</span>
+<span class="na">hook-pre-app</span> <span class="o">=</span> <span class="s">callint:putenv PATH=bin:$(PATH)</span>
+<span class="na">hook-post-app</span> <span class="o">=</span> <span class="s">call:uwsgi_log application has been loaded</span>
+<span class="na">hook-as-user-atexit</span> <span class="o">=</span> <span class="s">print:goodbye cruel world</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Hooks</a><ul>
+<li><a class="reference internal" href="#the-hookable-uwsgi-phases">The “hookable” uWSGI phases</a></li>
+<li><a class="reference internal" href="#the-hardcoded-hooks">The “hardcoded” hooks</a><ul>
+<li><a class="reference internal" href="#mount-mount-filesystems"><code class="docutils literal notranslate"><span class="pre">mount</span></code> – mount filesystems</a></li>
+<li><a class="reference internal" href="#umount-unmount-filesystems"><code class="docutils literal notranslate"><span class="pre">umount</span></code> – unmount filesystems</a></li>
+<li><a class="reference internal" href="#exec-run-shell-commands"><code class="docutils literal notranslate"><span class="pre">exec</span></code> run shell commands</a></li>
+<li><a class="reference internal" href="#call-call-functions-in-the-current-process-address-space"><code class="docutils literal notranslate"><span class="pre">call</span></code> call functions in the current process address space</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#attaching-hardcoded-hooks">Attaching “hardcoded” hooks</a></li>
+<li><a class="reference internal" href="#the-advanced-hooks">The “advanced” hooks</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="LogEncoders.html"
+                        title="previous chapter">Log encoders</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="WorkerOverride.html"
+                        title="next chapter">Overriding Workers</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/Hooks.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="WorkerOverride.html" title="Overriding Workers"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="LogEncoders.html" title="Log encoders"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

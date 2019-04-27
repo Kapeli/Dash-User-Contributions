@@ -1,0 +1,273 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Log encoders &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Hooks" href="Hooks.html" />
+    <link rel="prev" title="Formatting uWSGI requests logs" href="LogFormat.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Hooks.html" title="Hooks"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="LogFormat.html" title="Formatting uWSGI requests logs"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="log-encoders">
+<h1>Log encoders<a class="headerlink" href="#log-encoders" title="Permalink to this headline">¶</a></h1>
+<p>uWSGI 1.9.16 got the “log encoding” feature.</p>
+<p>An encoder receives a logline and give back a “transformation” of it.</p>
+<p>Encoders can be added by plugins, and can be enabled in chain (the output of an encoder will be the input of the following one and so on).</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; send logs to udp address 192.168.173.13:1717</span>
+<span class="na">logger</span> <span class="o">=</span> <span class="s">socket:192.168.173.13:1717</span>
+<span class="c1">; before sending a logline to the logger encode it in gzip</span>
+<span class="na">log-encoder</span> <span class="o">=</span> <span class="s">gzip</span>
+<span class="c1">; after gzip add a &#39;clear&#39; prefix to easy decode</span>
+<span class="na">log-encoder</span> <span class="o">=</span> <span class="s">prefix i am gzip encoded</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+<p>with this configuration the log server will receive the “i am gzip encoded” string followed by the tru log message encoded in gzip</p>
+<p>The log encoder syntax is the following:</p>
+<p>log-encoder = &lt;encoder&gt;[ args]</p>
+<p>so args (if any) are separated by a single space</p>
+<div class="section" id="request-logs-vs-stdout-stderr">
+<h2>Request logs VS stdout/stderr<a class="headerlink" href="#request-logs-vs-stdout-stderr" title="Permalink to this headline">¶</a></h2>
+<p>The –log-encoder option encodes only the stdout/stderr logs.</p>
+<p>If you want to encode request logs to use –log-req-encoder:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; send request logs to udp address 192.168.173.13:1717</span>
+<span class="na">req-logger</span> <span class="o">=</span> <span class="s">socket:192.168.173.13:1717</span>
+<span class="c1">; before sending a logline to the logger encode it in gzip</span>
+<span class="na">log-req-encoder</span> <span class="o">=</span> <span class="s">gzip</span>
+<span class="c1">; after gzip add a &#39;clear&#39; prefix to easy decode</span>
+<span class="na">log-req-encoder</span> <span class="o">=</span> <span class="s">prefix i am gzip encoded</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="routing-encoders">
+<h2>Routing encoders<a class="headerlink" href="#routing-encoders" title="Permalink to this headline">¶</a></h2>
+<p>Log routing allows sending each logline to a different log engine based on regexps. You can use the same system with encoders too:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; by default send logs to udp address 192.168.173.13:1717</span>
+<span class="na">logger</span> <span class="o">=</span> <span class="s">socket:192.168.173.13:1717</span>
+<span class="c1">; an alternative logger using the same address</span>
+<span class="na">logger</span> <span class="o">=</span> <span class="s">secondlogger socket:192.168.173.13:1717</span>
+<span class="c1">; use &#39;secondlogger&#39; for the logline containing &#39;uWSGI&#39;</span>
+<span class="na">log-route</span> <span class="o">=</span> <span class="s">secondlogger uWSGI</span>
+<span class="c1">; before sending a logline to the &#39;secondlogger&#39; logger encode it in gzip</span>
+<span class="na">log-encoder</span> <span class="o">=</span> <span class="s">gzip:secondlogger</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="core-encoders">
+<h2><code class="docutils literal notranslate"><span class="pre">Core</span></code> encoders<a class="headerlink" href="#core-encoders" title="Permalink to this headline">¶</a></h2>
+<p>The following encoders are available in the uwsgi ‘core’:</p>
+<p><code class="docutils literal notranslate"><span class="pre">prefix</span></code> add a raw prefix to each log msg</p>
+<p><code class="docutils literal notranslate"><span class="pre">suffix</span></code> add a raw suffix to each log msg</p>
+<p><code class="docutils literal notranslate"><span class="pre">nl</span></code> add a newline char to each log msg</p>
+<p><code class="docutils literal notranslate"><span class="pre">gzip</span></code> compress each msg with gzip (requires zlib)</p>
+<p><code class="docutils literal notranslate"><span class="pre">compress</span></code> compress each msg with zlib compress (requires zlib)</p>
+<p><code class="docutils literal notranslate"><span class="pre">format</span></code> apply the specified format to each log msg:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="na">log-encoder</span> <span class="o">=</span> <span class="s">format [FOO ${msg} BAR]</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">json</span></code> like <code class="docutils literal notranslate"><span class="pre">format</span></code> but each variable is json escaped</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="na">log-encoder</span> <span class="o">=</span> <span class="s">json {&quot;unix&quot;:${unix}, &quot;msg&quot;:&quot;${msg}&quot;}</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+<p>The following variables (for format and json) are available:</p>
+<p><code class="docutils literal notranslate"><span class="pre">${msg}</span></code> the raw log message (newline stripped)</p>
+<p><code class="docutils literal notranslate"><span class="pre">${msgnl}</span></code> the raw log message (with newline)</p>
+<p><code class="docutils literal notranslate"><span class="pre">${unix}</span></code> the current unix time</p>
+<p><code class="docutils literal notranslate"><span class="pre">${micros}</span></code> the current unix time in microseconds</p>
+<p><code class="docutils literal notranslate"><span class="pre">${strftime:xxx}</span></code> strftime using the xxx format:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">...</span>
+<span class="c1">; we need to escape % to avoid magic vars nameclash</span>
+<span class="na">log-encoder</span> <span class="o">=</span> <span class="s">json {&quot;unix&quot;:${unix}, &quot;msg&quot;:&quot;${msg}&quot;, &quot;date&quot;:&quot;${strftime:%%d/%%m/%%Y %%H:%%M:%%S}&quot;}</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="the-msgpack-encoder">
+<h2>The <code class="docutils literal notranslate"><span class="pre">msgpack</span></code> encoder<a class="headerlink" href="#the-msgpack-encoder" title="Permalink to this headline">¶</a></h2>
+<p>This is the first log-encoder plugin officially added to uWSGI sources. It allows encoding of loglines in msgpack (<a class="reference external" href="http://msgpack.org/">http://msgpack.org/</a>) format.</p>
+<p>The syntax is pretty versatile as it has been developed for adding any information to a single packet</p>
+<p><code class="docutils literal notranslate"><span class="pre">log-encoder</span> <span class="pre">=</span> <span class="pre">msgpack</span> <span class="pre">&lt;format&gt;</span></code></p>
+<p>format is pretty complex as it is a list of the single items in the whole packet.</p>
+<p>For example if you want to encode the {‘foo’:’bar’, ‘test’:17} dictionary you need to read it as:</p>
+<p>a map of 2 items | the string foo | the string bar | the string test | the integer 17</p>
+<p>for a total of 5 items.</p>
+<p>A more complex structure {‘boo’:30, ‘foo’:’bar’, ‘test’: [1,3,3,17.30,nil,true,false]}</p>
+<p>will be</p>
+<p>a map of 3 items | the string boo | the number 30| the string foo| the string bar | the string test | an array of 7 items | the integer 1 | the integer 3 | the integer 3 | the float 17.30 | a nil | a true | a false</p>
+<p>The &lt;format&gt; string is a representation of this way:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>map:2<span class="p">|</span>str:foo<span class="p">|</span>str:bar<span class="p">|</span>str:test<span class="p">|</span>int:17
+</pre></div>
+</div>
+<p>The pipe is the seprator of each item. The string before the colon is the type of item, followed by the optional argument</p>
+<p>The following item types are supported:</p>
+<p><code class="docutils literal notranslate"><span class="pre">map</span></code> a dictionary, the argument is the number of items</p>
+<p><code class="docutils literal notranslate"><span class="pre">array</span></code> an array, the argument is the number of items</p>
+<p><code class="docutils literal notranslate"><span class="pre">str</span></code> a string, the argument is the string itself</p>
+<p><code class="docutils literal notranslate"><span class="pre">bin</span></code> a byte array, the argument is the binary stream itself</p>
+<p><code class="docutils literal notranslate"><span class="pre">int</span></code> an integer, the argument is the number</p>
+<p><code class="docutils literal notranslate"><span class="pre">float</span></code> a float, the argument is the number</p>
+<p><code class="docutils literal notranslate"><span class="pre">nil</span></code> undefined/NULL</p>
+<p><code class="docutils literal notranslate"><span class="pre">true</span></code> boolean TRUE</p>
+<p><code class="docutils literal notranslate"><span class="pre">false</span></code> boolean FALSE</p>
+<p>in addition to msgpack types, a series of dynamic types are available:</p>
+<p><code class="docutils literal notranslate"><span class="pre">msg</span></code> translate the logline to a msgpack string with newline chopped</p>
+<p><code class="docutils literal notranslate"><span class="pre">msgbin</span></code> translate the logline to a msgpack byte array with newline chopped</p>
+<p><code class="docutils literal notranslate"><span class="pre">msgnl</span></code> translate the logline to a msgpack string (newline included)</p>
+<p><code class="docutils literal notranslate"><span class="pre">msgbin</span></code> translate the logline to a msgpack byte array (newline included)</p>
+<p><code class="docutils literal notranslate"><span class="pre">unix</span></code> translate to an integer of the unix time</p>
+<p><code class="docutils literal notranslate"><span class="pre">micros</span></code> translate to an integer of the unix time in microseconds</p>
+<p><code class="docutils literal notranslate"><span class="pre">strftime</span></code> translate to a string using strftime syntax. The strftime format is the argument</p>
+<p>As an example you can send logline to a logstash server via udp:</p>
+<p>(logstash debug configuration):</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="n">input</span> <span class="p">{</span>
+     <span class="n">udp</span> <span class="p">{</span>
+             <span class="n">codec</span> <span class="o">=&gt;</span>   <span class="n">msgpack</span> <span class="p">{}</span>
+             <span class="n">port</span> <span class="o">=&gt;</span> <span class="mi">1717</span>
+     <span class="p">}</span>
+<span class="p">}</span>
+<span class="n">output</span> <span class="p">{</span>
+     <span class="n">stdout</span> <span class="p">{</span> <span class="n">debug</span> <span class="o">=&gt;</span> <span class="nb">true</span> <span class="p">}</span>
+     <span class="n">elasticsearch</span> <span class="p">{</span> <span class="n">embedded</span> <span class="o">=&gt;</span> <span class="nb">true</span> <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="na">logger</span> <span class="o">=</span> <span class="s">socket:192.168.173.13:1717</span>
+<span class="na">log-encoder</span> <span class="o">=</span> <span class="s">msgpack map:4|str:message|msg|str:hostname|str:%h|str:version|str:%V|str:appname|str:myapp</span>
+<span class="na">...</span>
+</pre></div>
+</div>
+<p>this will generate the following structure:</p>
+<div class="highlight-js notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+   <span class="s2">&quot;message&quot;</span><span class="o">:</span> <span class="s2">&quot;*** Starting uWSGI 1.9.16-dev-29d80ce (64bit) on [Sat Sep  7 15:04:32 2013] ***&quot;</span><span class="p">,</span>
+   <span class="s2">&quot;hostname&quot;</span><span class="o">:</span> <span class="s2">&quot;unbit.it&quot;</span><span class="p">,</span>
+   <span class="s2">&quot;version&quot;</span><span class="o">:</span> <span class="s2">&quot;1.9.16-dev&quot;</span><span class="p">,</span>
+   <span class="s2">&quot;appname&quot;</span><span class="o">:</span> <span class="s2">&quot;myapp&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>that will be stored in elasticsearch</p>
+</div>
+<div class="section" id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
+<p>Encoders automatically enable –log-master</p>
+<p>For best performance consider allocating a thread for log sending with –threaded-logger</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Log encoders</a><ul>
+<li><a class="reference internal" href="#request-logs-vs-stdout-stderr">Request logs VS stdout/stderr</a></li>
+<li><a class="reference internal" href="#routing-encoders">Routing encoders</a></li>
+<li><a class="reference internal" href="#core-encoders"><code class="docutils literal notranslate"><span class="pre">Core</span></code> encoders</a></li>
+<li><a class="reference internal" href="#the-msgpack-encoder">The <code class="docutils literal notranslate"><span class="pre">msgpack</span></code> encoder</a></li>
+<li><a class="reference internal" href="#notes">Notes</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="LogFormat.html"
+                        title="previous chapter">Formatting uWSGI requests logs</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Hooks.html"
+                        title="next chapter">Hooks</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/LogEncoders.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Hooks.html" title="Hooks"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="LogFormat.html" title="Formatting uWSGI requests logs"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

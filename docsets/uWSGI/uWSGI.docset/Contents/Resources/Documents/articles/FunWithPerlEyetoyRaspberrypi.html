@@ -1,0 +1,392 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fun with Perl, Eyetoy and RaspberryPi &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Offloading Websockets and Server-Sent Events AKA “Combine them with Django safely”" href="OffloadingWebsocketsAndSSE.html" />
+    <link rel="prev" title="The Art of Graceful Reloading" href="TheArtOfGracefulReloading.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="OffloadingWebsocketsAndSSE.html" title="Offloading Websockets and Server-Sent Events AKA “Combine them with Django safely”"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="TheArtOfGracefulReloading.html" title="The Art of Graceful Reloading"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="fun-with-perl-eyetoy-and-raspberrypi">
+<h1>Fun with Perl, Eyetoy and RaspberryPi<a class="headerlink" href="#fun-with-perl-eyetoy-and-raspberrypi" title="Permalink to this headline">¶</a></h1>
+<p>Author: Roberto De Ioris</p>
+<p>Date: 2013-12-07</p>
+<img alt="https://raw.github.com/unbit/uwsgi-capture/master/rpi-examples/rpi_eyetoy.jpg" src="https://raw.github.com/unbit/uwsgi-capture/master/rpi-examples/rpi_eyetoy.jpg" />
+<div class="section" id="intro">
+<h2>Intro<a class="headerlink" href="#intro" title="Permalink to this headline">¶</a></h2>
+<p>This article is the result of various experiments aimed at improving uWSGI performance and usability in various areas before the 2.0 release.</p>
+<p>To follow the article you need:</p>
+<ul class="simple">
+<li><p>a Raspberry Pi (any model) with a Linux distribution installed (I used standard Raspbian)</p></li>
+<li><p>a PS3 Eyetoy webcam</p></li>
+<li><p>a websocket-enabled browser (basically any serious browser)</p></li>
+<li><p>a bit of Perl knowledge (really only a bit, there’s less than 10 lines of Perl ;)</p></li>
+<li><p>Patience (building uWSGI + PSGI + coroae on the RPI requires 13 minutes)</p></li>
+</ul>
+</div>
+<div class="section" id="uwsgi-subsystems-and-plugins">
+<h2>uWSGI subsystems and plugins<a class="headerlink" href="#uwsgi-subsystems-and-plugins" title="Permalink to this headline">¶</a></h2>
+<p>The project makes use of the following uWSGI subsystems and plugins:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="../WebSockets.html"><span class="doc">WebSocket support</span></a></p></li>
+<li><p><a class="reference internal" href="../SharedArea.html"><span class="doc">SharedArea – share memory pages between uWSGI components</span></a> (for storing frames)</p></li>
+<li><p><a class="reference internal" href="../Mules.html"><span class="doc">uWSGI Mules</span></a> (for gathering frames)</p></li>
+<li><p><a class="reference internal" href="../Symcall.html"><span class="doc">The Symcall plugin</span></a></p></li>
+<li><p><a class="reference internal" href="../Perl.html"><span class="doc">uWSGI Perl support (PSGI)</span></a></p></li>
+<li><p><a class="reference internal" href="../Async.html"><span class="doc">uWSGI asynchronous/non-blocking modes (updated to uWSGI 1.9)</span></a> (optional, we use <code class="docutils literal notranslate"><span class="pre">Coro::Anyevent</span></code> but you can rely on standard processes, though you’ll need way more memory)</p></li>
+</ul>
+</div>
+<div class="section" id="what-we-want-to-accomplish">
+<h2>What we want to accomplish<a class="headerlink" href="#what-we-want-to-accomplish" title="Permalink to this headline">¶</a></h2>
+<p>We want our RPI to gather frames from the Eyetoy and stream them to various connected clients using websockets, using a HTML5 canvas element to show them.</p>
+<p>The whole system must use as little memory as possible, as few CPU cycles as possible, and it should support a large number of clients (… though well, even 10 clients will be a success for the Raspberry Pi hardware ;)</p>
+</div>
+<div class="section" id="technical-background">
+<h2>Technical background<a class="headerlink" href="#technical-background" title="Permalink to this headline">¶</a></h2>
+<p>The Eyetoy captures frames in YUYV format (known as YUV 4:2:2). This means we need 4 bytes for 2 pixels.</p>
+<p>By default the resolution is set to 640x480, so each frame will need 614,400 bytes.</p>
+<p>Once we have a frame we need to decode it to RGBA to allow the HTML5 canvas to show it.</p>
+<p>The translation between YUYV and RGBA is pretty heavy for the RPI (especially if you need to do it for every connected client) so we will do it
+in the browser using Javascript. (There are other approaches we could follow, just check the end of the article for them.)</p>
+<p>The uWSGI stack is composed by a mule gathering frames from the Eyetoy and writing them to the uWSGI SharedArea.</p>
+<p>Workers constantly read from that SharedArea and send frames as binary websocket messages.</p>
+</div>
+<div class="section" id="let-s-start-the-uwsgi-capture-plugin">
+<h2>Let’s start: the uwsgi-capture plugin<a class="headerlink" href="#let-s-start-the-uwsgi-capture-plugin" title="Permalink to this headline">¶</a></h2>
+<p>uWSGI 1.9.21 introduced a simplified (and safe) procedure to build uWSGI plugins. (Expect more third party plugins soon!)</p>
+<p>The project at: <a class="reference external" href="https://github.com/unbit/uwsgi-capture">https://github.com/unbit/uwsgi-capture</a> shows a very simple plugin using the Video4Linux 2 API to gather frames.</p>
+<p>Each frame is written in a shared area initialized by the plugin itself.</p>
+<p>The first step is getting uWSGI and building it with the ‘coroae’ profile:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>sudo apt-get install git build-essential libperl-dev libcoro-perl
+git clone https://github.com/unbit/uwsgi
+<span class="nb">cd</span> uwsgi
+make coroae
+</pre></div>
+</div>
+<p>The procedure requires about 13 minutes. If all goes well you can clone the uwsgi-capture plugin and build it.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/unbit/uwsgi-capture
+./uwsgi --build-plugin uwsgi-capture
+</pre></div>
+</div>
+<p>You now have the capture_plugin.so file in your uwsgi directory.</p>
+<p>Plug your Eyetoy into an USB port on your RPI and check if it works:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi --plugin capture --v4l-capture /dev/video0
+</pre></div>
+</div>
+<p>(the <code class="docutils literal notranslate"><span class="pre">--v4l-capture</span></code> option is exposed by the capture plugin)</p>
+<p>If all goes well you should see the following lines in uWSGI startup logs:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>/dev/video0 detected <span class="nv">width</span> <span class="o">=</span> <span class="m">640</span>
+/dev/video0 detected <span class="nv">height</span> <span class="o">=</span> <span class="m">480</span>
+/dev/video0 detected <span class="nv">format</span> <span class="o">=</span> YUYV
+sharedarea <span class="m">0</span> created at 0xb6935000 <span class="o">(</span><span class="m">150</span> pages, area at 0xb6936000<span class="o">)</span>
+/dev/video0 started streaming frames to sharedarea <span class="m">0</span>
+</pre></div>
+</div>
+<p>(the sharedarea memory pointers will obviously probably be different)</p>
+<p>The uWSGI process will exit soon after this as we did not tell it what to do. :)</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">uwsgi-capture</span></code> plugin exposes 2 functions:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">captureinit()</span></code>, mapped as the init() hook of the plugin, will be called automatically by uWSGI. If the –v4l-capture option is specified, this function will initialize the specified device and will map it to a uWSGI sharedarea.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">captureloop()</span></code> is the function gathering frames and writing them to the sharedarea. This function should constantly run (even if there are no clients reading frames)</p></li>
+</ul>
+<p>We want a mule to run the <code class="docutils literal notranslate"><span class="pre">captureloop()</span></code> function.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi --plugin capture --v4l-capture /dev/video0 --mule<span class="o">=</span><span class="s2">&quot;captureloop()&quot;</span> --http-socket :9090
+</pre></div>
+</div>
+<p>This time we have bound uWSGI to HTTP port 9090 with a mule mapped to the “captureloop()” function. This mule syntax is
+exposed by the symcall plugin that takes control of every mule argument ending with “()” (the quoting is required to avoid the shell making a mess of the parentheses).</p>
+<p>If all goes well you should see your uWSGI server spawning a master, a mule and a worker.</p>
+</div>
+<div class="section" id="step-2-the-psgi-app">
+<h2>Step 2: the PSGI app<a class="headerlink" href="#step-2-the-psgi-app" title="Permalink to this headline">¶</a></h2>
+<p>Time to write our websocket server sending Eyetoy frames (you can find sources for the example here: <a class="reference external" href="https://github.com/unbit/uwsgi-capture/tree/master/rpi-examples">https://github.com/unbit/uwsgi-capture/tree/master/rpi-examples</a>).</p>
+<p>The PSGI app will be very simple:</p>
+<div class="highlight-pl notranslate"><div class="highlight"><pre><span></span><span class="k">use</span> <span class="nn">IO::File</span><span class="p">;</span>
+<span class="k">use</span> <span class="nn">File::Basename</span><span class="p">;</span>
+
+<span class="k">my</span> <span class="nv">$app</span> <span class="o">=</span> <span class="k">sub</span> <span class="p">{</span>
+     <span class="k">my</span> <span class="nv">$env</span> <span class="o">=</span> <span class="nb">shift</span><span class="p">;</span>
+
+     <span class="c1"># websockets connection happens on /eyetoy</span>
+     <span class="k">if</span> <span class="p">(</span><span class="nv">$env</span><span class="o">-&gt;</span><span class="p">{</span><span class="n">PATH_INFO</span><span class="p">}</span> <span class="ow">eq</span> <span class="s">&#39;/eyetoy&#39;</span><span class="p">)</span> <span class="p">{</span>
+             <span class="c1"># complete the handshake</span>
+             <span class="nn">uwsgi::</span><span class="n">websocket_handshake</span><span class="p">(</span><span class="nv">$env</span><span class="o">-&gt;</span><span class="p">{</span><span class="n">HTTP_SEC_WEBSOCKET_KEY</span><span class="p">},</span> <span class="nv">$env</span><span class="o">-&gt;</span><span class="p">{</span><span class="n">HTTP_ORIGIN</span><span class="p">});</span>
+             <span class="k">while</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+                     <span class="c1"># wait for updates in the sharedarea</span>
+                     <span class="nn">uwsgi::</span><span class="n">sharedarea_wait</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">50</span><span class="p">);</span>
+                     <span class="c1"># send a binary websocket message directly from the sharedarea</span>
+                     <span class="nn">uwsgi::</span><span class="n">websocket_send_binary_from_sharedarea</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+             <span class="p">}</span>
+     <span class="p">}</span>
+     <span class="c1"># other requests generate the html</span>
+     <span class="k">else</span> <span class="p">{</span>
+             <span class="k">return</span> <span class="p">[</span><span class="mi">200</span><span class="p">,</span> <span class="p">[</span><span class="s">&#39;Content-Type&#39;</span> <span class="o">=&gt;</span> <span class="s">&#39;text/html&#39;</span><span class="p">],</span> <span class="k">new</span> <span class="nn">IO::</span><span class="n">File</span><span class="p">(</span><span class="n">dirname</span><span class="p">(</span><span class="n">__FILE__</span><span class="p">)</span><span class="o">.</span><span class="s">&#39;/eyetoy.html&#39;</span><span class="p">)];</span>
+     <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The only interesting parts are:</p>
+<div class="highlight-pl notranslate"><div class="highlight"><pre><span></span><span class="nn">uwsgi::</span><span class="n">sharedarea_wait</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">50</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>This function suspends the current request until the specified shared area (the ‘zero’ one) gets an update. As this function is basically a busy-loop poll, the second argument specifies the polling frequency in milliseconds. 50 milliseconds gave us good results (feel free to try with other values).</p>
+<div class="highlight-pl notranslate"><div class="highlight"><pre><span></span><span class="nn">uwsgi::</span><span class="n">websocket_send_binary_from_sharedarea</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This is a special utility function sending a websocket binary message directly from the sharedarea (yep, zero-copy). The first argument is the sharedarea id (the ‘zero’ one) and the second is the position
+in the sharedarea to start reading from (zero again, as we want a full frame).</p>
+</div>
+<div class="section" id="step-3-html5">
+<h2>Step 3: HTML5<a class="headerlink" href="#step-3-html5" title="Permalink to this headline">¶</a></h2>
+<p>The HTML part (well it would be better to say Javascript part) is very easy, aside from the YUYV to RGB(A) transform voodoo.</p>
+<div class="highlight-html notranslate"><div class="highlight"><pre><span></span><span class="p">&lt;</span><span class="nt">html</span><span class="p">&gt;</span>
+     <span class="p">&lt;</span><span class="nt">body</span><span class="p">&gt;</span>
+             <span class="p">&lt;</span><span class="nt">canvas</span> <span class="na">id</span><span class="o">=</span><span class="s">&quot;mystream&quot;</span> <span class="na">width</span><span class="o">=</span><span class="s">&quot;640&quot;</span> <span class="na">height</span><span class="o">=</span><span class="s">&quot;480&quot;</span> <span class="na">style</span><span class="o">=</span><span class="s">&quot;border:solid 1px red&quot;</span><span class="p">&gt;&lt;/</span><span class="nt">canvas</span><span class="p">&gt;</span>
+
+             <span class="p">&lt;</span><span class="nt">script</span><span class="p">&gt;</span>
+
+
+                     <span class="kd">var</span> <span class="nx">canvas</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="s1">&#39;mystream&#39;</span><span class="p">);</span>
+                     <span class="kd">var</span> <span class="nx">width</span> <span class="o">=</span> <span class="nx">canvas</span><span class="p">.</span><span class="nx">width</span><span class="p">;</span>
+                     <span class="kd">var</span> <span class="nx">height</span> <span class="o">=</span> <span class="nx">canvas</span><span class="p">.</span><span class="nx">height</span><span class="p">;</span>
+                     <span class="kd">var</span> <span class="nx">ctx</span> <span class="o">=</span> <span class="nx">canvas</span><span class="p">.</span><span class="nx">getContext</span><span class="p">(</span><span class="s2">&quot;2d&quot;</span><span class="p">);</span>
+                     <span class="kd">var</span> <span class="nx">rgba</span> <span class="o">=</span> <span class="nx">ctx</span><span class="p">.</span><span class="nx">getImageData</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nx">width</span><span class="p">,</span> <span class="nx">height</span><span class="p">);</span>
+
+                     <span class="c1">// fill alpha (optimization)</span>
+                     <span class="k">for</span><span class="p">(</span><span class="nx">y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">y</span><span class="o">&lt;</span> <span class="nx">height</span><span class="p">;</span> <span class="nx">y</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+                             <span class="k">for</span><span class="p">(</span><span class="nx">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">x</span> <span class="o">&lt;</span> <span class="nx">width</span><span class="p">;</span> <span class="nx">x</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+                                     <span class="nx">pos</span> <span class="o">=</span> <span class="p">(</span><span class="nx">y</span> <span class="o">*</span> <span class="nx">width</span> <span class="o">*</span> <span class="mi">4</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="nx">x</span> <span class="o">*</span> <span class="mi">4</span><span class="p">)</span> <span class="p">;</span>
+                                     <span class="nx">rgba</span><span class="p">.</span><span class="nx">data</span><span class="p">[</span><span class="nx">pos</span><span class="o">+</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="mi">255</span><span class="p">;</span>
+                             <span class="p">}</span>
+                     <span class="p">}</span>
+
+                     <span class="c1">// connect to the PSGI websocket server</span>
+                     <span class="kd">var</span> <span class="nx">ws</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">WebSocket</span><span class="p">(</span><span class="s1">&#39;ws://&#39;</span> <span class="o">+</span> <span class="nb">window</span><span class="p">.</span><span class="nx">location</span><span class="p">.</span><span class="nx">host</span> <span class="o">+</span> <span class="s1">&#39;/eyetoy&#39;</span><span class="p">);</span>
+                     <span class="nx">ws</span><span class="p">.</span><span class="nx">binaryType</span> <span class="o">=</span> <span class="s1">&#39;arraybuffer&#39;</span><span class="p">;</span>
+                     <span class="nx">ws</span><span class="p">.</span><span class="nx">onopen</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+                             <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;ready&#39;</span><span class="p">);</span>
+                     <span class="p">};</span>
+
+                     <span class="nx">ws</span><span class="p">.</span><span class="nx">onmessage</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+                             <span class="kd">var</span> <span class="nx">x</span><span class="p">,</span> <span class="nx">y</span><span class="p">;</span>
+                             <span class="kd">var</span> <span class="nx">ycbcr</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Uint8ClampedArray</span><span class="p">(</span><span class="nx">e</span><span class="p">.</span><span class="nx">data</span><span class="p">);</span>
+                             <span class="c1">// convert YUYV to RGBA</span>
+                             <span class="k">for</span><span class="p">(</span><span class="nx">y</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">y</span><span class="o">&lt;</span> <span class="nx">height</span><span class="p">;</span> <span class="nx">y</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+                                     <span class="k">for</span><span class="p">(</span><span class="nx">x</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nx">x</span> <span class="o">&lt;</span> <span class="nx">width</span><span class="p">;</span> <span class="nx">x</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+                                             <span class="nx">pos</span> <span class="o">=</span> <span class="p">(</span><span class="nx">y</span> <span class="o">*</span> <span class="nx">width</span> <span class="o">*</span> <span class="mi">4</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="nx">x</span> <span class="o">*</span> <span class="mi">4</span><span class="p">)</span> <span class="p">;</span>
+                                             <span class="kd">var</span> <span class="nx">vy</span><span class="p">,</span> <span class="nx">cb</span><span class="p">,</span> <span class="nx">cr</span><span class="p">;</span>
+                                             <span class="k">if</span> <span class="p">(</span><span class="nx">x</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+                                                     <span class="nx">ycbcr_pos</span> <span class="o">=</span> <span class="p">(</span><span class="nx">y</span> <span class="o">*</span> <span class="nx">width</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="nx">x</span> <span class="o">*</span> <span class="mi">2</span><span class="p">);</span>
+                                                     <span class="nx">vy</span> <span class="o">=</span> <span class="nx">ycbcr</span><span class="p">[</span><span class="nx">ycbcr_pos</span><span class="p">];</span>
+                                                     <span class="nx">cb</span> <span class="o">=</span> <span class="nx">ycbcr</span><span class="p">[</span><span class="nx">ycbcr_pos</span><span class="o">+</span><span class="mi">1</span><span class="p">];</span>
+                                                     <span class="nx">cr</span> <span class="o">=</span> <span class="nx">ycbcr</span><span class="p">[</span><span class="nx">ycbcr_pos</span><span class="o">+</span><span class="mi">3</span><span class="p">];</span>
+                                             <span class="p">}</span>
+                                             <span class="k">else</span> <span class="p">{</span>
+                                                     <span class="nx">ycbcr_pos</span> <span class="o">=</span> <span class="p">(</span><span class="nx">y</span> <span class="o">*</span> <span class="nx">width</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="p">((</span><span class="nx">x</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span><span class="p">);</span>
+                                                     <span class="nx">vy</span> <span class="o">=</span> <span class="nx">ycbcr</span><span class="p">[</span><span class="nx">ycbcr_pos</span><span class="o">+</span><span class="mi">2</span><span class="p">];</span>
+                                                     <span class="nx">cb</span> <span class="o">=</span> <span class="nx">ycbcr</span><span class="p">[</span><span class="nx">ycbcr_pos</span><span class="o">+</span><span class="mi">1</span><span class="p">];</span>
+                                                     <span class="nx">cr</span> <span class="o">=</span> <span class="nx">ycbcr</span><span class="p">[</span><span class="nx">ycbcr_pos</span><span class="o">+</span><span class="mi">3</span><span class="p">];</span>
+                                             <span class="p">}</span>
+                                             <span class="kd">var</span> <span class="nx">r</span> <span class="o">=</span> <span class="p">(</span><span class="nx">cr</span> <span class="o">+</span> <span class="p">((</span><span class="nx">cr</span> <span class="o">*</span> <span class="mi">103</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">8</span><span class="p">))</span> <span class="o">-</span> <span class="mi">179</span><span class="p">;</span>
+                                             <span class="kd">var</span> <span class="nx">g</span> <span class="o">=</span> <span class="p">((</span><span class="nx">cb</span> <span class="o">*</span> <span class="mi">88</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">-</span> <span class="mi">44</span> <span class="o">+</span> <span class="p">((</span><span class="nx">cr</span> <span class="o">*</span> <span class="mi">183</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">8</span><span class="p">)</span> <span class="o">-</span> <span class="mi">91</span><span class="p">;</span>
+                                             <span class="kd">var</span> <span class="nx">b</span> <span class="o">=</span> <span class="p">(</span><span class="nx">cb</span> <span class="o">+</span> <span class="p">((</span><span class="nx">cb</span> <span class="o">*</span> <span class="mi">198</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">8</span><span class="p">))</span> <span class="o">-</span> <span class="mi">227</span><span class="p">;</span>
+                                             <span class="nx">rgba</span><span class="p">.</span><span class="nx">data</span><span class="p">[</span><span class="nx">pos</span><span class="p">]</span> <span class="o">=</span> <span class="nx">vy</span> <span class="o">+</span> <span class="nx">r</span><span class="p">;</span>
+                                             <span class="nx">rgba</span><span class="p">.</span><span class="nx">data</span><span class="p">[</span><span class="nx">pos</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nx">vy</span> <span class="o">+</span> <span class="nx">g</span><span class="p">;</span>
+                                             <span class="nx">rgba</span><span class="p">.</span><span class="nx">data</span><span class="p">[</span><span class="nx">pos</span><span class="o">+</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="nx">vy</span> <span class="o">+</span> <span class="nx">b</span><span class="p">;</span>
+                                     <span class="p">}</span>
+                             <span class="p">}</span>
+                             <span class="c1">// draw pixels</span>
+                             <span class="nx">ctx</span><span class="p">.</span><span class="nx">putImageData</span><span class="p">(</span><span class="nx">rgba</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+                     <span class="p">};</span>
+                     <span class="nx">ws</span><span class="p">.</span><span class="nx">onclose</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span> <span class="nx">alert</span><span class="p">(</span><span class="s1">&#39;goodbye&#39;</span><span class="p">);}</span>
+                     <span class="nx">ws</span><span class="p">.</span><span class="nx">onerror</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span> <span class="nx">alert</span><span class="p">(</span><span class="s1">&#39;oops&#39;</span><span class="p">);}</span>
+             <span class="p">&lt;/</span><span class="nt">script</span><span class="p">&gt;</span>
+
+     <span class="p">&lt;/</span><span class="nt">body</span><span class="p">&gt;</span>
+<span class="p">&lt;/</span><span class="nt">html</span><span class="p">&gt;</span>
+</pre></div>
+</div>
+<p>Nothing special here. The vast majority of the code is related to YUYV-&gt;RGBA conversion. Pay attention to set the websocket communication in ‘binary’ mode (binaryType = ‘arraybuffer’ is enough) and be sure to use
+an Uint8ClampedArray (otherwise performance will be terribly bad)</p>
+</div>
+<div class="section" id="ready-to-watch">
+<h2>Ready to watch<a class="headerlink" href="#ready-to-watch" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi --plugin capture --v4l-capture /dev/video0 --http-socket :9090 --psgi uwsgi-capture/rpi-examples/eyetoy.pl --mule<span class="o">=</span><span class="s2">&quot;captureloop()&quot;</span>
+</pre></div>
+</div>
+<p>Connect with your browser to TCP port 9090 of your Raspberry Pi and start watching.</p>
+</div>
+<div class="section" id="concurrency">
+<h2>Concurrency<a class="headerlink" href="#concurrency" title="Permalink to this headline">¶</a></h2>
+<p>While you watch your websocket stream, you may want to start another browser window to see a second copy of your video. Unfortunately
+you spawned uWSGI with a single worker, so only a single client can get the stream.</p>
+<p>You can add multiple workers easily:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi --plugin capture --v4l-capture /dev/video0 --http-socket :9090 --psgi uwsgi-capture/rpi-examples/eyetoy.pl --mule<span class="o">=</span><span class="s2">&quot;captureloop()&quot;</span> --processes <span class="m">10</span>
+</pre></div>
+</div>
+<p>Like this up to 10 people will be able to watch the stream.</p>
+<p>But coroutines are way better (and cheaper) for I/O bound applications such as this:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./uwsgi --plugin capture --v4l-capture /dev/video0 --http-socket :9090 --psgi uwsgi-capture/rpi-examples/eyetoy.pl --mule<span class="o">=</span><span class="s2">&quot;captureloop()&quot;</span> --coroae <span class="m">10</span>
+</pre></div>
+</div>
+<p>Now, magically, we are able to manage 10 clients with but a single process! The memory on the RPI will be grateful to you.</p>
+</div>
+<div class="section" id="zero-copy-all-the-things">
+<h2>Zero-copy all the things<a class="headerlink" href="#zero-copy-all-the-things" title="Permalink to this headline">¶</a></h2>
+<p>Why are we using the SharedArea?</p>
+<p>The SharedArea is one of the most advanced uWSGI features. If you give a look at the uwsgi-capture plugin you will see how it easily creates a sharedarea pointing
+to a mmap()’ed region. Basically each worker, thread (but please do not use threads with Perl) or coroutine will have access to that memory in a concurrently safe way.</p>
+<p>In addition to this, thanks to the websocket/sharedarea cooperation API you can directly send websocket packets from a sharedarea without copying memory (except for the resulting websocket packet).</p>
+<p>This is way faster than something like:</p>
+<div class="highlight-pl notranslate"><div class="highlight"><pre><span></span><span class="k">my</span> <span class="nv">$chunk</span> <span class="o">=</span> <span class="nn">uwsgi::</span><span class="n">sharedarea_read</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="nn">uwsgi::</span><span class="n">websocket_send_binary</span><span class="p">(</span><span class="nv">$chunk</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We would need to allocate the memory for $chunk at every iteration, copying the sharedarea content into it and finally encapsulating it in a websocket message.</p>
+<p>With the sharedarea you remove the need to allocate (and free) memory constantly and to copy it from sharedarea to the Perl VM.</p>
+</div>
+<div class="section" id="alternative-approaches">
+<h2>Alternative approaches<a class="headerlink" href="#alternative-approaches" title="Permalink to this headline">¶</a></h2>
+<p>There are obviously other approaches you can follow.</p>
+<p>You could hack uwsgi-capture to allocate a second sharedarea into which it will directly write RGBA frames.</p>
+<p>JPEG encoding is relatively fast, you can try encoding frames in the RPI and sending them as MJPEG frames (instead of using websockets):</p>
+<div class="highlight-pl notranslate"><div class="highlight"><pre><span></span><span class="k">my</span> <span class="nv">$writer</span> <span class="o">=</span> <span class="nv">$responder</span><span class="o">-&gt;</span><span class="p">(</span> <span class="p">[</span><span class="mi">200</span><span class="p">,</span> <span class="p">[</span><span class="s">&#39;Content-Type&#39;</span> <span class="o">=&gt;</span> <span class="s">&#39;multipart/x-mixed-replace; boundary=uwsgi_mjpeg_frame&#39;</span><span class="p">]]);</span>
+<span class="nv">$writer</span><span class="o">-&gt;</span><span class="nb">write</span><span class="p">(</span><span class="s">&quot;--uwsgi_mjpeg_frame\r\n&quot;</span><span class="p">);</span>
+<span class="k">while</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nn">uwsgi::</span><span class="n">sharedarea_wait</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+    <span class="k">my</span> <span class="nv">$chunk</span> <span class="o">=</span> <span class="nn">uwsgi::</span><span class="n">sharedarea_read</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+    <span class="nv">$writer</span><span class="o">-&gt;</span><span class="nb">write</span><span class="p">(</span><span class="s">&quot;Content-Type: image/jpeg\r\n&quot;</span><span class="p">);</span>
+    <span class="nv">$writer</span><span class="o">-&gt;</span><span class="nb">write</span><span class="p">(</span><span class="s">&quot;Content-Length: &quot;</span><span class="o">.</span><span class="nb">length</span><span class="p">(</span><span class="nv">$chunk</span><span class="p">)</span><span class="o">.</span><span class="s">&quot;\r\n\r\n&quot;</span><span class="p">);</span>
+    <span class="nv">$writer</span><span class="o">-&gt;</span><span class="nb">write</span><span class="p">(</span><span class="nv">$chunk</span><span class="p">);</span>
+    <span class="nv">$writer</span><span class="o">-&gt;</span><span class="nb">write</span><span class="p">(</span><span class="s">&quot;\r\n--uwsgi_mjpeg_frame\r\n&quot;</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="other-languages">
+<h2>Other languages<a class="headerlink" href="#other-languages" title="Permalink to this headline">¶</a></h2>
+<p>At the time of writing, the uWSGI PSGI plugin is the only one exposing the additional API for websockets+sharedarea. The other language plugins will be updated soon.</p>
+</div>
+<div class="section" id="more-hacking">
+<h2>More hacking<a class="headerlink" href="#more-hacking" title="Permalink to this headline">¶</a></h2>
+<p>The RPI board is really fun to tinker with and uWSGI is a great companion for it (especially its lower-level API functions).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>As an exercise left to the reader: remember you can mmap() the address 0x20200000 to access the Raspberry PI GPIO controller… ready to write a uwsgi-gpio plugin?</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Fun with Perl, Eyetoy and RaspberryPi</a><ul>
+<li><a class="reference internal" href="#intro">Intro</a></li>
+<li><a class="reference internal" href="#uwsgi-subsystems-and-plugins">uWSGI subsystems and plugins</a></li>
+<li><a class="reference internal" href="#what-we-want-to-accomplish">What we want to accomplish</a></li>
+<li><a class="reference internal" href="#technical-background">Technical background</a></li>
+<li><a class="reference internal" href="#let-s-start-the-uwsgi-capture-plugin">Let’s start: the uwsgi-capture plugin</a></li>
+<li><a class="reference internal" href="#step-2-the-psgi-app">Step 2: the PSGI app</a></li>
+<li><a class="reference internal" href="#step-3-html5">Step 3: HTML5</a></li>
+<li><a class="reference internal" href="#ready-to-watch">Ready to watch</a></li>
+<li><a class="reference internal" href="#concurrency">Concurrency</a></li>
+<li><a class="reference internal" href="#zero-copy-all-the-things">Zero-copy all the things</a></li>
+<li><a class="reference internal" href="#alternative-approaches">Alternative approaches</a></li>
+<li><a class="reference internal" href="#other-languages">Other languages</a></li>
+<li><a class="reference internal" href="#more-hacking">More hacking</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="TheArtOfGracefulReloading.html"
+                        title="previous chapter">The Art of Graceful Reloading</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="OffloadingWebsocketsAndSSE.html"
+                        title="next chapter">Offloading Websockets and Server-Sent Events AKA “Combine them with Django safely”</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/articles/FunWithPerlEyetoyRaspberrypi.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="OffloadingWebsocketsAndSSE.html" title="Offloading Websockets and Server-Sent Events AKA “Combine them with Django safely”"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="TheArtOfGracefulReloading.html" title="The Art of Graceful Reloading"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>

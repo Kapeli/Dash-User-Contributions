@@ -1,0 +1,248 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>The GlusterFS plugin &#8212; uWSGI 2.0 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="The RADOS plugin" href="Rados.html" />
+    <link rel="prev" title="The GridFS plugin" href="GridFS.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Rados.html" title="The RADOS plugin"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="GridFS.html" title="The GridFS plugin"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="the-glusterfs-plugin">
+<h1>The GlusterFS plugin<a class="headerlink" href="#the-glusterfs-plugin" title="Permalink to this headline">¶</a></h1>
+<p>Available from uWSGI 1.9.15</p>
+<p>official modifier1: 27</p>
+<p>The ‘glusterfs’ plugin allows you to serve files stored in glusterfs filesystems directly using the glusterfs api
+available starting from GlusterFS 3.4</p>
+<p>This approach (compared to serving via fuse or nfs) has various advantages in terms of performances and ease of deployment.</p>
+<div class="section" id="step1-glusterfs-installation">
+<h2>Step1: glusterfs installation<a class="headerlink" href="#step1-glusterfs-installation" title="Permalink to this headline">¶</a></h2>
+<p>we build glusterfs from official sources, installing it in /opt/glusterfs on 3 nodes (192.168.173.1, 192.168.173.2, 192.168.173.3).</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>./configure --prefix<span class="o">=</span>/opt/glusterfs
+make
+make install
+</pre></div>
+</div>
+<p>now start the configuration/control daemon with:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>/opt/glusterfs/sbin/glusterd
+</pre></div>
+</div>
+<p>from now on we can start configuring our cluster</p>
+</div>
+<div class="section" id="step2-the-first-cluster">
+<h2>Step2: the first cluster<a class="headerlink" href="#step2-the-first-cluster" title="Permalink to this headline">¶</a></h2>
+<p>run the control client to access the glusterfs shell:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>/opt/glusterfs/sbin/gluster
+</pre></div>
+</div>
+<p>the first step is “discovering” the other nodes:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># do not run on node1 !!!</span>
+peer probe <span class="m">192</span>.168.173.1
+<span class="c1"># do not run on node2 !!!</span>
+peer probe <span class="m">192</span>.168.173.2
+<span class="c1"># do not run on node3 !!!</span>
+peer probe <span class="m">192</span>.168.173.3
+</pre></div>
+</div>
+<p>remember, you do not need to run “peer probe” for the same address of the machine on which you are running
+the glusterfs console. You have to repeat the procedure on each node of the cluser.</p>
+<p>Now we can create a replica volume (/exports/brick001 dir has to exist in every node):</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>volume create unbit001 replica <span class="m">3</span> <span class="m">192</span>.168.173.1:/exports/brick001 <span class="m">192</span>.168.173.2:/exports/brick001 <span class="m">192</span>.168.173.3:/exports/brick001
+</pre></div>
+</div>
+<p>and start it:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>volume start unbit001
+</pre></div>
+</div>
+<p>Now you should be able to mount your glusterfs filesystem and start writing files in it (you can use nfs or fuse)</p>
+</div>
+<div class="section" id="step3-uwsgi">
+<h2>Step3: uWSGI<a class="headerlink" href="#step3-uwsgi" title="Permalink to this headline">¶</a></h2>
+<p>a build profile, named ‘glusterfs’ is already available, so you can simply do:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">PKG_CONFIG_PATH</span><span class="o">=</span>/opt/glusterfs/lib/pkgconfig/ <span class="nv">UWSGI_PROFILE</span><span class="o">=</span>glusterfs make
+</pre></div>
+</div>
+<p>The profile currently disable ‘matheval’ support as the glusterfs libraries use bison/yacc with the same function prefixes (causing nameclash).</p>
+<p>You can now start your HTTP serving fastly serving glusterfs files (remember no nfs or fuse are involved):</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; bind on port 9090</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="c1">; set the default modifier1 to the glusterfs one</span>
+<span class="na">http-socket-modifier1</span> <span class="o">=</span> <span class="s">27</span>
+<span class="c1">; mount our glusterfs filesystem</span>
+<span class="na">glusterfs-mount</span> <span class="o">=</span> <span class="s">mountpoint=/,volume=unbit001,server=192.168.173.1:0</span>
+<span class="c1">; spawn 30 threads</span>
+<span class="na">threads</span> <span class="o">=</span> <span class="s">30</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="high-availability">
+<h2>High availability<a class="headerlink" href="#high-availability" title="Permalink to this headline">¶</a></h2>
+<p>The main GlusterFS selling point is high availability. With the prevopus setup we introduced a SPOF with the control daemon.</p>
+<p>The ‘server’ option allows you to specify multiple control daemons (they are tried until one responds)</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; bind on port 9090</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="c1">; set the default modifier1 to the glusterfs one</span>
+<span class="na">http-socket-modifier1</span> <span class="o">=</span> <span class="s">27</span>
+<span class="c1">; mount our glusterfs filesystem</span>
+<span class="na">glusterfs-mount</span> <span class="o">=</span> <span class="s">mountpoint=/,volume=unbit001,server=192.168.173.1:0;192.168.173.2:0;192.168.173.3:0</span>
+<span class="c1">; spawn 30 threads</span>
+<span class="na">threads</span> <span class="o">=</span> <span class="s">30</span>
+</pre></div>
+</div>
+<p>The ‘0’ port is a glusterfs convention, it means ‘the default port’ (generally 24007). You can specify whatever port you need/want</p>
+</div>
+<div class="section" id="multiple-mountpoints">
+<h2>Multiple mountpoints<a class="headerlink" href="#multiple-mountpoints" title="Permalink to this headline">¶</a></h2>
+<p>If your webserver (like nginx or the uWSGI http router) is capable of setting protocol vars (like SCRIPT_NAME or UWSGI_APPID) you can mount multiple
+glusterfs filesystems in the same instance:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[uwsgi]</span>
+<span class="c1">; bind on port 9090</span>
+<span class="na">http-socket</span> <span class="o">=</span> <span class="s">:9090</span>
+<span class="c1">; set the default modifier1 to the glusterfs one</span>
+<span class="na">http-socket-modifier1</span> <span class="o">=</span> <span class="s">27</span>
+<span class="c1">; mount our glusterfs filesystem</span>
+<span class="na">glusterfs-mount</span> <span class="o">=</span> <span class="s">mountpoint=/,volume=unbit001,server=192.168.173.1:0;192.168.173.2:0;192.168.173.3:0</span>
+<span class="na">glusterfs-mount</span> <span class="o">=</span> <span class="s">mountpoint=/foo,volume=unbit002,server=192.168.173.1:0;192.168.173.2:0;192.168.173.3:0</span>
+<span class="na">glusterfs-mount</span> <span class="o">=</span> <span class="s">mountpoint=/bar,volume=unbit003,server=192.168.173.1:0;192.168.173.2:0;192.168.173.3:0</span>
+<span class="c1">; spawn 30 threads</span>
+<span class="na">threads</span> <span class="o">=</span> <span class="s">30</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="multiprocess-vs-multithread">
+<h2>Multiprocess VS multithread<a class="headerlink" href="#multiprocess-vs-multithread" title="Permalink to this headline">¶</a></h2>
+<p>Currently a mix of the both will offers you best performance and availability.</p>
+<p>Async support is on work</p>
+</div>
+<div class="section" id="internal-routing">
+<h2>Internal routing<a class="headerlink" href="#internal-routing" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference internal" href="InternalRouting.html"><span class="doc">uWSGI internal routing</span></a> allows you to rewrite requests to change the requested files. Currently the glusterfs plugin only uses the PATH_INFO, so you can change it
+via the ‘setpathinfo’ directive</p>
+<p>Caching is supported too. Check the tutorial (linked in the homepage) for some cool idea</p>
+</div>
+<div class="section" id="using-capabilities-on-linux">
+<h2>Using capabilities (on Linux)<a class="headerlink" href="#using-capabilities-on-linux" title="Permalink to this headline">¶</a></h2>
+<p>If your cluster requires clients to bind on privileged ports (&lt;1024) and you do not want to change that thing (and obviously you do not want to run uWSGI as root)
+you may want to give your uWSGI instance the NET_BIND_SERVICE capability. Just ensure you have a capabilities-enabled uWSGI and add</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>... --cap net_bind_service ...
+</pre></div>
+</div>
+<p>to all of the instances you want to connect to glusterfs</p>
+</div>
+<div class="section" id="notes">
+<h2>Notes:<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h2>
+<p>The plugin automatically enables the mime type engine.</p>
+<p>There is no directory index support</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">The GlusterFS plugin</a><ul>
+<li><a class="reference internal" href="#step1-glusterfs-installation">Step1: glusterfs installation</a></li>
+<li><a class="reference internal" href="#step2-the-first-cluster">Step2: the first cluster</a></li>
+<li><a class="reference internal" href="#step3-uwsgi">Step3: uWSGI</a></li>
+<li><a class="reference internal" href="#high-availability">High availability</a></li>
+<li><a class="reference internal" href="#multiple-mountpoints">Multiple mountpoints</a></li>
+<li><a class="reference internal" href="#multiprocess-vs-multithread">Multiprocess VS multithread</a></li>
+<li><a class="reference internal" href="#internal-routing">Internal routing</a></li>
+<li><a class="reference internal" href="#using-capabilities-on-linux">Using capabilities (on Linux)</a></li>
+<li><a class="reference internal" href="#notes">Notes:</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="GridFS.html"
+                        title="previous chapter">The GridFS plugin</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="Rados.html"
+                        title="next chapter">The RADOS plugin</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/GlusterFS.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="Rados.html" title="The RADOS plugin"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="GridFS.html" title="The GridFS plugin"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">uWSGI 2.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2012-2016, uWSGI.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.0.1.
+    </div>
+  </body>
+</html>
