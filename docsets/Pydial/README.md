@@ -1,0 +1,3 @@
+Pydial
+=======================
+PyDial is a scientific system developed for scientific purposes and actively used for research by the Dialogue Systems Group at the University of Cambridge. Although we put great effort into designing clean interfaces and easily understandable structures, some the code will not necessarily be up to commercial standards. As it is used actively by our reserach group, the code may also change in the future. However, the core intefaces have been designed in a way that there should not be any need to change them.
