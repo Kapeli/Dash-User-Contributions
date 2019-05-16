@@ -5,10 +5,6 @@ Laravel Zero Docset
 
 You can contact me at [@godbout](https://twitter.com/godbout), on [GitHub](https://github.com/godbout) or by email at guill@sleeplessmind.com.mo.
 
-## Possible improvements
-
-The docset comes with a Table of Contents of Sections, but it can probably be improved. Let me know if you see any other type of entries that could be added.
-
 ## Docset build
 
 I built my own builder in PHP, available here: https://github.com/godbout/dash-docset-builder
@@ -18,7 +14,7 @@ To build this docset:
 // Install the PHP dependencies
 composer install
 
-// Download the docs, then package them into the docset file
+// Download the docs, package, and archive them
 php dash-docset build laravel-zero
 ```
 
