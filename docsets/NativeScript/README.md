@@ -8,7 +8,7 @@ definitions](https://github.com/NativeScript/NativeScript/) using the
 [Typedoc generator](http://typedoc.io/) with [Dash typedoc
 theme](https://github.com/alg/typedoc-dash-theme).
 
-This documentation is valid for [NativeScript 5.3.4](https://www.nativescript.org/)
+This documentation is valid for [NativeScript 5.4.0](https://www.nativescript.org/)
 
 ---
 
