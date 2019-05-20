@@ -13,6 +13,8 @@ Updated by [Julian Torres](https://github.com/macintacos) to v3.4.0
 
 Update by [Prashant Mital](https://github.com/prashantmital) to v3.6.1
 
+Update by [Kelvin Ng](https://github.com/hoishing) to 3.8.0
+
 ### How to build:
 
 - install [doc2dash](https://pypi.python.org/pypi/doc2dash)
