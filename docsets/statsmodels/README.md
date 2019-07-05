@@ -15,18 +15,7 @@ cd statsmodels/docs
 make html
 ```
 
-To generate the documentation, you need to download the following packages:
-
- - tzlocal
- - pandas-datareader
- - numpydoc
- - rpy2
- - sphinx
- - matplotlib
-
-_pandas-datareader_ is needed to run some of the example notebooks (https://github.com/pydata/pandas-datareader).
-
-The documentation build generates many warning messages about documents not included in any toctree:
+To generate the documentation, you will need to download the packages in the `requirements.txt` file. The documentation build generates many warning messages about documents "not included in any toctree":
 
 ```bash
 file_name.rst: WARNING: document isn't included in any toctree
