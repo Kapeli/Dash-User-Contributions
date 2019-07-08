@@ -28,9 +28,10 @@ Pygments
     ```shell
     cd pygments-main/doc/
     make html
-    doc2dash -n Pygments -u http://pygments.org -v -A -i logo_only.png .
-    ```
-
-    where `logo_only.png` can be found under `path/to/cloned/repo/pygments-main/doc/_static`.
-
-  ​
+    cd _build/html
+    doc2dash -n Pygments -u http://pygments.org -v -A -i ./_static/logo_only.png -f -I index.html -j .
+```
+    
+  where `logo_only.png` can be found under `path/to/cloned/repo/pygments-main/doc/_static`.
+  
+  
