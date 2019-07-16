@@ -1,4 +1,4 @@
-Agora Web SDK Docset
+Agora Electron SDK Docset
 ========================================
 Created by [Agora](https://www.agora.io)
 
