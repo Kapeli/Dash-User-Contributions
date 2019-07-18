@@ -1,6 +1,6 @@
 TensorFlow Docset
 =======================
 
-Built by Yuxin Wu (ppwwyyxx)
+Built by Reuben Morais
 
-See [dash-docset-tensorflow](https://github.com/ppwwyyxx/dash-docset-tensorflow) for instructions to generate the docset.
+See [gen_tf_docset](https://github.com/reuben/gen_tf_docset) for instructions to generate the docset.
