@@ -144,7 +144,7 @@ def create_docset():
                         class_doc = class_doc + "<p>" + info["description"] + "</p>\n"
                         index_html = index_html + "<a class='index' href='ref/" + class_path + "'>" + class_name + "</a>" + info["brief"] + "</br>"
                         for element in parsed_json["elements"]:
-                            function_name = element["name"]
+                            function_name = element["name"].split("\n")[0]
                             if function_name != "":
                                 entry_type = "Function"
                                 if element["type"] == "VARIABLE":
