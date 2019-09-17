@@ -22,4 +22,4 @@ Prerequisite(MacOS):
 * Terminal: doc2dash Blender
 * That's all!
 
-Updated to add the latest version currently, 2.79
+Updated to add the latest version currently, 2.80

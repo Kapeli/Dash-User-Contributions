@@ -39,7 +39,7 @@ git clone --branch $tag https://github.com/scikit-learn/scikit-learn
 cd scikit-learn/doc
 git fetch https://github.com/jnothman/scikit-learn 0.20sphinxrename
 git cherry-pick FETCH_HEAD  # patch sphinx to avoid overwriting generated files with different case
-make html optipng
+NO_MATHJAX=1 make html optipng
 cd $workdir
 
 # convert to dash
