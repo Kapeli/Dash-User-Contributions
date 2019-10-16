@@ -4,7 +4,7 @@ OpenLayers Docset
 [OpenLayers](https://openlayers.org) API docset versions:
 - 5.3.3
 - 5.3.2
-- 6.0.0-beta.5
+- 6.0.1
 
 
 
