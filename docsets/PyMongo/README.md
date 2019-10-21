@@ -11,9 +11,11 @@ Updated by [Yang Xu](https://github.com/xyoun) to v3.0.3
 
 Updated by [Julian Torres](https://github.com/macintacos) to v3.4.0
 
-Update by [Prashant Mital](https://github.com/prashantmital) to v3.6.1
+Updated by [Prashant Mital](https://github.com/prashantmital) to v3.6.1
 
-Update by [Kelvin Ng](https://github.com/hoishing) to 3.8.0
+Updated by [Kelvin Ng](https://github.com/hoishing) to 3.8.0
+
+Updated by [Prashant Mital](https://github.com/prashantmital) to v3.9.0
 
 ### How to build:
 
