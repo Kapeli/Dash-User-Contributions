@@ -30,11 +30,4 @@ index 5941716a..b91c3bf1 100644
  * `tox -e docs` (install tox via pip)
  * `cd doc/en/_build`
  * `cp .../icon@2x.png .`
- * `cp .../dashing.json .`
- * `dashing build -s . -f dashing.json` (https://github.com/technosophos/dashing)
- * add this to the pytest.docset/Contents/Info.plist dict:
-
-```
-   <key>DashDocSetFallbackURL</key>
-   <string>https://docs.pytest.org/en/latest/contents.html</string>
-```
+ * `doc2dash -A -n pytest --online-redirect-url https://docs.pytest.org/en/latest/contents.html -i icon@2x.png html/ -f`

@@ -1,12 +1,13 @@
 uWSGI Docset
 ============
 
-Docset created by [Kenrick Turner](http://kenners.org).
+Docset created by [Cololi](https://github.com/cololi).
 
 ```
 $ git clone https://github.com/unbit/uwsgi-docs.git
-$ sphinx-build -b html uwsgi-docs uWSGI
-$ doc2dash uWSGI
+$ make html
+$ cd _build
+$ doc2dash -n uWSGI -j -u https://uwsgi-docs.readthedocs.io/en/latest/ html
 ```
 
-© Copyright 2013 uWSGI
+© Copyright 2012-2016 uWSGI
