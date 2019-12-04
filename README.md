@@ -29,3 +29,6 @@ To contribute a docset, follow the steps below. If you get stuck at any point or
   * Edit the docset.json file. Make sure to follow the same naming rules as the sample (i.e. your docset name should be the same as the archive name, but replace whitespaces with underscores)
   * Edit the README.md
 * Submit a pull request
+
+
+**Note that the docset contents, in a `.tgz` file, is removed when the Pull Request is merged, and a `.tgz.txt` file is left as a receipt.**
