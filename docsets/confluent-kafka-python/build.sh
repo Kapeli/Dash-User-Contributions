@@ -2,7 +2,7 @@
 # Github: benbenbang
 # Created Date: 2019-12-11
 # Last Modified by: benbenbang
-# Last Modified: 2019-12-11
+# Last Modified: 2019-12-12
 
 mkdir target
 git clone https://github.com/confluentinc/confluent-kafka-python.git ./target
@@ -15,6 +15,4 @@ rm -rf target
 mkdir -p versions/$CONFLUENT_VERSION/
 tar --exclude='.DS_Store' -czvf confluent-kafka-python.tgz confluent-kafka-python.docset
 cp confluent-kafka-python.tgz versions/$CONFLUENT_VERSION/
-mv confluent-kafka-python.tgz confluent-kafka-python.tgz.txt
-mv ./versions/$CONFLUENT_VERSION/confluent-kafka-python.tgz ./versions/$CONFLUENT_VERSION/confluent-kafka-python.tgz.txt
 rm -rf confluent-kafka-python.docset
