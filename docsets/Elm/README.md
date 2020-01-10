@@ -10,3 +10,9 @@ There are two versions of the documentation:
   * `^0.19.0` current version of packages as of 2020-01-10
 
 For more information about Elm, visit http://elm-lang.org/
+
+Contributions
+=============
+
+This Docset is standing on the shoulders of [Peter Damoc](https://github.com/pdamoc).
+Thank you for making this possible.
