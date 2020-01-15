@@ -46,7 +46,7 @@ cd $workdir
 
 # convert to dash
 export PYTHONPATH=$workdir # adds userguide to python path
-doc2dash --index-page documentation.html --parser userguide.ScikitLearnDocs -n scikit-learn scikit-learn/doc/_build/html/stable
+doc2dash --index-page documentation.html --parser userguide.ScikitLearnDocs --enable-js -n scikit-learn scikit-learn/doc/_build/html/stable
 tar --exclude='.DS_Store' -czvf scikit-learn.tgz scikit-learn.docset
 
 # update Dash-User-Contributions
