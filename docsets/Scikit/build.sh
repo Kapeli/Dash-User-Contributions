@@ -33,16 +33,19 @@ cp userguide.py $workdir
 cd $workdir
 # TODO: perhaps scikit-learn should provide an environment.yml and this script should use conda-env...
 pip install -U pip
-pip install numpy==1.15 scipy cython nose coverage matplotlib sphinx pillow sphinx-gallery numpydoc scikit-image joblib pandas
+pip install numpy==1.15 scipy cython nose coverage matplotlib sphinx pillow sphinx-gallery numpydoc scikit-image joblib pandas pytest
 pip install doc2dash scikit-learn==$tag
 git clone --branch $tag https://github.com/scikit-learn/scikit-learn
 cd scikit-learn/doc
 git fetch https://github.com/jnothman/scikit-learn 0.20sphinxrename
 git cherry-pick FETCH_HEAD  # patch sphinx to avoid overwriting generated files with different case
+git fetch https://github.com/thomasjpfan/scikit-learn examples_njobs_fix
+git cherry-pick FETCH_HEAD  # n_jobs=1
 NO_MATHJAX=1 make html optipng
 cd $workdir
 
 # convert to dash
+export PYTHONPATH=$workdir # adds userguide to python path
 doc2dash --index-page documentation.html --parser userguide.ScikitLearnDocs -n scikit-learn scikit-learn/doc/_build/html/stable
 tar --exclude='.DS_Store' -czvf scikit-learn.tgz scikit-learn.docset
 
