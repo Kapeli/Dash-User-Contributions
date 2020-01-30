@@ -1,6 +1,15 @@
 Altair Docset
 =======================
 
+## Author:
+
+Docset created by [Angelo Varlotta](https://altair-viz.github.io/index.html).
+
+Updated by [Kelvin Ng](https://github.com/hoishing) to 4.0.0
+
+
+## Notes (ver 3.2)
+
 I had to install many Python packages in order for the `MakeFile` to compile properly. Here is the list from `pip freeze`:
 
 ```bash
