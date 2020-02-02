@@ -10,3 +10,6 @@ SpigotMC
 	* On [Twitter](https://twitter.com/kd9)
 	* On [Github](https://github.com/crock)
 	
+* I am known as vk2gpz.
+	* You can find me on the [SpigotMC](https://www.spigotmc.org/resources/authors/vk2gpz.617/) website.
+	* On [Github](https://github.com/vk2gpz)
