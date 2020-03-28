@@ -1,0 +1,394 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>TorchScript &mdash; transformers 2.6.0 documentation</title>
+  
+
+  
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+        <script src="_static/js/custom.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/huggingface.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/code-snippets.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/hidesidebar.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Multi-lingual models" href="multilingual.html" />
+    <link rel="prev" title="BERTology" href="bertology.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> transformers
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Notes</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pretrained_models.html">Pretrained models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_sharing.html">Model upload and sharing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks.html">Notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Loading Google AI or OpenAI pre-trained weights or PyTorch dump</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html#serialization-best-practices">Serialization best-practices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="converting_tensorflow_models.html">Converting Tensorflow Checkpoints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration.html">Migrating from pytorch-pretrained-bert</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bertology.html">BERTology</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">TorchScript</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#implications">Implications</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#torchscript-flag-and-tied-weights">TorchScript flag and tied weights</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dummy-inputs-and-standard-lengths">Dummy inputs and standard lengths</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#using-torchscript-in-python">Using TorchScript in Python</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#saving-a-model">Saving a model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#loading-a-model">Loading a model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#using-a-traced-model-for-inference">Using a traced model for inference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="multilingual.html">Multi-lingual models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="benchmarks.html">Benchmarks</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Main classes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/model.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/tokenizer.html">Tokenizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/pipelines.html">Pipelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/optimizer_schedules.html">Optimizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/optimizer_schedules.html#schedules">Schedules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/optimizer_schedules.html#gradient-strategies">Gradient Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/processors.html">Processors</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/auto.html">AutoModels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/bert.html">BERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/gpt.html">OpenAI GPT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/transformerxl.html">Transformer XL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/gpt2.html">OpenAI GPT2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/xlm.html">XLM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/xlnet.html">XLNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/roberta.html">RoBERTa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/distilbert.html">DistilBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/ctrl.html">CTRL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/camembert.html">CamemBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/albert.html">ALBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/xlmroberta.html">XLM-RoBERTa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/flaubert.html">FlauBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/bart.html">Bart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/t5.html">T5</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">transformers</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>TorchScript</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/torchscript.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="torchscript">
+<h1>TorchScript<a class="headerlink" href="#torchscript" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is the very beginning of our experiments with TorchScript and we are still exploring its capabilities
+with variable-input-size models. It is a focus of interest to us and we will deepen our analysis in upcoming
+releases, with more code examples, a more flexible implementation, and benchmarks comparing python-based codes
+with compiled TorchScript.</p>
+</div>
+<p>According to Pytorch’s documentation: “TorchScript is a way to create serializable and optimizable models from PyTorch code”.
+Pytorch’s two modules <a class="reference external" href="https://pytorch.org/docs/stable/jit.html">JIT and TRACE</a> allow the developer to export
+their model to be re-used in other programs, such as efficiency-oriented C++ programs.</p>
+<p>We have provided an interface that allows the export of <cite>transformers</cite> models to TorchScript so that they can
+be reused in a different environment than a Pytorch-based python program. Here we explain how to use our models so that
+they can be exported, and what to be mindful of when using these models with TorchScript.</p>
+<p>Exporting a model needs two things:</p>
+<ul class="simple">
+<li><p>dummy inputs to execute a model forward pass.</p></li>
+<li><p>the model needs to be instantiated with the <code class="docutils literal notranslate"><span class="pre">torchscript</span></code> flag.</p></li>
+</ul>
+<p>These necessities imply several things developers should be careful about. These are detailed below.</p>
+<div class="section" id="implications">
+<h2>Implications<a class="headerlink" href="#implications" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="torchscript-flag-and-tied-weights">
+<h3>TorchScript flag and tied weights<a class="headerlink" href="#torchscript-flag-and-tied-weights" title="Permalink to this headline">¶</a></h3>
+<p>This flag is necessary because most of the language models in this repository have tied weights between their
+<code class="docutils literal notranslate"><span class="pre">Embedding</span></code> layer and their <code class="docutils literal notranslate"><span class="pre">Decoding</span></code> layer. TorchScript does not allow the export of models that have tied weights,
+it is therefore necessary to untie the weights beforehand.</p>
+<p>This implies that models instantiated with the <code class="docutils literal notranslate"><span class="pre">torchscript</span></code> flag have their <code class="docutils literal notranslate"><span class="pre">Embedding</span></code> layer and <code class="docutils literal notranslate"><span class="pre">Decoding</span></code> layer
+separate, which means that they should not be trained down the line. Training would de-synchronize the two layers,
+leading to unexpected results.</p>
+<p>This is not the case for models that do not have a Language Model head, as those do not have tied weights. These models
+can be safely exported without the <code class="docutils literal notranslate"><span class="pre">torchscript</span></code> flag.</p>
+</div>
+<div class="section" id="dummy-inputs-and-standard-lengths">
+<h3>Dummy inputs and standard lengths<a class="headerlink" href="#dummy-inputs-and-standard-lengths" title="Permalink to this headline">¶</a></h3>
+<p>The dummy inputs are used to do a model forward pass. While the inputs’ values are propagating through the layers,
+Pytorch keeps track of the different operations executed on each tensor. These recorded operations are then used
+to create the “trace” of the model.</p>
+<p>The trace is created relatively to the inputs’ dimensions. It is therefore constrained by the dimensions of the dummy
+input, and will not work for any other sequence length or batch size. When trying with a different size, an error such
+as:</p>
+<p><code class="docutils literal notranslate"><span class="pre">The</span> <span class="pre">expanded</span> <span class="pre">size</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">tensor</span> <span class="pre">(3)</span> <span class="pre">must</span> <span class="pre">match</span> <span class="pre">the</span> <span class="pre">existing</span> <span class="pre">size</span> <span class="pre">(7)</span> <span class="pre">at</span> <span class="pre">non-singleton</span> <span class="pre">dimension</span> <span class="pre">2</span></code></p>
+<p>will be raised. It is therefore recommended to trace the model with a dummy input size at least as large as the largest
+input that will be fed to the model during inference. Padding can be performed to fill the missing values. As the model
+will have been traced with a large input size however, the dimensions of the different matrix will be large as well,
+resulting in more calculations.</p>
+<p>It is recommended to be careful of the total number of operations done on each input and to follow performance closely
+when exporting varying sequence-length models.</p>
+</div>
+</div>
+<div class="section" id="using-torchscript-in-python">
+<h2>Using TorchScript in Python<a class="headerlink" href="#using-torchscript-in-python" title="Permalink to this headline">¶</a></h2>
+<p>Below are examples of using the Python to save, load models as well as how to use the trace for inference.</p>
+<div class="section" id="saving-a-model">
+<h3>Saving a model<a class="headerlink" href="#saving-a-model" title="Permalink to this headline">¶</a></h3>
+<p>This snippet shows how to use TorchScript to export a <code class="docutils literal notranslate"><span class="pre">BertModel</span></code>. Here the <code class="docutils literal notranslate"><span class="pre">BertModel</span></code> is instantiated
+according to a <code class="docutils literal notranslate"><span class="pre">BertConfig</span></code> class and then saved to disk under the filename <code class="docutils literal notranslate"><span class="pre">traced_bert.pt</span></code></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">transformers</span> <span class="kn">import</span> <span class="n">BertModel</span><span class="p">,</span> <span class="n">BertTokenizer</span><span class="p">,</span> <span class="n">BertConfig</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+
+<span class="n">enc</span> <span class="o">=</span> <span class="n">BertTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;bert-base-uncased&quot;</span><span class="p">)</span>
+
+<span class="c1"># Tokenizing input text</span>
+<span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;[CLS] Who was Jim Henson ? [SEP] Jim Henson was a puppeteer [SEP]&quot;</span>
+<span class="n">tokenized_text</span> <span class="o">=</span> <span class="n">enc</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+
+<span class="c1"># Masking one of the input tokens</span>
+<span class="n">masked_index</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="n">tokenized_text</span><span class="p">[</span><span class="n">masked_index</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;[MASK]&#39;</span>
+<span class="n">indexed_tokens</span> <span class="o">=</span> <span class="n">enc</span><span class="o">.</span><span class="n">convert_tokens_to_ids</span><span class="p">(</span><span class="n">tokenized_text</span><span class="p">)</span>
+<span class="n">segments_ids</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+
+<span class="c1"># Creating a dummy input</span>
+<span class="n">tokens_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">indexed_tokens</span><span class="p">])</span>
+<span class="n">segments_tensors</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">segments_ids</span><span class="p">])</span>
+<span class="n">dummy_input</span> <span class="o">=</span> <span class="p">[</span><span class="n">tokens_tensor</span><span class="p">,</span> <span class="n">segments_tensors</span><span class="p">]</span>
+
+<span class="c1"># Initializing the model with the torchscript flag</span>
+<span class="c1"># Flag set to True even though it is not necessary as this model does not have an LM Head.</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">BertConfig</span><span class="p">(</span><span class="n">vocab_size_or_config_json_file</span><span class="o">=</span><span class="mi">32000</span><span class="p">,</span> <span class="n">hidden_size</span><span class="o">=</span><span class="mi">768</span><span class="p">,</span>
+    <span class="n">num_hidden_layers</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">num_attention_heads</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">intermediate_size</span><span class="o">=</span><span class="mi">3072</span><span class="p">,</span> <span class="n">torchscript</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Instantiating the model</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">BertModel</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+
+<span class="c1"># The model needs to be in evaluation mode</span>
+<span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+
+<span class="c1"># If you are instantiating the model with `from_pretrained` you can also easily set the TorchScript flag</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">BertModel</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;bert-base-uncased&quot;</span><span class="p">,</span> <span class="n">torchscript</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Creating the trace</span>
+<span class="n">traced_model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="p">[</span><span class="n">tokens_tensor</span><span class="p">,</span> <span class="n">segments_tensors</span><span class="p">])</span>
+<span class="n">torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">traced_model</span><span class="p">,</span> <span class="s2">&quot;traced_bert.pt&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="loading-a-model">
+<h3>Loading a model<a class="headerlink" href="#loading-a-model" title="Permalink to this headline">¶</a></h3>
+<p>This snippet shows how to load the <code class="docutils literal notranslate"><span class="pre">BertModel</span></code> that was previously saved to disk under the name <code class="docutils literal notranslate"><span class="pre">traced_bert.pt</span></code>.
+We are re-using the previously initialised <code class="docutils literal notranslate"><span class="pre">dummy_input</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">loaded_model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;traced_model.pt&quot;</span><span class="p">)</span>
+<span class="n">loaded_model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+
+<span class="n">all_encoder_layers</span><span class="p">,</span> <span class="n">pooled_output</span> <span class="o">=</span> <span class="n">loaded_model</span><span class="p">(</span><span class="n">dummy_input</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="using-a-traced-model-for-inference">
+<h3>Using a traced model for inference<a class="headerlink" href="#using-a-traced-model-for-inference" title="Permalink to this headline">¶</a></h3>
+<p>Using the traced model for inference is as simple as using its <code class="docutils literal notranslate"><span class="pre">__call__</span></code> dunder method:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">traced_model</span><span class="p">(</span><span class="n">tokens_tensor</span><span class="p">,</span> <span class="n">segments_tensors</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="multilingual.html" class="btn btn-neutral float-right" title="Multi-lingual models" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="bertology.html" class="btn btn-neutral float-left" title="BERTology" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, huggingface
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+    <!-- Theme Analytics -->
+    <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-83738774-2', 'auto');
+    ga('send', 'pageview');
+    </script>
+
+    
+   
+
+</body>
+</html>

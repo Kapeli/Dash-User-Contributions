@@ -1,0 +1,330 @@
+
+<!DOCTYPE html>
+
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en"> <!--<![endif]-->
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Optimizer — transformers 2.6.0 documentation</title>
+<link href="../_static/favicon.ico" rel="shortcut icon"/>
+<script src="../_static/js/modernizr.min.js" type="text/javascript"></script>
+<script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js" type="text/javascript"></script>
+<script src="../_static/jquery.js"></script>
+<script src="../_static/underscore.js"></script>
+<script src="../_static/doctools.js"></script>
+<script src="../_static/language_data.js"></script>
+<script src="../_static/js/custom.js"></script>
+<script src="../_static/js/theme.js" type="text/javascript"></script>
+<link href="../_static/css/theme.css" rel="stylesheet" type="text/css"/>
+<link href="../_static/pygments.css" rel="stylesheet" type="text/css"/>
+<link href="../_static/css/huggingface.css" rel="stylesheet" type="text/css"/>
+<link href="../_static/css/code-snippets.css" rel="stylesheet" type="text/css"/>
+<link href="../_static/css/hidesidebar.css" rel="stylesheet" type="text/css"/>
+<link href="../genindex.html" rel="index" title="Index"/>
+<link href="../search.html" rel="search" title="Search"/>
+<link href="processors.html" rel="next" title="Processors"/>
+<link href="pipelines.html" rel="prev" title="Pipelines"/>
+</head>
+<body class="wy-body-for-nav">
+<div class="wy-grid-for-nav">
+<nav class="wy-nav-side" data-toggle="wy-nav-shift">
+<div class="wy-side-scroll">
+<div class="wy-side-nav-search">
+<a class="icon icon-home" href="../index.html"> transformers
+          
+
+          
+          </a>
+<div role="search">
+<form action="../search.html" class="wy-form" id="rtd-search-form" method="get">
+<input name="q" placeholder="Search docs" type="text"/>
+<input name="check_keywords" type="hidden" value="yes"/>
+<input name="area" type="hidden" value="default"/>
+</form>
+</div>
+</div>
+<div aria-label="main navigation" class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation">
+<p class="caption"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pretrained_models.html">Pretrained models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_sharing.html">Model upload and sharing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks.html">Notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../serialization.html">Loading Google AI or OpenAI pre-trained weights or PyTorch dump</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../serialization.html#serialization-best-practices">Serialization best-practices</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../converting_tensorflow_models.html">Converting Tensorflow Checkpoints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../migration.html">Migrating from pytorch-pretrained-bert</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bertology.html">BERTology</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../torchscript.html">TorchScript</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../multilingual.html">Multi-lingual models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../benchmarks.html">Benchmarks</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Main classes</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tokenizer.html">Tokenizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pipelines.html">Pipelines</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Optimizer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#adamw"><code class="docutils literal notranslate"><span class="pre">AdamW</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#adamweightdecay"><code class="docutils literal notranslate"><span class="pre">AdamWeightDecay</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#schedules">Schedules</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#learning-rate-schedules">Learning Rate Schedules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#warmup"><code class="docutils literal notranslate"><span class="pre">Warmup</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#gradient-strategies">Gradient Strategies</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#gradientaccumulator"><code class="docutils literal notranslate"><span class="pre">GradientAccumulator</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="processors.html">Processors</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Package Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../model_doc/auto.html">AutoModels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_doc/bert.html">BERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_doc/gpt.html">OpenAI GPT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_doc/transformerxl.html">Transformer XL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_doc/gpt2.html">OpenAI GPT2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_doc/xlm.html">XLM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_doc/xlnet.html">XLNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_doc/roberta.html">RoBERTa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_doc/distilbert.html">DistilBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_doc/ctrl.html">CTRL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_doc/camembert.html">CamemBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_doc/albert.html">ALBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_doc/xlmroberta.html">XLM-RoBERTa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_doc/flaubert.html">FlauBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_doc/bart.html">Bart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model_doc/t5.html">T5</a></li>
+</ul>
+</div>
+</div>
+</nav>
+<section class="wy-nav-content-wrap" data-toggle="wy-nav-shift">
+<nav aria-label="top navigation" class="wy-nav-top">
+<i class="fa fa-bars" data-toggle="wy-nav-top"></i>
+<a href="../index.html">transformers</a>
+</nav>
+<div class="wy-nav-content">
+<div class="rst-content">
+<div aria-label="breadcrumbs navigation" role="navigation">
+<ul class="wy-breadcrumbs">
+<li><a href="../index.html">Docs</a> »</li>
+<li>Optimizer</li>
+<li class="wy-breadcrumbs-aside">
+<a href="../_sources/main_classes/optimizer_schedules.rst.txt" rel="nofollow"> View page source</a>
+</li>
+</ul>
+<hr/>
+</div>
+<div class="document" itemscope="itemscope" itemtype="http://schema.org/Article" role="main">
+<div itemprop="articleBody">
+<div class="section" id="optimizer">
+<h1>Optimizer<a class="headerlink" href="#optimizer" title="Permalink to this headline">¶</a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">.optimization</span></code> module provides:</p>
+<ul class="simple">
+<li><p>an optimizer with weight decay fixed that can be used to fine-tuned models, and</p></li>
+<li><p>several schedules in the form of schedule objects that inherit from <code class="docutils literal notranslate"><span class="pre">_LRSchedule</span></code>:</p></li>
+<li><p>a gradient accumulation class to accumulate the gradients of multiple batches</p></li>
+</ul>
+<div class="section" id="adamw">
+<h2><code class="docutils literal notranslate"><span class="pre">AdamW</span></code><a class="headerlink" href="#adamw" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="transformers.AdamW"><a name="//apple_ref/cpp/Class/transformers.AdamW"></a>
+<em class="property">class </em><code class="sig-prename descclassname">transformers.</code><code class="sig-name descname">AdamW</code><span class="sig-paren">(</span><em class="sig-param">params</em>, <em class="sig-param">lr=0.001</em>, <em class="sig-param">betas=(0.9</em>, <em class="sig-param">0.999)</em>, <em class="sig-param">eps=1e-06</em>, <em class="sig-param">weight_decay=0.0</em>, <em class="sig-param">correct_bias=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/transformers/optimization.html#AdamW"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transformers.AdamW" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implements Adam algorithm with weight decay fix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lr</strong> (<em>float</em>) – learning rate. Default 1e-3.</p></li>
+<li><p><strong>betas</strong> (<em>tuple of 2 floats</em>) – Adams beta parameters (b1, b2). Default: (0.9, 0.999)</p></li>
+<li><p><strong>eps</strong> (<em>float</em>) – Adams epsilon. Default: 1e-6</p></li>
+<li><p><strong>weight_decay</strong> (<em>float</em>) – Weight decay. Default: 0.0</p></li>
+<li><p><strong>correct_bias</strong> (<em>bool</em>) – can be set to False to avoid correcting bias in Adam (e.g. like in Bert TF repository). Default True.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="transformers.AdamW.step"><a name="//apple_ref/cpp/Method/transformers.AdamW.step"></a>
+<code class="sig-name descname">step</code><span class="sig-paren">(</span><em class="sig-param">closure=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/transformers/optimization.html#AdamW.step"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transformers.AdamW.step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs a single optimization step.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>closure</strong> (<em>callable</em><em>, </em><em>optional</em>) – A closure that reevaluates the model
+and returns the loss.</p>
+</dd>
+</dl>
+</dd></dl>
+</dd></dl>
+</div>
+<div class="section" id="adamweightdecay">
+<h2><code class="docutils literal notranslate"><span class="pre">AdamWeightDecay</span></code><a class="headerlink" href="#adamweightdecay" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="transformers.AdamWeightDecay"><a name="//apple_ref/cpp/Class/transformers.AdamWeightDecay"></a>
+<em class="property">class </em><code class="sig-prename descclassname">transformers.</code><code class="sig-name descname">AdamWeightDecay</code><span class="sig-paren">(</span><em class="sig-param">learning_rate=0.001</em>, <em class="sig-param">beta_1=0.9</em>, <em class="sig-param">beta_2=0.999</em>, <em class="sig-param">epsilon=1e-07</em>, <em class="sig-param">amsgrad=False</em>, <em class="sig-param">weight_decay_rate=0.0</em>, <em class="sig-param">include_in_weight_decay=None</em>, <em class="sig-param">exclude_from_weight_decay=None</em>, <em class="sig-param">name='AdamWeightDecay'</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/transformers/optimization_tf.html#AdamWeightDecay"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transformers.AdamWeightDecay" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adam enables L2 weight decay and clip_by_global_norm on gradients.</p>
+<p>Just adding the square of the weights to the loss function is <em>not</em> the
+correct way of using L2 regularization/weight decay with Adam, since that will
+interact with the m and v parameters in strange ways.</p>
+<p>Instead we want ot decay the weights in a manner that doesn’t interact with
+the m/v parameters. This is equivalent to adding the square of the weights to
+the loss with plain (non-momentum) SGD.</p>
+<dl class="method">
+<dt id="transformers.AdamWeightDecay.apply_gradients"><a name="//apple_ref/cpp/Method/transformers.AdamWeightDecay.apply_gradients"></a>
+<code class="sig-name descname">apply_gradients</code><span class="sig-paren">(</span><em class="sig-param">grads_and_vars</em>, <em class="sig-param">clip_norm</em>, <em class="sig-param">name=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/transformers/optimization_tf.html#AdamWeightDecay.apply_gradients"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transformers.AdamWeightDecay.apply_gradients" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply gradients to variables.</p>
+<p>This is the second part of <cite>minimize()</cite>. It returns an <cite>Operation</cite> that
+applies gradients.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>grads_and_vars</strong> – List of (gradient, variable) pairs.</p></li>
+<li><p><strong>name</strong> – Optional name for the returned operation.  Default to the name
+passed to the <cite>Optimizer</cite> constructor.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>An <cite>Operation</cite> that applies the specified gradients. The <cite>iterations</cite>
+will be automatically increased by 1.</p>
+</dd>
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>TypeError</strong> – If <cite>grads_and_vars</cite> is malformed.</p></li>
+<li><p><strong>ValueError</strong> – If none of the variables have gradients.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+<dl class="method">
+<dt id="transformers.AdamWeightDecay.from_config"><a name="//apple_ref/cpp/Method/transformers.AdamWeightDecay.from_config"></a>
+<em class="property">classmethod </em><code class="sig-name descname">from_config</code><span class="sig-paren">(</span><em class="sig-param">config</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/transformers/optimization_tf.html#AdamWeightDecay.from_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transformers.AdamWeightDecay.from_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates an optimizer from its config with WarmUp custom object.</p>
+</dd></dl>
+<dl class="method">
+<dt id="transformers.AdamWeightDecay.get_config"><a name="//apple_ref/cpp/Method/transformers.AdamWeightDecay.get_config"></a>
+<code class="sig-name descname">get_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/transformers/optimization_tf.html#AdamWeightDecay.get_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transformers.AdamWeightDecay.get_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the config of the optimimizer.</p>
+<p>An optimizer config is a Python dictionary (serializable)
+containing the configuration of an optimizer.
+The same optimizer can be reinstantiated later
+(without any saved state) from this configuration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Python dictionary.</p>
+</dd>
+</dl>
+</dd></dl>
+</dd></dl>
+<dl class="function">
+<dt id="transformers.create_optimizer"><a name="//apple_ref/cpp/Function/transformers.create_optimizer"></a>
+<code class="sig-prename descclassname">transformers.</code><code class="sig-name descname">create_optimizer</code><span class="sig-paren">(</span><em class="sig-param">init_lr</em>, <em class="sig-param">num_train_steps</em>, <em class="sig-param">num_warmup_steps</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/transformers/optimization_tf.html#create_optimizer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transformers.create_optimizer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates an optimizer with learning rate schedule.</p>
+</dd></dl>
+</div>
+</div>
+<div class="section" id="schedules">
+<h1>Schedules<a class="headerlink" href="#schedules" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="learning-rate-schedules">
+<h2>Learning Rate Schedules<a class="headerlink" href="#learning-rate-schedules" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="transformers.get_constant_schedule"><a name="//apple_ref/cpp/Function/transformers.get_constant_schedule"></a>
+<code class="sig-prename descclassname">transformers.</code><code class="sig-name descname">get_constant_schedule</code><span class="sig-paren">(</span><em class="sig-param">optimizer</em>, <em class="sig-param">last_epoch=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/transformers/optimization.html#get_constant_schedule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transformers.get_constant_schedule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a schedule with a constant learning rate.</p>
+</dd></dl>
+<dl class="function">
+<dt id="transformers.get_constant_schedule_with_warmup"><a name="//apple_ref/cpp/Function/transformers.get_constant_schedule_with_warmup"></a>
+<code class="sig-prename descclassname">transformers.</code><code class="sig-name descname">get_constant_schedule_with_warmup</code><span class="sig-paren">(</span><em class="sig-param">optimizer</em>, <em class="sig-param">num_warmup_steps</em>, <em class="sig-param">last_epoch=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/transformers/optimization.html#get_constant_schedule_with_warmup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transformers.get_constant_schedule_with_warmup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a schedule with a constant learning rate preceded by a warmup
+period during which the learning rate increases linearly between 0 and 1.</p>
+</dd></dl>
+<a class="reference external image-reference" href="/imgs/warmup_constant_schedule.png"><img alt="" src="../_images/warmup_constant_schedule.png"/></a>
+<dl class="function">
+<dt id="transformers.get_cosine_schedule_with_warmup"><a name="//apple_ref/cpp/Function/transformers.get_cosine_schedule_with_warmup"></a>
+<code class="sig-prename descclassname">transformers.</code><code class="sig-name descname">get_cosine_schedule_with_warmup</code><span class="sig-paren">(</span><em class="sig-param">optimizer</em>, <em class="sig-param">num_warmup_steps</em>, <em class="sig-param">num_training_steps</em>, <em class="sig-param">num_cycles=0.5</em>, <em class="sig-param">last_epoch=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/transformers/optimization.html#get_cosine_schedule_with_warmup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transformers.get_cosine_schedule_with_warmup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a schedule with a learning rate that decreases following the
+values of the cosine function between 0 and <cite>pi * cycles</cite> after a warmup
+period during which it increases linearly between 0 and 1.</p>
+</dd></dl>
+<a class="reference external image-reference" href="/imgs/warmup_cosine_schedule.png"><img alt="" src="../_images/warmup_cosine_schedule.png"/></a>
+<dl class="function">
+<dt id="transformers.get_cosine_with_hard_restarts_schedule_with_warmup"><a name="//apple_ref/cpp/Function/transformers.get_cosine_with_hard_restarts_schedule_with_warmup"></a>
+<code class="sig-prename descclassname">transformers.</code><code class="sig-name descname">get_cosine_with_hard_restarts_schedule_with_warmup</code><span class="sig-paren">(</span><em class="sig-param">optimizer</em>, <em class="sig-param">num_warmup_steps</em>, <em class="sig-param">num_training_steps</em>, <em class="sig-param">num_cycles=1.0</em>, <em class="sig-param">last_epoch=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/transformers/optimization.html#get_cosine_with_hard_restarts_schedule_with_warmup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transformers.get_cosine_with_hard_restarts_schedule_with_warmup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a schedule with a learning rate that decreases following the
+values of the cosine function with several hard restarts, after a warmup
+period during which it increases linearly between 0 and 1.</p>
+</dd></dl>
+<a class="reference external image-reference" href="/imgs/warmup_cosine_hard_restarts_schedule.png"><img alt="" src="../_images/warmup_cosine_hard_restarts_schedule.png"/></a>
+<dl class="function">
+<dt id="transformers.get_linear_schedule_with_warmup"><a name="//apple_ref/cpp/Function/transformers.get_linear_schedule_with_warmup"></a>
+<code class="sig-prename descclassname">transformers.</code><code class="sig-name descname">get_linear_schedule_with_warmup</code><span class="sig-paren">(</span><em class="sig-param">optimizer</em>, <em class="sig-param">num_warmup_steps</em>, <em class="sig-param">num_training_steps</em>, <em class="sig-param">last_epoch=-1</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/transformers/optimization.html#get_linear_schedule_with_warmup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transformers.get_linear_schedule_with_warmup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a schedule with a learning rate that decreases linearly after
+linearly increasing during a warmup period.</p>
+</dd></dl>
+<a class="reference external image-reference" href="/imgs/warmup_linear_schedule.png"><img alt="" src="../_images/warmup_linear_schedule.png"/></a>
+</div>
+<div class="section" id="warmup">
+<h2><code class="docutils literal notranslate"><span class="pre">Warmup</span></code><a class="headerlink" href="#warmup" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="transformers.WarmUp"><a name="//apple_ref/cpp/Class/transformers.WarmUp"></a>
+<em class="property">class </em><code class="sig-prename descclassname">transformers.</code><code class="sig-name descname">WarmUp</code><span class="sig-paren">(</span><em class="sig-param">initial_learning_rate</em>, <em class="sig-param">decay_schedule_fn</em>, <em class="sig-param">warmup_steps</em>, <em class="sig-param">power=1.0</em>, <em class="sig-param">name=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/transformers/optimization_tf.html#WarmUp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transformers.WarmUp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applys a warmup schedule on a given learning rate decay schedule.</p>
+</dd></dl>
+</div>
+</div>
+<div class="section" id="gradient-strategies">
+<h1>Gradient Strategies<a class="headerlink" href="#gradient-strategies" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="gradientaccumulator">
+<h2><code class="docutils literal notranslate"><span class="pre">GradientAccumulator</span></code><a class="headerlink" href="#gradientaccumulator" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="transformers.GradientAccumulator"><a name="//apple_ref/cpp/Class/transformers.GradientAccumulator"></a>
+<em class="property">class </em><code class="sig-prename descclassname">transformers.</code><code class="sig-name descname">GradientAccumulator</code><a class="reference internal" href="../_modules/transformers/optimization_tf.html#GradientAccumulator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#transformers.GradientAccumulator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Distribution strategies-aware gradient accumulation utility.</p>
+</dd></dl>
+</div>
+</div>
+</div>
+</div>
+<footer>
+<div aria-label="footer navigation" class="rst-footer-buttons" role="navigation">
+<a accesskey="n" class="btn btn-neutral float-right" href="processors.html" rel="next" title="Processors">Next <span class="fa fa-arrow-circle-right"></span></a>
+<a accesskey="p" class="btn btn-neutral float-left" href="pipelines.html" rel="prev" title="Pipelines"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+</div>
+<hr/>
+<div role="contentinfo">
+<p>
+        © Copyright 2020, huggingface
+
+    </p>
+</div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+</div>
+</div>
+</section>
+</div>
+<script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+<!-- Theme Analytics -->
+<script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-83738774-2', 'auto');
+    ga('send', 'pageview');
+    </script>
+</body>
+</html>
