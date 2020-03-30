@@ -7,8 +7,9 @@ torchtext Docset
 
 #### How to create:
 
-- See `makefile` in the [main documentation page](https://github.com/pytorch/pytorch/blob/master/docs/Makefile).
+- See `makefile` in the [main documentation page](https://github.com/pytorch/text/blob/master/docs/Makefile).
 
 #### Docset Author:
 
+- [Gerry Gao](https://github.com/hologerry)
 - [Yuan Tian](https://github.com/xzwj)
