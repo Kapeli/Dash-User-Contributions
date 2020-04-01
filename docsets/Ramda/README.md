@@ -3,9 +3,12 @@ Ramda Docset
 
 Author: <https://github.com/alexbepple>
 
-## Generate docset
 
-+ Make a new version directory in this docset `./versions/{version-number}`
-+ Generate the docset using <https://github.com/alexbepple/ramda-dash-docset>
-+ Copy the generated docset file `build-default/Ramda.tgz` file into the new version directory.
+## Update docset
 
+* Make a directory for the new version: `./versions/{version-number}`
+* Generate the docset using <https://github.com/alexbepple/ramda-dash-docset>
+* Copy the generated docset file (`Ramda.tgz`)
+  * into the new version directory
+  * here (There is no need to delete `Ramda.tgz.txt`.)
+* Update `docset.json`
