@@ -11,4 +11,5 @@ torchvision Docset
 
 #### Docset Author:
 
+- [Gerry Gao](https://github.com/hologerry)
 - [Youchen Du](https://github.com/Time1ess)
