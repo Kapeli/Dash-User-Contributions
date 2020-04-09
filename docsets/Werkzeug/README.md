@@ -9,6 +9,8 @@ Docset created by [Byron Yi](https://github.com/byronyi).
 
 Updated by [Torin Kwok](https://github.com/torinkwok) to v0.16.1.
 
+Updated by [Torin Kwok](https://github.com/torinkwok) to v1.0.1.
+
 ### How to build:
 
 - Install [doc2dash](https://pypi.python.org/pypi/doc2dash)
