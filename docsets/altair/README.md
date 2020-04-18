@@ -15,7 +15,7 @@ Altair is a declarative statistical visualization library for Python, based on [
 
 ## Notes (v4.1.0)
 
-I had to install many Python packages in order for `make` to compile properly. Here is the list of commands:
+Here is the list of commands I ran to compile the docs:
 
 ```bash
 conda create -n myenv python=3.7.7  # if the environment isn't in place
@@ -28,6 +28,7 @@ make help  # gives a list of make commands that can be used
 make html
 ```
 
+I had to install many Python packages for `make` to compile properly. Just install them with `conda` or `pip` as the error messages come up.
 
 Also you will need to place the `ChromeDriver` binary in your path and install Google Chrome in the Applications folder ("a directory that the `make` file expects Chrome to be located in"). You can download the driver from ['ChromeDriver - WebDriver for Chrome'](https://sites.google.com/a/chromium.org/chromedriver/home), or you can install it from Anaconda with `conda install -c python-chromedriver-binary`.
 
