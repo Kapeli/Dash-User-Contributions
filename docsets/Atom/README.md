@@ -11,17 +11,13 @@ Author: Ben Booth ([@bkbooth11][2])
 
 ## Prequisites
 
-- [Node.js][4] >= v6.0.0
+- [Node.js][4] >= v8.0.0
 - [httrack][3]
 - [Yarn][5] (preferred, can use `npm`)
 
 ## Known Bugs
 
 - None, submit any you find [here][7]
-
-## Planned Improvements
-
-- (Maybe) add Table of Contents support
 
 [1]: https://atom.io/
 [2]: https://twitter.com/bkbooth11
