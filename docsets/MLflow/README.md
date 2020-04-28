@@ -14,10 +14,10 @@ cd mlflow
 You likely want to check out a version-tagged state with:
 
 ```shell
-git checkout x.y.z
+git checkout vX.Y.Z
 ```
 
-where `x.y.z` is a tag (for MLFlow corresponding to a version number), such as `1.7.2`.
+where `X.Y.Z` is a tag (for MLFlow corresponding to a version number), such as `1.7.2`.
 
 Install the pre-requisites:
 
@@ -36,15 +36,15 @@ is in `mlflow/version.py`, it should contain
 
 ```python
 ...
-VERSION = 'x.y.z'
+VERSION = 'X.Y.Z'
 ```
 
-where `x.y.z` is the correct version (which you can check with `git describe --tags` for example,
+where `X.Y.Z` is the correct version (which you can check with `git describe --tags` for example,
 and do not include the `v` reported in that version). The same for the R docs at `mlflow/R/mlflow/DESCRIPTION`
 
 ```rst
 ...
-Version: x.y.z
+Version: X.Y.Z
 ...
 ```
 
@@ -62,7 +62,7 @@ and these should wherever applicable contain the correct version as:
 
 ```xml
 ...
-<version>x.y.z</version>
+<version>X.Y.Z</version>
 ...
 ```
 
