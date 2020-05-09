@@ -6,7 +6,7 @@ About
 [JAX](https://jax.readthedocs.io/en/latest/) is NumPy on the CPU, GPU, and TPU, with great automatic differentiation for high-performance machine learning research.
 
 Versions
-- Version 0.1.67 generated on 05-09-20 (@nirum)
+- Version 0.1.67 generated on 05-09-20 ([@nirum](https://github.com/nirum)).
 
 Instructions on how to generate the docset
 ------------------------------------------
