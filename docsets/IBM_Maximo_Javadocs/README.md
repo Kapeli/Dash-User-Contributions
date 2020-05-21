@@ -1,4 +1,4 @@
-![IBM Maximo](https://github.com/reedand/Dash-User-Contributions/docsets/IBM_Maximo_Javadocs/versions/7.6.0/icon@2x.png "IBM Maximo") JavaDocs
+![IBM Maximo](https://github.com/reedand/Dash-User-Contributions/blob/master/docsets/IBM_Maximo_Javadocs/icon%402x.png "IBM Maximo") JavaDocs
 =======================
 
 # Who am I
