@@ -49,11 +49,25 @@ $WGET -q -kpHN -nH -P docs "$HTML"
 # $WGET -q -O "$TEMPDIR/$(basename $REPO)-$VERSION_TAG.zip" "$REPO/archive/$VERSION_TAG.zip"
 echo "Done !"
 
+echo -n "Cleaning HTML docs... "
+# remove trackers
+sed -i .bak 's/\/\/www.google-analytics.com\/analytics.js//' docs/docs/index.html
+sed -i .bak 's/\/\/piwik.selfbuild.fr\///' docs/docs/index.html
+# remove ads
+sed -i .bak 's/\.\.\/properties\/151\/funder\.js//' docs/docs/index.html
+# remove non-functional search bars (sort of, this is a hack)
+sed -i .bak 's/<input type="text" class="form-control" placeholder="Search".*$//' docs/docs/index.html
+sed -i .bak 's/<i class="glyphicon glyphicon-search"><\/i>//' docs/docs/index.html
+echo "Done !"
+
 # Generate .docset and archive it
 echo -n "Building .docset ... "
-$DASHING build -s docs/ > /dev/null
-tar --exclude='.DS_Store' -cvzf "$(basename $REPO)-$VERSION_TAG.tgz" Carbon.docset
+$DASHING build --source docs/ > /dev/null
+tar --exclude='.DS_Store' -cvzf "$(basename $REPO).tgz" Carbon.docset
 echo "Done !"
+
+# Copy main archive to specific version
+cp "$(basename $REPO).tgz" "versions/$(basename $REPO)-$VERSION_TAG.tgz"
 
 # Clean directory
 rm -rf Carbon.docset/
