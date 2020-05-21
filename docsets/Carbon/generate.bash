@@ -33,7 +33,7 @@ if [[ -z $GIT ]]; then
 fi
 
 # Check if sami.phar exists locally
-if [[ -f $SAMI ]]; then
+if [[ ! -f $SAMI ]]; then
     echo "Sorry but sami doesn't exist locally. I need it." >&2
     exit 1
 fi
@@ -46,29 +46,39 @@ fi
 
 # Download repo archive at given tag, and unzip it
 echo -n "Downloading HTML docs... "
-$WGET -q -kpHN -nH -P docs "$HTML"
-# echo "Downloading repo at: $TEMPDIR"
-# $WGET -q -O "$TEMPDIR/$(basename $REPO)-$VERSION_TAG.zip" "$REPO/archive/$VERSION_TAG.zip"
+$WGET -q -kpHN -nH -P docs/html_docs "$HTML"
 echo "Done !"
 
 echo -n "Cleaning HTML docs... "
 # remove trackers
-sed -i .bak 's/\/\/www.google-analytics.com\/analytics.js//' docs/docs/index.html
-sed -i .bak 's/\/\/piwik.selfbuild.fr\///' docs/docs/index.html
+sed -i .bak 's/\/\/www.google-analytics.com\/analytics.js//' docs/html_docs/docs/index.html
+sed -i .bak 's/\/\/piwik.selfbuild.fr\///' docs/html_docs/docs/index.html
 # remove ads
-sed -i .bak 's/\.\.\/properties\/151\/funder\.js//' docs/docs/index.html
+sed -i .bak 's/\.\.\/properties\/151\/funder\.js//' docs/html_docs/docs/index.html
 # remove non-functional search bars (sort of, this is a hack)
-sed -i .bak 's/<input type="text" class="form-control" placeholder="Search".*$//' docs/docs/index.html
-sed -i .bak 's/<i class="glyphicon glyphicon-search"><\/i>//' docs/docs/index.html
+sed -i .bak 's/<input type="text" class="form-control" placeholder="Search".*$//' docs/html_docs/docs/index.html
+sed -i .bak 's/<i class="glyphicon glyphicon-search"><\/i>//' docs/html_docs/docs/index.html
+echo "Done !"
+
+echo -n "Downloading repo... "
+$GIT clone -q $REPO
 echo "Done !"
 
 # Generate API doc with Sami
-$SAMI update sami-config.php
+echo -n "Generating API docs from repo... "
+export VERSION_TAG
+php $SAMI update sami-config.php
+echo "Done !"
+
+echo -n "Cleaning API docs... "
+# always hide the left column
+sed -i .bak 's/max-width: 991px/min-width: 0px/' docs/api_docs/css/sami.css
+echo "Done !"
 
 # Generate .docset and archive it
 echo -n "Building .docset ... "
 $DASHING build --source docs/ > /dev/null
-tar --exclude='.DS_Store' -cvzf "$(basename $REPO).tgz" Carbon.docset
+tar --exclude='.DS_Store' -czf "$(basename $REPO).tgz" Carbon.docset
 echo "Done !"
 
 # Copy main archive to specific version
@@ -77,6 +87,7 @@ cp "$(basename $REPO).tgz" "versions/$(basename $REPO)-$VERSION_TAG.tgz"
 # Clean directory
 rm -rf Carbon.docset/
 rm -rf docs/
+rm -rf Carbon/
 
 echo
 echo "Docset successfully generated !"
