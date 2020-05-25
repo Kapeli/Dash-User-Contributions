@@ -32,15 +32,17 @@ cp userguide.py $workdir
 # XXX: alternatively we could just download from scikit-learn.github.io assuming versions are matched
 cd $workdir
 # TODO: perhaps scikit-learn should provide an environment.yml and this script should use conda-env...
-pip install -U pip
-pip install numpy==1.15 scipy cython nose coverage matplotlib sphinx pillow sphinx-gallery numpydoc scikit-image joblib pandas pytest
-pip install doc2dash scikit-learn==$tag
+
 git clone --branch $tag https://github.com/scikit-learn/scikit-learn
 cd scikit-learn/doc
 git fetch https://github.com/jnothman/scikit-learn 0.20sphinxrename
 git cherry-pick FETCH_HEAD  # patch sphinx to avoid overwriting generated files with different case
-git fetch https://github.com/thomasjpfan/scikit-learn examples_njobs_fix
-git cherry-pick FETCH_HEAD  # n_jobs=1
+###git fetch https://github.com/thomasjpfan/scikit-learn examples_njobs_fix
+###git cherry-pick FETCH_HEAD  # n_jobs=1
+
+pip install -U pip
+pip install numpy scipy cython nose coverage matplotlib==2.* sphinx==2.1.2 pillow sphinx-gallery numpydoc scikit-image seaborn joblib pandas pytest
+pip install doc2dash scikit-learn==$tag
 NO_MATHJAX=1 make html optipng
 cd $workdir
 
