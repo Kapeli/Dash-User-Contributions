@@ -17,17 +17,15 @@ René Schwaiger ([sanssecours](https://github.com/sanssecours))
 # Clone Elektra’s repository
 git clone https://github.com/ElektraInitiative/libelektra.git
 
-# Create the build folder
+# Change working directory to repository root
 cd libelektra
-mkdir build
-cd build
 
 # Build the DocSet
-cmake .. -DBUILD_DOCSET=ON -DBUILD_FULL=OFF -DBUILD_SHARED=OFF \
-         -DBUILD_STATIC=OFF -DBUILD_TESTING=OFF
-make
+cmake -DBUILD_DOCSET=ON -DBUILD_FULL=OFF -DBUILD_SHARED=OFF \
+      -DBUILD_STATIC=OFF -DBUILD_TESTING=OFF -Bbuild
+cmake --build build
 
 # Archive the DocSet
-cd doc/html
+cd build/doc/html
 tar --exclude='.DS_Store' -cvzf ~/Downloads/Elektra.tgz org.libelektra.docset
 ```
