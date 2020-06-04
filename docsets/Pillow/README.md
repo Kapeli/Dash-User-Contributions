@@ -7,7 +7,7 @@ __Docset description:__
 	Library](https://en.wikipedia.org/wiki/Python_Imaging_Library).
 
 __Author:__
-    [153957](https://github.com/153957)
+    [TomFrank](https://github.com/TomFrank)
 
 __How to generate the docset:__
 
