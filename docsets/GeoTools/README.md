@@ -10,7 +10,20 @@ Documentation for [GeoTools](http://www.geotools.org) library as a [Dash](http:/
 * [javadocset](https://github.com/Kapeli/javadocset), to convert the Javadoc to a Dash docset.
 
 #### Available Versions
+* 23.0
+* 22.3
+* 22.2
+* 22.1
+* 22.0
+* 21.5
+* 21.4
+* 21.3
+* 21.2
+* 21.1
 * 21.0
+* 20.5
+* 20.4
+* 20.3
 * 20.2
 * 20.1
 * 20.0
@@ -56,12 +69,13 @@ Documentation for [GeoTools](http://www.geotools.org) library as a [Dash](http:/
 
 #### Generating
 1. Download the GeoTools API documentation from http://docs.geotools.org. 
-2. Convert to a Dash docset using javadocset
+2. Unzip the downloaded docs
+3. Convert to a Dash docset using javadocset (from https://github.com/Kapeli/javadocset, you may have to remove the quarantine on javadocset with `xattr -rd com.apple.quarantine ./javadocset`)
 
     ```bash
     $ javadocset GeoTools apidocs
     ```
-3. Compress the docset using tar
+4. Compress the docset using tar
 
     ```bash
     $ tar --exclude='.DS_Store' -cvzf GeoTools.tgz GeoTools.docset

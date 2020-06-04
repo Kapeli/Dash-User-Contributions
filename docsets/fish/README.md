@@ -1,11 +1,10 @@
-fish Docset
-===========
+# fish docset
 
-[fish](http://fishshell.com) docset for [Dash](https://kapeli.com/dash).
+* Author: [Andrei Borisov](https://github.com/andreiborisov)
+* Generated using: [dash-fish](https://github.com/andreiborisov/dash-fish)
 
-* Author: [Dan Underwood](https://github.com/dan-c-underwood) ([Twitter](https://twitter.com/DanCUnderwood))
-* Generated using: [fish-dash](https://github.com/dan-c-underwood/fish-dash)
+## Bugs & feature requests
 
-## Bugs & Enhancements
+You can raise an issue in the [dash-fish repo](https://github.com/andreiborisov/dash-fish/issues).
 
-Please raise any issues in the [fish-dash issue tracker](https://github.com/dan-c-underwood/fish-dash/issues). Feature suggestions are welcome, if the docset hasn't been updated for the latest version of `fish` then feel free to raise an issue!
+Feature suggestions are welcome, if the docset hasn't been updated for the latest version of `fish`, feel free to raise an issue!
