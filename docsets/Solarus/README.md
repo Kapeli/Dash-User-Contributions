@@ -1,20 +1,24 @@
-![alt text][logo]
+![Solarus Logo](logo.png)
 
-[logo]: http://santiagoitzcoatl.net/Solarus/solarus-logo-s.png "Solarus"
+# Solarus Quest Maker documentation
 
-# Solarus Quest documentation
+[Solarus](https://www.solarus-games.org "Official website") is a free and
+open-source multiplatform Action-RPG 2D game engine, licensed under GPL.
+It is written in C++, and runs games in Lua.
 
-Solarus : a free and open-source Action-RPG game engine
-Solarus is a free and open-source Action-RPG game engine, licensed under GPL, and written in C++. It runs quests in Lua, and can work on a great number of platforms. 
-Solarus also features a game editor called Solarus Quest Editor, written in C++ with Qt to help you create your game.
+This docset contains the Quest Maker Documentation, i.e. documentation about
+the Solarus Lua API.
 
-------
+## Docset maintainer
 
-* Solarus Version: 1.6
-* Docset updated by Santiago Itzcoatl
-* [santiagoitzcoatl.net](http://santiagoitzcoatl.net "Website")
-* [@santiagoitzcoat](https://twitter.com/santiagoitzcoat "Twitter")
-* [Github](https://github.com/santiagoitzcoatl "Github")
+* Name: Santiago Itzcoatl
+* Website: [santiagoitzcoatl.net](http://santiagoitzcoatl.net "Website")
+* Twitter: [@santiagoitzcoat](https://twitter.com/santiagoitzcoat "Twitter")
+* Github: [santiagoitzcoatl](https://github.com/santiagoitzcoatl "Github")
 
+## Docset generation
 
-Docset created from latest documentation available at: http://www.solarus-games.org/doc/latest/
+Docset created from latest documentation available at:
+https://www.solarus-games.org/doc/latest/
+
+* Solarus Version: 1.6.0
