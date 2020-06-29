@@ -3,26 +3,15 @@
 [Tailwind CSS 1.x][1] Docset
 =======================
 
-## Bug reports
+## Bug report and Docset improvement
 
-You can contact me at [@godbout](https://twitter.com/godbout), on [GitHub](https://github.com/godbout) or by email at guill@sleeplessmind.com.mo.
+Best is to drop an issue or do a PR at the Docset's repo: https://github.com/godbout/dash-docsets.
 
-## Docset build
+Else you can also contact me at [@godbout](https://twitter.com/godbout), on [GitHub](https://github.com/godbout) or by email at guill@sleeplessmind.com.mo.
 
-I built my own builder in PHP, available here: https://github.com/godbout/dash-docset-builder
+## Dash Docset Builder
 
-To build this docset:
-```php
-// Install the PHP dependencies
-composer install
-
-// Download the docs, package, and archive them
-php dash-docset build tailwindcss
-```
-
-If you just want to download the docs, you can run `php dash-docset grab tailwindcss`, if you already have the docs but just want to build the package, run `php dash-docset build tailwindcss`.
-
-The docset information (where to download the doc, which file is the index, where to get the icons, what CSS to update, etc...) is defined in a Docset class of the builder app. You could add any other doc and build it, although currently the builder is in alpha and changes might occur periodically.
+This Docset was built with the Dash Docset Builder in PHP. You can find information on how to build your own Docset on its GitHub repo: https://github.com/godbout/dash-docset-builder.
 
 # [Tailwind CSS 0.7.4][1] Docset
 
