@@ -13,7 +13,7 @@ And finally, you can checkout my GPG keys on [Keybase](https://keybase.io/Max13)
 
 # Prerequisites
 - `dashing`
-- `doxygen`
+- `sami`
 - `git`
 - `wget`
 
