@@ -1,0 +1,105 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Ensemble array\n",
+    "\n",
+    "An ensemble array is a group of ensembles\n",
+    "that each represent a part of the overall signal.\n",
+    "\n",
+    "Ensemble arrays are similar to normal ensembles,\n",
+    "but expose a slightly different interface.\n",
+    "Additionally, in an ensemble array,\n",
+    "the components of the overall signal are not related.\n",
+    "As a result, network arrays cannot be used\n",
+    "to compute nonlinear functions that mix the dimensions they represent."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import matplotlib.pyplot as plt\n",
+    "import numpy as np\n",
+    "\n",
+    "import nengo"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = nengo.Network(label='Ensemble Array')\n",
+    "with model:\n",
+    "    # Make an input node\n",
+    "    sin = nengo.Node(output=lambda t: [np.cos(t), np.sin(t)])\n",
+    "\n",
+    "    # Make ensembles to connect\n",
+    "    A = nengo.networks.EnsembleArray(100, n_ensembles=2)\n",
+    "    B = nengo.Ensemble(100, dimensions=2)\n",
+    "    C = nengo.networks.EnsembleArray(100, n_ensembles=2)\n",
+    "\n",
+    "    # Connect the model elements, just feedforward\n",
+    "    nengo.Connection(sin, A.input)\n",
+    "    nengo.Connection(A.output, B)\n",
+    "    nengo.Connection(B, C.input)\n",
+    "\n",
+    "    # Setup the probes for plotting\n",
+    "    sin_probe = nengo.Probe(sin)\n",
+    "    A_probe = nengo.Probe(A.output, synapse=0.02)\n",
+    "    B_probe = nengo.Probe(B, synapse=0.02)\n",
+    "    C_probe = nengo.Probe(C.output, synapse=0.02)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(10)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Plot the results\n",
+    "plt.figure()\n",
+    "plt.plot(sim.trange(), sim.data[sin_probe])\n",
+    "plt.plot(sim.trange(), sim.data[A_probe])\n",
+    "plt.plot(sim.trange(), sim.data[B_probe])\n",
+    "plt.plot(sim.trange(), sim.data[C_probe]);"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "These plots demonstrate that the ensemble array\n",
+    "works very similarly to a standard N-dimensional population.\n",
+    "However, this is not true when it comes to computing functions.\n",
+    "Ensemble arrays cannot be used\n",
+    "to compute nonlinear functions that mix the dimensions they represent."
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

@@ -1,0 +1,711 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# NEF summary\n",
+    "\n",
+    "The Neural Engineering Framework (NEF)\n",
+    "is one set of theoretical methods that are used in\n",
+    "Nengo for constructing neural models.\n",
+    "The NEF is based on [Eliasmith & Anderson's (2003) book](\n",
+    "https://mitpress.mit.edu/books/neural-engineering) from MIT Press.\n",
+    "This notebook introduces the three main principles\n",
+    "discussed in that book and implemented in Nengo."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "import nengo\n",
+    "from nengo.dists import Uniform\n",
+    "from nengo.processes import WhiteSignal\n",
+    "from nengo.utils.ensemble import tuning_curves\n",
+    "from nengo.utils.ipython import hide_input\n",
+    "from nengo.utils.matplotlib import rasterplot\n",
+    "\n",
+    "\n",
+    "def aligned(n_neurons, radius=0.9):\n",
+    "    intercepts = np.linspace(-radius, radius, n_neurons)\n",
+    "    encoders = np.tile([[1], [-1]], (n_neurons // 2, 1))\n",
+    "    intercepts *= encoders[:, 0]\n",
+    "    return intercepts, encoders\n",
+    "\n",
+    "\n",
+    "hide_input()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Principle 1: Representation\n",
+    "\n",
+    "### Encoding\n",
+    "\n",
+    "Neural populations represent time-varying signals\n",
+    "through their spiking responses.\n",
+    "A signal is a vector of real numbers of arbitrary length.\n",
+    "This example is a 1D signal going from -1 to 1 in 1 second."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = nengo.Network(label=\"NEF summary\")\n",
+    "with model:\n",
+    "    input = nengo.Node(lambda t: t * 2 - 1)\n",
+    "    input_probe = nengo.Probe(input)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(1.0)\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.plot(sim.trange(), sim.data[input_probe], lw=2)\n",
+    "plt.title(\"Input signal\")\n",
+    "plt.xlabel(\"Time (s)\")\n",
+    "plt.xlim(0, 1);\n",
+    "hide_input()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "These signals drive neural populations\n",
+    "based on each neuron's *tuning curve*\n",
+    "(which is similar to the current-frequency curve,\n",
+    "if you're familiar with that).\n",
+    "\n",
+    "The tuning curve describes how much\n",
+    "a particular neuron will fire as a function of the input signal."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "intercepts, encoders = aligned(8)  # Makes evenly spaced intercepts\n",
+    "with model:\n",
+    "    A = nengo.Ensemble(\n",
+    "        8,\n",
+    "        dimensions=1,\n",
+    "        intercepts=intercepts,\n",
+    "        max_rates=Uniform(80, 100),\n",
+    "        encoders=encoders)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    eval_points, activities = tuning_curves(A, sim)\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.plot(eval_points, activities, lw=2)\n",
+    "plt.xlabel(\"Input signal\")\n",
+    "plt.ylabel(\"Firing rate (Hz)\");\n",
+    "hide_input()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can drive these neurons with our input signal\n",
+    "and observe their spiking activity over time."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    nengo.Connection(input, A)\n",
+    "    A_spikes = nengo.Probe(A.neurons)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(1)\n",
+    "\n",
+    "plt.figure()\n",
+    "ax = plt.subplot(1, 1, 1)\n",
+    "rasterplot(sim.trange(), sim.data[A_spikes], ax)\n",
+    "ax.set_xlim(0, 1)\n",
+    "ax.set_ylabel('Neuron')\n",
+    "ax.set_xlabel('Time (s)');\n",
+    "hide_input()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Decoding\n",
+    "\n",
+    "We can estimate the input signal\n",
+    "originally encoded by decoding the pattern of spikes.\n",
+    "To do this, we first filter the spike train\n",
+    "with a temporal filter that accounts for\n",
+    "postsynaptic current (PSC) activity."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = nengo.Network(label=\"NEF summary\")\n",
+    "with model:\n",
+    "    input = nengo.Node(lambda t: t * 2 - 1)\n",
+    "    input_probe = nengo.Probe(input)\n",
+    "    intercepts, encoders = aligned(8)  # Makes evenly spaced intercepts\n",
+    "    A = nengo.Ensemble(8, dimensions=1,\n",
+    "                       intercepts=intercepts,\n",
+    "                       max_rates=Uniform(80, 100),\n",
+    "                       encoders=encoders)\n",
+    "    nengo.Connection(input, A)\n",
+    "    A_spikes = nengo.Probe(A.neurons, synapse=0.01)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(1)\n",
+    "\n",
+    "scale = 180\n",
+    "plt.figure()\n",
+    "for i in range(A.n_neurons):\n",
+    "    plt.plot(sim.trange(), sim.data[A_spikes][:, i] - i * scale)\n",
+    "plt.xlim(0, 1)\n",
+    "plt.ylim(scale * (-A.n_neurons + 1), scale)\n",
+    "plt.ylabel(\"Neuron\")\n",
+    "plt.yticks(\n",
+    "    np.arange(scale / 1.8, (-A.n_neurons + 1) * scale, -scale),\n",
+    "    np.arange(A.n_neurons))\n",
+    "hide_input()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Then we mulitply those filtered spike trains\n",
+    "with decoding weights and sum them together\n",
+    "to give an estimate of the input based on the spikes.\n",
+    "\n",
+    "The decoding weights are determined\n",
+    "by minimizing the squared difference\n",
+    "between the decoded estimate and the actual input signal."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    A_probe = nengo.Probe(A, synapse=0.01)  # 10ms PSC filter"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(1)\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.plot(sim.trange(), sim.data[input_probe], label=\"Input signal\")\n",
+    "plt.plot(sim.trange(), sim.data[A_probe], label=\"Decoded estimate\")\n",
+    "plt.legend(loc=\"best\")\n",
+    "plt.xlim(0, 1)\n",
+    "hide_input()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The accuracy of the decoded estimate increases\n",
+    "as the number of neurons increases."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = nengo.Network(label=\"NEF summary\")\n",
+    "with model:\n",
+    "    input = nengo.Node(lambda t: t * 2 - 1)\n",
+    "    input_probe = nengo.Probe(input)\n",
+    "    A = nengo.Ensemble(30, dimensions=1, max_rates=Uniform(80, 100))\n",
+    "    nengo.Connection(input, A)\n",
+    "    A_spikes = nengo.Probe(A.neurons)\n",
+    "    A_probe = nengo.Probe(A, synapse=0.01)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(1)\n",
+    "\n",
+    "plt.figure(figsize=(15, 3.5))\n",
+    "\n",
+    "plt.subplot(1, 3, 1)\n",
+    "eval_points, activities = tuning_curves(A, sim)\n",
+    "plt.plot(eval_points, activities, lw=2)\n",
+    "plt.xlabel(\"Input signal\")\n",
+    "plt.ylabel(\"Firing rate (Hz)\")\n",
+    "\n",
+    "ax = plt.subplot(1, 3, 2)\n",
+    "rasterplot(sim.trange(), sim.data[A_spikes], ax)\n",
+    "plt.xlim(0, 1)\n",
+    "plt.xlabel(\"Time (s)\")\n",
+    "plt.ylabel(\"Neuron\")\n",
+    "\n",
+    "plt.subplot(1, 3, 3)\n",
+    "plt.plot(sim.trange(), sim.data[input_probe], label=\"Input signal\")\n",
+    "plt.plot(sim.trange(), sim.data[A_probe], label=\"Decoded esimate\")\n",
+    "plt.legend(loc=\"best\")\n",
+    "plt.xlabel(\"Time (s)\")\n",
+    "plt.xlim(0, 1)\n",
+    "hide_input()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Any smooth signal can be encoded and decoded."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = nengo.Network(label=\"NEF summary\")\n",
+    "with model:\n",
+    "    input = nengo.Node(WhiteSignal(1, high=5), size_out=1)\n",
+    "    input_probe = nengo.Probe(input)\n",
+    "    A = nengo.Ensemble(30, dimensions=1, max_rates=Uniform(80, 100))\n",
+    "    nengo.Connection(input, A)\n",
+    "    A_spikes = nengo.Probe(A.neurons)\n",
+    "    A_probe = nengo.Probe(A, synapse=0.01)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(1)\n",
+    "\n",
+    "plt.figure(figsize=(10, 3.5))\n",
+    "plt.subplot(1, 2, 1)\n",
+    "plt.plot(sim.trange(), sim.data[input_probe], label=\"Input signal\")\n",
+    "plt.plot(sim.trange(), sim.data[A_probe], label=\"Decoded esimate\")\n",
+    "plt.legend(loc=\"best\")\n",
+    "plt.xlabel(\"Time (s)\")\n",
+    "plt.xlim(0, 1)\n",
+    "\n",
+    "ax = plt.subplot(1, 2, 2)\n",
+    "rasterplot(sim.trange(), sim.data[A_spikes], ax)\n",
+    "plt.xlim(0, 1)\n",
+    "plt.xlabel(\"Time (s)\")\n",
+    "plt.ylabel(\"Neuron\")\n",
+    "hide_input()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Principle 2: Transformation\n",
+    "\n",
+    "Encoding and decoding allow us to encode signals over time,\n",
+    "and decode transformations of those signals.\n",
+    "\n",
+    "In fact, we can decode arbitrary transformations of the input signal,\n",
+    "not just the signal itself (as in the previous example).\n",
+    "\n",
+    "Let's decode the square of our white noise input."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = nengo.Network(label=\"NEF summary\")\n",
+    "with model:\n",
+    "    input = nengo.Node(WhiteSignal(1, high=5), size_out=1)\n",
+    "    input_probe = nengo.Probe(input, )\n",
+    "    A = nengo.Ensemble(30, dimensions=1, max_rates=Uniform(80, 100))\n",
+    "    Asquare = nengo.Node(size_in=1)\n",
+    "    nengo.Connection(input, A)\n",
+    "    nengo.Connection(A, Asquare, function=np.square)\n",
+    "    A_spikes = nengo.Probe(A.neurons)\n",
+    "    Asquare_probe = nengo.Probe(Asquare, synapse=0.01)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(1)\n",
+    "\n",
+    "plt.figure(figsize=(10, 3.5))\n",
+    "plt.subplot(1, 2, 1)\n",
+    "plt.plot(\n",
+    "    sim.trange(),\n",
+    "    sim.data[input_probe],\n",
+    "    label=\"Input signal\")\n",
+    "plt.plot(\n",
+    "    sim.trange(),\n",
+    "    sim.data[Asquare_probe],\n",
+    "    label=\"Decoded esimate\")\n",
+    "plt.plot(\n",
+    "    sim.trange(),\n",
+    "    np.square(sim.data[input_probe]),\n",
+    "    label=\"Input signal squared\")\n",
+    "plt.legend(loc=\"best\", fontsize='medium')\n",
+    "plt.xlabel(\"Time (s)\")\n",
+    "plt.xlim(0, 1)\n",
+    "\n",
+    "ax = plt.subplot(1, 2, 2)\n",
+    "rasterplot(sim.trange(), sim.data[A_spikes])\n",
+    "plt.xlim(0, 1)\n",
+    "plt.xlabel(\"Time (s)\")\n",
+    "plt.ylabel(\"Neuron\")\n",
+    "hide_input()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Notice that the spike trains are exactly the same.\n",
+    "The only difference is how we're interpreting those spikes.\n",
+    "We told Nengo to compute a new set of decoders\n",
+    "that estimate the function $x^2$.\n",
+    "\n",
+    "In general, the transformation principle\n",
+    "determines how we can decode spike trains\n",
+    "to compute linear and nonlinear transformations of signals\n",
+    "encoded in a population of neurons.\n",
+    "We can then project those transformed signals\n",
+    "into another population, and repeat the process.\n",
+    "Essentially, this provides a means of\n",
+    "computing the neural connection weights\n",
+    "to compute an arbitrary function between populations.\n",
+    "\n",
+    "Suppose we are representing a sine wave."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = nengo.Network(label=\"NEF summary\")\n",
+    "with model:\n",
+    "    input = nengo.Node(lambda t: np.sin(np.pi * t))\n",
+    "    A = nengo.Ensemble(30, dimensions=1, max_rates=Uniform(80, 100))\n",
+    "    nengo.Connection(input, A)\n",
+    "    A_spikes = nengo.Probe(A.neurons)\n",
+    "    A_probe = nengo.Probe(A, synapse=0.01)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(2)\n",
+    "\n",
+    "plt.figure(figsize=(10, 3.5))\n",
+    "plt.subplot(1, 2, 1)\n",
+    "plt.plot(sim.trange(), sim.data[A_probe])\n",
+    "plt.title(\"A\")\n",
+    "plt.xlabel(\"Time (s)\")\n",
+    "plt.xlim(0, 2)\n",
+    "\n",
+    "ax = plt.subplot(1, 2, 2)\n",
+    "rasterplot(sim.trange(), sim.data[A_spikes], ax)\n",
+    "plt.xlim(0, 2)\n",
+    "plt.title(\"A\")\n",
+    "plt.xlabel(\"Time (s)\")\n",
+    "plt.ylabel(\"Neuron\")\n",
+    "hide_input()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Linear transformations of that signal\n",
+    "involve solving for the usual decoders,\n",
+    "and scaling those decoding weights.\n",
+    "Let us flip this sine wave upside down\n",
+    "as it is transmitted between two populations\n",
+    "(i.e. population A and population -A)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    minusA = nengo.Ensemble(30, dimensions=1, max_rates=Uniform(80, 100))\n",
+    "    nengo.Connection(A, minusA, function=lambda x: -x)\n",
+    "    minusA_spikes = nengo.Probe(minusA.neurons)\n",
+    "    minusA_probe = nengo.Probe(minusA, synapse=0.01)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(2)\n",
+    "\n",
+    "plt.figure(figsize=(10, 5))\n",
+    "plt.subplot(2, 2, 1)\n",
+    "plt.plot(sim.trange(), sim.data[A_probe])\n",
+    "plt.title(\"A\")\n",
+    "plt.xticks(())\n",
+    "plt.xlim(0, 2)\n",
+    "\n",
+    "plt.subplot(2, 2, 3)\n",
+    "plt.plot(sim.trange(), sim.data[minusA_probe])\n",
+    "plt.title(\"-A\")\n",
+    "plt.xlabel(\"Time (s)\")\n",
+    "plt.xlim(0, 2)\n",
+    "\n",
+    "ax = plt.subplot(2, 2, 2)\n",
+    "rasterplot(sim.trange(), sim.data[A_spikes], ax)\n",
+    "plt.xlim(0, 2)\n",
+    "plt.title(\"A\")\n",
+    "plt.xticks(())\n",
+    "plt.ylabel(\"Neuron\")\n",
+    "\n",
+    "ax = plt.subplot(2, 2, 4)\n",
+    "rasterplot(sim.trange(), sim.data[minusA_spikes], ax)\n",
+    "plt.xlim(0, 2)\n",
+    "plt.title(\"-A\")\n",
+    "plt.xlabel(\"Time (s)\")\n",
+    "plt.ylabel(\"Neuron\")\n",
+    "hide_input()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Nonlinear transformations involve\n",
+    "solving for a new set of decoding weights.\n",
+    "Let us add a third population connected\n",
+    "to the second one and use it to compute $(-A)^2$."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    A_squared = nengo.Ensemble(30, dimensions=1, max_rates=Uniform(80, 100))\n",
+    "    nengo.Connection(minusA, A_squared, function=lambda x: x ** 2)\n",
+    "    A_squared_spikes = nengo.Probe(A_squared.neurons)\n",
+    "    A_squared_probe = nengo.Probe(A_squared, synapse=0.02)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(2)\n",
+    "\n",
+    "plt.figure(figsize=(10, 6.5))\n",
+    "plt.subplot(3, 2, 1)\n",
+    "plt.plot(sim.trange(), sim.data[A_probe])\n",
+    "plt.axhline(0, color='k')\n",
+    "plt.title(\"A\")\n",
+    "plt.xticks(())\n",
+    "plt.xlim(0, 2)\n",
+    "\n",
+    "plt.subplot(3, 2, 3)\n",
+    "plt.plot(sim.trange(), sim.data[minusA_probe])\n",
+    "plt.axhline(0, color='k')\n",
+    "plt.title(\"-A\")\n",
+    "plt.xticks(())\n",
+    "plt.xlim(0, 2)\n",
+    "\n",
+    "plt.subplot(3, 2, 5)\n",
+    "plt.plot(sim.trange(), sim.data[A_squared_probe])\n",
+    "plt.axhline(0, color='k')\n",
+    "plt.title(\"(-A)^2\")\n",
+    "plt.xlabel(\"Time (s)\")\n",
+    "plt.xlim(0, 2)\n",
+    "\n",
+    "ax = plt.subplot(3, 2, 2)\n",
+    "rasterplot(sim.trange(), sim.data[A_spikes], ax)\n",
+    "plt.xlim(0, 2)\n",
+    "plt.title(\"A\")\n",
+    "plt.xticks(())\n",
+    "plt.ylabel(\"Neuron\")\n",
+    "\n",
+    "ax = plt.subplot(3, 2, 4)\n",
+    "rasterplot(sim.trange(), sim.data[minusA_spikes], ax)\n",
+    "plt.xlim(0, 2)\n",
+    "plt.title(\"-A\")\n",
+    "plt.xticks(())\n",
+    "plt.ylabel(\"Neuron\")\n",
+    "\n",
+    "ax = plt.subplot(3, 2, 6)\n",
+    "rasterplot(sim.trange(), sim.data[A_squared_spikes], ax)\n",
+    "plt.xlim(0, 2)\n",
+    "plt.title(\"(-A)^2\")\n",
+    "plt.xlabel(\"Time (s)\")\n",
+    "plt.ylabel(\"Neuron\")\n",
+    "hide_input()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Principle 3: Dynamics\n",
+    "\n",
+    "So far, we have been considering the values\n",
+    "represented by ensembles as generic \"signals.\"\n",
+    "However, if we think of them instead\n",
+    "as state variables in a dynamical system,\n",
+    "then we can apply the methods of control theory\n",
+    "or dynamic systems theory to brain models.\n",
+    "Nengo automatically translates from standard dynamical systems descriptions\n",
+    "to descriptions consistent with neural dynamics.\n",
+    "\n",
+    "In order to get interesting dynamics,\n",
+    "we can connect populations recurrently (i.e., to themselves).\n",
+    "\n",
+    "Below is a simple harmonic oscillator\n",
+    "implemented using this third principle.\n",
+    "It needs is a bit of input to get it started."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = nengo.Network(label=\"NEF summary\")\n",
+    "with model:\n",
+    "    input = nengo.Node(lambda t: [1, 0] if t < 0.1 else [0, 0])\n",
+    "    oscillator = nengo.Ensemble(200, dimensions=2)\n",
+    "    nengo.Connection(input, oscillator)\n",
+    "    nengo.Connection(\n",
+    "        oscillator, oscillator, transform=[[1, 1], [-1, 1]], synapse=0.1)\n",
+    "    oscillator_probe = nengo.Probe(oscillator, synapse=0.02)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(3)\n",
+    "\n",
+    "plt.figure(figsize=(10, 3.5))\n",
+    "plt.subplot(1, 2, 1)\n",
+    "plt.plot(sim.trange(), sim.data[oscillator_probe])\n",
+    "plt.ylim(-1.2, 1.2)\n",
+    "plt.xlabel('Time (s)')\n",
+    "\n",
+    "plt.subplot(1, 2, 2)\n",
+    "plt.plot(sim.data[oscillator_probe][:, 0], sim.data[oscillator_probe][:, 1])\n",
+    "plt.grid()\n",
+    "plt.axis([-1.2, 1.2, -1.2, 1.2])\n",
+    "plt.xlabel('$x_1$')\n",
+    "plt.ylabel('$x_2$')\n",
+    "hide_input()"
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

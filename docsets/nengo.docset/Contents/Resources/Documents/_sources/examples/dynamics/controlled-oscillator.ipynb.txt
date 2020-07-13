@@ -1,0 +1,225 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Controlled oscillator\n",
+    "\n",
+    "The controlled oscillator is an oscillator\n",
+    "with an extra input that controls the frequency of the oscillation.\n",
+    "\n",
+    "To implement a basic oscillator,\n",
+    "we would use a neural ensemble of two dimensions\n",
+    "that has the following dynamics:\n",
+    "\n",
+    "$$\n",
+    "\\dot{x} = \\begin{bmatrix} 0 && - \\omega \\\\ \\omega && 0 \\end{bmatrix} x\n",
+    "$$\n",
+    "\n",
+    "where the frequency of oscillation is $\\omega \\over {2 \\pi}$ Hz.\n",
+    "\n",
+    "We need the neurons to represent three variables,\n",
+    "$x_0$, $x_1$, and $\\omega$.\n",
+    "According the the dynamics principle of the NEF,\n",
+    "in order to implement some particular dynamics,\n",
+    "we need to convert this dynamics equation into a feedback function:\n",
+    "\n",
+    "$$\n",
+    "\\begin{align}\n",
+    "  \\dot{x} &= f(x) \\\\\n",
+    "  &\\implies f_{feedback}(x) = x + \\tau f(x)\n",
+    "\\end{align}\n",
+    "$$\n",
+    "\n",
+    "where $\\tau$ is the post-synaptic time constant of the feedback connection.\n",
+    "\n",
+    "In this case, the feedback function to be computed is\n",
+    "\n",
+    "$$\n",
+    "\\begin{align}\n",
+    "  f_{feedback}(x) &= x + \\tau\n",
+    "  \\begin{bmatrix}\n",
+    "    0 && - \\omega \\\\\n",
+    "    \\omega && 0\n",
+    "  \\end{bmatrix}\n",
+    "  x \\\\\n",
+    "  &=\n",
+    "  \\begin{bmatrix}\n",
+    "    x_0 - \\tau \\cdot \\omega \\cdot x_1 \\\\\n",
+    "    x_1 + \\tau \\cdot \\omega \\cdot x_0\n",
+    "  \\end{bmatrix}\n",
+    "\\end{align}\n",
+    "$$\n",
+    "\n",
+    "Since the neural ensemble represents all three variables\n",
+    "but the dynamics only affects the first two ($x_0$, $x_1$),\n",
+    "we need the feedback function to not affect that last variable.\n",
+    "We do this by adding a zero to the feedback function.\n",
+    "\n",
+    "$$\n",
+    "f_{feedback}(x) = \\begin{bmatrix}\n",
+    "  x_0 - \\tau \\cdot \\omega \\cdot x_1 \\\\\n",
+    "  x_1 + \\tau \\cdot \\omega \\cdot x_0 \\\\\n",
+    " 0 \\end{bmatrix}\n",
+    "$$\n",
+    "\n",
+    "We also generally want to keep\n",
+    "the ranges of variables represented within an ensemble\n",
+    "to be approximately the same.\n",
+    "In this case, if $x_0$ and $x_1$ are between -1 and 1,\n",
+    "$\\omega$ will also be between -1 and 1,\n",
+    "giving a frequency range of $-1 \\over {2 \\pi}$ to $1 \\over {2 \\pi}$.\n",
+    "To increase this range,\n",
+    "we introduce a scaling factor to $\\omega$ called $\\omega_{max}$.\n",
+    "\n",
+    "$$\n",
+    "f_{feedback}(x) = \\begin{bmatrix}\n",
+    "  x_0 - \\tau \\cdot \\omega \\cdot \\omega_{max} \\cdot x_1 \\\\\n",
+    "  x_1 + \\tau \\cdot \\omega \\cdot \\omega_{max} \\cdot x_0 \\\\\n",
+    "  0 \\end{bmatrix}\n",
+    "$$"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "import nengo\n",
+    "from nengo.processes import Piecewise"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 1: Create the network"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "tau = 0.1  # Post-synaptic time constant for feedback\n",
+    "w_max = 10  # Maximum frequency in Hz is w_max/(2*pi)\n",
+    "\n",
+    "model = nengo.Network(label='Controlled Oscillator')\n",
+    "with model:\n",
+    "    # The ensemble for the oscillator\n",
+    "    oscillator = nengo.Ensemble(500, dimensions=3, radius=1.7)\n",
+    "\n",
+    "    # The feedback connection\n",
+    "    def feedback(x):\n",
+    "        x0, x1, w = x  # These are the three variables stored in the ensemble\n",
+    "        return x0 - w * w_max * tau * x1, x1 + w * w_max * tau * x0, 0\n",
+    "\n",
+    "    nengo.Connection(oscillator, oscillator, function=feedback, synapse=tau)\n",
+    "\n",
+    "    # The ensemble for controlling the speed of oscillation\n",
+    "    frequency = nengo.Ensemble(100, dimensions=1)\n",
+    "\n",
+    "    nengo.Connection(frequency, oscillator[2])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 2: Create the input"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    # We need a quick input at the beginning to start the oscillator\n",
+    "    initial = nengo.Node(Piecewise({0: [1, 0, 0], 0.15: [0, 0, 0]}))\n",
+    "    nengo.Connection(initial, oscillator)\n",
+    "\n",
+    "    # Vary the speed over time\n",
+    "    input_frequency = nengo.Node(\n",
+    "        Piecewise({\n",
+    "            0: 1,\n",
+    "            1: 0.5,\n",
+    "            2: 0,\n",
+    "            3: -0.5,\n",
+    "            4: -1\n",
+    "        }))\n",
+    "\n",
+    "    nengo.Connection(input_frequency, frequency)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 3: Add Probes"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    # Indicate which values to record\n",
+    "    oscillator_probe = nengo.Probe(oscillator, synapse=0.03)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 4: Run the Model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(5)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 5: Plot the Results"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "plt.figure()\n",
+    "plt.plot(sim.trange(), sim.data[oscillator_probe])\n",
+    "plt.xlabel('Time (s)')\n",
+    "plt.legend(['$x_0$', '$x_1$', r'$\\omega$']);"
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

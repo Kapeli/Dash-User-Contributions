@@ -1,0 +1,193 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Addition\n",
+    "\n",
+    "In this example, we will construct a network that adds two inputs.\n",
+    "The network utilizes two communication channels\n",
+    "into the same neural population.\n",
+    "Addition is thus somewhat 'free', since the incoming currents\n",
+    "from different synaptic connections interact linearly\n",
+    "(though two inputs don't have to\n",
+    "combine in this way; see the combining demo)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "import nengo"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 1: Create the Model\n",
+    "\n",
+    "The model has three ensembles, which we will call A, B, and C."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Create the model object\n",
+    "model = nengo.Network(label='Addition')\n",
+    "with model:\n",
+    "    # Create 3 ensembles each containing 100 leaky integrate-and-fire neurons\n",
+    "    A = nengo.Ensemble(100, dimensions=1)\n",
+    "    B = nengo.Ensemble(100, dimensions=1)\n",
+    "    C = nengo.Ensemble(100, dimensions=1)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 2: Provide Input to the Model\n",
+    "\n",
+    "We will use two constant scalar values for the two input signals\n",
+    "that drive activity in ensembles A and B."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    # Create input nodes representing constant values\n",
+    "    input_a = nengo.Node(output=0.5)\n",
+    "    input_b = nengo.Node(output=0.3)\n",
+    "\n",
+    "    # Connect the input nodes to the appropriate ensembles\n",
+    "    nengo.Connection(input_a, A)\n",
+    "    nengo.Connection(input_b, B)\n",
+    "\n",
+    "    # Connect input ensembles A and B to output ensemble C\n",
+    "    nengo.Connection(A, C)\n",
+    "    nengo.Connection(B, C)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 3: Probe Output\n",
+    "\n",
+    "Let's collect output data from each ensemble and output."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    input_a_probe = nengo.Probe(input_a)\n",
+    "    input_b_probe = nengo.Probe(input_b)\n",
+    "    A_probe = nengo.Probe(A, synapse=0.01)\n",
+    "    B_probe = nengo.Probe(B, synapse=0.01)\n",
+    "    C_probe = nengo.Probe(C, synapse=0.01)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 4: Run the Model\n",
+    "\n",
+    "In order to run the model, we have to create a simulator.\n",
+    "Then, we can run that simulator over and over again\n",
+    "without affecting the original model."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Create the simulator\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    # Run it for 5 seconds\n",
+    "    sim.run(5)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The data produced by running the model can now be plotted."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Plot the input signals and decoded ensemble values\n",
+    "t = sim.trange()\n",
+    "plt.figure()\n",
+    "plt.plot(\n",
+    "    sim.trange(),\n",
+    "    sim.data[A_probe],\n",
+    "    label=\"Decoded Ensemble A\")\n",
+    "plt.plot(\n",
+    "    sim.trange(),\n",
+    "    sim.data[B_probe],\n",
+    "    label=\"Decoded Ensemble B\")\n",
+    "plt.plot(\n",
+    "    sim.trange(),\n",
+    "    sim.data[C_probe],\n",
+    "    label=\"Decoded Ensemble C\")\n",
+    "plt.plot(\n",
+    "    sim.trange(),\n",
+    "    sim.data[input_a_probe],\n",
+    "    label=\"Input A\",\n",
+    "    color='k',\n",
+    "    linewidth=2.0)\n",
+    "plt.plot(\n",
+    "    sim.trange(),\n",
+    "    sim.data[input_b_probe],\n",
+    "    label=\"Input B\",\n",
+    "    color='0.75',\n",
+    "    linewidth=2.0)\n",
+    "plt.legend()\n",
+    "plt.ylim(0, 1)\n",
+    "plt.xlabel('time [s]');"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "You can check that the decoded value\n",
+    "of the activity in ensemble C\n",
+    "provides a good estimate of the sum of inputs A and B."
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

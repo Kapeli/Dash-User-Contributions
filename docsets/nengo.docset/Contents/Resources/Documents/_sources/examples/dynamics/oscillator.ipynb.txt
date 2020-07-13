@@ -1,0 +1,163 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# A simple harmonic oscillator\n",
+    "\n",
+    "This demo implements a simple harmonic oscillator\n",
+    "in a 2D neural population.\n",
+    "The oscillator is more visually interesting on its own\n",
+    "than the integrator, but the principle at work is the same.\n",
+    "Here, instead of having the recurrent input just integrate\n",
+    "(i.e. feeding the full input value back to the population),\n",
+    "we have two dimensions which interact."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "import nengo\n",
+    "from nengo.processes import Piecewise"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 1: Create the Model\n",
+    "\n",
+    "The model consists of a single neural ensemble that we will call `Neurons`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Create the model object\n",
+    "model = nengo.Network(label='Oscillator')\n",
+    "with model:\n",
+    "    # Create the ensemble for the oscillator\n",
+    "    neurons = nengo.Ensemble(200, dimensions=2)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 2: Provide Input to the Model\n",
+    "\n",
+    "A brief input signal is provided\n",
+    "to trigger the oscillatory behavior of the neural representation."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    # Create an input signal\n",
+    "    input = nengo.Node(Piecewise({0: [1, 0], 0.1: [0, 0]}))\n",
+    "\n",
+    "    # Connect the input signal to the neural ensemble\n",
+    "    nengo.Connection(input, neurons)\n",
+    "\n",
+    "    # Create the feedback connection\n",
+    "    nengo.Connection(neurons, neurons,\n",
+    "                     transform=[[1, 1], [-1, 1]],\n",
+    "                     synapse=0.1)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 3: Add Probes\n",
+    "\n",
+    "These probes will collect data from the input signal and the neural ensemble."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    input_probe = nengo.Probe(input, 'output')\n",
+    "    neuron_probe = nengo.Probe(neurons, 'decoded_output', synapse=0.1)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 4: Run the Model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Create the simulator\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    # Run it for 5 seconds\n",
+    "    sim.run(5)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 5: Plot the Results"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "plt.figure()\n",
+    "plt.plot(sim.trange(), sim.data[neuron_probe])\n",
+    "plt.xlabel('Time (s)', fontsize='large')\n",
+    "plt.legend(['$x_0$', '$x_1$']);"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "data = sim.data[neuron_probe]\n",
+    "plt.figure()\n",
+    "plt.plot(data[:, 0], data[:, 1], label='Decoded Output')\n",
+    "plt.xlabel('$x_0$', fontsize=20)\n",
+    "plt.ylabel('$x_1$', fontsize=20)\n",
+    "plt.legend();"
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

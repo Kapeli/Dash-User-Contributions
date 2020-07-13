@@ -1,0 +1,194 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Inhibitory gating of ensembles"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import matplotlib.pyplot as plt\n",
+    "import numpy as np\n",
+    "\n",
+    "import nengo\n",
+    "from nengo.processes import Piecewise"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 1: Create the network\n",
+    "\n",
+    "Our model consists of two ensembles (called A and B)\n",
+    "that receive inputs from a common sine wave signal generator.\n",
+    "\n",
+    "Ensemble A is gated using the output of a node,\n",
+    "while Ensemble B is gated using the output of a third ensemble (C).\n",
+    "This is to demonstrate that ensembles can be gated\n",
+    "using either node outputs, or decoded outputs from ensembles."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "n_neurons = 30\n",
+    "\n",
+    "model = nengo.Network(label=\"Inhibitory Gating\")\n",
+    "with model:\n",
+    "    A = nengo.Ensemble(n_neurons, dimensions=1)\n",
+    "    B = nengo.Ensemble(n_neurons, dimensions=1)\n",
+    "    C = nengo.Ensemble(n_neurons, dimensions=1)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 2: Provide input to the model\n",
+    "\n",
+    "As described in Step 1, this model requires two inputs.\n",
+    "\n",
+    "1. A sine wave signal that is used to drive ensembles A and B\n",
+    "2. An inhibitory control signal used to (directly) gate ensemble A,\n",
+    "   and (indirectly through ensemble C) gate ensemble B."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    sin = nengo.Node(np.sin)\n",
+    "    inhib = nengo.Node(Piecewise({0: 0, 2.5: 1, 5: 0, 7.5: 1, 10: 0, 12.5: 1}))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 3: Connect the different components of the model\n",
+    "\n",
+    "In this model, we need to make the following connections:\n",
+    "\n",
+    "1. From sine wave generator to Ensemble A\n",
+    "2. From sine wave generator to Ensemble B\n",
+    "3. From inhibitory control signal to the neurons of Ensemble A\n",
+    "   (to directly drive the currents of the neurons)\n",
+    "4. From inhibitory control signal to Ensemble C\n",
+    "5. From Ensemble C to the neurons of Ensemble B\n",
+    "   (this demonstrates that the decoded output of Ensemble C\n",
+    "   can be used to gate Ensemble B)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    nengo.Connection(sin, A)\n",
+    "    nengo.Connection(sin, B)\n",
+    "    nengo.Connection(inhib, A.neurons, transform=[[-2.5]] * n_neurons)\n",
+    "    nengo.Connection(inhib, C)\n",
+    "    nengo.Connection(C, B.neurons, transform=[[-2.5]] * n_neurons)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 4: Probe outputs\n",
+    "\n",
+    "Anything that is probed will collect the data it produces over time,\n",
+    "allowing us to analyze and visualize it later.\n",
+    "Let's collect all the data produced."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    sin_probe = nengo.Probe(sin)\n",
+    "    inhib_probe = nengo.Probe(inhib)\n",
+    "    A_probe = nengo.Probe(A, synapse=0.01)\n",
+    "    B_probe = nengo.Probe(B, synapse=0.01)\n",
+    "    C_probe = nengo.Probe(C, synapse=0.01)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 5: Run the model\n",
+    "\n",
+    "In order to run the model, we have to create a simulator.\n",
+    "Then, we can run that simulator over and over again\n",
+    "without affecting the original model."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(15)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Plot the decoded output of Ensemble A\n",
+    "plt.figure()\n",
+    "plt.plot(sim.trange(), sim.data[A_probe], label='Decoded output')\n",
+    "plt.plot(sim.trange(), sim.data[sin_probe], label='Sine input')\n",
+    "plt.plot(sim.trange(), sim.data[inhib_probe], label='Inhibitory signal')\n",
+    "plt.legend();"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Plot the decoded output of Ensemble B and C\n",
+    "plt.figure()\n",
+    "plt.plot(sim.trange(), sim.data[B_probe], label='Decoded output of B')\n",
+    "plt.plot(sim.trange(), sim.data[sin_probe], label='Sine input')\n",
+    "plt.plot(sim.trange(), sim.data[C_probe], label='Decoded output of C')\n",
+    "plt.plot(sim.trange(), sim.data[inhib_probe], label='Inhibitory signal')\n",
+    "plt.legend();"
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

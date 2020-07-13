@@ -1,0 +1,589 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# The `config` system\n",
+    "\n",
+    "Nengo objects have many parameters\n",
+    "that can be modified.\n",
+    "Some of these parameters\n",
+    "are critical characteristics of that object,\n",
+    "and others are hints or suggestions\n",
+    "that a backend can use or ignore.\n",
+    "\n",
+    "Nengo's `config` system is designed\n",
+    "to make setting large numbers of parameters easy,\n",
+    "and to allow backends\n",
+    "to introduce additional parameters\n",
+    "without changing core Nengo objects."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import nengo\n",
+    "import nengo.params\n",
+    "from nengo.utils.ipython import hide_input\n",
+    "hide_input()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Setting default parameters\n",
+    "\n",
+    "The `config` system aids in\n",
+    "setting many parameters\n",
+    "with a **hierarchy of defaults**.\n",
+    "When you create a Nengo object,\n",
+    "any parameters not specified\n",
+    "will be given the value `nengo.Default`.\n",
+    "This value tells Nengo\n",
+    "to use the default value\n",
+    "with the highest precedence\n",
+    "in the hierarchy.\n",
+    "Every `Network` has an associated\n",
+    "`config` object,\n",
+    "on which defaults can be set.\n",
+    "The network hierarchy is traversed\n",
+    "from most to least specific\n",
+    "and the first network with a default\n",
+    "set for that particular parameter\n",
+    "is used. For example:\n",
+    "\n",
+    "    with nengo.Network() as net:\n",
+    "        with nengo.Network() as subnet:\n",
+    "            with nengo.Network() as subsubnet:\n",
+    "                ens = nengo.Ensemble(10, 1)\n",
+    "\n",
+    "When filling in defaults for `ens`,\n",
+    "the hierarchy looks like\n",
+    "\n",
+    "    └── net                <- least specific\n",
+    "        └── subnet\n",
+    "            └── subsubnet  <- most specific\n",
+    "\n",
+    "so defaults set in `subsubnet`\n",
+    "will take precedence over those in `subnet`,\n",
+    "which take precedence over those in `net`.\n",
+    "\n",
+    "If no default has been set in the\n",
+    "network hierarchy,\n",
+    "then the parameter default\n",
+    "is used.\n",
+    "These defaults are specified\n",
+    "when the Nengo objects are created.\n",
+    "We can investigate these defaults\n",
+    "by printing the class attributes\n",
+    "associated with them."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Get all info about the radius\n",
+    "print(nengo.Ensemble.radius)\n",
+    "# Just get the default\n",
+    "print(nengo.Ensemble.radius.default)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can inspect which defaults\n",
+    "have been overridden in a\n",
+    "particular `config` object\n",
+    "by printing it.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = nengo.Network()\n",
+    "print(model.config)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "To configure a parameter\n",
+    "(i.e., change its network-local default),\n",
+    "set it as shown below."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model.config[nengo.Ensemble].radius = 1.5\n",
+    "print(model.config[nengo.Ensemble])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Within this network, the default radius will be 1.5."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Network():\n",
+    "    ens = nengo.Ensemble(10, 1)\n",
+    "print(\"Normal network: ens.radius = %s\" % ens.radius)\n",
+    "\n",
+    "with model:\n",
+    "    ens = nengo.Ensemble(10, 1)\n",
+    "print(\"Configured network: ens.radius = %s\" % ens.radius)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Note that if a radius is explicitly passed in,\n",
+    "it will always be used."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Network():\n",
+    "    ens = nengo.Ensemble(10, 1, radius=2.0)\n",
+    "print(\"Normal network: ens.radius = %s\" % ens.radius)\n",
+    "\n",
+    "with model:\n",
+    "    ens = nengo.Ensemble(10, 1, radius=2.0)\n",
+    "print(\"Configured network: ens.radius = %s\" % ens.radius)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "When networks are nested within one another,\n",
+    "the most specific network configuration is used.\n",
+    "For example, if you create an Ensemble\n",
+    "without specifying a radius,\n",
+    "it will first check the network\n",
+    "that the Ensemble is a part of;\n",
+    "if that network has not configured a default,\n",
+    "then it will check the network\n",
+    "that that network is part of,\n",
+    "and so on."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "\n",
+    "    with nengo.Network() as subnet:\n",
+    "        subnet.config[nengo.Ensemble].neuron_type = nengo.LIFRate()\n",
+    "\n",
+    "        with nengo.Network() as subsubnet:\n",
+    "            subsubnet.config[nengo.Ensemble].radius = 2.0\n",
+    "            print(\"Creating e1 in subsubnet\")\n",
+    "            e1 = nengo.Ensemble(10, 1)\n",
+    "            # Uses subsubnet.config value for radius\n",
+    "            print(\"  radius =\", e1.radius)\n",
+    "            # Uses subnet.config value for neuron_type\n",
+    "            print(\"  neuron_type =\", e1.neuron_type)\n",
+    "\n",
+    "        print(\"Creating e2 in subnet\")\n",
+    "        e2 = nengo.Ensemble(10, 1)\n",
+    "        # Uses model.config value for radius\n",
+    "        print(\"  radius =\", e2.radius)\n",
+    "        # Uses subnet.config value for neuron_type\n",
+    "        print(\"  neuron_type =\", e2.neuron_type)\n",
+    "\n",
+    "    print(\"Creating e3 in model\")\n",
+    "    e3 = nengo.Ensemble(10, 1)\n",
+    "    # Uses model.config value for radius\n",
+    "    print(\"  radius =\", e3.radius)\n",
+    "    # Uses nengo.Ensemble default for neuron_type\n",
+    "    print(\"  neuron_type =\", e3.neuron_type)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Note that each `config` object\n",
+    "only knows about the defaults set on itself."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    with nengo.Network() as subnet:\n",
+    "        subnet.config[nengo.Ensemble].neuron_type = nengo.LIFRate()\n",
+    "        with nengo.Network() as subsubnet:\n",
+    "            subsubnet.config[nengo.Ensemble].radius = 2.0\n",
+    "print(\"subsubnet:\")\n",
+    "print(subsubnet.config[nengo.Ensemble])\n",
+    "print(\"\\nsubnet:\")\n",
+    "print(subnet.config[nengo.Ensemble])\n",
+    "print(\"\\nmodel:\")\n",
+    "print(model.config[nengo.Ensemble])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "If you want a more global picture of the defaults\n",
+    "in the *current context*, you can query the `Config`\n",
+    "class itself (all `config` objects are instances of `Config`).\n",
+    "\n",
+    "To query all parameters, print `Config.all_defaults()`.\n",
+    "You may pass a Nengo object class to this function\n",
+    "to filter the results.\n",
+    "For example, to get all defaults set for `Ensemble`,\n",
+    "use `Config.all_defaults(nengo.Ensemble)`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    print(\"In 'model' context:\")\n",
+    "    print(nengo.Config.all_defaults())\n",
+    "\n",
+    "    with nengo.Network() as subnet:\n",
+    "        subnet.config[nengo.Ensemble].neuron_type = nengo.LIFRate()\n",
+    "        subnet.config[nengo.Ensemble].radius = 3.0\n",
+    "        print(\"\\nIn 'subnet' context:\")\n",
+    "        print(nengo.Config.all_defaults(nengo.Ensemble))\n",
+    "\n",
+    "        with nengo.Network() as subsubnet:\n",
+    "            subsubnet.config[nengo.Ensemble].neuron_type = nengo.Direct()\n",
+    "            subsubnet.config[nengo.Ensemble].radius = 2.0\n",
+    "            print(\"\\nIn 'subsubnet' context:\")\n",
+    "            print(nengo.Config.all_defaults(nengo.Ensemble))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The default value for a particular parameter\n",
+    "can be queried from the global context\n",
+    "with the `nengo.Config.default` function."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "help(nengo.Config.default)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def print_defaults():\n",
+    "    def_radius = nengo.Config.default(nengo.Ensemble, 'radius')\n",
+    "    def_type = nengo.Config.default(nengo.Ensemble, 'neuron_type')\n",
+    "    print(\"  default radius: %s\" % def_radius)\n",
+    "    print(\"  default neuron_type: %s\" % def_type)\n",
+    "\n",
+    "\n",
+    "with model:\n",
+    "    with nengo.Network() as subnet:\n",
+    "        subnet.config[nengo.Ensemble].neuron_type = nengo.LIFRate()\n",
+    "        with nengo.Network() as subsubnet:\n",
+    "            subsubnet.config[nengo.Ensemble].radius = 2.0\n",
+    "            print(\"subsubnet:\")\n",
+    "            print_defaults()\n",
+    "        print(\"\\nsubnet:\")\n",
+    "        print_defaults()\n",
+    "    print(\"\\nmodel:\")\n",
+    "    print_defaults()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Defaults are filled in immediately\n",
+    "\n",
+    "One important feature about the defaults hierarchy\n",
+    "is that defaults are filled in **immediately**.\n",
+    "When you create a Nengo object,\n",
+    "the attributes are filled in with the **current**\n",
+    "defaults that are set.\n",
+    "Changing the defaults after object creation\n",
+    "will not update objects already created."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    e1 = nengo.Ensemble(10, 1)\n",
+    "    print(\"e1.radius =\", e1.radius)\n",
+    "    print(\"Changing default radius to 2.0\")\n",
+    "    model.config[nengo.Ensemble].radius = 2.0\n",
+    "    e2 = nengo.Ensemble(10, 1)\n",
+    "    print(\"e1.radius =\", e1.radius)\n",
+    "    print(\"e2.radius =\", e2.radius)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Resetting to default\n",
+    "\n",
+    "If you ever wish to reset a value\n",
+    "back to the default,\n",
+    "you can remove it from the `config` object you modified."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    e1 = nengo.Ensemble(10, 1)\n",
+    "    print(\"e1.radius =\", e1.radius)\n",
+    "    print(\"Resetting radius back to default\")\n",
+    "    del model.config[nengo.Ensemble].radius\n",
+    "    print(\"\\n\" + str(model.config[nengo.Ensemble]) + \"\\n\")\n",
+    "    e2 = nengo.Ensemble(10, 1)\n",
+    "    print(\"e2.radius =\", e2.radius)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Making new `config`s\n",
+    "\n",
+    "Typically, several Nengo objects\n",
+    "will share a set of parameters,\n",
+    "but won't make sense to encapsulate in a network.\n",
+    "One method of having those objects share parameters\n",
+    "is to use dictionary unpacking."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Network():\n",
+    "    hippocampus_args = {'radius': 1.5, 'neuron_type': nengo.LIFRate()}\n",
+    "    e1 = nengo.Ensemble(100, 2, **hippocampus_args)\n",
+    "    e2 = nengo.Ensemble(150, 3, **hippocampus_args)\n",
+    "    e3 = nengo.Ensemble(200, 4, **hippocampus_args)\n",
+    "print(e1.radius, e2.radius, e3.radius)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "An alternative method that can be very useful\n",
+    "for large networks and for more readable models\n",
+    "is to create a new `config` object\n",
+    "to encapsulate those parameter settings."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "in_hippocampus = nengo.Config(nengo.Ensemble)\n",
+    "in_hippocampus[nengo.Ensemble].radius = 1.5\n",
+    "in_hippocampus[nengo.Ensemble].neuron_type = nengo.LIFRate()\n",
+    "\n",
+    "with nengo.Network():\n",
+    "    with in_hippocampus:\n",
+    "        e1 = nengo.Ensemble(100, 2)\n",
+    "        e2 = nengo.Ensemble(150, 3)\n",
+    "        e3 = nengo.Ensemble(200, 4)\n",
+    "print(e1.radius, e2.radius, e3.radius)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Advanced: adding new parameters\n",
+    "\n",
+    "This section is targeted to those\n",
+    "implementing new backends\n",
+    "or large libraries of networks\n",
+    "(like, for example, `nengo.SPA`).\n",
+    "\n",
+    "Often, you want to associate some kind of\n",
+    "metadata with a Nengo object,\n",
+    "or a type of Nengo objects.\n",
+    "For example, in backends\n",
+    "that communicate with specific hardware,\n",
+    "it can be helpful to mark certain nodes\n",
+    "as being time-dependent,\n",
+    "or to assign certain ensembles\n",
+    "to a particular portion of the hardware memory.\n",
+    "\n",
+    "Python allows us to make new attributes\n",
+    "on Nengo objects.\n",
+    "However, we highly discourage this activity,\n",
+    "because a Nengo object should be\n",
+    "a backend-agnostic part of a model.\n",
+    "The parameters pre-defined on Nengo objects\n",
+    "make up the parameters that all backends\n",
+    "should deal with in some way.\n",
+    "\n",
+    "For this reason, we raise a warning\n",
+    "when creating a new attribute."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Network():\n",
+    "    ens = nengo.Ensemble(10, 1)\n",
+    "    ens.memory_location = 0x1000"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "So how should backends associate arbitrary information\n",
+    "with Nengo objects?\n",
+    "The `config` system!\n",
+    "\n",
+    "We saw above that we can create new `config` objects\n",
+    "by specifying which Nengo objects they can configure.\n",
+    "We can also create new parameters\n",
+    "on those `config` objects."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "my_config = nengo.Config(nengo.Ensemble)\n",
+    "# memory_location must be a positive integer\n",
+    "my_config[nengo.Ensemble].set_param(\n",
+    "    'memory_location',\n",
+    "    nengo.params.IntParam(\n",
+    "        'memory_location', default=None, optional=True, low=0))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now, we can set that parameter\n",
+    "for the `nengo.Ensemble` class as a whole,\n",
+    "or with individual instances."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Make the network (this code is backend-agnostic)\n",
+    "with nengo.Network():\n",
+    "    e1 = nengo.Ensemble(10, 1)\n",
+    "    e2 = nengo.Ensemble(10, 1)\n",
+    "\n",
+    "# Set backend-specific parameters\n",
+    "my_config[nengo.Ensemble].memory_location = 0x1000  # Set Ensemble default\n",
+    "my_config[e2].memory_location = 0x2000  # Set value for e2\n",
+    "\n",
+    "print('e1 will be stored at 0x%x' % my_config[e1].memory_location)\n",
+    "print('e2 will be stored at 0x%x' % my_config[e2].memory_location)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "`Parameter` types for the most common Python objects\n",
+    "are available in `nengo.params`,\n",
+    "as well as other types that Nengo uses frequently,\n",
+    "but it is possible to implement your own\n",
+    "in order to do additional processing\n",
+    "like validation.\n",
+    "See the `nengo.params` source\n",
+    "for examples."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "[cls for cls in dir(nengo.params) if cls.endswith('Param')]"
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

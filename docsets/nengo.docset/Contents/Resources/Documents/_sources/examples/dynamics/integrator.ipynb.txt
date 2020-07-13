@@ -1,0 +1,202 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Integrator\n",
+    "\n",
+    "This demo implements a one-dimensional neural integrator.\n",
+    "\n",
+    "This is the first example of a recurrent network in the demos.\n",
+    "It shows how neurons can be used to implement stable dynamics.\n",
+    "Such dynamics are important for memory, noise cleanup,\n",
+    "statistical inference, and many other dynamic transformations.\n",
+    "\n",
+    "When you run this demo,\n",
+    "it will automatically put in some step functions on the input,\n",
+    "so you can see that the output is\n",
+    "integrating (i.e. summing over time) the input.\n",
+    "You can also input your own values.\n",
+    "Note that since the integrator constantly sums its input,\n",
+    "it will saturate quickly if you leave the input non-zero.\n",
+    "This makes it clear that neurons have a finite range of representation.\n",
+    "Such saturation effects can be exploited\n",
+    "to perform useful computations (e.g. soft normalization)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "import nengo\n",
+    "from nengo.processes import Piecewise"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 1: Create the neural populations\n",
+    "\n",
+    "Our model consists of one recurrently connected ensemble\n",
+    "and an input population."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = nengo.Network(label='Integrator')\n",
+    "with model:\n",
+    "    # Our ensemble consists of 100 leaky integrate-and-fire neurons,\n",
+    "    # representing a one-dimensional signal\n",
+    "    A = nengo.Ensemble(100, dimensions=1)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 2: Create input for the model\n",
+    "\n",
+    "We will use a piecewise step function as input,\n",
+    "so we can see the effects of recurrence."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Create a piecewise step function for input\n",
+    "with model:\n",
+    "    input = nengo.Node(\n",
+    "        Piecewise({\n",
+    "            0: 0,\n",
+    "            0.2: 1,\n",
+    "            1: 0,\n",
+    "            2: -2,\n",
+    "            3: 0,\n",
+    "            4: 1,\n",
+    "            5: 0\n",
+    "        }))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 3: Connect the network elements"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    # Connect the population to itself\n",
+    "    tau = 0.1\n",
+    "    nengo.Connection(\n",
+    "        A, A, transform=[[1]],\n",
+    "        synapse=tau)  # Using a long time constant for stability\n",
+    "\n",
+    "    # Connect the input\n",
+    "    nengo.Connection(\n",
+    "        input, A, transform=[[tau]], synapse=tau\n",
+    "    )  # The same time constant as recurrent to make it more 'ideal'"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 4: Probe outputs\n",
+    "\n",
+    "Anything that is probed will collect the data it produces over time,\n",
+    "allowing us to analyze and visualize it later."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    # Add probes\n",
+    "    input_probe = nengo.Probe(input)\n",
+    "    A_probe = nengo.Probe(A, synapse=0.01)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 5: Run the model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Create our simulator\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    # Run it for 6 seconds\n",
+    "    sim.run(6)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 6: Plot the results"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Plot the decoded output of the ensemble\n",
+    "plt.figure()\n",
+    "plt.plot(sim.trange(), sim.data[input_probe], label=\"Input\")\n",
+    "plt.plot(sim.trange(), sim.data[A_probe], 'k', label=\"Integrator output\")\n",
+    "plt.legend();"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The graph shows the response to the input by the integrator.\n",
+    "Because it is implemented in neurons,\n",
+    "it will not be perfect (i.e. there will be drift).\n",
+    "Running several times will give a sense of\n",
+    "the kinds of drift you might expect.\n",
+    "Drift can be reduced by increasing the number of neurons."
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

@@ -1,0 +1,394 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Using the Izhikevich neuron model\n",
+    "\n",
+    "The [Izhikevich neuron model](\n",
+    "http://www.izhikevich.org/publications/spikes.htm)\n",
+    "is a quadratic integrate-and-fire type model\n",
+    "with a recovery variable.\n",
+    "It is able to replicate several characteristics\n",
+    "of biological neurons while remaining\n",
+    "computationally efficient.\n",
+    "\n",
+    "The Izhikevich neuron model is implemented in Nengo.\n",
+    "To use it, use a `nengo.Izhikevich` instance\n",
+    "as the `neuron_type` of an ensemble."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import matplotlib.pyplot as plt\n",
+    "import numpy as np\n",
+    "\n",
+    "import nengo\n",
+    "from nengo.utils.ensemble import tuning_curves\n",
+    "from nengo.utils.matplotlib import rasterplot"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Network(seed=0) as model:\n",
+    "    u = nengo.Node(lambda t: np.sin(2 * np.pi * t))\n",
+    "    ens = nengo.Ensemble(10, dimensions=1, neuron_type=nengo.Izhikevich())\n",
+    "    nengo.Connection(u, ens)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "In addition to the usual decoded output and neural activity\n",
+    "that can always be probed,\n",
+    "you can probe the voltage and recovery terms\n",
+    "of the Izhikevich model."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    out_p = nengo.Probe(ens, synapse=0.03)\n",
+    "    spikes_p = nengo.Probe(ens.neurons)\n",
+    "    voltage_p = nengo.Probe(ens.neurons, 'voltage')\n",
+    "    recovery_p = nengo.Probe(ens.neurons, 'recovery')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Simulating this model shows that we are able\n",
+    "to decode a time-varying scalar with\n",
+    "an ensemble of Izhikevich neurons."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(1.0)\n",
+    "\n",
+    "t = sim.trange()\n",
+    "plt.figure(figsize=(12, 6))\n",
+    "plt.subplot(2, 1, 1)\n",
+    "plt.plot(t, sim.data[out_p])\n",
+    "plt.ylabel(\"Decoded output\")\n",
+    "ax = plt.subplot(2, 1, 2)\n",
+    "rasterplot(t, sim.data[spikes_p], ax=ax)\n",
+    "plt.ylabel(\"Neuron\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "One thing you might notice is a slight bump in the decoded value\n",
+    "at the start of the simulation.\n",
+    "This occurs because of the adaptive nature of the Izhikevic model;\n",
+    "it is easier to initiate the first spike than it is to ellicit\n",
+    "further spikes.\n",
+    "\n",
+    "Let's use a constant input and\n",
+    "look at the first 100 ms of the simulation in more detail\n",
+    "to see the difference between the first spike and subsequent spikes."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def izh_plot(sim):\n",
+    "    t = sim.trange()\n",
+    "    plt.figure(figsize=(12, 10))\n",
+    "    plt.subplot(4, 1, 1)\n",
+    "    plt.plot(t, sim.data[out_p])\n",
+    "    plt.ylabel(\"Decoded output\")\n",
+    "    plt.xlim(right=t[-1])\n",
+    "    ax = plt.subplot(4, 1, 2)\n",
+    "    rasterplot(t, sim.data[spikes_p], ax=ax)\n",
+    "    plt.ylabel(\"Neuron\")\n",
+    "    plt.xlim(right=t[-1])\n",
+    "    plt.subplot(4, 1, 3)\n",
+    "    plt.plot(t, sim.data[voltage_p])\n",
+    "    plt.ylabel(\"Voltage\")\n",
+    "    plt.xlim(right=t[-1])\n",
+    "    plt.subplot(4, 1, 4)\n",
+    "    plt.plot(t, sim.data[recovery_p])\n",
+    "    plt.ylabel(\"Recovery\")\n",
+    "    plt.xlim(right=t[-1])\n",
+    "\n",
+    "\n",
+    "u.output = 0.2\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(0.1)\n",
+    "izh_plot(sim)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Those neurons that have an encoder of -1\n",
+    "receive negative current, and therefore\n",
+    "remain at a low voltage.\n",
+    "\n",
+    "Those neurons that have an encoder of 1\n",
+    "receive positive current, and start spiking rapidly.\n",
+    "However, as they spike, the recovery variable grows,\n",
+    "until it reaches a balance with the voltage\n",
+    "such that the cells spike regularly.\n",
+    "\n",
+    "This occurs because, by default,\n",
+    "we use a set of parameters\n",
+    "that models a \"regular spiking\" neuron.\n",
+    "We can use parameters\n",
+    "that model several different\n",
+    "classes of neurons instead."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Intrinsically bursting (IB)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ens.neuron_type = nengo.Izhikevich(reset_voltage=-55, reset_recovery=4)\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(0.4)\n",
+    "izh_plot(sim)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Chattering (CH)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ens.neuron_type = nengo.Izhikevich(reset_voltage=-50, reset_recovery=2)\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(0.4)\n",
+    "izh_plot(sim)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Fast spiking (FS)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ens.neuron_type = nengo.Izhikevich(tau_recovery=0.1)\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(0.4)\n",
+    "izh_plot(sim)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Low-threshold spiking (LTS)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ens.neuron_type = nengo.Izhikevich(coupling=0.25)\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(0.4)\n",
+    "izh_plot(sim)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Resonator (RZ)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ens.neuron_type = nengo.Izhikevich(tau_recovery=0.1, coupling=0.26)\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(0.4)\n",
+    "izh_plot(sim)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Caveats\n",
+    "\n",
+    "Unfortunately, Izhikevich neurons can't necessarily\n",
+    "be used in all of the situations that LIFs are used,\n",
+    "due to the more complex dynamics illustrated above.\n",
+    "\n",
+    "The way that Nengo encodes and decodes information\n",
+    "with neurons is informed by the tuning curves\n",
+    "of those neurons.\n",
+    "With Izhikevich neurons, the firing rate\n",
+    "with a certain input current `J` changes;\n",
+    "the spike rate is initially higher due\n",
+    "to the adaptation illustrated above.\n",
+    "\n",
+    "We try our best to generate tuning curves\n",
+    "for Izhikevich neurons."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Network(seed=0) as model:\n",
+    "    u = nengo.Node(lambda t: np.sin(2 * np.pi * t))\n",
+    "    ens = nengo.Ensemble(30, dimensions=1, neuron_type=nengo.Izhikevich())\n",
+    "    nengo.Connection(u, ens)\n",
+    "    out_p = nengo.Probe(ens, synapse=0.03)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    plt.figure()\n",
+    "    plt.plot(*tuning_curves(ens, sim));"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "But these are not as accurate and clean\n",
+    "as LIF curves, which is detrimental\n",
+    "for function decoding."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "u.output = lambda t: np.sin(2 * np.pi * t)\n",
+    "with model:\n",
+    "    square = nengo.Ensemble(30, dimensions=1, neuron_type=nengo.Izhikevich())\n",
+    "    nengo.Connection(ens, square, function=lambda x: x ** 2)\n",
+    "    square_p = nengo.Probe(square, synapse=0.03)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(2.0)\n",
+    "\n",
+    "t = sim.trange()\n",
+    "plt.figure(figsize=(12, 3))\n",
+    "plt.plot(t, sim.data[out_p], label=\"Ensemble 1 (sin wave)\")\n",
+    "plt.plot(t, sim.data[square_p], label=\"Ensemble 2 (sin^2)\")\n",
+    "plt.legend(loc=\"best\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Some of these weird dynamics\n",
+    "can be overcome by using Izhikevich\n",
+    "neurons with different parameters."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "square.neuron_type = nengo.Izhikevich(tau_recovery=0.2)\n",
+    "\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(2.0)\n",
+    "\n",
+    "t = sim.trange()\n",
+    "plt.figure(figsize=(12, 3))\n",
+    "plt.plot(t, sim.data[out_p], label=\"Ensemble 1 (sin wave)\")\n",
+    "plt.plot(t, sim.data[square_p], label=\"Ensemble 2 (sin^2)\")\n",
+    "plt.legend(loc=\"best\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Generally, however, Izhikevich neurons are most useful\n",
+    "when trying to match known physiological properties\n",
+    "of the system being modelled."
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

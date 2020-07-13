@@ -1,0 +1,184 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Combining\n",
+    "\n",
+    "This example demonstrates how to create\n",
+    "a neuronal ensemble that will combine two 1-D inputs\n",
+    "into one 2-D representation."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import matplotlib.pyplot as plt\n",
+    "import numpy as np\n",
+    "\n",
+    "import nengo"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 1: Create the neural populations\n",
+    "\n",
+    "Our model consists of three ensembles,\n",
+    "two input ensembles and one 2-D ensemble\n",
+    "that will represent the two inputs as one two-dimensional signal."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = nengo.Network(label='Combining')\n",
+    "with model:\n",
+    "    # Our input ensembles consist of 100 leaky integrate-and-fire neurons,\n",
+    "    # representing a one-dimensional signal\n",
+    "    A = nengo.Ensemble(100, dimensions=1)\n",
+    "    B = nengo.Ensemble(100, dimensions=1)\n",
+    "\n",
+    "    # The output ensemble consists of 200 leaky integrate-and-fire neurons,\n",
+    "    # representing a two-dimensional signal\n",
+    "    output = nengo.Ensemble(200, dimensions=2, label='2D Population')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 2: Create input for the model\n",
+    "\n",
+    "We will use sine and cosine waves\n",
+    "as examples of continuously changing signals."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    # Create input nodes generating the sine and cosine\n",
+    "    sin = nengo.Node(output=np.sin)\n",
+    "    cos = nengo.Node(output=np.cos)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 3: Connect the network elements"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    nengo.Connection(sin, A)\n",
+    "    nengo.Connection(cos, B)\n",
+    "\n",
+    "    # The square brackets define which dimension the input will project to\n",
+    "    nengo.Connection(A, output[1])\n",
+    "    nengo.Connection(B, output[0])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 4: Probe outputs\n",
+    "\n",
+    "Anything that is probed will collect the data it produces over time,\n",
+    "allowing us to analyze and visualize it later."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    sin_probe = nengo.Probe(sin)\n",
+    "    cos_probe = nengo.Probe(cos)\n",
+    "    A_probe = nengo.Probe(A, synapse=0.01)  # 10ms filter\n",
+    "    B_probe = nengo.Probe(B, synapse=0.01)  # 10ms filter\n",
+    "    out_probe = nengo.Probe(output, synapse=0.01)  # 10ms filter"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 5: Run the model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Create our simulator\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    # Run it for 5 seconds\n",
+    "    sim.run(5)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 6: Plot the results"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Plot the decoded output of the ensemble\n",
+    "plt.figure()\n",
+    "plt.plot(sim.trange(), sim.data[out_probe][:, 0], 'b', label=\"2D output\")\n",
+    "plt.plot(sim.trange(), sim.data[out_probe][:, 1], 'g', label=\"2D output\")\n",
+    "plt.plot(sim.trange(), sim.data[A_probe], 'r', label=\"A output\")\n",
+    "plt.plot(sim.trange(), sim.data[sin_probe], 'k', label=\"Sine\")\n",
+    "plt.legend()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The graph shows that the input signal (Sine),\n",
+    "the output from the 1D population (A output),\n",
+    "and the 2D population (green line) are all equal.\n",
+    "The other dimension in the 2D population is shown in blue."
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

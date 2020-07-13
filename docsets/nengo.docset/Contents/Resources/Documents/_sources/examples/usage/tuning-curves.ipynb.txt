@@ -1,0 +1,350 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Tuning curves\n",
+    "\n",
+    "One of the most common ways\n",
+    "to tweak models\n",
+    "and debug failures\n",
+    "is to look at the **tuning curves**\n",
+    "of the neurons in an ensemble.\n",
+    "The tuning curve tells us\n",
+    "how each neuron responds\n",
+    "to an incoming input signal."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## 1-dimensional ensembles\n",
+    "\n",
+    "The tuning curve is easiest\n",
+    "to interpret in the one-dimensional case.\n",
+    "Since the input is a single scalar,\n",
+    "we use that value as the x-axis,\n",
+    "and the neuron response as the y-axis."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "from mpl_toolkits.mplot3d import Axes3D\n",
+    "\n",
+    "import nengo\n",
+    "from nengo.dists import Choice\n",
+    "from nengo.utils.ensemble import response_curves, tuning_curves"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = nengo.Network()\n",
+    "with model:\n",
+    "    ens_1d = nengo.Ensemble(15, dimensions=1)\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    eval_points, activities = tuning_curves(ens_1d, sim)\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.plot(eval_points, activities)\n",
+    "# We could have alternatively shortened this to\n",
+    "# plt.plot(*tuning_curves(ens_1d, sim))\n",
+    "plt.ylabel(\"Firing rate (Hz)\")\n",
+    "plt.xlabel(\"Input scalar, x\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Each coloured line represents the response on one neuron.\n",
+    "As you can see, the neurons cover the space pretty well,\n",
+    "but there is no clear pattern to their responses.\n",
+    "\n",
+    "If there is some biological or functional reason\n",
+    "to impose some pattern to their responses,\n",
+    "we can do so by changing the parameters\n",
+    "of the ensemble."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ens_1d.intercepts = Choice([-0.2])  # All neurons have x-intercept -0.2\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    plt.figure()\n",
+    "    plt.plot(*tuning_curves(ens_1d, sim))\n",
+    "\n",
+    "plt.ylabel(\"Firing rate (Hz)\")\n",
+    "plt.xlabel(\"Input scalar, x\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now, there is a clear pattern to the tuning curve.\n",
+    "However, note that some neurons start firing at\n",
+    "-0.2, while others stop firing at 0.2.\n",
+    "This is because the input signal, `x`,\n",
+    "is multiplied by a neuron's *encoder*\n",
+    "when it is converted to input current.\n",
+    "\n",
+    "We could further constrain the tuning curves\n",
+    "by changing the encoders of the ensemble."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ens_1d.encoders = Choice([[1]])  # All neurons have encoder [1]\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    plt.figure()\n",
+    "    plt.plot(*tuning_curves(ens_1d, sim))\n",
+    "\n",
+    "plt.ylabel(\"Firing rate (Hz)\")\n",
+    "plt.xlabel(\"Input scalar, x\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "This gives us an ensemble of neurons\n",
+    "that respond very predictably to input.\n",
+    "In some cases, this is important to the\n",
+    "proper functioning of a model,\n",
+    "or to matching what we know about\n",
+    "the physiology of a brain area or neuron type."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## 2-dimensional ensembles\n",
+    "\n",
+    "In a two-dimensional ensemble,\n",
+    "the input is represented by two scalar values,\n",
+    "meaning that we will need three axes\n",
+    "to represent its tuning curve;\n",
+    "two for input dimensions, and one for the neural activity.\n",
+    "\n",
+    "Fortunately, we are able to plot data in 3D.\n",
+    "\n",
+    "If there is a clear pattern to the tuning curves,\n",
+    "then visualizing them all is (sort of) possible."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = nengo.Network()\n",
+    "with model:\n",
+    "    ens_2d = nengo.Ensemble(15, dimensions=2, encoders=Choice([[1, 1]]))\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    eval_points, activities = tuning_curves(ens_2d, sim)\n",
+    "\n",
+    "plt.figure(figsize=(8, 8))\n",
+    "ax = plt.subplot(111, projection='3d')\n",
+    "ax.set_title(\"Tuning curve of all neurons\")\n",
+    "for i in range(ens_2d.n_neurons):\n",
+    "    ax.plot_surface(\n",
+    "        eval_points.T[0],\n",
+    "        eval_points.T[1],\n",
+    "        activities.T[i],\n",
+    "        cmap=plt.cm.autumn)\n",
+    "ax.set_xlabel(\"$x_1$\")\n",
+    "ax.set_ylabel(\"$x_2$\")\n",
+    "ax.set_zlabel(\"Firing rate (Hz)\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "But in most cases, for 2D ensembles,\n",
+    "we have to look at each neuron's tuning curve separately."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ens_2d.encoders = nengo.Default\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    eval_points, activities = tuning_curves(ens_2d, sim)\n",
+    "\n",
+    "plt.figure(figsize=(12, 12))\n",
+    "for i in range(4):\n",
+    "    ax = plt.subplot(2, 2, i + 1, projection=Axes3D.name)\n",
+    "    ax.set_title(\"Neuron %d\" % i)\n",
+    "    ax.plot_surface(\n",
+    "        eval_points.T[0],\n",
+    "        eval_points.T[1],\n",
+    "        activities.T[i],\n",
+    "        cmap=plt.cm.autumn)\n",
+    "    ax.set_xlabel(\"$x_1$\")\n",
+    "    ax.set_ylabel(\"$x_2$\")\n",
+    "    ax.set_zlabel(\"Firing rate (Hz)\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## N-dimensional ensembles\n",
+    "\n",
+    "The `tuning_curve` function accepts\n",
+    "ensembles of any dimensionality,\n",
+    "and will always return `eval_points` and `activities`.\n",
+    "However, for ensembles of dimensionality\n",
+    "greater than 2, these are large arrays\n",
+    "and it becomes nearly impossible\n",
+    "to visualize them.\n",
+    "\n",
+    "There are two main approaches\n",
+    "to investigating the tuning curves\n",
+    "of ensembles of arbitrary dimensionality."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Clamp some axes\n",
+    "\n",
+    "In many cases, we only care about\n",
+    "the neural sensitivity to one or two dimensions.\n",
+    "We can investigate those dimensions specifically\n",
+    "by only varying those dimensions,\n",
+    "and keeping the rest constant.\n",
+    "\n",
+    "To do this, we will use the `inputs` argument\n",
+    "to the `tuning_curves` function,\n",
+    "which allows us to define\n",
+    "the input signals that\n",
+    "will drive the neurons\n",
+    "to determine their activity.\n",
+    "In other words, we are specifying\n",
+    "the `eval_point` parameter\n",
+    "to generate the `activities`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = nengo.Network()\n",
+    "with model:\n",
+    "    ens_3d = nengo.Ensemble(15, dimensions=3)\n",
+    "\n",
+    "inputs = np.zeros((50, 3))\n",
+    "# Vary the first dimension\n",
+    "inputs[:, 0] = np.linspace(-ens_3d.radius, ens_3d.radius, 50)\n",
+    "inputs[:, 1] = 0.5  # Clamp the second dimension\n",
+    "inputs[:, 2] = 0.5  # Clamp the third dimension\n",
+    "\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    eval_points, activities = tuning_curves(ens_3d, sim, inputs=inputs)\n",
+    "\n",
+    "assert eval_points is inputs  # The inputs will be returned as eval_points\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.plot(inputs.T[0], activities)\n",
+    "plt.ylabel(\"Firing rate (Hz)\")\n",
+    "plt.xlabel(\"$x_0$\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Notice that these tuning curves\n",
+    "are much more broad than those\n",
+    "in the 1-dimensional case.\n",
+    "This is because some neurons are not\n",
+    "very sensitive to\n",
+    "the dimension that are varying,\n",
+    "and are instead sensitive\n",
+    "to one or two of the other dimensions.\n",
+    "If we wanted these neurons\n",
+    "to be more sharply tuned\n",
+    "to this dimension,\n",
+    "we could change their encoders\n",
+    "to be more tuned to this dimension."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Response curves\n",
+    "\n",
+    "If all else fails,\n",
+    "we can still get some information\n",
+    "about the tuning properties\n",
+    "of the neurons in the ensemble\n",
+    "using the **response curve**.\n",
+    "The response curve is similar to the tuning curve,\n",
+    "but instead of looking at the neural response\n",
+    "to a particular input stimulus,\n",
+    "we are instead looking at its response\n",
+    "to (relative) injected current.\n",
+    "This is analogous to the tuning curves\n",
+    "with the inputs aligned to the\n",
+    "preferred directions of each neuron."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = nengo.Network()\n",
+    "with model:\n",
+    "    ens_5d = nengo.Ensemble(15, dimensions=5)\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    plt.figure()\n",
+    "    plt.plot(*response_curves(ens_5d, sim))\n",
+    "\n",
+    "plt.ylabel(\"Firing rate (Hz)\")\n",
+    "plt.xlabel(\"x along preferred direction\");"
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

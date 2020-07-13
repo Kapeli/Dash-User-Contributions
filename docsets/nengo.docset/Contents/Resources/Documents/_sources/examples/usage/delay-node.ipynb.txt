@@ -1,0 +1,110 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Delaying a connection with a node\n",
+    "\n",
+    "Nodes allow for all sorts of advanced behavior\n",
+    "that is typically done by modifying the code of a neural simulator.\n",
+    "In Nengo, the `Node` object allows us to run custom code.\n",
+    "\n",
+    "In this example, we will implement\n",
+    "an `n`-timestep delayed connection by using a node."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import numpy as np\n",
+    "import matplotlib.pyplot as plt\n",
+    "\n",
+    "import nengo\n",
+    "from nengo.processes import WhiteSignal"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = nengo.Network(label=\"Delayed connection\")\n",
+    "with model:\n",
+    "    # We'll use white noise as input\n",
+    "    inp = nengo.Node(WhiteSignal(2, high=5), size_out=1)\n",
+    "    A = nengo.Ensemble(40, dimensions=1)\n",
+    "    nengo.Connection(inp, A)\n",
+    "\n",
+    "\n",
+    "# We'll make a simple object to implement the delayed connection\n",
+    "class Delay:\n",
+    "    def __init__(self, dimensions, timesteps=50):\n",
+    "        self.history = np.zeros((timesteps, dimensions))\n",
+    "\n",
+    "    def step(self, t, x):\n",
+    "        self.history = np.roll(self.history, -1)\n",
+    "        self.history[-1] = x\n",
+    "        return self.history[0]\n",
+    "\n",
+    "\n",
+    "dt = 0.001\n",
+    "delay = Delay(1, timesteps=int(0.2 / 0.001))\n",
+    "\n",
+    "with model:\n",
+    "    delaynode = nengo.Node(delay.step, size_in=1, size_out=1)\n",
+    "    nengo.Connection(A, delaynode)\n",
+    "\n",
+    "    # Send the delayed output through an ensemble\n",
+    "    B = nengo.Ensemble(40, dimensions=1)\n",
+    "    nengo.Connection(delaynode, B)\n",
+    "\n",
+    "    # Probe the input at the delayed output\n",
+    "    A_probe = nengo.Probe(A, synapse=0.01)\n",
+    "    B_probe = nengo.Probe(B, synapse=0.01)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Run for 2 seconds\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(2)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Plot the results\n",
+    "plt.figure()\n",
+    "plt.subplot(2, 1, 1)\n",
+    "plt.plot(sim.trange(), sim.data[A_probe], lw=2)\n",
+    "plt.title(\"Input\")\n",
+    "plt.subplot(2, 1, 2)\n",
+    "plt.plot(sim.trange(), sim.data[B_probe], lw=2)\n",
+    "plt.axvline(0.2, c='k')\n",
+    "plt.title(\"Delayed output\")\n",
+    "plt.tight_layout();"
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

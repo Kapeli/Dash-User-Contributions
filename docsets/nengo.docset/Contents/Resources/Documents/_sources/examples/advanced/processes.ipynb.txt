@@ -1,0 +1,563 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Processes and how to use them\n",
+    "\n",
+    "Processes in Nengo can be used to describe\n",
+    "general functions or dynamical systems,\n",
+    "including those with randomness.\n",
+    "They can be useful if you want a `Node` output\n",
+    "that has a state (like a dynamical system),\n",
+    "and they're also used for things like\n",
+    "injecting noise into Ensembles\n",
+    "so that you can not only have \"white\" noise\n",
+    "that samples from a distribution,\n",
+    "but can also have \"colored\" noise\n",
+    "where subsequent samples are correlated with past samples.\n",
+    "\n",
+    "This notebook will first present the basic process interface,\n",
+    "then demonstrate some of the built-in Nengo processes\n",
+    "and how they can be used in your code.\n",
+    "It will also describe how to create your own custom process."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import matplotlib.pyplot as plt\n",
+    "import numpy as np\n",
+    "\n",
+    "import nengo"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Interface\n",
+    "\n",
+    "We will begin by looking at how to run an existing process instance.\n",
+    "\n",
+    "The key functions for running processes\n",
+    "are `run`, `run_steps`, and `apply`.\n",
+    "The first two are for running without an input,\n",
+    "and the third is for applying the process to an input.\n",
+    "\n",
+    "There are also two helper functions,\n",
+    "`trange` and `ntrange`,\n",
+    "which return the time points corresponding to a process output,\n",
+    "given either a length of time or a number of steps, respectively."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### `run`: running a process for a length of time\n",
+    "\n",
+    "The `run` function runs a process\n",
+    "for a given length of time, without any input.\n",
+    "Many of the random processes in `nengo.processes` will be run this way,\n",
+    "since they do not require an input signal."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Create a process (details on the FilteredNoise process below)\n",
+    "process = nengo.processes.FilteredNoise(\n",
+    "    synapse=nengo.synapses.Alpha(0.1), seed=0)\n",
+    "\n",
+    "# run the process for two seconds\n",
+    "y = process.run(2.0)\n",
+    "\n",
+    "# get a corresponding two-second time range\n",
+    "t = process.trange(2.0)\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.plot(t, y)\n",
+    "plt.xlabel('time [s]')\n",
+    "plt.ylabel('process output');"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### `run_steps`: running a process for a number of steps\n",
+    "\n",
+    "To run the process for a number of steps, use the `run_steps` function.\n",
+    "The length of the generated signal will depend on the process's `default_dt`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "process = nengo.processes.FilteredNoise(\n",
+    "    synapse=nengo.synapses.Alpha(0.1), seed=0)\n",
+    "\n",
+    "# run the process for 1000 steps\n",
+    "y = process.run_steps(1000)\n",
+    "\n",
+    "# get a corresponding 1000-step time range\n",
+    "t = process.ntrange(1000)\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.plot(t, y)\n",
+    "plt.xlabel('time [s]')\n",
+    "plt.ylabel('process output');"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### `apply`: running a process with an input\n",
+    "\n",
+    "To run a process with an input, use the `apply` function."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "process = nengo.synapses.Lowpass(0.2)\n",
+    "\n",
+    "t = process.trange(5)\n",
+    "x = np.minimum(t % 2, 2 - (t % 2))  # sawtooth wave\n",
+    "y = process.apply(x)  # general to all Processes\n",
+    "z = process.filtfilt(x)  # specific to Synapses\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.plot(t, x, label='input')\n",
+    "plt.plot(t, y, label='output')\n",
+    "plt.plot(t, z, label='filtfilt')\n",
+    "plt.xlabel('time [s]')\n",
+    "plt.ylabel('signal')\n",
+    "plt.legend();"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Note that Synapses are a special kind of process,\n",
+    "and have the additional functions `filt` and `filtfilt`.\n",
+    "`filt` works mostly the same as `apply`,\n",
+    "but with some additional functionality\n",
+    "such as the ability to filter along any axis.\n",
+    "`filtfilt` provides zero-phase filtering."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Changing the time-step (`dt` and `default_dt`)\n",
+    "\n",
+    "To run a process with a different time-step,\n",
+    "you can either pass the new time step (`dt`) when calling the functions,\n",
+    "or change the `default_dt` property of the process."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "process = nengo.processes.FilteredNoise(\n",
+    "    synapse=nengo.synapses.Alpha(0.1), seed=0)\n",
+    "y1 = process.run(2.0, dt=0.05)\n",
+    "t1 = process.trange(2.0, dt=0.05)\n",
+    "\n",
+    "process = nengo.processes.FilteredNoise(\n",
+    "    synapse=nengo.synapses.Alpha(0.1), default_dt=0.1, seed=0)\n",
+    "y2 = process.run(2.0)\n",
+    "t2 = process.trange(2.0)\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.plot(t1, y1, label='dt = %s' % 0.05)\n",
+    "plt.plot(t2, y2, label='dt = %s' % 0.1)\n",
+    "plt.xlabel('time [s]')\n",
+    "plt.ylabel('output');"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## `WhiteSignal`\n",
+    "\n",
+    "The `WhiteSignal` process is used to generate band-limited white noise,\n",
+    "with only frequencies below a given cutoff frequency."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Network() as model:\n",
+    "    a = nengo.Node(nengo.processes.WhiteSignal(1.0, high=5, seed=0))\n",
+    "    b = nengo.Node(nengo.processes.WhiteSignal(1.0, high=10, seed=0))\n",
+    "    c = nengo.Node(nengo.processes.WhiteSignal(1.0, high=5, rms=0.3, seed=0))\n",
+    "    d = nengo.Node(nengo.processes.WhiteSignal(0.5, high=5, seed=0))\n",
+    "    ap = nengo.Probe(a)\n",
+    "    bp = nengo.Probe(b)\n",
+    "    cp = nengo.Probe(c)\n",
+    "    dp = nengo.Probe(d)\n",
+    "\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(1.0)\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.plot(sim.trange(), sim.data[ap], label='5 Hz cutoff')\n",
+    "plt.plot(sim.trange(), sim.data[bp], label='10 Hz cutoff')\n",
+    "plt.plot(sim.trange(), sim.data[cp], label='5 Hz cutoff, 0.3 RMS amplitude')\n",
+    "plt.plot(sim.trange(), sim.data[dp], label='5 Hz cutoff, 0.5 s period')\n",
+    "plt.xlabel(\"time [s]\")\n",
+    "plt.legend(loc=2);"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Note that the 10 Hz signal (green)\n",
+    "has similar low frequency characteristics\n",
+    "as the 5 Hz signal (blue),\n",
+    "but with additional higher-frequency components.\n",
+    "The 0.3 RMS amplitude 5 Hz signal (red)\n",
+    "is the same as the original 5 Hz signal (blue),\n",
+    "but scaled down (the default RMS amplitude is 0.5).\n",
+    "Finally, the signal with a 0.5 s period\n",
+    "(instead of a 1 s period like the others)\n",
+    "is completely different,\n",
+    "because changing the period changes\n",
+    "the spacing of the random frequency components\n",
+    "and thus creates a completely different signal.\n",
+    "Note how the signal with the 0.5 s period repeats itself;\n",
+    "for example, the value at $t = 0$\n",
+    "is the same as the value at $t = 0.5$,\n",
+    "and the value at $t = 0.4$\n",
+    "is the same as the value at $t = 0.9$."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## `WhiteNoise`\n",
+    "\n",
+    "The `WhiteNoise` process generates white noise,\n",
+    "with equal power across all frequencies.\n",
+    "By default, it is scaled so that the integral process (Brownian noise)\n",
+    "will have the same standard deviation regardless of `dt`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "process = nengo.processes.WhiteNoise(dist=nengo.dists.Gaussian(0, 1))\n",
+    "\n",
+    "t = process.trange(0.5)\n",
+    "y = process.run(0.5)\n",
+    "plt.figure()\n",
+    "plt.plot(t, y);"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "One use of the `WhiteNoise` process\n",
+    "is to inject noise into neural populations.\n",
+    "Here, we create two identical ensembles,\n",
+    "but add a bit of noise to one and no noise to the other.\n",
+    "We plot the membrane voltages of both."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "process = nengo.processes.WhiteNoise(\n",
+    "    dist=nengo.dists.Gaussian(0, 0.01), seed=1)\n",
+    "\n",
+    "with nengo.Network() as model:\n",
+    "    ens_args = dict(encoders=[[1]], intercepts=[0.01], max_rates=[100])\n",
+    "    a = nengo.Ensemble(1, 1, **ens_args)\n",
+    "    b = nengo.Ensemble(1, 1, noise=process, **ens_args)\n",
+    "    a_voltage = nengo.Probe(a.neurons, 'voltage')\n",
+    "    b_voltage = nengo.Probe(b.neurons, 'voltage')\n",
+    "\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(0.15)\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.plot(sim.trange(), sim.data[a_voltage], label=\"deterministic\")\n",
+    "plt.plot(sim.trange(), sim.data[b_voltage], label=\"noisy\")\n",
+    "plt.xlabel('time [s]')\n",
+    "plt.ylabel('voltage')\n",
+    "plt.legend(loc=4);"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We see that the neuron without noise (blue)\n",
+    "approaches its firing threshold,\n",
+    "but never quite gets there.\n",
+    "Adding a bit of noise (green)\n",
+    "causes the neuron to occasionally jitter above the threshold,\n",
+    "resulting in two spikes\n",
+    "(where the voltage suddenly drops to zero)."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## `FilteredNoise`\n",
+    "\n",
+    "The `FilteredNoise` process takes a white noise signal\n",
+    "and passes it through a filter.\n",
+    "Using any type of lowpass filter (e.g. `Lowpass`, `Alpha`)\n",
+    "will result in a signal similar to `WhiteSignal`,\n",
+    "but rather than being ideally filtered\n",
+    "(i.e. no frequency content above the cutoff),\n",
+    "the `FilteredNoise` signal\n",
+    "will have some frequency content above the cutoff,\n",
+    "with the amount depending on the filter used.\n",
+    "Here, we can see how an `Alpha` filter\n",
+    "(a second-order lowpass filter)\n",
+    "is much better than the `Lowpass` filter\n",
+    "(a first-order lowpass filter)\n",
+    "at removing the high-frequency content."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "process1 = nengo.processes.FilteredNoise(\n",
+    "    dist=nengo.dists.Gaussian(0, 0.01), synapse=nengo.Alpha(0.005), seed=0)\n",
+    "\n",
+    "process2 = nengo.processes.FilteredNoise(\n",
+    "    dist=nengo.dists.Gaussian(0, 0.01), synapse=nengo.Lowpass(0.005), seed=0)\n",
+    "\n",
+    "tlen = 0.5\n",
+    "plt.figure()\n",
+    "plt.plot(process1.trange(tlen), process1.run(tlen))\n",
+    "plt.plot(process2.trange(tlen), process2.run(tlen));"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The `FilteredNoise` process with an `Alpha` synapse (blue)\n",
+    "has significantly lower high-frequency components\n",
+    "than a similar process with a `Lowpass` synapse (green)."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## `PresentInput`\n",
+    "\n",
+    "The `PresentInput` process is useful for\n",
+    "presenting a series of static inputs to a network,\n",
+    "where each input is shown for the same length of time.\n",
+    "Once all the images have been shown,\n",
+    "they repeat from the beginning.\n",
+    "One application is presenting a series of images to a classification network."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "inputs = [[0, 0.5], [0.3, 0.2], [-0.1, -0.7], [-0.8, 0.6]]\n",
+    "process = nengo.processes.PresentInput(inputs, presentation_time=0.1)\n",
+    "\n",
+    "tlen = 0.8\n",
+    "plt.figure()\n",
+    "plt.plot(process.trange(tlen), process.run(tlen))\n",
+    "plt.xlim([0, tlen])\n",
+    "plt.ylim([-1, 1]);"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Custom processes\n",
+    "\n",
+    "You can create custom processes\n",
+    "by inheriting from the `nengo.Process` class\n",
+    "and overloading the `make_step` and `make_state` methods.\n",
+    "\n",
+    "As an example, we'll make a simple custom process\n",
+    "that implements a two-dimensional oscillator dynamical system.\n",
+    "The `make_state` function defines a `state` variable\n",
+    "to store the state.\n",
+    "The `make_step` function uses that state\n",
+    "and a fixed `A` matrix to determine\n",
+    "how the state changes over time.\n",
+    "\n",
+    "One advantage to using a process over a simple function\n",
+    "is that if we reset our simulator,\n",
+    "`make_step` will be called again\n",
+    "and the process state\n",
+    "will be restored to the initial state."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class SimpleOscillator(nengo.Process):\n",
+    "    def make_state(self, shape_in, shape_out, dt, dtype=None):\n",
+    "        # return a dictionary mapping strings to their initial state\n",
+    "        return {\"state\": np.array([1., 0.])}\n",
+    "\n",
+    "    def make_step(self, shape_in, shape_out, dt, rng, state):\n",
+    "        A = np.array([[-0.1, -1.], [1., -0.1]])\n",
+    "        s = state[\"state\"]\n",
+    "\n",
+    "        # define the step function, which will be called\n",
+    "        # by the node every time step\n",
+    "        def step(t):\n",
+    "            s[:] += dt * np.dot(A, s)\n",
+    "            return s\n",
+    "\n",
+    "        return step  # return the step function\n",
+    "\n",
+    "\n",
+    "with nengo.Network() as model:\n",
+    "    a = nengo.Node(SimpleOscillator(), size_in=0, size_out=2)\n",
+    "    a_p = nengo.Probe(a)\n",
+    "\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(20.0)\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.plot(sim.trange(), sim.data[a_p])\n",
+    "plt.xlabel('time [s]');"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can generalize this process to one\n",
+    "that can implement arbitrary linear dynamical systems,\n",
+    "given `A` and `B` matrices.\n",
+    "We will overload the `__init__` method\n",
+    "to take and store these matrices,\n",
+    "as well as check the matrix shapes\n",
+    "and set the default size in and out.\n",
+    "The advantage of using the default sizes\n",
+    "is that when we then create a node using the process,\n",
+    "or run the process using `apply`,\n",
+    "we do not need to specify the sizes."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class LTIProcess(nengo.Process):\n",
+    "    def __init__(self, A, B, **kwargs):\n",
+    "        A, B = np.asarray(A), np.asarray(B)\n",
+    "\n",
+    "        # check that the matrix shapes are compatible\n",
+    "        assert A.ndim == 2 and A.shape[0] == A.shape[1]\n",
+    "        assert B.ndim == 2 and B.shape[0] == A.shape[0]\n",
+    "\n",
+    "        # store the matrices for `make_step`\n",
+    "        self.A = A\n",
+    "        self.B = B\n",
+    "\n",
+    "        # pass the default sizes to the Process constructor\n",
+    "        super().__init__(\n",
+    "            default_size_in=B.shape[1], default_size_out=A.shape[0], **kwargs)\n",
+    "\n",
+    "    def make_state(self, shape_in, shape_out, dt, dtype=None):\n",
+    "        return {\"state\": np.zeros(self.A.shape[0])}\n",
+    "\n",
+    "    def make_step(self, shape_in, shape_out, dt, rng, state):\n",
+    "        assert shape_in == (self.B.shape[1],)\n",
+    "        assert shape_out == (self.A.shape[0],)\n",
+    "        A, B = self.A, self.B\n",
+    "        s = state[\"state\"]\n",
+    "\n",
+    "        def step(t, x):\n",
+    "            s[:] += dt * (np.dot(A, s) + np.dot(B, x))\n",
+    "            return s\n",
+    "\n",
+    "        return step\n",
+    "\n",
+    "\n",
+    "# demonstrate the LTIProcess in action\n",
+    "A = [[-0.1, -1], [1, -0.1]]\n",
+    "B = [[10], [-10]]\n",
+    "\n",
+    "with nengo.Network() as model:\n",
+    "    u = nengo.Node(lambda t: 1 if t < 0.1 else 0)\n",
+    "    # we don't need to specify size_in and size_out!\n",
+    "    a = nengo.Node(LTIProcess(A, B))\n",
+    "    nengo.Connection(u, a)\n",
+    "    a_p = nengo.Probe(a)\n",
+    "\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(20.0)\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.plot(sim.trange(), sim.data[a_p])\n",
+    "plt.xlabel('time [s]');"
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

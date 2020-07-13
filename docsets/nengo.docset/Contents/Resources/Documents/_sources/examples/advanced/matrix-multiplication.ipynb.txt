@@ -1,0 +1,202 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Matrix multiplication\n",
+    "\n",
+    "This example demonstrates how to perform\n",
+    "general matrix multiplication using Nengo.\n",
+    "The matrix can change during the computation,\n",
+    "which makes it distinct from doing static matrix multiplication\n",
+    "with neural connection weights (as done in all neural networks).\n",
+    "\n",
+    "Note that the order of operands in matrix multiplication matters.\n",
+    "We will be computing $A \\cdot B$ which is equivalent to $(B \\cdot A)^{\\top}$."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import matplotlib.pyplot as plt\n",
+    "import numpy as np\n",
+    "\n",
+    "import nengo"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "N = 100\n",
+    "Amat = np.asarray([[.5, -.5], [-.2, .3]])\n",
+    "Bmat = np.asarray([[0.58, -1.], [.7, 0.1]])\n",
+    "\n",
+    "# Values should stay within the range (-radius, radius)\n",
+    "radius = 1\n",
+    "\n",
+    "model = nengo.Network(label='Matrix Multiplication', seed=123)\n",
+    "with model:\n",
+    "    # Make 2 EnsembleArrays to store the input\n",
+    "    A = nengo.networks.EnsembleArray(N, Amat.size, radius=radius)\n",
+    "    B = nengo.networks.EnsembleArray(N, Bmat.size, radius=radius)\n",
+    "\n",
+    "    # connect inputs to them so we can set their value\n",
+    "    inputA = nengo.Node(Amat.ravel())\n",
+    "    inputB = nengo.Node(Bmat.ravel())\n",
+    "    nengo.Connection(inputA, A.input)\n",
+    "    nengo.Connection(inputB, B.input)\n",
+    "    A_probe = nengo.Probe(A.output, sample_every=0.01, synapse=0.01)\n",
+    "    B_probe = nengo.Probe(B.output, sample_every=0.01, synapse=0.01)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(1)\n",
+    "plt.figure()\n",
+    "plt.subplot(1, 2, 1)\n",
+    "plt.title('A')\n",
+    "plt.plot(sim.trange(sample_every=0.01), sim.data[A_probe])\n",
+    "plt.subplot(1, 2, 2)\n",
+    "plt.title('B')\n",
+    "plt.plot(sim.trange(sample_every=0.01), sim.data[B_probe]);"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    # The C matrix is composed of populations that each contain\n",
+    "    # one element of A and one element of B.\n",
+    "    # These elements will be multiplied together in the next step.\n",
+    "\n",
+    "    # The appropriate encoders make the multiplication more accurate\n",
+    "    # Check the \"multiplication\" example to see how multiplication\n",
+    "    # can be implemented in neurons.\n",
+    "    c_size = Amat.size * Bmat.shape[1]\n",
+    "    C = nengo.networks.Product(N, dimensions=c_size)\n",
+    "\n",
+    "# Determine the transformation matrices to get the correct pairwise\n",
+    "# products computed.  This looks a bit like black magic but if\n",
+    "# you manually try multiplying two matrices together, you can see\n",
+    "# the underlying pattern.  Basically, we need to build up D1*D2*D3\n",
+    "# pairs of numbers in C to compute the product of.  If i,j,k are the\n",
+    "# indexes into the D1*D2*D3 products, we want to compute the product\n",
+    "# of element (i,j) in A with the element (j,k) in B.  The index in\n",
+    "# A of (i,j) is j+i*D2 and the index in B of (j,k) is k+j*D3.\n",
+    "# The index in C is j+k*D2+i*D2*D3.\n",
+    "transformA = np.zeros((c_size, Amat.size))\n",
+    "transformB = np.zeros((c_size, Bmat.size))\n",
+    "\n",
+    "for i in range(Amat.shape[0]):\n",
+    "    for j in range(Amat.shape[1]):\n",
+    "        for k in range(Bmat.shape[1]):\n",
+    "            c_index = (j + k * Amat.shape[1] + i * Bmat.size)\n",
+    "            transformA[c_index][j + i * Amat.shape[1]] = 1\n",
+    "            transformB[c_index][k + j * Bmat.shape[1]] = 1\n",
+    "\n",
+    "print(\"A->C\")\n",
+    "print(transformA)\n",
+    "print(\"B->C\")\n",
+    "print(transformB)\n",
+    "\n",
+    "with model:\n",
+    "    nengo.Connection(A.output, C.input_a, transform=transformA)\n",
+    "    nengo.Connection(B.output, C.input_b, transform=transformB)\n",
+    "    C_probe = nengo.Probe(C.output, sample_every=0.01, synapse=0.01)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Look at C\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "plt.figure()\n",
+    "plt.plot(sim.trange(sample_every=0.01), sim.data[C_probe])\n",
+    "plt.title('C');"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    # Now do the appropriate summing\n",
+    "    D = nengo.networks.EnsembleArray(\n",
+    "        N, n_ensembles=Amat.shape[0] * Bmat.shape[1], radius=radius)\n",
+    "\n",
+    "# The mapping for this transformation is much easier, since we want to\n",
+    "# combine D2 pairs of elements (we sum D2 products together)\n",
+    "transformC = np.zeros((D.dimensions, c_size))\n",
+    "for i in range(c_size):\n",
+    "    transformC[i // Bmat.shape[0]][i] = 1\n",
+    "print(\"C->D\")\n",
+    "print(transformC)\n",
+    "\n",
+    "with model:\n",
+    "    nengo.Connection(C.output, D.input, transform=transformC)\n",
+    "    D_probe = nengo.Probe(D.output, sample_every=0.01, synapse=0.01)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "plt.figure()\n",
+    "plt.plot(sim.trange(sample_every=0.01), sim.data[D_probe])\n",
+    "for d in np.dot(Amat, Bmat).flatten():\n",
+    "    plt.axhline(d, color='k')\n",
+    "plt.title(\"D\");"
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

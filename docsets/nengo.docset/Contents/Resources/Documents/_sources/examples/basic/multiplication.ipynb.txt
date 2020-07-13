@@ -1,0 +1,321 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Multiplication\n",
+    "\n",
+    "This example will show you how to multiply two values.\n",
+    "The model architecture can be thought of as\n",
+    "a combination of the combining demo and the squaring demo.\n",
+    "Essentially, we project both inputs independently into a 2D space,\n",
+    "and then decode a nonlinear transformation of that space\n",
+    "(the product of the first and second vector elements)."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import matplotlib.pyplot as plt\n",
+    "import numpy as np\n",
+    "\n",
+    "import nengo\n",
+    "from nengo.dists import Choice\n",
+    "from nengo.processes import Piecewise"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 1: Create the model\n",
+    "\n",
+    "The model has four ensembles:\n",
+    "two input ensembles ('A' and 'B'),\n",
+    "a 2D combined ensemble ('Combined'),\n",
+    "and an output ensemble ('D')."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Create the model object\n",
+    "model = nengo.Network(label='Multiplication')\n",
+    "with model:\n",
+    "    # Create 4 ensembles of leaky integrate-and-fire neurons\n",
+    "    A = nengo.Ensemble(100, dimensions=1, radius=10)\n",
+    "    B = nengo.Ensemble(100, dimensions=1, radius=10)\n",
+    "    combined = nengo.Ensemble(\n",
+    "        220, dimensions=2, radius=15)  # This radius is ~sqrt(10^2+10^2)\n",
+    "    prod = nengo.Ensemble(100, dimensions=1, radius=20)\n",
+    "\n",
+    "# This next two lines make all of the encoders in the Combined population\n",
+    "# point at the corners of the cube.\n",
+    "# This improves the quality of the computation.\n",
+    "\n",
+    "# Comment out the line below for 'normal' encoders\n",
+    "combined.encoders = Choice([[1, 1], [-1, 1], [1, -1], [-1, -1]])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 2: Provide input to the model\n",
+    "\n",
+    "We will use two varying scalar values for the two input signals\n",
+    "that drive activity in ensembles A and B."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    # Create a piecewise step function for input\n",
+    "    inputA = nengo.Node(Piecewise({0: 0, 2.5: 10, 4: -10}))\n",
+    "    inputB = nengo.Node(Piecewise({0: 10, 1.5: 2, 3: 0, 4.5: 2}))\n",
+    "\n",
+    "    correct_ans = Piecewise({0: 0, 1.5: 0, 2.5: 20, 3: 0, 4: 0, 4.5: -20})"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 3: Connect the elements of the model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    # Connect the input nodes to the appropriate ensembles\n",
+    "    nengo.Connection(inputA, A)\n",
+    "    nengo.Connection(inputB, B)\n",
+    "\n",
+    "    # Connect input ensembles A and B to the 2D combined ensemble\n",
+    "    nengo.Connection(A, combined[0])\n",
+    "    nengo.Connection(B, combined[1])\n",
+    "\n",
+    "    # Define a function that computes the multiplication of two inputs\n",
+    "    def product(x):\n",
+    "        return x[0] * x[1]\n",
+    "\n",
+    "    # Connect the combined ensemble to the output ensemble D\n",
+    "    nengo.Connection(combined, prod, function=product)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 4: Probe the output\n",
+    "\n",
+    "Collect output data from each ensemble and input."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    inputA_probe = nengo.Probe(inputA)\n",
+    "    inputB_probe = nengo.Probe(inputB)\n",
+    "    A_probe = nengo.Probe(A, synapse=0.01)\n",
+    "    B_probe = nengo.Probe(B, synapse=0.01)\n",
+    "    combined_probe = nengo.Probe(combined, synapse=0.01)\n",
+    "    prod_probe = nengo.Probe(prod, synapse=0.01)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 5: Run the model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Create the simulator\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    # Run it for 5 seconds\n",
+    "    sim.run(5)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 6: Plot the results\n",
+    "\n",
+    "To check the performance of the model,\n",
+    "we can plot the input signals and decoded ensemble values."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Plot the input signals and decoded ensemble values\n",
+    "plt.figure()\n",
+    "plt.plot(\n",
+    "    sim.trange(), sim.data[A_probe], label=\"Decoded A\")\n",
+    "plt.plot(\n",
+    "    sim.trange(), sim.data[B_probe], label=\"Decoded B\")\n",
+    "plt.plot(\n",
+    "    sim.trange(), sim.data[prod_probe], label=\"Decoded product\")\n",
+    "plt.plot(\n",
+    "    sim.trange(), correct_ans.run(sim.time, dt=sim.dt),\n",
+    "    c='k', label=\"Actual product\")\n",
+    "plt.legend(loc='best')\n",
+    "plt.ylim(-25, 25);"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The input signals we chose make it obvious when things are working,\n",
+    "as the inputs are zero often (so the product should be).\n",
+    "When choosing encoders randomly around the circle (the default in Nengo),\n",
+    "you may see more unwanted interactions between the inputs.\n",
+    "To see this, comment the above code that sets the encoders\n",
+    "to the corners of the cube (in Step 1 where it says\n",
+    "`# Comment out the line below for 'normal' encoders`)."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Bonus step: Make a subnetwork\n",
+    "\n",
+    "If you find that you need to compute the product\n",
+    "in several parts of your network,\n",
+    "you can put all of the components necessary\n",
+    "to compute the product\n",
+    "together in a subnetwork.\n",
+    "By making a function to construct this subnetwork,\n",
+    "it becomes easy to make many such networks\n",
+    "in a single model."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def Product(neuron_per_dimension, input_magnitude):\n",
+    "    # Create the model object\n",
+    "    model = nengo.Network(label='Product')\n",
+    "    with model:\n",
+    "        # Create passthrough nodes to redirect both inputs\n",
+    "        model.A = nengo.Node(output=None, size_in=1)\n",
+    "        model.B = nengo.Node(output=None, size_in=1)\n",
+    "\n",
+    "        model.combined = nengo.Ensemble(\n",
+    "            neuron_per_dimension * 2,\n",
+    "            dimensions=2,\n",
+    "            radius=np.sqrt(input_magnitude**2 + input_magnitude**2),\n",
+    "            encoders=Choice([[1, 1], [-1, 1], [1, -1], [-1, -1]]))\n",
+    "\n",
+    "        model.prod = nengo.Ensemble(\n",
+    "            neuron_per_dimension, dimensions=1, radius=input_magnitude * 2)\n",
+    "\n",
+    "        # Connect everything up\n",
+    "        nengo.Connection(model.A, model.combined[0], synapse=None)\n",
+    "        nengo.Connection(model.B, model.combined[1], synapse=None)\n",
+    "\n",
+    "        def product(x):\n",
+    "            return x[0] * x[1]\n",
+    "\n",
+    "        nengo.Connection(model.combined, model.prod, function=product)\n",
+    "    return model\n",
+    "\n",
+    "\n",
+    "# The previous model can then be replicated with the following\n",
+    "model = nengo.Network(label='Multiplication')\n",
+    "with model:\n",
+    "    inputA = nengo.Node(Piecewise({0: 0, 2.5: 10, 4: -10}))\n",
+    "    inputB = nengo.Node(Piecewise({0: 10, 1.5: 2, 3: 0, 4.5: 2}))\n",
+    "    A = nengo.Ensemble(100, dimensions=1, radius=10)\n",
+    "    B = nengo.Ensemble(100, dimensions=1, radius=10)\n",
+    "    prod = Product(100, input_magnitude=10)\n",
+    "    nengo.Connection(inputA, A)\n",
+    "    nengo.Connection(inputB, B)\n",
+    "    nengo.Connection(A, prod.A)\n",
+    "    nengo.Connection(B, prod.B)\n",
+    "\n",
+    "    inputA_probe = nengo.Probe(inputA)\n",
+    "    inputB_probe = nengo.Probe(inputB)\n",
+    "    A_probe = nengo.Probe(A, synapse=0.01)\n",
+    "    B_probe = nengo.Probe(B, synapse=0.01)\n",
+    "    combined_probe = nengo.Probe(prod.combined, synapse=0.01)\n",
+    "    prod_probe = nengo.Probe(prod.prod, synapse=0.01)\n",
+    "\n",
+    "# Create the simulator\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    # Run it for 5 seconds\n",
+    "    sim.run(5)\n",
+    "\n",
+    "# Plot the input signals and decoded ensemble values\n",
+    "plt.figure()\n",
+    "plt.plot(\n",
+    "    sim.trange(), sim.data[A_probe], label=\"Decoded A\")\n",
+    "plt.plot(\n",
+    "    sim.trange(), sim.data[B_probe], label=\"Decoded B\")\n",
+    "plt.plot(\n",
+    "    sim.trange(), sim.data[prod_probe], label=\"Decoded product\")\n",
+    "plt.plot(\n",
+    "    sim.trange(), correct_ans.run(sim.time, dt=sim.dt),\n",
+    "    c='k', label=\"Actual product\")\n",
+    "plt.legend(loc='best')\n",
+    "plt.ylim(-25, 25);"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Alternatively, you can use Nengo's built in\n",
+    "[`nengo.networks.Product` network](\n",
+    "https://www.nengo.ai/nengo/networks.html#nengo.networks.Product).\n",
+    "This network works with input of any dimensionality\n",
+    "(e.g., to compute the dot product of two large vectors)\n",
+    "and uses special optimizatons to make the product\n",
+    "more accurate than this implementation."
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

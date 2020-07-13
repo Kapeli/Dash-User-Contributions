@@ -1,0 +1,198 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Context matters, membership doesn't\n",
+    "\n",
+    "When you create a Nengo object\n",
+    "and leave the parameters as their default values,\n",
+    "we determine the default values dynamically\n",
+    "based on `Config` objects.\n",
+    "Every `Network` has an associated `Config` object,\n",
+    "and you can make new `Config` objects for additional flexibility.\n",
+    "\n",
+    "Nengo keeps track of the current context.\n",
+    "The following example works based on the context."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import nengo"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Network() as model:\n",
+    "    model.config[nengo.Ensemble].radius = 2.0\n",
+    "    subnet = nengo.Network()\n",
+    "\n",
+    "    with subnet:\n",
+    "        a = nengo.Ensemble(10, 1)\n",
+    "        print(a.radius)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The radius of `a` is `2.0`\n",
+    "because the current context includes both\n",
+    "`subnet` and `model`.\n",
+    "`subnet` does not change the default value of the radius,\n",
+    "but `model` does, so it uses the `model` default of `2.0`.\n",
+    "\n",
+    "Here's a similar example."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Network() as model:\n",
+    "    model.config[nengo.Ensemble].radius = 2.0\n",
+    "    subnet = nengo.Network()\n",
+    "\n",
+    "with subnet:\n",
+    "    a = nengo.Ensemble(10, 1)\n",
+    "    print(a.radius)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "While this example looks nearly identical,\n",
+    "the difference is that `a` is created\n",
+    "in the context of `subnet` only;\n",
+    "`model` is not part of the config context.\n",
+    "Because of that, when `a` is created,\n",
+    "Nengo sees that no default is set in `subnet`\n",
+    "and uses the global default value of `1.0`.\n",
+    "\n",
+    "This may seem counterintuitive\n",
+    "since `subnet` is a member of `model`;\n",
+    "it's stored as a sub-network of the `model` network.\n",
+    "However, Nengo objects are not aware of their parents.\n",
+    "This allows `subnet` to be used the same way\n",
+    "whether it's the top-level network\n",
+    "or whether it's nested twenty layers deep,\n",
+    "but it also means that we can't set defaults\n",
+    "based on network membership."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Context details\n",
+    "\n",
+    "The configuration context is stored in the\n",
+    "`nengo.Config` class as `nengo.Config.context`.\n",
+    "`context` is a thread-local list.\n",
+    "We add new contexts to the end of that list\n",
+    "at the start of `with` blocks,\n",
+    "and pop contexts off of that list\n",
+    "at the end of `with` blocks."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# No context\n",
+    "len(nengo.Config.context)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Model context\n",
+    "with model:\n",
+    "    print(len(nengo.Config.context))\n",
+    "    print(nengo.Config.context[0] is model.config)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Subnet, Model context\n",
+    "with model:\n",
+    "    with subnet:\n",
+    "        print(len(nengo.Config.context))\n",
+    "        print(nengo.Config.context[0] is model.config)\n",
+    "        print(nengo.Config.context[1] is subnet.config)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "If you are not sure what context you're in,\n",
+    "but you want to know what the defaults are\n",
+    "in the current context,\n",
+    "use `nengo.Config.all_defaults`.\n",
+    "You can optionally pass in the type that you're interested in."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    with subnet:\n",
+    "        print(nengo.Config.all_defaults(nengo.Ensemble))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with subnet:\n",
+    "    print(nengo.Config.all_defaults(nengo.Ensemble))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Note above that the radius changes\n",
+    "despite the fact that both situations occur\n",
+    "in the context of `subnet`!\n",
+    "Configuration outside matters if no default\n",
+    "has been set in the immediate context."
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

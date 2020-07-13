@@ -1,0 +1,104 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## The Lorenz chaotic attractor\n",
+    "\n",
+    "This example shows the construction of a classic chaotic dynamical system:\n",
+    "the Lorenz \"butterfly\" attractor. The equations are:\n",
+    "\n",
+    "$$\n",
+    "\\dot{x}_0 = \\sigma(x_1 - x_0) \\\\\\\n",
+    "\\dot{x}_1 = x_0 (\\rho - x_2) - x_1  \\\\\\\n",
+    "\\dot{x}_2 = x_0 x_1 - \\beta x_2\n",
+    "$$\n",
+    "\n",
+    "Since $x_2$ is centered around approximately $\\rho$,\n",
+    "and since NEF ensembles are usually optimized\n",
+    "to represent values within a certain radius of the origin,\n",
+    "we substitute $x_2' = x_2 - \\rho$, giving these equations:\n",
+    "$$\n",
+    "\\dot{x}_0 = \\sigma(x_1 - x_0) \\\\\\\n",
+    "\\dot{x}_1 = - x_0 x_2' - x_1 \\\\\\\n",
+    "\\dot{x}_2' = x_0 x_1 - \\beta (x_2' + \\rho) - \\rho\n",
+    "$$\n",
+    "\n",
+    "For more information, see\n",
+    "http://compneuro.uwaterloo.ca/publications/eliasmith2005b.html\n",
+    "\"Chris Eliasmith. A unified approach to building\n",
+    "and controlling spiking attractor networks.\n",
+    "Neural computation, 7(6):1276-1314, 2005.\""
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import matplotlib.pyplot as plt\n",
+    "from mpl_toolkits.mplot3d import Axes3D\n",
+    "\n",
+    "import nengo"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "tau = 0.1\n",
+    "sigma = 10\n",
+    "beta = 8.0 / 3\n",
+    "rho = 28\n",
+    "\n",
+    "\n",
+    "def feedback(x):\n",
+    "    dx0 = -sigma * x[0] + sigma * x[1]\n",
+    "    dx1 = -x[0] * x[2] - x[1]\n",
+    "    dx2 = x[0] * x[1] - beta * (x[2] + rho) - rho\n",
+    "\n",
+    "    return [\n",
+    "        dx0 * tau + x[0],\n",
+    "        dx1 * tau + x[1],\n",
+    "        dx2 * tau + x[2],\n",
+    "    ]\n",
+    "\n",
+    "\n",
+    "model = nengo.Network(label='Lorenz attractor')\n",
+    "with model:\n",
+    "    state = nengo.Ensemble(2000, 3, radius=60)\n",
+    "    nengo.Connection(state, state, function=feedback, synapse=tau)\n",
+    "    state_probe = nengo.Probe(state, synapse=tau)\n",
+    "\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    sim.run(10)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ax = plt.figure().add_subplot(111, projection=Axes3D.name)\n",
+    "ax.plot(*sim.data[state_probe].T)\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.plot(sim.trange(), sim.data[state_probe])"
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

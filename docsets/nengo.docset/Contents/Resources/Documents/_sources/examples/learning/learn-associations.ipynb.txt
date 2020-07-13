@@ -1,0 +1,358 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Learning new associations\n",
+    "\n",
+    "Being able to learn an input-output mapping\n",
+    "(or a _heteroassociative memory_)\n",
+    "is useful for storing and recalling associations.\n",
+    "This is also a task required by more complicated models\n",
+    "that require some notion of long-term memory.\n",
+    "\n",
+    "In a perfect world, the PES rule could be applied\n",
+    "to learn this mapping from examples.\n",
+    "However, when two distinct inputs cause the same neurons to fire,\n",
+    "their decoded values will depend on one another.\n",
+    "This leads to difficulty when trying to store\n",
+    "multiple independent associations in the same memory.\n",
+    "\n",
+    "To solve this problem,\n",
+    "a vector-space analog of Oja's rule,\n",
+    "dubbed Vector-Oja's rule (or simply _Voja's rule_) was proposed.\n",
+    "In essence, this unsupervised learning rule\n",
+    "makes neurons fire selectively in response to their input.\n",
+    "When used in conjunction with properly-chosen intercepts\n",
+    "(corresponding to the largest dot-product between pairs of inputs),\n",
+    "this approach makes it possible to scalably\n",
+    "learn new associations in a spiking network.\n",
+    "\n",
+    "Voja's rule works by moving the encoders\n",
+    "of the active neurons toward the current input.\n",
+    "This can be stated succinctly as,\n",
+    "\n",
+    "$$\n",
+    "\\Delta e_i = \\kappa a_i (x - e_i)\n",
+    "$$\n",
+    "\n",
+    "where $e_i$ is the encoder of the $i^{th}$ neuron,\n",
+    "$\\kappa$ is a modulatory learning rate\n",
+    "(positive to move towards, and negative to move away),\n",
+    "$a_i$ is the filtered activity of the $i^{th}$ neuron,\n",
+    "and $x$ is the input vector encoded by each neuron.\n",
+    "To see how this is related to Oja's rule,\n",
+    "substituting $e_i$ with the row of weights $W_i$,\n",
+    "$x$ for the pre-synaptic activity vector $b$,\n",
+    "and letting $s = 1 / a_i$ be a dynamic normalizing factor, gives\n",
+    "\n",
+    "$$\n",
+    "\\Delta W_i = \\kappa a_i (b - s a_i W_i)\n",
+    "$$\n",
+    "\n",
+    "which is the update rule for a single row using Oja.\n",
+    "For more details,\n",
+    "see [Learning large-scale heteroassociative memories in spiking neurons](\n",
+    "http://compneuro.uwaterloo.ca/publications/voelker2014a.html).\n",
+    "\n",
+    "This notebook will lead the reader through\n",
+    "a basic example of building a network\n",
+    "that can store and recall new associations."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 1: Configure some example data\n",
+    "\n",
+    "First, we will setup some keys (inputs) and values (outputs)\n",
+    "for our network to store and recall."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import matplotlib.pyplot as plt\n",
+    "import numpy as np\n",
+    "\n",
+    "import nengo"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "num_items = 5\n",
+    "\n",
+    "d_key = 2\n",
+    "d_value = 4\n",
+    "\n",
+    "rng = np.random.RandomState(seed=7)\n",
+    "keys = nengo.dists.UniformHypersphere(surface=True).sample(\n",
+    "    num_items, d_key, rng=rng)\n",
+    "values = nengo.dists.UniformHypersphere(surface=False).sample(\n",
+    "    num_items, d_value, rng=rng)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "An important quantity is the largest dot-product\n",
+    "between all pairs of keys,\n",
+    "since a neuron's intercept should not go below this value\n",
+    "if it's positioned between these two keys.\n",
+    "Otherwise, the neuron will move back and forth\n",
+    "between encoding those two inputs."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "intercept = (np.dot(keys, keys.T) - np.eye(num_items)).flatten().max()\n",
+    "print(\"Intercept: %s\" % intercept)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 2: Build the model\n",
+    "\n",
+    "We define a helper function that is useful\n",
+    "for creating nodes that cycle through keys/values."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def cycle_array(x, period, dt=0.001):\n",
+    "    \"\"\"Cycles through the elements\"\"\"\n",
+    "    i_every = int(round(period / dt))\n",
+    "    if i_every != period / dt:\n",
+    "        raise ValueError(\"dt (%s) does not divide period (%s)\" % (dt, period))\n",
+    "\n",
+    "    def f(t):\n",
+    "        i = int(round((t - dt) / dt))  # t starts at dt\n",
+    "        return x[int(i / i_every) % len(x)]\n",
+    "\n",
+    "    return f"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We create three inputs:\n",
+    "the keys, the values, and a modulatory learning signal.\n",
+    "The model is run continuously in two phases:\n",
+    "the first half learns the set of associations,\n",
+    "and the second tests recall.\n",
+    "\n",
+    "The learning signal will be set to 0\n",
+    "o allow learning during the first phase,\n",
+    "and -1 to inhibit learning during the second phase.\n",
+    "\n",
+    "The memory is confined to a single ensemble.\n",
+    "Roughly speaking, its encoders will hold the keys,\n",
+    "and its decoders will hold the values."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Model constants\n",
+    "n_neurons = 200\n",
+    "dt = 0.001\n",
+    "period = 0.3\n",
+    "T = period * num_items * 2\n",
+    "\n",
+    "# Model network\n",
+    "model = nengo.Network()\n",
+    "with model:\n",
+    "\n",
+    "    # Create the inputs/outputs\n",
+    "    stim_keys = nengo.Node(output=cycle_array(keys, period, dt))\n",
+    "    stim_values = nengo.Node(output=cycle_array(values, period, dt))\n",
+    "    learning = nengo.Node(output=lambda t: -int(t >= T / 2))\n",
+    "    recall = nengo.Node(size_in=d_value)\n",
+    "\n",
+    "    # Create the memory\n",
+    "    memory = nengo.Ensemble(\n",
+    "        n_neurons, d_key, intercepts=[intercept] * n_neurons)\n",
+    "\n",
+    "    # Learn the encoders/keys\n",
+    "    voja = nengo.Voja(learning_rate=5e-2, post_synapse=None)\n",
+    "    conn_in = nengo.Connection(\n",
+    "        stim_keys, memory, synapse=None, learning_rule_type=voja)\n",
+    "    nengo.Connection(learning, conn_in.learning_rule, synapse=None)\n",
+    "\n",
+    "    # Learn the decoders/values, initialized to a null function\n",
+    "    conn_out = nengo.Connection(\n",
+    "        memory,\n",
+    "        recall,\n",
+    "        learning_rule_type=nengo.PES(1e-3),\n",
+    "        function=lambda x: np.zeros(d_value))\n",
+    "\n",
+    "    # Create the error population\n",
+    "    error = nengo.Ensemble(n_neurons, d_value)\n",
+    "    nengo.Connection(\n",
+    "        learning, error.neurons, transform=[[10.0]] * n_neurons, synapse=None)\n",
+    "\n",
+    "    # Calculate the error and use it to drive the PES rule\n",
+    "    nengo.Connection(stim_values, error, transform=-1, synapse=None)\n",
+    "    nengo.Connection(recall, error, synapse=None)\n",
+    "    nengo.Connection(error, conn_out.learning_rule)\n",
+    "\n",
+    "    # Setup probes\n",
+    "    p_keys = nengo.Probe(stim_keys, synapse=None)\n",
+    "    p_values = nengo.Probe(stim_values, synapse=None)\n",
+    "    p_learning = nengo.Probe(learning, synapse=None)\n",
+    "    p_error = nengo.Probe(error, synapse=0.005)\n",
+    "    p_recall = nengo.Probe(recall, synapse=None)\n",
+    "    p_encoders = nengo.Probe(conn_in.learning_rule, 'scaled_encoders')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 3: Running the model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with nengo.Simulator(model, dt=dt) as sim:\n",
+    "    sim.run(T)\n",
+    "t = sim.trange()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 4: Plotting simulation output\n",
+    "\n",
+    "We first start by checking the keys, values, and learning signals."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "plt.figure()\n",
+    "plt.title(\"Keys\")\n",
+    "plt.plot(t, sim.data[p_keys])\n",
+    "plt.ylim(-1, 1)\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.title(\"Values\")\n",
+    "plt.plot(t, sim.data[p_values])\n",
+    "plt.ylim(-1, 1)\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.title(\"Learning\")\n",
+    "plt.plot(t, sim.data[p_learning])\n",
+    "plt.ylim(-1.2, 0.2);"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Next, we look at the error during training and testing.\n",
+    "In the top figure, the error being minimized by PES\n",
+    "goes to zero for each association during the training phase.\n",
+    "In the bottom figure, the recall error is close to zero,\n",
+    "with momentary spikes each time a new key is presented."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "train = t <= T / 2\n",
+    "test = ~train\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.title(\"Value Error During Training\")\n",
+    "plt.plot(t[train], sim.data[p_error][train])\n",
+    "\n",
+    "plt.figure()\n",
+    "plt.title(\"Value Error During Recall\")\n",
+    "plt.plot(t[test], sim.data[p_recall][test] - sim.data[p_values][test]);"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 5: Examining encoder changes\n",
+    "\n",
+    "We can also plot the two-dimensional encoders before and after training.\n",
+    "Initially, they are uniformly distributed around the unit circle.\n",
+    "Afterward, we see that each key has attracted all of its nearby neurons.\n",
+    "Notably, almost all neurons are participating\n",
+    "in the representation of a unique association."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "scale = (sim.data[memory].gain / memory.radius)[:, np.newaxis]\n",
+    "\n",
+    "\n",
+    "def plot_2d(text, xy):\n",
+    "    plt.figure()\n",
+    "    plt.title(text)\n",
+    "    plt.scatter(xy[:, 0], xy[:, 1], label=\"Encoders\")\n",
+    "    plt.scatter(\n",
+    "        keys[:, 0], keys[:, 1], c='red', s=150, alpha=0.6, label=\"Keys\")\n",
+    "    plt.xlim(-1.5, 1.5)\n",
+    "    plt.ylim(-1.5, 2)\n",
+    "    plt.legend()\n",
+    "    plt.gca().set_aspect('equal')\n",
+    "\n",
+    "\n",
+    "plot_2d(\"Before\", sim.data[p_encoders][0].copy() / scale)\n",
+    "plot_2d(\"After\", sim.data[p_encoders][-1].copy() / scale)"
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}

@@ -1,0 +1,159 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Squaring the input\n",
+    "\n",
+    "This demo shows you how to construct a network\n",
+    "that squares the value encoded in a first population\n",
+    "in the output of a second population."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%matplotlib inline\n",
+    "import matplotlib.pyplot as plt\n",
+    "import numpy as np\n",
+    "\n",
+    "import nengo"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 1: Create the Model\n",
+    "\n",
+    "The model is comprised of an input ensemble ('A')\n",
+    "and an output ensemble ('B'),\n",
+    "from which the squared value of the input signal can be decoded."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Create the model object\n",
+    "model = nengo.Network(label='Squaring')\n",
+    "with model:\n",
+    "    # Create two ensembles of 100 leaky-integrate-and-fire neurons\n",
+    "    A = nengo.Ensemble(100, dimensions=1)\n",
+    "    B = nengo.Ensemble(100, dimensions=1)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 2: Provide Input to the Model\n",
+    "\n",
+    "A single input signal (a sine wave) will be used\n",
+    "to drive the neural activity in ensemble A."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    # Create an input node that represents a sine wave\n",
+    "    sin = nengo.Node(np.sin)\n",
+    "\n",
+    "    # Connect the input node to ensemble A\n",
+    "    nengo.Connection(sin, A)\n",
+    "\n",
+    "    # Define the squaring function\n",
+    "    def square(x):\n",
+    "        return x[0] * x[0]\n",
+    "\n",
+    "    # Connection ensemble A to ensemble B\n",
+    "    nengo.Connection(A, B, function=square)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 3: Probe the Output\n",
+    "\n",
+    "Let's collect output data from each ensemble and output."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "with model:\n",
+    "    sin_probe = nengo.Probe(sin)\n",
+    "    A_probe = nengo.Probe(A, synapse=0.01)\n",
+    "    B_probe = nengo.Probe(B, synapse=0.01)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Step 4: Run the Model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Create the simulator\n",
+    "with nengo.Simulator(model) as sim:\n",
+    "    # Run the simulator for 5 seconds\n",
+    "    sim.run(5)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Plot the input signal and decoded ensemble values\n",
+    "plt.figure()\n",
+    "plt.plot(\n",
+    "    sim.trange(), sim.data[A_probe], label='Decoded Ensemble A')\n",
+    "plt.plot(\n",
+    "    sim.trange(), sim.data[B_probe], label='Decoded Ensemble B')\n",
+    "plt.plot(\n",
+    "    sim.trange(), sim.data[sin_probe], label='Input Sine Wave',\n",
+    "    color='k', linewidth=2.0)\n",
+    "plt.legend(loc='best')\n",
+    "plt.ylim(-1.2, 1.2);"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The plotted output of ensemble B should show\n",
+    "the decoded squared value of the input sine wave."
+   ]
+  }
+ ],
+ "metadata": {
+  "language_info": {
+   "name": "python",
+   "pygments_lexer": "ipython3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
