@@ -1,9 +1,9 @@
-Alfred 4 Docset
+Alfred Docset
 =======================
 
 ## Bug report and Docset improvement
 
-Best is to drop an issue or do a PR at the Docset's repo: https://github.com/godbout/dash-docsets.
+Best is to drop an issue or do a PR at the Docset's repo: https://github.com/godbout/alfred-dash-docsets.
 
 Else you can also contact me at [@godbout](https://twitter.com/godbout), on [GitHub](https://github.com/godbout) or by email at guill@sleeplessmind.com.mo.
 
