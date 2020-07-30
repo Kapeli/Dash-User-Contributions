@@ -9,6 +9,7 @@ LibROSA Docset
 #### How to Build:
 
 - See `makefile` in [LibROSA Github](https://github.com/librosa/librosa/blob/master/docs/Makefile)
+  or simply base the build off the libROSA `gh-pages` branch.
 - Add some variables and a `docset` target
 
     ```makefile
