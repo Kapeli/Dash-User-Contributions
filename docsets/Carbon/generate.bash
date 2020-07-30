@@ -51,13 +51,13 @@ echo "Done !"
 
 echo -n "Cleaning HTML docs... "
 # remove trackers
-sed -i .bak 's/\/\/www.google-analytics.com\/analytics.js//' docs/html_docs/docs/index.html
-sed -i .bak 's/\/\/piwik.selfbuild.fr\///' docs/html_docs/docs/index.html
+LC_ALL=C sed -i .bak 's/\/\/www.google-analytics.com\/analytics.js//' docs/html_docs/docs/index.html
+LC_ALL=C sed -i .bak 's/\/\/piwik.selfbuild.fr\///' docs/html_docs/docs/index.html
 # remove ads
-sed -i .bak 's/\.\.\/properties\/151\/funder\.js//' docs/html_docs/docs/index.html
+LC_ALL=C sed -i .bak 's/\.\.\/properties\/151\/funder\.js//' docs/html_docs/docs/index.html
 # remove non-functional search bars (sort of, this is a hack)
-sed -i .bak 's/<input type="text" class="form-control" placeholder="Search".*$//' docs/html_docs/docs/index.html
-sed -i .bak 's/<i class="glyphicon glyphicon-search"><\/i>//' docs/html_docs/docs/index.html
+LC_ALL=C sed -i .bak 's/<input type="text" class="form-control" placeholder="Search".*$//' docs/html_docs/docs/index.html
+LC_ALL=C sed -i .bak 's/<i class="glyphicon glyphicon-search"><\/i>//' docs/html_docs/docs/index.html
 echo "Done !"
 
 echo -n "Downloading repo... "
@@ -72,7 +72,7 @@ echo "Done !"
 
 echo -n "Cleaning API docs... "
 # always hide the left column
-sed -i .bak 's/max-width: 991px/min-width: 0px/' docs/api_docs/css/sami.css
+LC_ALL=C sed -i .bak 's/max-width: 991px/min-width: 0px/' docs/api_docs/css/sami.css
 echo "Done !"
 
 # Generate .docset and archive it
