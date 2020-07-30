@@ -11,7 +11,7 @@ use Sami\Version\GitVersionCollection;
 use Sami\Version\SingleVersionCollection;
 use Symfony\Component\Finder\Finder;
 
-$src = __DIR__ . '/Carbon/src';
+$src = __DIR__ . '/carbon/src';
 $version = getenv('VERSION_TAG');
 
 $iterator = Finder::create()
