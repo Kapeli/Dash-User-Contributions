@@ -1,15 +1,16 @@
 statsmodels Docset
 =======================
 
-* Author: Ben Dichter (http://github.com/bendichter/)
-* Documentation downloaded from https://github.com/statsmodels/statsmodels
+_statsmodels_ Docset
 
-To generate documentation:
+
+ - Author: Angelo Varlotta (http://github.com/capac/)
+ - Documentation: downloaded from the v0.11.1 folder from the repository at https://github.com/statsmodels/statsmodels.github.io/.
+
+I just downloaded the v0.11.1 folder, which you can do by using SVN:
+
 ```
-git clone https://github.com/statsmodels/statsmodels.git
-cd statsmodels/docs
-make html
+svn checkout https://github.com/statsmodels/statsmodels.github.io/trunk/v0.11.1
 ```
 
-Requirements:
-Needed https://github.com/pydata/pandas-datareader to run some of the example notebooks
+Basically place `trunk` in place of `tree/master` in the URL for the v0.11.1 folder. The docs folder with the HTML files will be present once you run the command above, and there you can run the `doc2dash` command.
