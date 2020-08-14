@@ -1,8 +1,8 @@
-# RxJS 5 Dash Docs
+# RxJS 6 Dash Docs
 
-RxJS 5 documentation for Dash
+RxJS 6 documentation for Dash
 
-**Author:** Ian Sinnott [@ian_sinn](https://twitter.com/ian_sinn) [github.com/iansinnott](https://github.com/iansinnott)
+**Author:** Steve Yin [github.com/steve3d](https://github.com/steve3d)
 
 For...
 
@@ -10,4 +10,4 @@ For...
 * Screenshots
 * More info
 
-Check out the README at [iansinnott/rxjs-dash-docset](https://github.com/iansinnott/rxjs-dash-docset)
+Check out the README at [steve3d/rxjs-dash-docset](https://github.com/steve3d/rxjs-dash-docset)

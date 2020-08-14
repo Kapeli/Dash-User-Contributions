@@ -8,10 +8,11 @@ Scikit-image Dash Docset
     - [Aziz Alto](https://github.com/iamaziz)
 
 - Instructions to generate the docset:
-    - fetch html:
-    	- `httrack "http://scikit-image.org/docs/0.10.x/" -O "Scikit-image" "+*scikit-image.org/docs/0.10.x/*" -v`
+    - clone the docs repo (this may take a while as the repo is quite heavy):
+        - `git clone https://github.com/scikit-image/docs scikit-image-docs`
+    - checkout the html branch
+        - `git checkout gh-pages`
+    - download the icon
+        - `wget https://raw.githubusercontent.com/Kapeli/Dash-User-Contributions/master/docsets/Scikit-image/icon%402x.png -O icon.png`
     - generate docset:
-    	- `doc2dash -v -n Scikit-image Contents/Resources/Documents/scikit-image.org/docs/0.10.x/`
-    - set [index page](http://kapeli.com/docsets#settingindexpage) in Info.plist:
-    	- `dashIndexFilePath: index.html`
-    - [add icon](http://kapeli.com/docsets#addingicon).
+    	- `doc2dash --verbose --name Scikit-image --icon icon.png --index-page index.html --enable-js 0.16.x`

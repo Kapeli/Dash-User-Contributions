@@ -8,12 +8,6 @@ Dash User Contributed Docsets
 
 You can install these docsets from [Dash's](https://kapeli.com/dash) Preferences > Downloads > User Contributed.
 
-### Improve an existing docset
-
-Navigate to the docset you want to fix in the `docsets` folder, improve it and submit [pull requests](https://github.com/Kapeli/Dash-User-Contributions/pulls).
-
-You do not have to fix the existing generation script if it's too flawed or in a language you're not comfortable with, you can write a new generation script and completely take over the maintenance for that docset if you wish, just make sure you justify your reasons (i.e. how your improved docset is better) when submitting the pull request.
-
 ### Contribute a new docset
 
 To contribute a docset, follow the steps below. If you get stuck at any point or have any questions, [open an issue](https://github.com/Kapeli/Dash-User-Contributions/issues). I'll help.
