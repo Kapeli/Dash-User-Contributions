@@ -1,10 +1,12 @@
 Tiki Docset
 =======================
 
-## Bug reports
+## Bug report and Docset improvement
 
-You can contact me at [@godbout](https://twitter.com/godbout), on [GitHub](https://github.com/godbout) or by email at guill@sleeplessmind.com.mo.
+Best is to drop an issue or do a PR at the Docset's repo: https://github.com/godbout/tiki-dash-docset.
 
-## Docset build
+Else you can also contact me at [@godbout](https://twitter.com/godbout), on [GitHub](https://github.com/godbout) or by email at guill@sleeplessmind.com.mo.
 
-I built my own Docset builder in PHP, available here: https://github.com/godbout/dash-docset-builder. You can find information on how this Docset was built and how to build your own on that GitHub repo.
+## Dash Docset Builder
+
+This Docset was built with the Dash Docset Builder in PHP. You can find information on how to build your own Docset on its GitHub repo: https://github.com/godbout/dash-docset-builder.
