@@ -1,10 +1,14 @@
-# dash-swift
+# Swift 5.3 Language Guide Dash Docset
 
-Dash docset and generation script for the [Swift 5.2 Language Guide](https://docs.swift.org/swift-book/LanguageGuide/).
+[Dash docset](https://github.com/Kapeli/Dash-User-Contributions) and generation script for the [Swift 5.3 Language Guide](https://docs.swift.org/swift-book/LanguageGuide/).
 
-- [github.com/roeybiran/dash-swift](https://github.com/roeybiran/dash-swift)
-- Use `wget -k -r -p -np https://docs.swift.org/swift-book/LanguageGuide/TheBasics.html` to gather the initial HTML.
-- Create the initial .docset directory per the official instructions.
-- Execute `generation_script.sh` while making sure it shares the same directory with the `.docset` directory.
+## Features
 
-![screenshot](screenshot.png)
+- Includes entries for each 'chapter', and its sections.
+- Tables of contents for sections.
+
+## Using/Modifying
+
+- Install [BeautifulSoup](https://www.crummy.com/software/BeautifulSoup/) (`pip3 install beatifulsoup4`) and `wget` (`brew install wget`). The script itself shoud work with the macOS-supplied `python`.
+- Clone and execute `generation_script.py` from the repo's root.
+- [URL: roeybiran/dash-docset-swift-5.3-language-guide](https://github.com/roeybiran/dash-docset-swift-5.3-language-guide)
