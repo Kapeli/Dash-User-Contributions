@@ -27,8 +27,8 @@ Install the pre-requisites:
 * For Python docs, you need Python 3.7, then install the requirements:
 
 ```shell
-pip install -r travis/small-requirements.txt
-pip install tensorflow "sphinx<2.2" sphinx-click==2.3.0
+pip install -r dev/small-requirements.txt
+pip install tensorflow "sphinx<2.2" sphinx-click==2.3.1
 ```
 
 You might need to check if the version number is correct in the source code, that
