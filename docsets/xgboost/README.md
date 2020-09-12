@@ -12,7 +12,7 @@ XGBoost  Dash Docset
         - `git clone https://github.com/dmlc/xgboost.git`
         - `cd xgboost`
         - `git fetch --all --tags --prune`
-        - `git checkout tags/v1.1.1 -b v1.1.1`
+        - `git checkout tags/v1.2.0 -b v1.2.0`
     - Create a Conda environment:
         - `conda create -n xgboost-docs -c conda-forge python=3.7`
     - Install `pip` dependencies and `doc2dash`:
@@ -25,5 +25,5 @@ XGBoost  Dash Docset
             - `conda install -c conda-forge python-graphviz`
     - Now run: 
         - `cd _build/html`
-        - `doc2dash -n "XGBoost" -d "/Users/angelo/Library/ApplicationSupport/doc2dash/DocSets/xgboost/1-1-1" -i "/Users/angelo/Pictures/Icons/dash/xgboost/icon@2x.png" -v -j -u "https://xgboost.readthedocs.io/en/stable/" -I "index.html" ./ -a -f`
+        - `doc2dash -n "XGBoost 1.2.0" -d "/Users/angelo/Library/ApplicationSupport/doc2dash/DocSets/xgboost/1-2-0" -i "/Users/angelo/Pictures/Icons/dash/xgboost/icon@2x.png" -v -j -u "https://xgboost.readthedocs.io/en/stable/" -I "index.html" ./ -a -f`
     - The XGBoost package will install directly into Dash.
