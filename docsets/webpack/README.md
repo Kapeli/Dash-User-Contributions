@@ -1,6 +1,6 @@
 **Please note that different versions of this Docset have been made by different people. Please contact the right person for your relevant Docset.**
 
-[webpack 4.44.x][1] Docset
+[webpack 4.x][1] and [webpack 5.x] Docsets
 =======================
 
 ## Bug report and Docset improvement
