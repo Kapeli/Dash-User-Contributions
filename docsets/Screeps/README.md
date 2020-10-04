@@ -25,7 +25,7 @@ cd ../..
 ```
 git clone https://github.com/malt3/screeps-dash-generator
 cd screeps-dash-generator
-python3 -m pip --user install beautifulsoup4
+python3 -m pip install --user beautifulsoup4
 # copy static docs here before modifying them
 cp -r ../screeps-docs/public .
 # fixup links and do some cosmetic changes
@@ -44,4 +44,6 @@ go get -u github.com/technosophos/dashing
 cd public
 dashing build Screeps
 # The resulting docset is written to Screeps.docset
+# (Optional: Copy Icon into the docset folder)
+cp ../icon@2x.png Screeps.docset/icon.png
 ```
