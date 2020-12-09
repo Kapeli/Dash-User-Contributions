@@ -40,8 +40,6 @@ doc2dash -n PyQGIS_3 build/master/html/
 ```
 Finally, add icons and docset.json to `PyQGIS_3.docset`
 
-If you want to propose a PR to update this documentation, just zip it, share it (on Dropbox for instance) and give the URL in the PR.
-
 To create the tar archive
 
 ```shell
