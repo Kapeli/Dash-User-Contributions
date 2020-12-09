@@ -53,5 +53,5 @@ If you want to propose a PR to update this documentation, just zip it, share it 
 To create the tar archive
 
 ```shell
-cd doc/api/html && tar cvzf QGIS.tgz doc/api/html/QGIS_3.docset
+cd doc/api/html && tar cvzf QGIS.tgz --exclude='.DS_Store' doc/api/html/QGIS_3.docset
 ```
