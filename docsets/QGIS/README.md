@@ -38,7 +38,7 @@ Then, in *doc/api/html/Info.plist* remove *CFBundleVersion* (key and string valu
 <true/>
 ```
 
-Then generate docset (doxytag2zealdb can be installed with pip)
+Then generate docset (doxytag2zealdb can be installed with pip, but be aware that you may have to apply this [patch](https://github.com/vedvyas/doxytag2zealdb/pull/2)). 
 ```shell
 # First command fail on docsetutil missing, nevermind!
 cd doc/api/html && make
@@ -53,5 +53,5 @@ If you want to propose a PR to update this documentation, just zip it, share it 
 To create the tar archive
 
 ```shell
-cd doc/api/html && tar cvzf QGIS.tgz --exclude='.DS_Store' doc/api/html/QGIS_3.docset
+cd doc/api/html && tar cvzf QGIS.tgz --exclude='.DS_Store' QGIS_3.docset
 ```
