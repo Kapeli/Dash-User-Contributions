@@ -21,14 +21,15 @@ where `X.Y.Z` is a tag (for MLFlow corresponding to a version number), such as `
 
 Install the pre-requisites:
 
-* For the R docs, need to install [R](https://www.r-project.org/)
+* For the R docs, need to install [R](https://www.r-project.org/), and `libgit2`
 * For the Java docs, need a Java runtime and `maven`
 * Will need to have `pandoc` installed as well
 * For Python docs, you need Python 3.7, then install the requirements:
 
 ```shell
 pip install -r dev/small-requirements.txt
-pip install tensorflow "sphinx<2.2" sphinx-click==2.3.1
+pip install -r dev/extra-ml-requirements.txt
+pip install -r dev-requirements.txt
 ```
 
 You might need to check if the version number is correct in the source code, that
@@ -72,6 +73,21 @@ Generate the docs:
 
 ```shell
 cd docs
+```
+
+Currently also need to comment out some Ubuntu-specific docs building steps,
+thus in `build-rdoc.sh` have to comment out the install lines lines at the top,
+such as these (basically all with a `sudo` step)
+
+```shell
+sudo add-apt-repository ppa:cran/libgit2
+sudo apt-get update
+sudo apt-get install --yes libssh2-1-dev libgit2-dev
+```
+
+Also ensure that you've installed `libgit2` (e.g. through `brew`).
+
+```shell
 make html
 ```
 
