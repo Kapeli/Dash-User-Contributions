@@ -1,0 +1,665 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Preprocessing data &mdash; transformers 4.2.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/huggingface.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/code-snippets.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/hidesidebar.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/clipboard.min.js"></script>
+        <script src="_static/copybutton.js"></script>
+        <script src="_static/js/custom.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Training and fine-tuning" href="training.html" />
+    <link rel="prev" title="Summary of the models" href="model_summary.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> transformers
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Get started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quicktour.html">Quick tour</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="philosophy.html">Philosophy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Using 🤗 Transformers</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="task_summary.html">Summary of the tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_summary.html">Summary of the models</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Preprocessing data</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#base-use">Base use</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#preprocessing-pairs-of-sentences">Preprocessing pairs of sentences</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#everything-you-always-wanted-to-know-about-padding-and-truncation">Everything you always wanted to know about padding and truncation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pre-tokenized-inputs">Pre-tokenized inputs</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="training.html">Training and fine-tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_sharing.html">Model sharing and uploading</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tokenizer_summary.html">Summary of the tokenizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multilingual.html">Multi-lingual models</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Advanced guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pretrained_models.html">Pretrained models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="custom_datasets.html">Fine-tuning with custom datasets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks.html">🤗 Transformers Notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="converting_tensorflow_models.html">Converting Tensorflow Checkpoints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration.html">Migrating from previous packages</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">How to contribute to transformers?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Exporting transformers models</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Research</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="bertology.html">BERTology</a></li>
+<li class="toctree-l1"><a class="reference internal" href="perplexity.html">Perplexity of fixed-length models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="benchmarks.html">Benchmarks</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Main Classes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/callback.html">Callbacks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/logging.html">Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/model.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/optimizer_schedules.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/output.html">Model outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/pipelines.html">Pipelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/processors.html">Processors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/tokenizer.html">Tokenizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/trainer.html">Trainer</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Models</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/albert.html">ALBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/auto.html">Auto Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/bart.html">BART</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/barthez.html">BARThez</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/bert.html">BERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/bertweet.html">Bertweet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/bertgeneration.html">BertGeneration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/blenderbot.html">Blenderbot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/blenderbot_small.html">Blenderbot Small</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/camembert.html">CamemBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/ctrl.html">CTRL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/deberta.html">DeBERTa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/dialogpt.html">DialoGPT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/distilbert.html">DistilBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/dpr.html">DPR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/electra.html">ELECTRA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/encoderdecoder.html">Encoder Decoder Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/flaubert.html">FlauBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/fsmt.html">FSMT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/funnel.html">Funnel Transformer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/herbert.html">herBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/layoutlm.html">LayoutLM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/led.html">LED</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/longformer.html">Longformer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/lxmert.html">LXMERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/marian.html">MarianMT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/mbart.html">MBart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/mobilebert.html">MobileBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/mpnet.html">MPNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/mt5.html">MT5</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/gpt.html">OpenAI GPT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/gpt2.html">OpenAI GPT2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/pegasus.html">Pegasus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/phobert.html">PhoBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/prophetnet.html">ProphetNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/rag.html">RAG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/reformer.html">Reformer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/retribert.html">RetriBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/roberta.html">RoBERTa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/squeezebert.html">SqueezeBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/t5.html">T5</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/tapas.html">TAPAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/transformerxl.html">Transformer XL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/xlm.html">XLM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/xlmprophetnet.html">XLM-ProphetNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/xlmroberta.html">XLM-RoBERTa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/xlnet.html">XLNet</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Internal Helpers</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="internal/modeling_utils.html">Custom Layers and Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="internal/pipelines_utils.html">Utilities for pipelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="internal/tokenization_utils.html">Utilities for Tokenizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="internal/trainer_utils.html">Utilities for Trainer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="internal/generation_utils.html">Utilities for Generation</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">transformers</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Preprocessing data</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/preprocessing.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="preprocessing-data">
+<h1>Preprocessing data<a class="headerlink" href="#preprocessing-data" title="Permalink to this headline">¶</a></h1>
+<p>In this tutorial, we’ll explore how to preprocess your data using 🤗 Transformers. The main tool for this is what we
+call a <a class="reference internal" href="main_classes/tokenizer.html"><span class="doc">tokenizer</span></a>. You can build one using the tokenizer class associated to the model
+you would like to use, or directly with the <a class="reference internal" href="model_doc/auto.html#transformers.AutoTokenizer" title="transformers.AutoTokenizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">AutoTokenizer</span></code></a> class.</p>
+<p>As we saw in the <a class="reference internal" href="quicktour.html"><span class="doc">quick tour</span></a>, the tokenizer will first split a given text in words (or part of
+words, punctuation symbols, etc.) usually called <cite>tokens</cite>. Then it will convert those <cite>tokens</cite> into numbers, to be able
+to build a tensor out of them and feed them to the model. It will also add any additional inputs the model might expect
+to work properly.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you plan on using a pretrained model, it’s important to use the associated pretrained tokenizer: it will split
+the text you give it in tokens the same way for the pretraining corpus, and it will use the same correspondence
+token to index (that we usually call a <cite>vocab</cite>) as during pretraining.</p>
+</div>
+<p>To automatically download the vocab used during pretraining or fine-tuning a given model, you can use the
+<a class="reference internal" href="model_doc/auto.html#transformers.AutoTokenizer.from_pretrained" title="transformers.AutoTokenizer.from_pretrained"><code class="xref py py-func docutils literal notranslate"><span class="pre">from_pretrained()</span></code></a> method:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">transformers</span> <span class="kn">import</span> <span class="n">AutoTokenizer</span>
+<span class="n">tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;bert-base-cased&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="section" id="base-use">
+<h2>Base use<a class="headerlink" href="#base-use" title="Permalink to this headline">¶</a></h2>
+<p>A <a class="reference internal" href="main_classes/tokenizer.html#transformers.PreTrainedTokenizer" title="transformers.PreTrainedTokenizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">PreTrainedTokenizer</span></code></a> has many methods, but the only one you need to remember for preprocessing
+is its <code class="docutils literal notranslate"><span class="pre">__call__</span></code>: you just need to feed your sentence to your tokenizer object.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">encoded_input</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="s2">&quot;Hello, I&#39;m a single sentence!&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">encoded_input</span><span class="p">)</span>
+<span class="go">{&#39;input_ids&#39;: [101, 138, 18696, 155, 1942, 3190, 1144, 1572, 13745, 1104, 159, 9664, 2107, 102],</span>
+<span class="go"> &#39;token_type_ids&#39;: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],</span>
+<span class="go"> &#39;attention_mask&#39;: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}</span>
+</pre></div>
+</div>
+<p>This returns a dictionary string to list of ints. The <a class="reference external" href="glossary.html#input-ids">input_ids</a> are the indices
+corresponding to each token in our sentence. We will see below what the <a class="reference external" href="glossary.html#attention-mask">attention_mask</a> is used for and in <a class="reference internal" href="#sentence-pairs"><span class="std std-ref">the next section</span></a> the goal of
+<a class="reference external" href="glossary.html#token-type-ids">token_type_ids</a>.</p>
+<p>The tokenizer can decode a list of token ids in a proper sentence:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoded_input</span><span class="p">[</span><span class="s2">&quot;input_ids&quot;</span><span class="p">])</span>
+<span class="go">&quot;[CLS] Hello, I&#39;m a single sentence! [SEP]&quot;</span>
+</pre></div>
+</div>
+<p>As you can see, the tokenizer automatically added some special tokens that the model expects. Not all models need
+special tokens; for instance, if we had used <cite>gpt2-medium</cite> instead of <cite>bert-base-cased</cite> to create our tokenizer, we
+would have seen the same sentence as the original one here. You can disable this behavior (which is only advised if you
+have added those special tokens yourself) by passing <code class="docutils literal notranslate"><span class="pre">add_special_tokens=False</span></code>.</p>
+<p>If you have several sentences you want to process, you can do this efficiently by sending them as a list to the
+tokenizer:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">batch_sentences</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Hello I&#39;m a single sentence&quot;</span><span class="p">,</span>
+<span class="gp">... </span>                   <span class="s2">&quot;And another sentence&quot;</span><span class="p">,</span>
+<span class="gp">... </span>                   <span class="s2">&quot;And the very very last one&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">encoded_inputs</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">batch_sentences</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">encoded_inputs</span><span class="p">)</span>
+<span class="go">{&#39;input_ids&#39;: [[101, 8667, 146, 112, 182, 170, 1423, 5650, 102],</span>
+<span class="go">               [101, 1262, 1330, 5650, 102],</span>
+<span class="go">               [101, 1262, 1103, 1304, 1304, 1314, 1141, 102]],</span>
+<span class="go"> &#39;token_type_ids&#39;: [[0, 0, 0, 0, 0, 0, 0, 0, 0],</span>
+<span class="go">                    [0, 0, 0, 0, 0],</span>
+<span class="go">                    [0, 0, 0, 0, 0, 0, 0, 0]],</span>
+<span class="go"> &#39;attention_mask&#39;: [[1, 1, 1, 1, 1, 1, 1, 1, 1],</span>
+<span class="go">                    [1, 1, 1, 1, 1],</span>
+<span class="go">                    [1, 1, 1, 1, 1, 1, 1, 1]]}</span>
+</pre></div>
+</div>
+<p>We get back a dictionary once again, this time with values being lists of lists of ints.</p>
+<p>If the purpose of sending several sentences at a time to the tokenizer is to build a batch to feed the model, you will
+probably want:</p>
+<ul class="simple">
+<li><p>To pad each sentence to the maximum length there is in your batch.</p></li>
+<li><p>To truncate each sentence to the maximum length the model can accept (if applicable).</p></li>
+<li><p>To return tensors.</p></li>
+</ul>
+<p>You can do all of this by using the following options when feeding your list of sentences to the tokenizer:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1">## PYTORCH CODE</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">batch_sentences</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">truncation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s2">&quot;pt&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+<span class="go">{&#39;input_ids&#39;: tensor([[ 101, 8667,  146,  112,  182,  170, 1423, 5650,  102],</span>
+<span class="go">                      [ 101, 1262, 1330, 5650,  102,    0,    0,    0,    0],</span>
+<span class="go">                      [ 101, 1262, 1103, 1304, 1304, 1314, 1141,  102,    0]]),</span>
+<span class="go"> &#39;token_type_ids&#39;: tensor([[0, 0, 0, 0, 0, 0, 0, 0, 0],</span>
+<span class="go">                           [0, 0, 0, 0, 0, 0, 0, 0, 0],</span>
+<span class="go">                           [0, 0, 0, 0, 0, 0, 0, 0, 0]]),</span>
+<span class="go"> &#39;attention_mask&#39;: tensor([[1, 1, 1, 1, 1, 1, 1, 1, 1],</span>
+<span class="go">                           [1, 1, 1, 1, 1, 0, 0, 0, 0],</span>
+<span class="go">                           [1, 1, 1, 1, 1, 1, 1, 1, 0]])}</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1">## TENSORFLOW CODE</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">batch_sentences</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">truncation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s2">&quot;tf&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+<span class="go">{&#39;input_ids&#39;: tf.Tensor([[ 101, 8667,  146,  112,  182,  170, 1423, 5650,  102],</span>
+<span class="go">                      [ 101, 1262, 1330, 5650,  102,    0,    0,    0,    0],</span>
+<span class="go">                      [ 101, 1262, 1103, 1304, 1304, 1314, 1141,  102,    0]]),</span>
+<span class="go"> &#39;token_type_ids&#39;: tf.Tensor([[0, 0, 0, 0, 0, 0, 0, 0, 0],</span>
+<span class="go">                           [0, 0, 0, 0, 0, 0, 0, 0, 0],</span>
+<span class="go">                           [0, 0, 0, 0, 0, 0, 0, 0, 0]]),</span>
+<span class="go"> &#39;attention_mask&#39;: tf.Tensor([[1, 1, 1, 1, 1, 1, 1, 1, 1],</span>
+<span class="go">                           [1, 1, 1, 1, 1, 0, 0, 0, 0],</span>
+<span class="go">                           [1, 1, 1, 1, 1, 1, 1, 1, 0]])}</span>
+</pre></div>
+</div>
+<p>It returns a dictionary with string keys and tensor values. We can now see what the <a class="reference external" href="glossary.html#attention-mask">attention_mask</a> is all about: it points out which tokens the model should pay attention to and which
+ones it should not (because they represent padding in this case).</p>
+<p>Note that if your model does not have a maximum length associated to it, the command above will throw a warning. You
+can safely ignore it. You can also pass <code class="docutils literal notranslate"><span class="pre">verbose=False</span></code> to stop the tokenizer from throwing those kinds of warnings.</p>
+</div>
+<div class="section" id="preprocessing-pairs-of-sentences">
+<span id="sentence-pairs"></span><h2>Preprocessing pairs of sentences<a class="headerlink" href="#preprocessing-pairs-of-sentences" title="Permalink to this headline">¶</a></h2>
+<p>Sometimes you need to feed a pair of sentences to your model. For instance, if you want to classify if two sentences in
+a pair are similar, or for question-answering models, which take a context and a question. For BERT models, the input
+is then represented like this: <code class="xref py py-obj docutils literal notranslate"><span class="pre">[CLS]</span> <span class="pre">Sequence</span> <span class="pre">A</span> <span class="pre">[SEP]</span> <span class="pre">Sequence</span> <span class="pre">B</span> <span class="pre">[SEP]</span></code></p>
+<p>You can encode a pair of sentences in the format expected by your model by supplying the two sentences as two arguments
+(not a list since a list of two sentences will be interpreted as a batch of two single sentences, as we saw before).
+This will once again return a dict string to list of ints:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">encoded_input</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="s2">&quot;How old are you?&quot;</span><span class="p">,</span> <span class="s2">&quot;I&#39;m 6 years old&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">encoded_input</span><span class="p">)</span>
+<span class="go">{&#39;input_ids&#39;: [101, 1731, 1385, 1132, 1128, 136, 102, 146, 112, 182, 127, 1201, 1385, 102],</span>
+<span class="go"> &#39;token_type_ids&#39;: [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1],</span>
+<span class="go"> &#39;attention_mask&#39;: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}</span>
+</pre></div>
+</div>
+<p>This shows us what the <a class="reference external" href="glossary.html#token-type-ids">token_type_ids</a> are for: they indicate to the model which part
+of the inputs correspond to the first sentence and which part corresponds to the second sentence. Note that
+<cite>token_type_ids</cite> are not required or handled by all models. By default, a tokenizer will only return the inputs that
+its associated model expects. You can force the return (or the non-return) of any of those special arguments by using
+<code class="docutils literal notranslate"><span class="pre">return_input_ids</span></code> or <code class="docutils literal notranslate"><span class="pre">return_token_type_ids</span></code>.</p>
+<p>If we decode the token ids we obtained, we will see that the special tokens have been properly added.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoded_input</span><span class="p">[</span><span class="s2">&quot;input_ids&quot;</span><span class="p">])</span>
+<span class="go">&quot;[CLS] How old are you? [SEP] I&#39;m 6 years old [SEP]&quot;</span>
+</pre></div>
+</div>
+<p>If you have a list of pairs of sequences you want to process, you should feed them as two lists to your tokenizer: the
+list of first sentences and the list of second sentences:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">batch_sentences</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Hello I&#39;m a single sentence&quot;</span><span class="p">,</span>
+<span class="gp">... </span>                   <span class="s2">&quot;And another sentence&quot;</span><span class="p">,</span>
+<span class="gp">... </span>                   <span class="s2">&quot;And the very very last one&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">batch_of_second_sentences</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;I&#39;m a sentence that goes with the first sentence&quot;</span><span class="p">,</span>
+<span class="gp">... </span>                             <span class="s2">&quot;And I should be encoded with the second sentence&quot;</span><span class="p">,</span>
+<span class="gp">... </span>                             <span class="s2">&quot;And I go with the very last one&quot;</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">encoded_inputs</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">batch_sentences</span><span class="p">,</span> <span class="n">batch_of_second_sentences</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">encoded_inputs</span><span class="p">)</span>
+<span class="go">{&#39;input_ids&#39;: [[101, 8667, 146, 112, 182, 170, 1423, 5650, 102, 146, 112, 182, 170, 5650, 1115, 2947, 1114, 1103, 1148, 5650, 102],</span>
+<span class="go">               [101, 1262, 1330, 5650, 102, 1262, 146, 1431, 1129, 12544, 1114, 1103, 1248, 5650, 102],</span>
+<span class="go">               [101, 1262, 1103, 1304, 1304, 1314, 1141, 102, 1262, 146, 1301, 1114, 1103, 1304, 1314, 1141, 102]],</span>
+<span class="go">&#39;token_type_ids&#39;: [[0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],</span>
+<span class="go">                   [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],</span>
+<span class="go">                   [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1]],</span>
+<span class="go">&#39;attention_mask&#39;: [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],</span>
+<span class="go">                   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],</span>
+<span class="go">                   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]}</span>
+</pre></div>
+</div>
+<p>As we can see, it returns a dictionary where each value is a list of lists of ints.</p>
+<p>To double-check what is fed to the model, we can decode each list in <cite>input_ids</cite> one by one:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">ids</span> <span class="ow">in</span> <span class="n">encoded_inputs</span><span class="p">[</span><span class="s2">&quot;input_ids&quot;</span><span class="p">]:</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="nb">print</span><span class="p">(</span><span class="n">tokenizer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">ids</span><span class="p">))</span>
+<span class="go">[CLS] Hello I&#39;m a single sentence [SEP] I&#39;m a sentence that goes with the first sentence [SEP]</span>
+<span class="go">[CLS] And another sentence [SEP] And I should be encoded with the second sentence [SEP]</span>
+<span class="go">[CLS] And the very very last one [SEP] And I go with the very last one [SEP]</span>
+</pre></div>
+</div>
+<p>Once again, you can automatically pad your inputs to the maximum sentence length in the batch, truncate to the maximum
+length the model can accept and return tensors directly with the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1">## PYTORCH CODE</span>
+<span class="n">batch</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">batch_sentences</span><span class="p">,</span> <span class="n">batch_of_second_sentences</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">truncation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s2">&quot;pt&quot;</span><span class="p">)</span>
+<span class="c1">## TENSORFLOW CODE</span>
+<span class="n">batch</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">batch_sentences</span><span class="p">,</span> <span class="n">batch_of_second_sentences</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">truncation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">return_tensors</span><span class="o">=</span><span class="s2">&quot;tf&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="everything-you-always-wanted-to-know-about-padding-and-truncation">
+<h2>Everything you always wanted to know about padding and truncation<a class="headerlink" href="#everything-you-always-wanted-to-know-about-padding-and-truncation" title="Permalink to this headline">¶</a></h2>
+<p>We have seen the commands that will work for most cases (pad your batch to the length of the maximum sentence and
+truncate to the maximum length the mode can accept). However, the API supports more strategies if you need them. The
+three arguments you need to know for this are <code class="xref py py-obj docutils literal notranslate"><span class="pre">padding</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">truncation</span></code> and <code class="xref py py-obj docutils literal notranslate"><span class="pre">max_length</span></code>.</p>
+<ul>
+<li><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">padding</span></code> controls the padding. It can be a boolean or a string which should be:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">True</span></code> or <code class="xref py py-obj docutils literal notranslate"><span class="pre">'longest'</span></code> to pad to the longest sequence in the batch (doing no padding if you only provide
+a single sequence).</p></li>
+<li><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">'max_length'</span></code> to pad to a length specified by the <code class="xref py py-obj docutils literal notranslate"><span class="pre">max_length</span></code> argument or the maximum length accepted
+by the model if no <code class="xref py py-obj docutils literal notranslate"><span class="pre">max_length</span></code> is provided (<code class="docutils literal notranslate"><span class="pre">max_length=None</span></code>). If you only provide a single sequence,
+padding will still be applied to it.</p></li>
+<li><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">False</span></code> or <code class="xref py py-obj docutils literal notranslate"><span class="pre">'do_not_pad'</span></code> to not pad the sequences. As we have seen before, this is the default
+behavior.</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">truncation</span></code> controls the truncation. It can be a boolean or a string which should be:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">True</span></code> or <code class="xref py py-obj docutils literal notranslate"><span class="pre">'only_first'</span></code> truncate to a maximum length specified by the <code class="xref py py-obj docutils literal notranslate"><span class="pre">max_length</span></code> argument or
+the maximum length accepted by the model if no <code class="xref py py-obj docutils literal notranslate"><span class="pre">max_length</span></code> is provided (<code class="docutils literal notranslate"><span class="pre">max_length=None</span></code>). This will
+only truncate the first sentence of a pair if a pair of sequence (or a batch of pairs of sequences) is provided.</p></li>
+<li><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">'only_second'</span></code> truncate to a maximum length specified by the <code class="xref py py-obj docutils literal notranslate"><span class="pre">max_length</span></code> argument or the maximum
+length accepted by the model if no <code class="xref py py-obj docutils literal notranslate"><span class="pre">max_length</span></code> is provided (<code class="docutils literal notranslate"><span class="pre">max_length=None</span></code>). This will only truncate
+the second sentence of a pair if a pair of sequence (or a batch of pairs of sequences) is provided.</p></li>
+<li><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">'longest_first'</span></code> truncate to a maximum length specified by the <code class="xref py py-obj docutils literal notranslate"><span class="pre">max_length</span></code> argument or the maximum
+length accepted by the model if no <code class="xref py py-obj docutils literal notranslate"><span class="pre">max_length</span></code> is provided (<code class="docutils literal notranslate"><span class="pre">max_length=None</span></code>). This will truncate token
+by token, removing a token from the longest sequence in the pair until the proper length is reached.</p></li>
+<li><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">False</span></code> or <code class="xref py py-obj docutils literal notranslate"><span class="pre">'do_not_truncate'</span></code> to not truncate the sequences. As we have seen before, this is the
+default behavior.</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_length</span></code> to control the length of the padding/truncation. It can be an integer or <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>, in which case
+it will default to the maximum length the model can accept. If the model has no specific maximum input length,
+truncation/padding to <code class="xref py py-obj docutils literal notranslate"><span class="pre">max_length</span></code> is deactivated.</p></li>
+</ul>
+<p>Here is a table summarizing the recommend way to setup padding and truncation. If you use pair of inputs sequence in
+any of the following examples, you can replace <code class="xref py py-obj docutils literal notranslate"><span class="pre">truncation=True</span></code> by a <code class="xref py py-obj docutils literal notranslate"><span class="pre">STRATEGY</span></code> selected in
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">['only_first',</span> <span class="pre">'only_second',</span> <span class="pre">'longest_first']</span></code>, i.e. <code class="xref py py-obj docutils literal notranslate"><span class="pre">truncation='only_second'</span></code> or <code class="xref py py-obj docutils literal notranslate"><span class="pre">truncation=</span>
+<span class="pre">'longest_first'</span></code> to control how both sequence in the pair are truncated as detailed before.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 21%" />
+<col style="width: 56%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Truncation</p></th>
+<th class="head"><p>Padding</p></th>
+<th class="head"><p>Instruction</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td rowspan="4"><p>no truncation</p></td>
+<td><p>no padding</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">tokenizer(batch_sentences)</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>padding to max sequence in batch</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">tokenizer(batch_sentences,</span> <span class="pre">padding=True)</span></code> or
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">tokenizer(batch_sentences,</span> <span class="pre">padding='longest')</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>padding to max model input length</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">tokenizer(batch_sentences,</span> <span class="pre">padding='max_length')</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>padding to specific length</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">tokenizer(batch_sentences,</span> <span class="pre">padding='max_length',</span> <span class="pre">max_length=42)</span></code></p></td>
+</tr>
+<tr class="row-even"><td rowspan="4"><p>truncation to max model input length</p></td>
+<td><p>no padding</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">tokenizer(batch_sentences,</span> <span class="pre">truncation=True)</span></code> or
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">tokenizer(batch_sentences,</span> <span class="pre">truncation=STRATEGY)</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>padding to max sequence in batch</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">tokenizer(batch_sentences,</span> <span class="pre">padding=True,</span> <span class="pre">truncation=True)</span></code> or
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">tokenizer(batch_sentences,</span> <span class="pre">padding=True,</span> <span class="pre">truncation=STRATEGY)</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>padding to max model input length</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">tokenizer(batch_sentences,</span> <span class="pre">padding='max_length',</span> <span class="pre">truncation=True)</span></code> or
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">tokenizer(batch_sentences,</span> <span class="pre">padding='max_length',</span> <span class="pre">truncation=STRATEGY)</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>padding to specific length</p></td>
+<td><p>Not possible</p></td>
+</tr>
+<tr class="row-even"><td rowspan="4"><p>truncation to specific length</p></td>
+<td><p>no padding</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">tokenizer(batch_sentences,</span> <span class="pre">truncation=True,</span> <span class="pre">max_length=42)</span></code> or
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">tokenizer(batch_sentences,</span> <span class="pre">truncation=STRATEGY,</span> <span class="pre">max_length=42)</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>padding to max sequence in batch</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">tokenizer(batch_sentences,</span> <span class="pre">padding=True,</span> <span class="pre">truncation=True,</span> <span class="pre">max_length=42)</span></code> or
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">tokenizer(batch_sentences,</span> <span class="pre">padding=True,</span> <span class="pre">truncation=STRATEGY,</span> <span class="pre">max_length=42)</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>padding to max model input length</p></td>
+<td><p>Not possible</p></td>
+</tr>
+<tr class="row-odd"><td><p>padding to specific length</p></td>
+<td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">tokenizer(batch_sentences,</span> <span class="pre">padding='max_length',</span> <span class="pre">truncation=True,</span> <span class="pre">max_length=42)</span></code> or
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">tokenizer(batch_sentences,</span> <span class="pre">padding='max_length',</span> <span class="pre">truncation=STRATEGY,</span> <span class="pre">max_length=42)</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="pre-tokenized-inputs">
+<h2>Pre-tokenized inputs<a class="headerlink" href="#pre-tokenized-inputs" title="Permalink to this headline">¶</a></h2>
+<p>The tokenizer also accept pre-tokenized inputs. This is particularly useful when you want to compute labels and extract
+predictions in <a class="reference external" href="https://en.wikipedia.org/wiki/Named-entity_recognition">named entity recognition (NER)</a> or
+<a class="reference external" href="https://en.wikipedia.org/wiki/Part-of-speech_tagging">part-of-speech tagging (POS tagging)</a>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Pre-tokenized does not mean your inputs are already tokenized (you wouldn’t need to pass them through the tokenizer
+if that was the case) but just split into words (which is often the first step in subword tokenization algorithms
+like BPE).</p>
+</div>
+<p>If you want to use pre-tokenized inputs, just set <code class="xref py py-obj docutils literal notranslate"><span class="pre">is_split_into_words=True</span></code> when passing your inputs to the
+tokenizer. For instance, we have:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">encoded_input</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">([</span><span class="s2">&quot;Hello&quot;</span><span class="p">,</span> <span class="s2">&quot;I&#39;m&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;single&quot;</span><span class="p">,</span> <span class="s2">&quot;sentence&quot;</span><span class="p">],</span> <span class="n">is_split_into_words</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">encoded_input</span><span class="p">)</span>
+<span class="go">{&#39;input_ids&#39;: [101, 8667, 146, 112, 182, 170, 1423, 5650, 102],</span>
+<span class="go"> &#39;token_type_ids&#39;: [0, 0, 0, 0, 0, 0, 0, 0, 0],</span>
+<span class="go"> &#39;attention_mask&#39;: [1, 1, 1, 1, 1, 1, 1, 1, 1]}</span>
+</pre></div>
+</div>
+<p>Note that the tokenizer still adds the ids of special tokens (if applicable) unless you pass
+<code class="docutils literal notranslate"><span class="pre">add_special_tokens=False</span></code>.</p>
+<p>This works exactly as before for batch of sentences or batch of pairs of sentences. You can encode a batch of sentences
+like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">batch_sentences</span> <span class="o">=</span> <span class="p">[[</span><span class="s2">&quot;Hello&quot;</span><span class="p">,</span> <span class="s2">&quot;I&#39;m&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;single&quot;</span><span class="p">,</span> <span class="s2">&quot;sentence&quot;</span><span class="p">],</span>
+                   <span class="p">[</span><span class="s2">&quot;And&quot;</span><span class="p">,</span> <span class="s2">&quot;another&quot;</span><span class="p">,</span> <span class="s2">&quot;sentence&quot;</span><span class="p">],</span>
+                   <span class="p">[</span><span class="s2">&quot;And&quot;</span><span class="p">,</span> <span class="s2">&quot;the&quot;</span><span class="p">,</span> <span class="s2">&quot;very&quot;</span><span class="p">,</span> <span class="s2">&quot;very&quot;</span><span class="p">,</span> <span class="s2">&quot;last&quot;</span><span class="p">,</span> <span class="s2">&quot;one&quot;</span><span class="p">]]</span>
+<span class="n">encoded_inputs</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">batch_sentences</span><span class="p">,</span> <span class="n">is_split_into_words</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>or a batch of pair sentences like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">batch_of_second_sentences</span> <span class="o">=</span> <span class="p">[[</span><span class="s2">&quot;I&#39;m&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="s2">&quot;sentence&quot;</span><span class="p">,</span> <span class="s2">&quot;that&quot;</span><span class="p">,</span> <span class="s2">&quot;goes&quot;</span><span class="p">,</span> <span class="s2">&quot;with&quot;</span><span class="p">,</span> <span class="s2">&quot;the&quot;</span><span class="p">,</span> <span class="s2">&quot;first&quot;</span><span class="p">,</span> <span class="s2">&quot;sentence&quot;</span><span class="p">],</span>
+                             <span class="p">[</span><span class="s2">&quot;And&quot;</span><span class="p">,</span> <span class="s2">&quot;I&quot;</span><span class="p">,</span> <span class="s2">&quot;should&quot;</span><span class="p">,</span> <span class="s2">&quot;be&quot;</span><span class="p">,</span> <span class="s2">&quot;encoded&quot;</span><span class="p">,</span> <span class="s2">&quot;with&quot;</span><span class="p">,</span> <span class="s2">&quot;the&quot;</span><span class="p">,</span> <span class="s2">&quot;second&quot;</span><span class="p">,</span> <span class="s2">&quot;sentence&quot;</span><span class="p">],</span>
+                             <span class="p">[</span><span class="s2">&quot;And&quot;</span><span class="p">,</span> <span class="s2">&quot;I&quot;</span><span class="p">,</span> <span class="s2">&quot;go&quot;</span><span class="p">,</span> <span class="s2">&quot;with&quot;</span><span class="p">,</span> <span class="s2">&quot;the&quot;</span><span class="p">,</span> <span class="s2">&quot;very&quot;</span><span class="p">,</span> <span class="s2">&quot;last&quot;</span><span class="p">,</span> <span class="s2">&quot;one&quot;</span><span class="p">]]</span>
+<span class="n">encoded_inputs</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">batch_sentences</span><span class="p">,</span> <span class="n">batch_of_second_sentences</span><span class="p">,</span> <span class="n">is_split_into_words</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>And you can add padding, truncation as well as directly return tensors like before:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1">## PYTORCH CODE</span>
+<span class="n">batch</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">batch_sentences</span><span class="p">,</span>
+                  <span class="n">batch_of_second_sentences</span><span class="p">,</span>
+                  <span class="n">is_split_into_words</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                  <span class="n">padding</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                  <span class="n">truncation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                  <span class="n">return_tensors</span><span class="o">=</span><span class="s2">&quot;pt&quot;</span><span class="p">)</span>
+<span class="c1">## TENSORFLOW CODE</span>
+<span class="n">batch</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">batch_sentences</span><span class="p">,</span>
+                  <span class="n">batch_of_second_sentences</span><span class="p">,</span>
+                  <span class="n">is_split_into_words</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                  <span class="n">padding</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                  <span class="n">truncation</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                  <span class="n">return_tensors</span><span class="o">=</span><span class="s2">&quot;tf&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="training.html" class="btn btn-neutral float-right" title="Training and fine-tuning" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="model_summary.html" class="btn btn-neutral float-left" title="Summary of the models" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2020, The Hugging Face Team, Licenced under the Apache License, Version 2.0.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+    <!-- Theme Analytics -->
+    <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-83738774-2', 'auto');
+    
+    ga('send', 'pageview');
+    </script>
+
+    
+   
+
+</body>
+</html>

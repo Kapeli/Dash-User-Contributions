@@ -1,0 +1,569 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Model sharing and uploading &mdash; transformers 4.2.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/huggingface.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/code-snippets.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/hidesidebar.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/clipboard.min.js"></script>
+        <script src="_static/copybutton.js"></script>
+        <script src="_static/js/custom.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Summary of the tokenizers" href="tokenizer_summary.html" />
+    <link rel="prev" title="Training and fine-tuning" href="training.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> transformers
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Get started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quicktour.html">Quick tour</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="philosophy.html">Philosophy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Using 🤗 Transformers</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="task_summary.html">Summary of the tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_summary.html">Summary of the models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="preprocessing.html">Preprocessing data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="training.html">Training and fine-tuning</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Model sharing and uploading</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#prepare-your-model-for-uploading">Prepare your model for uploading</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#model-versioning">Model versioning</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#basic-steps">Basic steps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#make-your-model-work-on-all-frameworks">Make your model work on all frameworks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#check-the-directory-before-pushing-to-the-model-hub">Check the directory before pushing to the model hub.</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#uploading-your-files">Uploading your files</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#add-a-model-card">Add a model card</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#using-your-model">Using your model</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#workflow-in-a-colab-notebook">Workflow in a Colab notebook</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tokenizer_summary.html">Summary of the tokenizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multilingual.html">Multi-lingual models</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Advanced guides</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pretrained_models.html">Pretrained models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="custom_datasets.html">Fine-tuning with custom datasets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks.html">🤗 Transformers Notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="converting_tensorflow_models.html">Converting Tensorflow Checkpoints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="migration.html">Migrating from previous packages</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">How to contribute to transformers?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Exporting transformers models</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Research</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="bertology.html">BERTology</a></li>
+<li class="toctree-l1"><a class="reference internal" href="perplexity.html">Perplexity of fixed-length models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="benchmarks.html">Benchmarks</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Main Classes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/callback.html">Callbacks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/logging.html">Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/model.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/optimizer_schedules.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/output.html">Model outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/pipelines.html">Pipelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/processors.html">Processors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/tokenizer.html">Tokenizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/trainer.html">Trainer</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Models</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/albert.html">ALBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/auto.html">Auto Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/bart.html">BART</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/barthez.html">BARThez</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/bert.html">BERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/bertweet.html">Bertweet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/bertgeneration.html">BertGeneration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/blenderbot.html">Blenderbot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/blenderbot_small.html">Blenderbot Small</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/camembert.html">CamemBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/ctrl.html">CTRL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/deberta.html">DeBERTa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/dialogpt.html">DialoGPT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/distilbert.html">DistilBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/dpr.html">DPR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/electra.html">ELECTRA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/encoderdecoder.html">Encoder Decoder Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/flaubert.html">FlauBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/fsmt.html">FSMT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/funnel.html">Funnel Transformer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/herbert.html">herBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/layoutlm.html">LayoutLM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/led.html">LED</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/longformer.html">Longformer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/lxmert.html">LXMERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/marian.html">MarianMT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/mbart.html">MBart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/mobilebert.html">MobileBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/mpnet.html">MPNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/mt5.html">MT5</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/gpt.html">OpenAI GPT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/gpt2.html">OpenAI GPT2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/pegasus.html">Pegasus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/phobert.html">PhoBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/prophetnet.html">ProphetNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/rag.html">RAG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/reformer.html">Reformer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/retribert.html">RetriBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/roberta.html">RoBERTa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/squeezebert.html">SqueezeBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/t5.html">T5</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/tapas.html">TAPAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/transformerxl.html">Transformer XL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/xlm.html">XLM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/xlmprophetnet.html">XLM-ProphetNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/xlmroberta.html">XLM-RoBERTa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/xlnet.html">XLNet</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Internal Helpers</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="internal/modeling_utils.html">Custom Layers and Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="internal/pipelines_utils.html">Utilities for pipelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="internal/tokenization_utils.html">Utilities for Tokenizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="internal/trainer_utils.html">Utilities for Trainer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="internal/generation_utils.html">Utilities for Generation</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">transformers</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Model sharing and uploading</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/model_sharing.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="model-sharing-and-uploading">
+<h1>Model sharing and uploading<a class="headerlink" href="#model-sharing-and-uploading" title="Permalink to this headline">¶</a></h1>
+<p>In this page, we will show you how to share a model you have trained or fine-tuned on new data with the community on
+the <a class="reference external" href="https://huggingface.co/models">model hub</a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>You will need to create an account on <a class="reference external" href="https://huggingface.co/join">huggingface.co</a> for this.</p>
+<p>Optionally, you can join an existing organization or create a new one.</p>
+</div>
+<div class="section" id="prepare-your-model-for-uploading">
+<h2>Prepare your model for uploading<a class="headerlink" href="#prepare-your-model-for-uploading" title="Permalink to this headline">¶</a></h2>
+<p>We have seen in the <a class="reference internal" href="training.html"><span class="doc">training tutorial</span></a>: how to fine-tune a model on a given task. You have probably
+done something similar on your task, either using the model directly in your own training loop or using the
+<a class="reference internal" href="main_classes/trainer.html#transformers.Trainer" title="transformers.Trainer"><code class="xref py py-class docutils literal notranslate"><span class="pre">Trainer</span></code></a>/<a class="reference internal" href="main_classes/trainer.html#transformers.TFTrainer" title="transformers.TFTrainer"><code class="xref py py-class docutils literal notranslate"><span class="pre">TFTrainer</span></code></a> class. Let’s see how you can share the result on the
+<a class="reference external" href="https://huggingface.co/models">model hub</a>.</p>
+<div class="section" id="model-versioning">
+<h3>Model versioning<a class="headerlink" href="#model-versioning" title="Permalink to this headline">¶</a></h3>
+<p>Since version v3.5.0, the model hub has built-in model versioning based on git and git-lfs. It is based on the paradigm
+that one model <em>is</em> one repo.</p>
+<p>This allows:</p>
+<ul class="simple">
+<li><p>built-in versioning</p></li>
+<li><p>access control</p></li>
+<li><p>scalability</p></li>
+</ul>
+<p>This is built around <em>revisions</em>, which is a way to pin a specific version of a model, using a commit hash, tag or
+branch.</p>
+<p>For instance:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">AutoModel</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="s2">&quot;julien-c/EsperBERTo-small&quot;</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="n">revision</span><span class="o">=</span><span class="s2">&quot;v2.0.1&quot;</span> <span class="c1"># tag name, or branch name, or commit hash</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="basic-steps">
+<h3>Basic steps<a class="headerlink" href="#basic-steps" title="Permalink to this headline">¶</a></h3>
+<p>In order to upload a model, you’ll need to first create a git repo. This repo will live on the model hub, allowing
+users to clone it and you (and your organization members) to push to it.</p>
+<p>You can create a model repo <strong>directly from `the /new page on the website &lt;https://huggingface.co/new&gt;`__.</strong></p>
+<p>Alternatively, you can use the <code class="docutils literal notranslate"><span class="pre">transformers-cli</span></code>. The next steps describe that process:</p>
+<p>Go to a terminal and run the following command. It should be in the virtual environment where you installed 🤗
+Transformers, since that command <code class="xref py py-obj docutils literal notranslate"><span class="pre">transformers-cli</span></code> comes from the library.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>transformers-cli login
+</pre></div>
+</div>
+<p>Once you are logged in with your model hub credentials, you can start building your repositories. To create a repo:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>transformers-cli repo create your-model-name
+</pre></div>
+</div>
+<p>If you want to create a repo under a specific organization, you should add a <cite>–organization</cite> flag:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>transformers-cli repo create your-model-name --organization your-org-name
+</pre></div>
+</div>
+<p>This creates a repo on the model hub, which can be cloned.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Make sure you have git-lfs installed</span>
+<span class="c1"># (https://git-lfs.github.com/)</span>
+git lfs install
+
+git clone https://huggingface.co/username/your-model-name
+</pre></div>
+</div>
+<p>When you have your local clone of your repo and lfs installed, you can then add/remove from that clone as you would
+with any other git repo.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Commit as usual</span>
+<span class="nb">cd</span> your-model-name
+<span class="nb">echo</span> <span class="s2">&quot;hello&quot;</span> &gt;&gt; README.md
+git add . <span class="o">&amp;&amp;</span> git commit -m <span class="s2">&quot;Update from </span><span class="nv">$USER</span><span class="s2">&quot;</span>
+</pre></div>
+</div>
+<p>We are intentionally not wrapping git too much, so that you can go on with the workflow you’re used to and the tools
+you already know.</p>
+<p>The only learning curve you might have compared to regular git is the one for git-lfs. The documentation at
+<a class="reference external" href="https://git-lfs.github.com/">git-lfs.github.com</a> is decent, but we’ll work on a tutorial with some tips and tricks
+in the coming weeks!</p>
+<p>Additionally, if you want to change multiple repos at once, the <a class="reference external" href="https://github.com/huggingface/efficient_scripts/blob/main/change_config.py">change_config.py script</a> can probably save you some time.</p>
+</div>
+<div class="section" id="make-your-model-work-on-all-frameworks">
+<h3>Make your model work on all frameworks<a class="headerlink" href="#make-your-model-work-on-all-frameworks" title="Permalink to this headline">¶</a></h3>
+<p>You probably have your favorite framework, but so will other users! That’s why it’s best to upload your model with both
+PyTorch <cite>and</cite> TensorFlow checkpoints to make it easier to use (if you skip this step, users will still be able to load
+your model in another framework, but it will be slower, as it will have to be converted on the fly). Don’t worry, it’s
+super easy to do (and in a future version, it might all be automatic). You will need to install both PyTorch and
+TensorFlow for this step, but you don’t need to worry about the GPU, so it should be very easy. Check the <a class="reference external" href="https://www.tensorflow.org/install/pip#tensorflow-2.0-rc-is-available">TensorFlow
+installation page</a> and/or the <a class="reference external" href="https://pytorch.org/get-started/locally/#start-locally">PyTorch
+installation page</a> to see how.</p>
+<p>First check that your model class exists in the other framework, that is try to import the same model by either adding
+or removing TF. For instance, if you trained a <a class="reference internal" href="model_doc/distilbert.html#transformers.DistilBertForSequenceClassification" title="transformers.DistilBertForSequenceClassification"><code class="xref py py-class docutils literal notranslate"><span class="pre">DistilBertForSequenceClassification</span></code></a>, try to type</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">transformers</span> <span class="kn">import</span> <span class="n">TFDistilBertForSequenceClassification</span>
+</pre></div>
+</div>
+<p>and if you trained a <a class="reference internal" href="model_doc/distilbert.html#transformers.TFDistilBertForSequenceClassification" title="transformers.TFDistilBertForSequenceClassification"><code class="xref py py-class docutils literal notranslate"><span class="pre">TFDistilBertForSequenceClassification</span></code></a>, try to type</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">transformers</span> <span class="kn">import</span> <span class="n">DistilBertForSequenceClassification</span>
+</pre></div>
+</div>
+<p>This will give back an error if your model does not exist in the other framework (something that should be pretty rare
+since we’re aiming for full parity between the two frameworks). In this case, skip this and go to the next step.</p>
+<p>Now, if you trained your model in PyTorch and have to create a TensorFlow version, adapt the following code to your
+model class:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tf_model</span> <span class="o">=</span> <span class="n">TFDistilBertForSequenceClassification</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;path/to/awesome-name-you-picked&quot;</span><span class="p">,</span> <span class="n">from_pt</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tf_model</span><span class="o">.</span><span class="n">save_pretrained</span><span class="p">(</span><span class="s2">&quot;path/to/awesome-name-you-picked&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>and if you trained your model in TensorFlow and have to create a PyTorch version, adapt the following code to your
+model class:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">pt_model</span> <span class="o">=</span> <span class="n">DistilBertForSequenceClassification</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;path/to/awesome-name-you-picked&quot;</span><span class="p">,</span> <span class="n">from_tf</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">pt_model</span><span class="o">.</span><span class="n">save_pretrained</span><span class="p">(</span><span class="s2">&quot;path/to/awesome-name-you-picked&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>That’s all there is to it!</p>
+</div>
+<div class="section" id="check-the-directory-before-pushing-to-the-model-hub">
+<h3>Check the directory before pushing to the model hub.<a class="headerlink" href="#check-the-directory-before-pushing-to-the-model-hub" title="Permalink to this headline">¶</a></h3>
+<p>Make sure there are no garbage files in the directory you’ll upload. It should only have:</p>
+<ul class="simple">
+<li><p>a <cite>config.json</cite> file, which saves the <a class="reference internal" href="main_classes/configuration.html"><span class="doc">configuration</span></a> of your model ;</p></li>
+<li><p>a <cite>pytorch_model.bin</cite> file, which is the PyTorch checkpoint (unless you can’t have it for some reason) ;</p></li>
+<li><p>a <cite>tf_model.h5</cite> file, which is the TensorFlow checkpoint (unless you can’t have it for some reason) ;</p></li>
+<li><p>a <cite>special_tokens_map.json</cite>, which is part of your <a class="reference internal" href="main_classes/tokenizer.html"><span class="doc">tokenizer</span></a> save;</p></li>
+<li><p>a <cite>tokenizer_config.json</cite>, which is part of your <a class="reference internal" href="main_classes/tokenizer.html"><span class="doc">tokenizer</span></a> save;</p></li>
+<li><p>files named <cite>vocab.json</cite>, <cite>vocab.txt</cite>, <cite>merges.txt</cite>, or similar, which contain the vocabulary of your tokenizer, part
+of your <a class="reference internal" href="main_classes/tokenizer.html"><span class="doc">tokenizer</span></a> save;</p></li>
+<li><p>maybe a <cite>added_tokens.json</cite>, which is part of your <a class="reference internal" href="main_classes/tokenizer.html"><span class="doc">tokenizer</span></a> save.</p></li>
+</ul>
+<p>Other files can safely be deleted.</p>
+</div>
+</div>
+<div class="section" id="uploading-your-files">
+<h2>Uploading your files<a class="headerlink" href="#uploading-your-files" title="Permalink to this headline">¶</a></h2>
+<p>Once the repo is cloned, you can add the model, configuration and tokenizer files. For instance, saving the model and
+tokenizer files:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">model</span><span class="o">.</span><span class="n">save_pretrained</span><span class="p">(</span><span class="s2">&quot;path/to/repo/clone/your-model-name&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tokenizer</span><span class="o">.</span><span class="n">save_pretrained</span><span class="p">(</span><span class="s2">&quot;path/to/repo/clone/your-model-name&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Or, if you’re using the Trainer API</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">trainer</span><span class="o">.</span><span class="n">save_model</span><span class="p">(</span><span class="s2">&quot;path/to/awesome-name-you-picked&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">tokenizer</span><span class="o">.</span><span class="n">save_pretrained</span><span class="p">(</span><span class="s2">&quot;path/to/repo/clone/your-model-name&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can then add these files to the staging environment and verify that they have been correctly staged with the <code class="docutils literal notranslate"><span class="pre">git</span>
+<span class="pre">status</span></code> command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git add --all
+git status
+</pre></div>
+</div>
+<p>Finally, the files should be committed:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git commit -m <span class="s2">&quot;First version of the your-model-name model and tokenizer.&quot;</span>
+</pre></div>
+</div>
+<p>And pushed to the remote:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git push
+</pre></div>
+</div>
+<p>This will upload the folder containing the weights, tokenizer and configuration we have just prepared.</p>
+<div class="section" id="add-a-model-card">
+<h3>Add a model card<a class="headerlink" href="#add-a-model-card" title="Permalink to this headline">¶</a></h3>
+<p>To make sure everyone knows what your model can do, what its limitations, potential bias or ethical considerations are,
+please add a README.md model card to your model repo. You can just create it, or there’s also a convenient button
+titled “Add a README.md” on your model page. A model card template can be found <a class="reference external" href="https://github.com/huggingface/model_card">here</a> (meta-suggestions are welcome). model card template (meta-suggestions
+are welcome).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Model cards used to live in the 🤗 Transformers repo under <cite>model_cards/</cite>, but for consistency and scalability we
+migrated every model card from the repo to its corresponding huggingface.co model repo.</p>
+</div>
+<p>If your model is fine-tuned from another model coming from the model hub (all 🤗 Transformers pretrained models do),
+don’t forget to link to its model card so that people can fully trace how your model was built.</p>
+</div>
+<div class="section" id="using-your-model">
+<h3>Using your model<a class="headerlink" href="#using-your-model" title="Permalink to this headline">¶</a></h3>
+<p>Your model now has a page on huggingface.co/models 🔥</p>
+<p>Anyone can load it from code:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;namespace/awesome-name-you-picked&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">AutoModel</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;namespace/awesome-name-you-picked&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You may specify a revision by using the <code class="docutils literal notranslate"><span class="pre">revision</span></code> flag in the <code class="docutils literal notranslate"><span class="pre">from_pretrained</span></code> method:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="s2">&quot;julien-c/EsperBERTo-small&quot;</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>  <span class="n">revision</span><span class="o">=</span><span class="s2">&quot;v2.0.1&quot;</span> <span class="c1"># tag name, or branch name, or commit hash</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="workflow-in-a-colab-notebook">
+<h2>Workflow in a Colab notebook<a class="headerlink" href="#workflow-in-a-colab-notebook" title="Permalink to this headline">¶</a></h2>
+<p>If you’re in a Colab notebook (or similar) with no direct access to a terminal, here is the workflow you can use to
+upload your model. You can execute each one of them in a cell by adding a ! at the beginning.</p>
+<p>First you need to install <cite>git-lfs</cite> in the environment used by the notebook:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sudo apt-get install git-lfs
+</pre></div>
+</div>
+<p>Then you can use either create a repo directly from <a class="reference external" href="https://huggingface.co/">huggingface.co</a> , or use the
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">transformers-cli</span></code> to create it:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>transformers-cli login
+transformers-cli repo create your-model-name
+</pre></div>
+</div>
+<p>Once it’s created, you can clone it and configure it (replace username by your username on huggingface.co):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git lfs install
+
+git clone https://username:password@huggingface.co/username/your-model-name
+<span class="c1"># Alternatively if you have a token,</span>
+<span class="c1"># you can use it instead of your password</span>
+git clone https://username:token@huggingface.co/username/your-model-name
+
+<span class="nb">cd</span> your-model-name
+git config --global user.email <span class="s2">&quot;email@example.com&quot;</span>
+<span class="c1"># Tip: using the same email than for your huggingface.co account will link your commits to your profile</span>
+git config --global user.name <span class="s2">&quot;Your name&quot;</span>
+</pre></div>
+</div>
+<p>Once you’ve saved your model inside, and your clone is setup with the right remote URL, you can add it and push it with
+usual git commands.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git add .
+git commit -m <span class="s2">&quot;Initial commit&quot;</span>
+git push
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="tokenizer_summary.html" class="btn btn-neutral float-right" title="Summary of the tokenizers" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="training.html" class="btn btn-neutral float-left" title="Training and fine-tuning" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2020, The Hugging Face Team, Licenced under the Apache License, Version 2.0.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+    <!-- Theme Analytics -->
+    <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-83738774-2', 'auto');
+    
+    ga('send', 'pageview');
+    </script>
+
+    
+   
+
+</body>
+</html>

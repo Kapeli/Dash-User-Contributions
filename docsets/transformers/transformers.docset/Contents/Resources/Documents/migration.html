@@ -1,0 +1,658 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Migrating from previous packages &mdash; transformers 4.2.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/copybutton.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/huggingface.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/code-snippets.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/hidesidebar.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/clipboard.min.js"></script>
+        <script src="_static/copybutton.js"></script>
+        <script src="_static/js/custom.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="How to contribute to transformers?" href="contributing.html" />
+    <link rel="prev" title="Converting Tensorflow Checkpoints" href="converting_tensorflow_models.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> transformers
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Get started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quicktour.html">Quick tour</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="philosophy.html">Philosophy</a></li>
+<li class="toctree-l1"><a class="reference internal" href="glossary.html">Glossary</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Using 🤗 Transformers</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="task_summary.html">Summary of the tasks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_summary.html">Summary of the models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="preprocessing.html">Preprocessing data</a></li>
+<li class="toctree-l1"><a class="reference internal" href="training.html">Training and fine-tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_sharing.html">Model sharing and uploading</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tokenizer_summary.html">Summary of the tokenizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="multilingual.html">Multi-lingual models</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Advanced guides</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="pretrained_models.html">Pretrained models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="custom_datasets.html">Fine-tuning with custom datasets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks.html">🤗 Transformers Notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="converting_tensorflow_models.html">Converting Tensorflow Checkpoints</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Migrating from previous packages</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#migrating-from-transformers-v3-x-to-v4-x">Migrating from transformers <code class="docutils literal notranslate"><span class="pre">v3.x</span></code> to <code class="docutils literal notranslate"><span class="pre">v4.x</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#autotokenizers-and-pipelines-now-use-fast-rust-tokenizers-by-default">1. AutoTokenizers and pipelines now use fast (rust) tokenizers by default.</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#how-to-obtain-the-same-behavior-as-v3-x-in-v4-x">How to obtain the same behavior as v3.x in v4.x</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#sentencepiece-is-removed-from-the-required-dependencies">2. SentencePiece is removed from the required dependencies</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id1">How to obtain the same behavior as v3.x in v4.x</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#the-architecture-of-the-repo-has-been-updated-so-that-each-model-resides-in-its-folder">3. The architecture of the repo has been updated so that each model resides in its folder</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id2">How to obtain the same behavior as v3.x in v4.x</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#switching-the-return-dict-argument-to-true-by-default">4. Switching the <code class="docutils literal notranslate"><span class="pre">return_dict</span></code> argument to <code class="docutils literal notranslate"><span class="pre">True</span></code> by default</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id3">How to obtain the same behavior as v3.x in v4.x</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#removed-some-deprecated-attributes">5. Removed some deprecated attributes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#migrating-from-pytorch-transformers-to-transformers">Migrating from pytorch-transformers to 🤗 Transformers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#positional-order-of-some-models-keywords-inputs-attention-mask-token-type-ids-changed">Positional order of some models’ keywords inputs (<code class="docutils literal notranslate"><span class="pre">attention_mask</span></code>, <code class="docutils literal notranslate"><span class="pre">token_type_ids</span></code>…) changed</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#migrating-from-pytorch-pretrained-bert">Migrating from pytorch-pretrained-bert</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#models-always-output-tuples">Models always output <code class="docutils literal notranslate"><span class="pre">tuples</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#serialization">Serialization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#optimizers-bertadam-openaiadam-are-now-adamw-schedules-are-standard-pytorch-schedules">Optimizers: BertAdam &amp; OpenAIAdam are now AdamW, schedules are standard PyTorch schedules</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">How to contribute to transformers?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="serialization.html">Exporting transformers models</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Research</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="bertology.html">BERTology</a></li>
+<li class="toctree-l1"><a class="reference internal" href="perplexity.html">Perplexity of fixed-length models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="benchmarks.html">Benchmarks</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Main Classes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/callback.html">Callbacks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/logging.html">Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/model.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/optimizer_schedules.html">Optimization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/output.html">Model outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/pipelines.html">Pipelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/processors.html">Processors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/tokenizer.html">Tokenizer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="main_classes/trainer.html">Trainer</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Models</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/albert.html">ALBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/auto.html">Auto Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/bart.html">BART</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/barthez.html">BARThez</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/bert.html">BERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/bertweet.html">Bertweet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/bertgeneration.html">BertGeneration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/blenderbot.html">Blenderbot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/blenderbot_small.html">Blenderbot Small</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/camembert.html">CamemBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/ctrl.html">CTRL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/deberta.html">DeBERTa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/dialogpt.html">DialoGPT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/distilbert.html">DistilBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/dpr.html">DPR</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/electra.html">ELECTRA</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/encoderdecoder.html">Encoder Decoder Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/flaubert.html">FlauBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/fsmt.html">FSMT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/funnel.html">Funnel Transformer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/herbert.html">herBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/layoutlm.html">LayoutLM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/led.html">LED</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/longformer.html">Longformer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/lxmert.html">LXMERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/marian.html">MarianMT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/mbart.html">MBart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/mobilebert.html">MobileBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/mpnet.html">MPNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/mt5.html">MT5</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/gpt.html">OpenAI GPT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/gpt2.html">OpenAI GPT2</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/pegasus.html">Pegasus</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/phobert.html">PhoBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/prophetnet.html">ProphetNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/rag.html">RAG</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/reformer.html">Reformer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/retribert.html">RetriBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/roberta.html">RoBERTa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/squeezebert.html">SqueezeBERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/t5.html">T5</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/tapas.html">TAPAS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/transformerxl.html">Transformer XL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/xlm.html">XLM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/xlmprophetnet.html">XLM-ProphetNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/xlmroberta.html">XLM-RoBERTa</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model_doc/xlnet.html">XLNet</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Internal Helpers</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="internal/modeling_utils.html">Custom Layers and Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="internal/pipelines_utils.html">Utilities for pipelines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="internal/tokenization_utils.html">Utilities for Tokenizers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="internal/trainer_utils.html">Utilities for Trainer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="internal/generation_utils.html">Utilities for Generation</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">transformers</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Migrating from previous packages</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/migration.md.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <!---
+Copyright 2020 The HuggingFace Team. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+--><div class="section" id="migrating-from-previous-packages">
+<h1>Migrating from previous packages<a class="headerlink" href="#migrating-from-previous-packages" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="migrating-from-transformers-v3-x-to-v4-x">
+<h2>Migrating from transformers <code class="docutils literal notranslate"><span class="pre">v3.x</span></code> to <code class="docutils literal notranslate"><span class="pre">v4.x</span></code><a class="headerlink" href="#migrating-from-transformers-v3-x-to-v4-x" title="Permalink to this headline">¶</a></h2>
+<p>A couple of changes were introduced when the switch from version 3 to version 4 was done. Below is a summary of the
+expected changes:</p>
+<div class="section" id="autotokenizers-and-pipelines-now-use-fast-rust-tokenizers-by-default">
+<h3>1. AutoTokenizers and pipelines now use fast (rust) tokenizers by default.<a class="headerlink" href="#autotokenizers-and-pipelines-now-use-fast-rust-tokenizers-by-default" title="Permalink to this headline">¶</a></h3>
+<p>The python and rust tokenizers have roughly the same API, but the rust tokenizers have a more complete feature set.</p>
+<p>This introduces two breaking changes:</p>
+<ul class="simple">
+<li><p>The handling of overflowing tokens between the python and rust tokenizers is different.</p></li>
+<li><p>The rust tokenizers do not accept integers in the encoding methods.</p></li>
+</ul>
+<div class="section" id="how-to-obtain-the-same-behavior-as-v3-x-in-v4-x">
+<h4>How to obtain the same behavior as v3.x in v4.x<a class="headerlink" href="#how-to-obtain-the-same-behavior-as-v3-x-in-v4-x" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li><p>The pipelines now contain additional features out of the box. See the <a class="reference external" href="https://huggingface.co/transformers/main_classes/pipelines.html?highlight=textclassification#tokenclassificationpipeline">token-classification pipeline with the <code class="docutils literal notranslate"><span class="pre">grouped_entities</span></code> flag</a>.</p></li>
+<li><p>The auto-tokenizers now return rust tokenizers. In order to obtain the python tokenizers instead, the user may use the <code class="docutils literal notranslate"><span class="pre">use_fast</span></code> flag by setting it to <code class="docutils literal notranslate"><span class="pre">False</span></code>:</p></li>
+</ul>
+<p>In version <code class="docutils literal notranslate"><span class="pre">v3.x</span></code>:</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">transformers</span> <span class="kn">import</span> <span class="n">AutoTokenizer</span>
+
+<span class="n">tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;bert-base-cased&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>to obtain the same in version <code class="docutils literal notranslate"><span class="pre">v4.x</span></code>:</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">transformers</span> <span class="kn">import</span> <span class="n">AutoTokenizer</span>
+
+<span class="n">tokenizer</span> <span class="o">=</span> <span class="n">AutoTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s2">&quot;bert-base-cased&quot;</span><span class="p">,</span> <span class="n">use_fast</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="sentencepiece-is-removed-from-the-required-dependencies">
+<h3>2. SentencePiece is removed from the required dependencies<a class="headerlink" href="#sentencepiece-is-removed-from-the-required-dependencies" title="Permalink to this headline">¶</a></h3>
+<p>The requirement on the SentencePiece dependency has been lifted from the <code class="docutils literal notranslate"><span class="pre">setup.py</span></code>. This is done so that we may have a channel on anaconda cloud without relying on <code class="docutils literal notranslate"><span class="pre">conda-forge</span></code>. This means that the tokenizers that depend on the SentencePiece library will not be available with a standard <code class="docutils literal notranslate"><span class="pre">transformers</span></code> installation.</p>
+<p>This includes the <strong>slow</strong> versions of:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">XLNetTokenizer</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">AlbertTokenizer</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">CamembertTokenizer</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MBartTokenizer</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PegasusTokenizer</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">T5Tokenizer</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ReformerTokenizer</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">XLMRobertaTokenizer</span></code></p></li>
+</ul>
+<div class="section" id="id1">
+<h4>How to obtain the same behavior as v3.x in v4.x<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h4>
+<p>In order to obtain the same behavior as version <code class="docutils literal notranslate"><span class="pre">v3.x</span></code>, you should install <code class="docutils literal notranslate"><span class="pre">sentencepiece</span></code> additionally:</p>
+<p>In version <code class="docutils literal notranslate"><span class="pre">v3.x</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip install transformers
+</pre></div>
+</div>
+<p>to obtain the same in version <code class="docutils literal notranslate"><span class="pre">v4.x</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip install transformers<span class="o">[</span>sentencepiece<span class="o">]</span>
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip install transformers sentencepiece
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="the-architecture-of-the-repo-has-been-updated-so-that-each-model-resides-in-its-folder">
+<h3>3. The architecture of the repo has been updated so that each model resides in its folder<a class="headerlink" href="#the-architecture-of-the-repo-has-been-updated-so-that-each-model-resides-in-its-folder" title="Permalink to this headline">¶</a></h3>
+<p>The past and foreseeable addition of new models means that the number of files in the directory <code class="docutils literal notranslate"><span class="pre">src/transformers</span></code> keeps growing and becomes harder to navigate and understand. We made the choice to put each model and the files accompanying it in their own sub-directories.</p>
+<p>This is a breaking change as importing intermediary layers using a model’s module directly needs to be done via a different path.</p>
+<div class="section" id="id2">
+<h4>How to obtain the same behavior as v3.x in v4.x<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h4>
+<p>In order to obtain the same behavior as version <code class="docutils literal notranslate"><span class="pre">v3.x</span></code>, you should update the path used to access the layers.</p>
+<p>In version <code class="docutils literal notranslate"><span class="pre">v3.x</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>from transformers.modeling_bert import BertLayer
+</pre></div>
+</div>
+<p>to obtain the same in version <code class="docutils literal notranslate"><span class="pre">v4.x</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>from transformers.models.bert.modeling_bert import BertLayer
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="switching-the-return-dict-argument-to-true-by-default">
+<h3>4. Switching the <code class="docutils literal notranslate"><span class="pre">return_dict</span></code> argument to <code class="docutils literal notranslate"><span class="pre">True</span></code> by default<a class="headerlink" href="#switching-the-return-dict-argument-to-true-by-default" title="Permalink to this headline">¶</a></h3>
+<p>The <a class="reference external" href="https://huggingface.co/transformers/main_classes/output.html"><code class="docutils literal notranslate"><span class="pre">return_dict</span></code> argument</a> enables the return of dict-like python objects containing the model outputs, instead of the standard tuples. This object is self-documented as keys can be used to retrieve values, while also behaving as a tuple as users may retrieve objects by index or by slice.</p>
+<p>This is a breaking change as the limitation of that tuple is that it cannot be unpacked: <code class="docutils literal notranslate"><span class="pre">value0,</span> <span class="pre">value1</span> <span class="pre">=</span> <span class="pre">outputs</span></code> will not work.</p>
+<div class="section" id="id3">
+<h4>How to obtain the same behavior as v3.x in v4.x<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h4>
+<p>In order to obtain the same behavior as version <code class="docutils literal notranslate"><span class="pre">v3.x</span></code>, you should specify the <code class="docutils literal notranslate"><span class="pre">return_dict</span></code> argument to <code class="docutils literal notranslate"><span class="pre">False</span></code>, either in the model configuration or during the forward pass.</p>
+<p>In version <code class="docutils literal notranslate"><span class="pre">v3.x</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">model</span> <span class="o">=</span> BertModel.from_pretrained<span class="o">(</span><span class="s2">&quot;bert-base-cased&quot;</span><span class="o">)</span>
+<span class="nv">outputs</span> <span class="o">=</span> model<span class="o">(</span>**inputs<span class="o">)</span>
+</pre></div>
+</div>
+<p>to obtain the same in version <code class="docutils literal notranslate"><span class="pre">v4.x</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">model</span> <span class="o">=</span> BertModel.from_pretrained<span class="o">(</span><span class="s2">&quot;bert-base-cased&quot;</span><span class="o">)</span>
+<span class="nv">outputs</span> <span class="o">=</span> model<span class="o">(</span>**inputs, <span class="nv">return_dict</span><span class="o">=</span>False<span class="o">)</span>
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">model</span> <span class="o">=</span> BertModel.from_pretrained<span class="o">(</span><span class="s2">&quot;bert-base-cased&quot;</span>, <span class="nv">return_dict</span><span class="o">=</span>False<span class="o">)</span>
+<span class="nv">outputs</span> <span class="o">=</span> model<span class="o">(</span>**inputs<span class="o">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="removed-some-deprecated-attributes">
+<h3>5. Removed some deprecated attributes<a class="headerlink" href="#removed-some-deprecated-attributes" title="Permalink to this headline">¶</a></h3>
+<p>Attributes that were deprecated have been removed if they had been deprecated for at least a month. The full list of deprecated attributes can be found in <a class="reference external" href="https://github.com/huggingface/transformers/pull/8604">#8604</a>.</p>
+<p>Here is a list of these attributes/methods/arguments and what their replacements should be:</p>
+<p>In several models, the labels become consistent with the other models:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">masked_lm_labels</span></code> becomes <code class="docutils literal notranslate"><span class="pre">labels</span></code> in <code class="docutils literal notranslate"><span class="pre">AlbertForMaskedLM</span></code> and <code class="docutils literal notranslate"><span class="pre">AlbertForPreTraining</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">masked_lm_labels</span></code> becomes <code class="docutils literal notranslate"><span class="pre">labels</span></code> in <code class="docutils literal notranslate"><span class="pre">BertForMaskedLM</span></code> and <code class="docutils literal notranslate"><span class="pre">BertForPreTraining</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">masked_lm_labels</span></code> becomes <code class="docutils literal notranslate"><span class="pre">labels</span></code> in <code class="docutils literal notranslate"><span class="pre">DistilBertForMaskedLM</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">masked_lm_labels</span></code> becomes <code class="docutils literal notranslate"><span class="pre">labels</span></code> in <code class="docutils literal notranslate"><span class="pre">ElectraForMaskedLM</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">masked_lm_labels</span></code> becomes <code class="docutils literal notranslate"><span class="pre">labels</span></code> in <code class="docutils literal notranslate"><span class="pre">LongformerForMaskedLM</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">masked_lm_labels</span></code> becomes <code class="docutils literal notranslate"><span class="pre">labels</span></code> in <code class="docutils literal notranslate"><span class="pre">MobileBertForMaskedLM</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">masked_lm_labels</span></code> becomes <code class="docutils literal notranslate"><span class="pre">labels</span></code> in <code class="docutils literal notranslate"><span class="pre">RobertaForMaskedLM</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lm_labels</span></code> becomes <code class="docutils literal notranslate"><span class="pre">labels</span></code> in <code class="docutils literal notranslate"><span class="pre">BartForConditionalGeneration</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lm_labels</span></code> becomes <code class="docutils literal notranslate"><span class="pre">labels</span></code> in <code class="docutils literal notranslate"><span class="pre">GPT2DoubleHeadsModel</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lm_labels</span></code> becomes <code class="docutils literal notranslate"><span class="pre">labels</span></code> in <code class="docutils literal notranslate"><span class="pre">OpenAIGPTDoubleHeadsModel</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lm_labels</span></code> becomes <code class="docutils literal notranslate"><span class="pre">labels</span></code> in <code class="docutils literal notranslate"><span class="pre">T5ForConditionalGeneration</span></code>.</p></li>
+</ul>
+<p>In several models, the caching mechanism becomes consistent with the other models:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">decoder_cached_states</span></code> becomes <code class="docutils literal notranslate"><span class="pre">past_key_values</span></code> in all BART-like, FSMT and T5 models.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">decoder_past_key_values</span></code> becomes <code class="docutils literal notranslate"><span class="pre">past_key_values</span></code> in all BART-like, FSMT and T5 models.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">past</span></code> becomes <code class="docutils literal notranslate"><span class="pre">past_key_values</span></code> in all CTRL models.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">past</span></code> becomes <code class="docutils literal notranslate"><span class="pre">past_key_values</span></code> in all GPT-2 models.</p></li>
+</ul>
+<p>Regarding the tokenizer classes:</p>
+<ul class="simple">
+<li><p>The tokenizer attribute <code class="docutils literal notranslate"><span class="pre">max_len</span></code> becomes <code class="docutils literal notranslate"><span class="pre">model_max_length</span></code>.</p></li>
+<li><p>The tokenizer attribute <code class="docutils literal notranslate"><span class="pre">return_lengths</span></code> becomes <code class="docutils literal notranslate"><span class="pre">return_length</span></code>.</p></li>
+<li><p>The tokenizer encoding argument <code class="docutils literal notranslate"><span class="pre">is_pretokenized</span></code> becomes <code class="docutils literal notranslate"><span class="pre">is_split_into_words</span></code>.</p></li>
+</ul>
+<p>Regarding the <code class="docutils literal notranslate"><span class="pre">Trainer</span></code> class:</p>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Trainer</span></code> argument <code class="docutils literal notranslate"><span class="pre">tb_writer</span></code> is removed in favor of the callback <code class="docutils literal notranslate"><span class="pre">TensorBoardCallback(tb_writer=...)</span></code>.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Trainer</span></code> argument <code class="docutils literal notranslate"><span class="pre">prediction_loss_only</span></code> is removed in favor of the class argument <code class="docutils literal notranslate"><span class="pre">args.prediction_loss_only</span></code>.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Trainer</span></code> attribute <code class="docutils literal notranslate"><span class="pre">data_collator</span></code> should be a callable.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Trainer</span></code> method <code class="docutils literal notranslate"><span class="pre">_log</span></code> is deprecated in favor of <code class="docutils literal notranslate"><span class="pre">log</span></code>.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Trainer</span></code> method <code class="docutils literal notranslate"><span class="pre">_training_step</span></code> is deprecated in favor of <code class="docutils literal notranslate"><span class="pre">training_step</span></code>.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Trainer</span></code> method <code class="docutils literal notranslate"><span class="pre">_prediction_loop</span></code> is deprecated in favor of <code class="docutils literal notranslate"><span class="pre">prediction_loop</span></code>.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Trainer</span></code> method <code class="docutils literal notranslate"><span class="pre">is_local_master</span></code> is deprecated in favor of <code class="docutils literal notranslate"><span class="pre">is_local_process_zero</span></code>.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Trainer</span></code> method <code class="docutils literal notranslate"><span class="pre">is_world_master</span></code> is deprecated in favor of <code class="docutils literal notranslate"><span class="pre">is_world_process_zero</span></code>.</p></li>
+</ul>
+<p>Regarding the <code class="docutils literal notranslate"><span class="pre">TFTrainer</span></code> class:</p>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">TFTrainer</span></code> argument <code class="docutils literal notranslate"><span class="pre">prediction_loss_only</span></code> is removed in favor of the class argument <code class="docutils literal notranslate"><span class="pre">args.prediction_loss_only</span></code>.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Trainer</span></code> method <code class="docutils literal notranslate"><span class="pre">_log</span></code> is deprecated in favor of <code class="docutils literal notranslate"><span class="pre">log</span></code>.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">TFTrainer</span></code> method <code class="docutils literal notranslate"><span class="pre">_prediction_loop</span></code> is deprecated in favor of <code class="docutils literal notranslate"><span class="pre">prediction_loop</span></code>.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">TFTrainer</span></code> method <code class="docutils literal notranslate"><span class="pre">_setup_wandb</span></code> is deprecated in favor of <code class="docutils literal notranslate"><span class="pre">setup_wandb</span></code>.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">TFTrainer</span></code> method <code class="docutils literal notranslate"><span class="pre">_run_model</span></code> is deprecated in favor of <code class="docutils literal notranslate"><span class="pre">run_model</span></code>.</p></li>
+</ul>
+<p>Regarding the <code class="docutils literal notranslate"><span class="pre">TrainerArgument</span></code> class:</p>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">TrainerArgument</span></code> argument <code class="docutils literal notranslate"><span class="pre">evaluate_during_training</span></code> is deprecated in favor of <code class="docutils literal notranslate"><span class="pre">evaluation_strategy</span></code>.</p></li>
+</ul>
+<p>Regarding the Transfo-XL model:</p>
+<ul class="simple">
+<li><p>The Transfo-XL configuration attribute <code class="docutils literal notranslate"><span class="pre">tie_weight</span></code> becomes <code class="docutils literal notranslate"><span class="pre">tie_words_embeddings</span></code>.</p></li>
+<li><p>The Transfo-XL modeling method <code class="docutils literal notranslate"><span class="pre">reset_length</span></code> becomes <code class="docutils literal notranslate"><span class="pre">reset_memory_length</span></code>.</p></li>
+</ul>
+<p>Regarding pipelines:</p>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">FillMaskPipeline</span></code> argument <code class="docutils literal notranslate"><span class="pre">topk</span></code> becomes <code class="docutils literal notranslate"><span class="pre">top_k</span></code>.</p></li>
+</ul>
+</div>
+</div>
+<div class="section" id="migrating-from-pytorch-transformers-to-transformers">
+<h2>Migrating from pytorch-transformers to 🤗 Transformers<a class="headerlink" href="#migrating-from-pytorch-transformers-to-transformers" title="Permalink to this headline">¶</a></h2>
+<p>Here is a quick summary of what you should take care of when migrating from <code class="docutils literal notranslate"><span class="pre">pytorch-transformers</span></code> to 🤗 Transformers.</p>
+<div class="section" id="positional-order-of-some-models-keywords-inputs-attention-mask-token-type-ids-changed">
+<h3>Positional order of some models’ keywords inputs (<code class="docutils literal notranslate"><span class="pre">attention_mask</span></code>, <code class="docutils literal notranslate"><span class="pre">token_type_ids</span></code>…) changed<a class="headerlink" href="#positional-order-of-some-models-keywords-inputs-attention-mask-token-type-ids-changed" title="Permalink to this headline">¶</a></h3>
+<p>To be able to use Torchscript (see #1010, #1204 and #1195) the specific order of some models <strong>keywords inputs</strong> (<code class="docutils literal notranslate"><span class="pre">attention_mask</span></code>, <code class="docutils literal notranslate"><span class="pre">token_type_ids</span></code>…) has been changed.</p>
+<p>If you used to call the models with keyword names for keyword arguments, e.g. <code class="docutils literal notranslate"><span class="pre">model(inputs_ids,</span> <span class="pre">attention_mask=attention_mask,</span> <span class="pre">token_type_ids=token_type_ids)</span></code>, this should not cause any change.</p>
+<p>If you used to call the models with positional inputs for keyword arguments, e.g. <code class="docutils literal notranslate"><span class="pre">model(inputs_ids,</span> <span class="pre">attention_mask,</span> <span class="pre">token_type_ids)</span></code>, you may have to double check the exact order of input arguments.</p>
+</div>
+</div>
+<div class="section" id="migrating-from-pytorch-pretrained-bert">
+<h2>Migrating from pytorch-pretrained-bert<a class="headerlink" href="#migrating-from-pytorch-pretrained-bert" title="Permalink to this headline">¶</a></h2>
+<p>Here is a quick summary of what you should take care of when migrating from <code class="docutils literal notranslate"><span class="pre">pytorch-pretrained-bert</span></code> to 🤗 Transformers</p>
+<div class="section" id="models-always-output-tuples">
+<h3>Models always output <code class="docutils literal notranslate"><span class="pre">tuples</span></code><a class="headerlink" href="#models-always-output-tuples" title="Permalink to this headline">¶</a></h3>
+<p>The main breaking change when migrating from <code class="docutils literal notranslate"><span class="pre">pytorch-pretrained-bert</span></code> to 🤗 Transformers is that the models forward method always outputs a <code class="docutils literal notranslate"><span class="pre">tuple</span></code> with various elements depending on the model and the configuration parameters.</p>
+<p>The exact content of the tuples for each model are detailed in the models’ docstrings and the <a class="reference external" href="https://huggingface.co/transformers/">documentation</a>.</p>
+<p>In pretty much every case, you will be fine by taking the first element of the output as the output you previously used in <code class="docutils literal notranslate"><span class="pre">pytorch-pretrained-bert</span></code>.</p>
+<p>Here is a <code class="docutils literal notranslate"><span class="pre">pytorch-pretrained-bert</span></code> to 🤗 Transformers conversion example for a <code class="docutils literal notranslate"><span class="pre">BertForSequenceClassification</span></code> classification model:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Let&#39;s load our model</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">BertForSequenceClassification</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;bert-base-uncased&#39;</span><span class="p">)</span>
+
+<span class="c1"># If you used to have this line in pytorch-pretrained-bert:</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">input_ids</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">)</span>
+
+<span class="c1"># Now just use this line in 🤗 Transformers to extract the loss from the output tuple:</span>
+<span class="n">outputs</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">input_ids</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">)</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="n">outputs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="c1"># In 🤗 Transformers you can also have access to the logits:</span>
+<span class="n">loss</span><span class="p">,</span> <span class="n">logits</span> <span class="o">=</span> <span class="n">outputs</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+
+<span class="c1"># And even the attention weights if you configure the model to output them (and other outputs too, see the docstrings and documentation)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">BertForSequenceClassification</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;bert-base-uncased&#39;</span><span class="p">,</span> <span class="n">output_attentions</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">outputs</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">input_ids</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">)</span>
+<span class="n">loss</span><span class="p">,</span> <span class="n">logits</span><span class="p">,</span> <span class="n">attentions</span> <span class="o">=</span> <span class="n">outputs</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="serialization">
+<h3>Serialization<a class="headerlink" href="#serialization" title="Permalink to this headline">¶</a></h3>
+<p>Breaking change in the <code class="docutils literal notranslate"><span class="pre">from_pretrained()</span></code>method:</p>
+<ol class="simple">
+<li><p>Models are now set in evaluation mode by default when instantiated with the <code class="docutils literal notranslate"><span class="pre">from_pretrained()</span></code> method. To train them don’t forget to set them back in training mode (<code class="docutils literal notranslate"><span class="pre">model.train()</span></code>) to activate the dropout modules.</p></li>
+<li><p>The additional <code class="docutils literal notranslate"><span class="pre">*inputs</span></code> and <code class="docutils literal notranslate"><span class="pre">**kwargs</span></code> arguments supplied to the <code class="docutils literal notranslate"><span class="pre">from_pretrained()</span></code> method used to be directly passed to the underlying model’s class <code class="docutils literal notranslate"><span class="pre">__init__()</span></code> method. They are now used to update the model configuration attribute first which can break derived model classes build based on the previous <code class="docutils literal notranslate"><span class="pre">BertForSequenceClassification</span></code> examples. More precisely, the positional arguments <code class="docutils literal notranslate"><span class="pre">*inputs</span></code> provided to <code class="docutils literal notranslate"><span class="pre">from_pretrained()</span></code> are directly forwarded the model <code class="docutils literal notranslate"><span class="pre">__init__()</span></code> method while the keyword arguments <code class="docutils literal notranslate"><span class="pre">**kwargs</span></code> (i) which match configuration class attributes are used to update said attributes (ii) which don’t match any configuration class attributes are forwarded to the model <code class="docutils literal notranslate"><span class="pre">__init__()</span></code> method.</p></li>
+</ol>
+<p>Also, while not a breaking change, the serialization methods have been standardized and you probably should switch to the new method <code class="docutils literal notranslate"><span class="pre">save_pretrained(save_directory)</span></code> if you were using any other serialization method before.</p>
+<p>Here is an example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1">### Let&#39;s load a model and tokenizer</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">BertForSequenceClassification</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;bert-base-uncased&#39;</span><span class="p">)</span>
+<span class="n">tokenizer</span> <span class="o">=</span> <span class="n">BertTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;bert-base-uncased&#39;</span><span class="p">)</span>
+
+<span class="c1">### Do some stuff to our model and tokenizer</span>
+<span class="c1"># Ex: add new tokens to the vocabulary and embeddings of our model</span>
+<span class="n">tokenizer</span><span class="o">.</span><span class="n">add_tokens</span><span class="p">([</span><span class="s1">&#39;[SPECIAL_TOKEN_1]&#39;</span><span class="p">,</span> <span class="s1">&#39;[SPECIAL_TOKEN_2]&#39;</span><span class="p">])</span>
+<span class="n">model</span><span class="o">.</span><span class="n">resize_token_embeddings</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">tokenizer</span><span class="p">))</span>
+<span class="c1"># Train our model</span>
+<span class="n">train</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+
+<span class="c1">### Now let&#39;s save our model and tokenizer to a directory</span>
+<span class="n">model</span><span class="o">.</span><span class="n">save_pretrained</span><span class="p">(</span><span class="s1">&#39;./my_saved_model_directory/&#39;</span><span class="p">)</span>
+<span class="n">tokenizer</span><span class="o">.</span><span class="n">save_pretrained</span><span class="p">(</span><span class="s1">&#39;./my_saved_model_directory/&#39;</span><span class="p">)</span>
+
+<span class="c1">### Reload the model and the tokenizer</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">BertForSequenceClassification</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;./my_saved_model_directory/&#39;</span><span class="p">)</span>
+<span class="n">tokenizer</span> <span class="o">=</span> <span class="n">BertTokenizer</span><span class="o">.</span><span class="n">from_pretrained</span><span class="p">(</span><span class="s1">&#39;./my_saved_model_directory/&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="optimizers-bertadam-openaiadam-are-now-adamw-schedules-are-standard-pytorch-schedules">
+<h3>Optimizers: BertAdam &amp; OpenAIAdam are now AdamW, schedules are standard PyTorch schedules<a class="headerlink" href="#optimizers-bertadam-openaiadam-are-now-adamw-schedules-are-standard-pytorch-schedules" title="Permalink to this headline">¶</a></h3>
+<p>The two optimizers previously included, <code class="docutils literal notranslate"><span class="pre">BertAdam</span></code> and <code class="docutils literal notranslate"><span class="pre">OpenAIAdam</span></code>, have been replaced by a single <code class="docutils literal notranslate"><span class="pre">AdamW</span></code> optimizer which has a few differences:</p>
+<ul class="simple">
+<li><p>it only implements weights decay correction,</p></li>
+<li><p>schedules are now externals (see below),</p></li>
+<li><p>gradient clipping is now also external (see below).</p></li>
+</ul>
+<p>The new optimizer <code class="docutils literal notranslate"><span class="pre">AdamW</span></code> matches PyTorch <code class="docutils literal notranslate"><span class="pre">Adam</span></code> optimizer API and let you use standard PyTorch or apex methods for the schedule and clipping.</p>
+<p>The schedules are now standard <a class="reference external" href="https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate">PyTorch learning rate schedulers</a> and not part of the optimizer anymore.</p>
+<p>Here is a conversion examples from <code class="docutils literal notranslate"><span class="pre">BertAdam</span></code> with a linear warmup and decay schedule to <code class="docutils literal notranslate"><span class="pre">AdamW</span></code> and the same schedule:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Parameters:</span>
+<span class="n">lr</span> <span class="o">=</span> <span class="mf">1e-3</span>
+<span class="n">max_grad_norm</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="n">num_training_steps</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">num_warmup_steps</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">warmup_proportion</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">num_warmup_steps</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">num_training_steps</span><span class="p">)</span>  <span class="c1"># 0.1</span>
+
+<span class="c1">### Previously BertAdam optimizer was instantiated like this:</span>
+<span class="n">optimizer</span> <span class="o">=</span> <span class="n">BertAdam</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span> <span class="n">schedule</span><span class="o">=</span><span class="s1">&#39;warmup_linear&#39;</span><span class="p">,</span> <span class="n">warmup</span><span class="o">=</span><span class="n">warmup_proportion</span><span class="p">,</span> <span class="n">num_training_steps</span><span class="o">=</span><span class="n">num_training_steps</span><span class="p">)</span>
+<span class="c1">### and used like this:</span>
+<span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">train_data</span><span class="p">:</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+    <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+    <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+
+<span class="c1">### In 🤗 Transformers, optimizer and schedules are split and instantiated like this:</span>
+<span class="n">optimizer</span> <span class="o">=</span> <span class="n">AdamW</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="n">lr</span><span class="p">,</span> <span class="n">correct_bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># To reproduce BertAdam specific behavior set correct_bias=False</span>
+<span class="n">scheduler</span> <span class="o">=</span> <span class="n">get_linear_schedule_with_warmup</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">num_warmup_steps</span><span class="o">=</span><span class="n">num_warmup_steps</span><span class="p">,</span> <span class="n">num_training_steps</span><span class="o">=</span><span class="n">num_training_steps</span><span class="p">)</span>  <span class="c1"># PyTorch scheduler</span>
+<span class="c1">### and used like this:</span>
+<span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="n">train_data</span><span class="p">:</span>
+    <span class="n">loss</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+    <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">clip_grad_norm_</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">max_grad_norm</span><span class="p">)</span>  <span class="c1"># Gradient clipping is not in AdamW anymore (so you can use amp without issue)</span>
+    <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+    <span class="n">scheduler</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="contributing.html" class="btn btn-neutral float-right" title="How to contribute to transformers?" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="converting_tensorflow_models.html" class="btn btn-neutral float-left" title="Converting Tensorflow Checkpoints" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2020, The Hugging Face Team, Licenced under the Apache License, Version 2.0.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+    <!-- Theme Analytics -->
+    <script>
+    (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+    })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+    ga('create', 'UA-83738774-2', 'auto');
+    
+    ga('send', 'pageview');
+    </script>
+
+    
+   
+
+</body>
+</html>
