@@ -1,5 +1,4 @@
 #!/bin/bash
-#cd ~/.local/share/Zeal/Zeal/docsets/discord.py.docset
 files=$(fd --extension html)
 for i in $files
 do

@@ -13,6 +13,6 @@ make html #build html docs
 doc2dash -n discord.py -d . _build/html #convert to docset
 ./html-formatter.sh #run formatter script to remove navbar and sidebar
 ```
-* edit version
-* add icons
-* add guides to SQLite db
+* edit version in `meta.json`
+* add icons to docset
+* add guides to `docSet.dsidx`
