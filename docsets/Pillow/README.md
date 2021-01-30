@@ -8,6 +8,7 @@ __Docset description:__
 
 __Author:__
     [TomFrank](https://github.com/TomFrank)
+    [Gerry Gao](https://github.com/hologerry)
 
 __How to generate the docset:__
 
