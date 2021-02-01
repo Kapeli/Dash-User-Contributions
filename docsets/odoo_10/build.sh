@@ -1,0 +1,31 @@
+#!/bin/bash
+
+set -e
+
+MAJOR_VERSION="10"
+ODOO_VERSION="$MAJOR_VERSION.0"
+
+git clone https://github.com/odoo/odoo.git --depth=1 --branch=$ODOO_VERSION
+
+virtualenv2 env
+source env/bin/activate
+
+pip2 install \
+    --requirement odoo/requirements.txt \
+    --requirement odoo/doc/requirements.txt
+# sphinx-patchqueue > 0.4.0 is required to fix this issue:
+# https://github.com/sphinx-doc/sphinx/issues/1888
+pip2 install --upgrade sphinx-patchqueue
+pip2 install doc2dash
+
+make --directory=odoo/doc html
+
+doc2dash \
+    --force \
+    --name "Odoo $MAJOR_VERSION" \
+    --online-redirect-url "https://www.odoo.com/documentation/$ODOO_VERSION/" \
+    --icon icon.png \
+    --index-page index.html \
+    odoo/doc/_build/html/
+
+tar --exclude='.DS_Store' -cvzf "Odoo_$MAJOR_VERSION.tgz" "Odoo $MAJOR_VERSION.docset"
