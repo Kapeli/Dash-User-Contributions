@@ -3,7 +3,11 @@ Boto3 Docset
 Boto3 is the Amazon Web Services (AWS) Software Development Kit (SDK) for Python, which allows Python developers to write software that makes use of services like Amazon S3 and Amazon EC2.
 http://boto3.readthedocs.io/en/latest/
 
+<<<<<<< HEAD
 * Boto3 Version: 1.13.2
+=======
+* Boto3 Version: 1.16.51
+>>>>>>> daee4539969911937fd29e266d25f0735f5452d3
 * Dash Docset: Updated by Randall Kahler
 * Twitter: @angrychimp
 * Github: https://github.com/angrychimp

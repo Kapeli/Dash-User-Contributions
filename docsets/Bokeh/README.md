@@ -13,14 +13,21 @@ For this version of Bokeh, I cloned the GitHub repository and checked out the 2.
 
 ```
 git clone https://github.com/bokeh/bokeh.git
+<<<<<<< HEAD
 git checkout tags/2.0.2 -b 2.0.2
 cd sphinx
 make html
+=======
+git checkout tags/2.2.1 -b 2.2.1
+cd sphinx
+make all
+>>>>>>> daee4539969911937fd29e266d25f0735f5452d3
 ```
 
 `make` will abort if certain Python modules are missing, so just install them. In my case, the requested packages were:
 
 ```
+<<<<<<< HEAD
 sphinx==3.0.3
 pandas==1.0.3
 scipy==1.4.1
@@ -28,6 +35,15 @@ colorcet==2.0.2
 bokeh==2.0.2
 nodejs==10.13.0
 networkx==2.4
+=======
+sphinx==3.2.1
+pandas==1.1.1
+scipy==1.5.2
+colorcet==2.0.2
+bokeh==2.2.1
+nodejs==10.13.0
+networkx==2.5
+>>>>>>> daee4539969911937fd29e266d25f0735f5452d3
 ```
 
 Another issue I had was this error:

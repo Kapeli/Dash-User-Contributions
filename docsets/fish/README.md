@@ -1,6 +1,10 @@
 # fish docset
 
+<<<<<<< HEAD
 * Author: [Andrei Borisov](https://github.com/andreiborisov)
+=======
+* Author: [Andrei Borisov](https://twitter.com/borisov_dev)
+>>>>>>> daee4539969911937fd29e266d25f0735f5452d3
 * Generated using: [dash-fish](https://github.com/andreiborisov/dash-fish)
 
 ## Bugs & feature requests

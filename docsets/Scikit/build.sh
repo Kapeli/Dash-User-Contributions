@@ -41,7 +41,11 @@ git cherry-pick FETCH_HEAD  # patch sphinx to avoid overwriting generated files 
 ###git cherry-pick FETCH_HEAD  # n_jobs=1
 
 pip install -U pip
+<<<<<<< HEAD
 pip install numpy scipy cython nose coverage matplotlib==2.* sphinx==2.1.2 pillow sphinx-gallery numpydoc scikit-image seaborn joblib pandas pytest
+=======
+pip install numpy scipy cython nose coverage matplotlib==2.* sphinx==2.1.2 pillow sphinx-gallery numpydoc scikit-image seaborn joblib pandas pytest sphinx-prompt
+>>>>>>> daee4539969911937fd29e266d25f0735f5452d3
 pip install doc2dash scikit-learn==$tag
 NO_MATHJAX=1 make html optipng
 cd $workdir

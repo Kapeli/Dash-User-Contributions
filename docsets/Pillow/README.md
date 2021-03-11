@@ -8,6 +8,10 @@ __Docset description:__
 
 __Author:__
     [TomFrank](https://github.com/TomFrank)
+<<<<<<< HEAD
+=======
+    [Gerry Gao](https://github.com/hologerry)
+>>>>>>> daee4539969911937fd29e266d25f0735f5452d3
 
 __How to generate the docset:__
 
