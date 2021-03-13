@@ -1,14 +1,27 @@
-# Swift 5.3 Language Guide Dash Docset
+# dash-docset-swift-language-guide
 
-[Dash docset](https://github.com/Kapeli/Dash-User-Contributions) and generation script for the [Swift 5.3 Language Guide](https://docs.swift.org/swift-book/LanguageGuide/).
+Applicable to: **Swift 5.4**
+
+[Dash docset](https://github.com/Kapeli/Dash-User-Contributions) and generation script for the [Swift Language Guide](https://docs.swift.org/swift-book/LanguageGuide/).
+
+This script will fetch the documentation from the Swift homepage, build the Dash index, and put everything in a `.build` folder in the same directory the script has been executed in.
 
 ## Features
 
-- Includes entries for each 'chapter', and its sections.
-- Tables of contents for sections.
+- Includes entries for each 'chapter' and its sub-sections.
+- Tables of contents for sub-sections.
 
-## Using/Modifying
+## Dependencies
 
-- Install [BeautifulSoup](https://www.crummy.com/software/BeautifulSoup/) (`pip3 install beatifulsoup4`) and `wget` (`brew install wget`). The script itself shoud work with the macOS-supplied `python`.
-- Clone and execute `generation_script.py` from the repo's root.
-- [URL: roeybiran/dash-docset-swift-5.3-language-guide](https://github.com/roeybiran/dash-docset-swift-5.3-language-guide)
+- Python 3.8+. Should be provided by your Mac if you're running Catalina or newer.
+- [html5lib](https://pypi.org/project/html5lib/) (`pip3 install html5lib`)
+- [beautifulsoup4](https://www.crummy.com/software/BeautifulSoup/) (`pip3 install beautifulsoup4`)
+- [wget](https://www.gnu.org/software/wget/) (`brew install wget`)
+
+## Links
+
+- [GitHub repository](https://github.com/roeybiran/dash-docset-swift-5.3-language-guide)
+
+## Issues
+
+- The "On This Page" jump menu as originally seen in the Swift website has been hidden due to some visual glitches it was causing. The Dash table of contents should offer a similar functionality.
