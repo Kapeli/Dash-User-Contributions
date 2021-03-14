@@ -38,7 +38,7 @@ To create this docset, we need two application
         "ExternalURL": "http://openframeworks.cc"
     }
     ```
-    - `dasing build .` in `build/html`
+    - `dashing build .` in `build/html`
   
 5. generate index with [doxytag2zealdb](https://github.com/vedvyas/doxytag2zealdb) in `_OF_DIR_/libs/openFrameworksCompiled/project/doxygen` directory, with terminal command below.
     ```
