@@ -17,7 +17,3 @@ This script will fetch the documentation from the Swift homepage, prepare it for
 - [html5lib](https://pypi.org/project/html5lib/) (`pip3 install html5lib`)
 - [beautifulsoup4](https://www.crummy.com/software/BeautifulSoup/) (`pip3 install beautifulsoup4`)
 - [wget](https://www.gnu.org/software/wget/) (`brew install wget`)
-
-## Issues
-
-- The "On This Page" jump menu as originally seen in the Swift website has been hidden due to some visual glitches it was causing. The Dash table of contents should offer a similar functionality.
