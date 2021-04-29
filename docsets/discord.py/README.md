@@ -1,6 +1,6 @@
 discord.py
 =======================
-[https://discordpy.readthedocs.io/en/latest/index.html](https://discordpy.readthedocs.io/en/latest/index.html)
+[https://discordpy.readthedocs.io/en/stable/index.html](https://discordpy.readthedocs.io/en/stable/index.html)
 
 Maintained by [UserBlackBox](https://github.com/UserBlackBox)
 
