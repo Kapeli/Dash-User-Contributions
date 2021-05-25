@@ -11,7 +11,7 @@ cd discord.py
 cd docs
 make html #build html docs
 doc2dash -n discord.py -d . _build/html #convert to docset
-./html-formatter.sh #run formatter script to remove navbar and sidebar
+python3 formatter.py #run formatter script to remove navbar and sidebar
 ```
 * edit version in `meta.json`
 * add icons to docset
