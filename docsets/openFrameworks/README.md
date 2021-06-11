@@ -1,4 +1,4 @@
-# Docset for openFrameworks 0.11.0
+# Docset for openFrameworks 0.11.1
 
 Created by [Yi donghoon](https://github.com/icq4ever), [@icq4ever](https://twitter.com/icq4ever)
 
@@ -15,7 +15,7 @@ To create this docset, we need two application
     - set `GENERATE_DOCSET` to `YES` 
     - set `DISABLE_INDEX` to `YES` 
     - set `GENERATE_TAGFILE` value = `openFrameworks.tag` 
-2. run `doxgen` in `_OF_DIR_/libs/openFrameworksCompiled/project/doxygen/`
+2. run `doxygen` in `_OF_DIR_/libs/openFrameworksCompiled/project/doxygen/`
 3. run `make` in the generated `build/html` directory
    > I dont know why dxidx file is not generated here. for this, we'll use `dashing`
 4. generate `dsidx` with `dashing`
@@ -38,7 +38,7 @@ To create this docset, we need two application
         "ExternalURL": "http://openframeworks.cc"
     }
     ```
-    - `dasing build .` in `build/html`
+    - `dashing build .` in `build/html`
   
 5. generate index with [doxytag2zealdb](https://github.com/vedvyas/doxytag2zealdb) in `_OF_DIR_/libs/openFrameworksCompiled/project/doxygen` directory, with terminal command below.
     ```
@@ -53,6 +53,8 @@ To create this docset, we need two application
 ---
 
 ## Contributions
+#### Docset for openFrameworks 0.11.0 
+- Created by [Yi donghoon](https://github.com/icq4ever), [@icq4ever](https://twitter.com/icq4ever)
 
 #### Docset for openFrameworks 0.10.1 
 - Created by [Yi donghoon](https://github.com/icq4ever), [@icq4ever](https://twitter.com/icq4ever)
