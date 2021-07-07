@@ -1,4 +1,4 @@
-# ARM AArch32 ISA docset
+# ARM docset
 
 * Author: [liu lei](https://github.com/leolovenet/)
 * Generated using: [dash-armref](https://github.com/leolovenet/Dash-ARMRef)
