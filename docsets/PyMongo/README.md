@@ -19,6 +19,8 @@ Updated by [Prashant Mital](https://github.com/prashantmital) to v3.9.0
 
 Updated by [Torin Kwok](https://github.com/torinkwok) to v3.10.1
 
+Updated by [Julian Torres](https://github.com/macintacos) to v3.12.0
+
 ### How to build:
 
 - install [doc2dash](https://pypi.python.org/pypi/doc2dash)
