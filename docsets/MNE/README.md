@@ -1,6 +1,7 @@
-[MNE](https://martinos.org/mne/stable/index.html)
+[MNE](https://mne-tools.github.io/)
 =======================
 
-* Created by [Felix Heilmeyer](https://github.com/heilerich)
-* This docset is created automatically, if you're interested in how it works refer to [heilerich/Dash-User-Contributions](https://github.com/heilerich/Dash-User-Contributions) 
-
+* Created by [NeuroForLunch](https://github.com/NeuroForLunch)
+* [@NeuroForLunch](https://twitter.com/NeuroForLunch)
+* This docset was created using doc2dash
+* Visit the online version at https://https://mne-tools.github.io/
