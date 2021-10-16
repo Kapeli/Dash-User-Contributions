@@ -1,34 +1,16 @@
-Standard ML Docset
-=======================
+# Standard ML docset
 
-**Author:** [Ethan Lee](https://github.com/Luminoid)
+Build requirements:
+* `svn` to get html
+* `ruby` (with `nokogiri`) to cleanup
+* `dashing` to build docset
+* `tar` to archive
 
-## How to generate the docset
-### Prerequisites
-* [Dashing](https://github.com/technosophos/dashing)
-* `dashing.json`
-```json
-{
-    "name": "Standard_ML",
-    "package": "Standard_ML",
-    "index": "manpages.html",
-    "selectors": {
-        "H2 CODE": "Section"
-    },
-    "ignore": [
-        "ABOUT"
-    ],
-    "icon32x32": "",
-    "allowJS": false,
-    "ExternalURL": "http://sml-family.org/Basis"
-}
+Build instructions:
+```shell
+git clone https://github.com/toy/SML-docset-builder.git
+cd SML-docset-builder
+make
 ```
-### initial HTML documentation
-* http://sml-family.org/Basis/manpages.html
-### How to run the generation script
-```bash
-$ cd Standard_ML
-$ dashing create
-# Now you can edit dashing.json. See below.
-$ dashing build Standard_ML
-```
+
+Scripts created by [Ivan Kuchin](https://github.com/toy)
