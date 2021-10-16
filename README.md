@@ -12,6 +12,8 @@ You can install these docsets from [Dash's](https://kapeli.com/dash) Preferences
 
 To contribute a docset, follow the steps below. If you get stuck at any point or have any questions, [open an issue](https://github.com/Kapeli/Dash-User-Contributions/issues). I'll help.
 
+**Notice:** You might qualify for a **free Dash license** if you had to write your own generation script to make the docset (e.g. docsets made using doc2dash, javadocset or similar do not qualify). Please mention your email address in the pull request if you'd like to request a free license.
+
 * Generate a docset by following the instructions at http://kapeli.com/docsets
     * Note: you can ignore the instructions regarding docset feeds. You won't need them if you plan to contribute to this repo
 * Make sure your docset fulfils all the required criteria on the [Docset Contribution Checklist](https://github.com/Kapeli/Dash-User-Contributions/wiki/Docset-Contribution-Checklist) and as many of the optional ones as possible
