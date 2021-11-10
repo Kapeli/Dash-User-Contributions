@@ -3,7 +3,7 @@ QGIS
 
 ## Author
 
-This docset is maintained by [Julien Cabieces](https://github.com/troopa81)
+This docset is maintained by [Julien Cabieces](https://github.com/troopa81) and [Antoine Facchini](https://github.com/Koyaani)
 
 ## Building
 
@@ -15,6 +15,7 @@ git clone https://github.com/qgis/QGIS.git
 Then edit Doxyfile template file *cmake_templates/Doxyfile.in* and modify these values
 ```
 GENERATE_DOCSET        = YES
+PROJECT_NAME           = "QGIS"
 DOCSET_FEEDNAME        = "QGIS"
 DOCSET_BUNDLE_ID       = QGIS_3
 DOCSET_PUBLISHER_ID    = com.QGIS
@@ -23,13 +24,13 @@ DISABLE_INDEX          = YES
 SEARCHENGINE           = NO
 GENERATE_TAGFILE       = qgis.tag
 ```
+`STRIP_FROM_PATH` could be set to remove the user-defined part of the path.
 
 Build it
 ```shell
 mkdir build
 cd build
-cmake ../ -DWITH_APIDOC=TRUE -DWITH_3D=TRUE -WITH_SERVER=TRUE
-make
+cmake ../ -DWITH_APIDOC=TRUE -DWITH_3D=TRUE -DWITH_SERVER=TRUE
 make apidoc
 ```
 Then, in *doc/api/html/Info.plist* remove *CFBundleVersion* (key and string value), and add the following two lines
