@@ -1,8 +1,8 @@
 # Octave docset
 
 Author: Hans-Helge Buerger ([GitHub](https://github.com/obstschale/) | [Twitter](https://twitter.com/obstschale))
-Date: 24. July 2021
-Version: v6.3.0
+Date: 03. November 2021
+Version: v6.4.0
 GitHub Repo: [obstschale/octave-docset](https://github.com/obstschale/octave-docset)
 
 
