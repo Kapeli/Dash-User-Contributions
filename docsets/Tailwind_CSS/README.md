@@ -1,6 +1,6 @@
 **Please note that different versions of this Docset have been made by different people. Please contact the right person for your relevant Docset.**
 
-[Tailwind CSS 1.x][1] Docset
+[Tailwind CSS 1.x, 2.x, 3.x][1] Docset
 =======================
 
 ## Bug report and Docset improvement
