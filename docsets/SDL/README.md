@@ -41,4 +41,6 @@ FULL_PATH_NAMES   = NO
 </plist>
 ```
 
+7. Run `tar --exclude='.DS_Store' -cvzf org.libsdl.sdl20.tgz org.libsdl.sdl20.docset` to archive docset
+
 Note: used [docsetutil](https://github.com/swiftdocorg/docsetutil) from swiftdocorg since Apple does not bundle `docsetutil` with Xcode anymore.
