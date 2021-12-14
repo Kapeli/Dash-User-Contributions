@@ -161,7 +161,16 @@ def create_docset():
                                     entry_type = "Enum"
 
                                 function_path = class_path + "#" + function_name
-                                class_doc = class_doc + "<h1><a name='//apple_ref/cpp/" + entry_type + "/" + function_name + "' class='dashAnchor'></a><a class='entry' name='" + function_name + "'>" + function_name + ("()" if entry_type == "Function" else "") + "</a></h1>"
+                                name = function_name
+                                if entry_type == "Function":
+                                    name = name + "("
+                                    for num, parameter in enumerate(element["parameters"]):
+                                        name = name + parameter["name"]
+                                        if num < len(element["parameters"]) - 1:
+                                            name = name + ", "
+                                    name = name + ")"
+
+                                class_doc = class_doc + "<h1><a name='//apple_ref/cpp/" + entry_type + "/" + function_name + "' class='dashAnchor'></a><a class='entry' name='" + function_name + "'>" + name + "</a></h1>"
                                 class_doc = class_doc + "<div class='brief'>" + element["brief"] + "</div>"
                                 if element.get("description", "") != "":
                                     class_doc = class_doc + "<p>" + element["description"] + "</p>"
