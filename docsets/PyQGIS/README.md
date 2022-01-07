@@ -3,7 +3,7 @@ QGIS
 
 ## Author
 
-This docset is maintained by [Julien Cabieces](https://github.com/troopa81)
+This docset is maintained by [Julien Cabieces](https://github.com/troopa81) and [Antoine Facchini](https://github.com/Koyaani)
 
 ## Building
 
@@ -16,14 +16,13 @@ Build it
 ```shell
 mkdir build
 cd build
-cmake ../ -DWITH_3D=TRUE -WITH_SERVER=TRUE
-make
+cmake ../ -DWITH_3D=TRUE -DWITH_SERVER=TRUE
 ```
 
 Then, clone PyQGIS
 
 ```shell
-git clone https://github.com/qgis/pyqgis.git
+git clone https://github.com/qgis/pyqgis.git  --depth=1
 ```
 
 Copy `pyqgis.patch` in pyqgis directory and apply patch
