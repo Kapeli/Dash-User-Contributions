@@ -1,10 +1,7 @@
 Presto
 ======
 
-[Presto](https://prestodb.io/) is an
-[open source](https://github.com/prestodb/presto) distributed SQL
-query engine for running interactive analytic queries against data
-sources of all sizes ranging from gigabytes to petabytes.
+[Presto](https://prestodb.io/) is an [open source](https://github.com/prestodb/presto) distributed SQL query engine for running interactive analytic queries against data sources of all sizes ranging from gigabytes to petabytes.
 
 ### Docset Maintainer
 
@@ -12,8 +9,6 @@ sources of all sizes ranging from gigabytes to petabytes.
 
 ### Docset Generation
 
-This docset is generated from
-[the official HTML documentation](https://prestodb.io/docs/current/).
+This docset is generated from [the official HTML documentation](https://prestodb.io/docs/current/).
 
-- Clone [my generator](https://github.com/knu/docset-presto) and
-  follow the instructions in `README.md`.
+- Clone [my generator](https://github.com/knu/docset-presto) and follow the instructions in `README.md`.
