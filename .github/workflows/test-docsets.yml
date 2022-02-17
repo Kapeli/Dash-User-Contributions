@@ -1,13 +1,8 @@
 name: Dash User Contributions
 'on':
-  push:
-    branches:
-      - master
   pull_request:
-    branches:
-      - master
 jobs:
-  Build:
+  test:
     runs-on: 'macos-latest'
     strategy:
       matrix:
@@ -17,18 +12,24 @@ jobs:
      - uses: maxim-lobanov/setup-xcode@v1
        with:
          xcode-version: latest
+     
      - uses: actions/checkout@v2
      - run: >-
-          wget http://kapeli.com/feeds/zzz/docsetcontrib.tgz && tar -xzf
-          docsetcontrib.tgz && ./docsetcontrib --verify | tee output.txt
-     - uses: EliLillyCo/github-actions-post-to-pr@main
+          wget http://kapeli.com/feeds/zzz/docsetcontrib.tgz && tar -xzf docsetcontrib.tgz
+          ./docsetcontrib --verify | tee output.txt
+          SCRIPT_OUTPUT=$(cat output.txt)
+          echo "SCRIPT_OUTPUT<<EOF" >> $GITHUB_ENV
+          echo "$SCRIPT_OUTPUT" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+     - uses: actions/github-script@v5
        with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        post_to_pr_definition: |
-          [
-            {
-              "message_file": "./output.txt",
-              "title": "Validation Results",
-              "compare_branches": []
-            }
-          ]
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `${{env.SCRIPT_OUTPUT}}`
+            })
+   
