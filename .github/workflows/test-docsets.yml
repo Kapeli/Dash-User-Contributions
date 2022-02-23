@@ -14,6 +14,25 @@ jobs:
          xcode-version: latest
      
      - uses: actions/checkout@v2
+     - name: Docset verify
+     - id: docset_verify
+     - shell: bash
      - run: >-
           wget http://kapeli.com/feeds/zzz/docsetcontrib.tgz && tar -xzf docsetcontrib.tgz;
-          ./docsetcontrib --verify;
+          ./docsetcontrib --verify | tee output.txt;
+          result=$(cat output.txt);
+          result="${result//'%'/'%25'}";
+          result="${result//$'\n'/'%0A'}";
+          result="${result//$'\r'/'%0D'}";
+          echo "::set-output name=result_code::$result";
+          
+
+     - name: Auto Comment
+       uses: bubkoo/auto-comment@v1
+       with:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         pullRequestOpened: >
+            
+            ```
+            ${{ steps.docset_verify.outputs.result_code }}
+            ```
