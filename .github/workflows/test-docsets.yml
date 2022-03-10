@@ -21,26 +21,28 @@ jobs:
        id: docset_verify
        run: |
           wget https://kapeli.com/feeds/zzz/docsetcontrib.tgz; tar -xzf docsetcontrib.tgz;
-          ./docsetcontrib --verify | tee output.txt;
+          set -o pipefail; ./docsetcontrib --verify | tee output.txt;
+          passOrFail=$([ $? == 0  ] && echo "**PASS** 🟢" || echo "**FAIL** 🔴")
           result="$(cat output.txt)";
           result="${result//'%'/%25}";
           result="${result//$'\n'/%0A}";
           result="${result//$'\r'/%0D}";
           echo "::set-output name=result_code::$result";
+          echo "::set-output name=passOrFail_code::$passOrFail";
           
      - name: Auto Comment
        uses: wow-actions/auto-comment@v1
        with:
          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
          pullRequestOpened: >
-            Test results:
+            Test result: ${{ steps.docset_verify.outputs.passOrFail_code }}
             ```
             
             ${{ steps.docset_verify.outputs.result_code }}
             
             ```
          pullRequestSynchronize: >
-            Test results:
+            Test result: ${{ steps.docset_verify.outputs.passOrFail_code }}
             ```
             
             ${{ steps.docset_verify.outputs.result_code }}
