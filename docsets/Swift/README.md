@@ -1,8 +1,6 @@
 # dash-docset-swift-language-guide
 
-Applicable to Swift version **5.5**.
-
-A Bash script to generate a [Dash docset](https://github.com/Kapeli/Dash-User-Contributions) for the [Swift language guide](https://docs.swift.org/swift-book/LanguageGuide/). Includes a table of contents.
+A Bash script to generate a [Dash docset](https://github.com/Kapeli/Dash-User-Contributions) for the [Swift language guide](https://docs.swift.org/swift-book/LanguageGuide/TheBasics.html). Includes a table of contents.
 
 Install directly from Dash, or build from source.
 
