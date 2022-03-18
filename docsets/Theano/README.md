@@ -1,0 +1,10 @@
+Theano Dash Docset
+=======================
+
+- Description:
+    - [Theano](www.deeplearning.net/software/theano/) is a Python library that allows you to define, optimize, and evaluate mathematical expressions involving multi-dimensional arrays efficiently.
+
+- Author:
+    - [Aziz Alto](https://github.com/iamaziz)
+    - [Roy Xue](https://github.com/royxue) (Update the version 0.6)
+    - [Zihao Fu](https://github.com/maplewizard)(Update the latest version 0.7)

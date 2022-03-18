@@ -1,0 +1,72 @@
+#!/bin/bash
+
+set -e
+
+if ! command -v dashing >/dev/null 2>&1; then
+    if command -v go >/dev/null; then
+        go get -u github.com/technosophos/dashing
+    else
+        echo "Missing go. Install golang first 'brew install golang'"
+        return 1
+    fi
+fi
+
+if ! command -v wget >/dev/null 2>&1; then
+    if command -v brew >/dev/null 2>&1; then
+        brew install wget
+    else
+        echo "Missing wget. Install wget first 'brew install wget'"
+        return 1
+    fi
+fi
+
+if ! command -v recode >/dev/null 2>&1; then
+    if command -v brew >/dev/null 2>&1; then
+        brew install recode
+    else
+        echo "Missing recode. Install recode first 'brew install recode'"
+        return 1
+    fi
+fi
+
+if [ ! -f 'book.html-split.tar.bz2' ]; then
+    wget https://download.freebsd.org/ftp/doc/en/books/handbook/book.html-split.tar.bz2
+fi
+
+if [ ! -d 'handbook' ]; then
+    mkdir handbook
+fi
+
+if [ ! -f 'handbook/index.html' ]; then
+    tar -xvf book.html-split.tar.bz2 -C handbook
+    recode iso-8859-1..utf8 -- handbook/*.html
+fi
+
+# remove archives before building
+if [ -f 'freebsd.tgz' ]; then
+    rm -f freebsd.tgz
+fi
+
+if [ ! -f 'handbook/dashing.json' ]; then
+    cp dashing.json handbook/dashing.json
+fi
+
+if [ ! -f 'handbook/icon.png' ]; then
+    cp icon.png handbook/icon.png
+fi
+
+cd handbook || return 1
+
+dashing build
+
+cd .. || return 1
+
+if [ -d 'freebsd.docset' ]; then
+    rm -rdfv freebsd.docset
+fi
+
+if [ -d 'handbook/freebsd.docset' ]; then
+    mv -v handbook/freebsd.docset freebsd.docset
+fi
+
+tar --exclude='.DS_Store' -cvzf freebsd.tgz freebsd.docset
