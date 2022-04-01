@@ -5,7 +5,7 @@ djangoCMS Documentation
 
 Simon Krull
 
-Twitter: [@expl0itmatrix](https://twitter.com/expl0itmatrix)  
+Twitter: [@crydotsnake](https://twitter.com/crydotsnake)  
 GitHub: [crydotsnake](https://github.com/crydotsnake) 
 
 ## Building the Docset
