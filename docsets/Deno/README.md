@@ -13,7 +13,7 @@ Author: Yuto Oguchi([@aiotter](https://github.com/aiotter))
 $ deno run --allow-net --allow-write=deno.docset --allow-read=. --no-check "https://raw.githubusercontent.com/aiotter/deno_api_docset/master/main.ts"
 
 # Generate docset for deno 1.20.2
-$ deno run --allow-net --allow-write=deno.docset --allow-read=. --no-check  "https://raw.githubusercontent.com/aiotter/deno_api_docset/master/main.ts" v1.20.2
+$ deno run --allow-net --allow-write=deno.docset --allow-read=. --no-check "https://raw.githubusercontent.com/aiotter/deno_api_docset/master/main.ts" v1.20.2
 ```
 
 ## Docset versioning
