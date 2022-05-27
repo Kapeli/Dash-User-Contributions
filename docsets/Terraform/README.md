@@ -1,52 +1,38 @@
-Terraform Docset
-=======================
+Terraform
+=========
 
-https://terraform.io/docs/
+# Overview
 
-Contributed by [rolandjohann](https://github.com/rolandjohann/terraform-dash-doc-generator.git)
+Docset includes:
 
-## Building the docsets
+- [Terraform CLI and Language](https://www.terraform.io/docs)
+- [All HashiCorp providers](https://registry.terraform.io/namespaces/hashicorp)
 
-### System Package Requirements
+Maintained at [roberth-k/dash-docset-terraform](https://github.com/roberth-k/dash-docset-terraform).
 
-The following packages need to be available on the system for building the docset:
+The maintainer of the docset is not affiliated with HashiCorp.
 
-- ruby-dev
-- libsqlite3-dev
-- nodejs
+# How to Build
 
-On Ubuntu:
-```text
-sudo apt-get install ruby-dev build-essential patch ruby-dev zlib1g-dev liblzma-dev libsqlite3-dev rake libv8-dev nodejs
+The system must provide the following:
+
+- bash
+- git
+- GNU Make
+- Python 3.9
+
+To build the docset, run:
+
+```bash
+git clone git@github.com:roberth-k/dash-docset-terraform.git
+cd dash-docset-terraform
+make docset
 ```
 
-### Build Process
+The docset will be available at `.build/latest/Terraform.docset` and the archive at `.build/latest/Terraform.tgz`.
 
-```sh
-git clone https://github.com/rolandjohann/terraform-dash-doc-generator.git
-cd terraform-dash-doc-generator
-./build_until_0.9.sh # to build all docsets until v0.9.11
-./build_current_from_0.10.sh <version> # to build current state of https://github.com/hashicorp/terraform-website.git and move to build/<version>
-```
+# Old Versions
 
-### Build Troubleshooting
-
-In case the build process fails at the json package requiring bundler version 1.16.1 then locate the build directory
-`/terraform-dash-doc-generator/terraform-website/content` and update the `bundler`:
-
-```text
-sudo gem install bundler -v 1.16.1
-sudo bundle update
-# Packages that could cause problems in the build process
-sudo gem install json -v '1.8.6'
-sudo gem install nokogiri -v '1.10.9'
-sudo gem install sqlite3
-```
-
-## Old version (< 0.10.0)
-
-ref. [README.deprecated.md](README.deprecated.md)
-
-## Old version (< 0.6.0)
-
-ref. [README.old.md](README.old.md)
+- [< 1.2.0](README.deprecated.2.md)
+- [< 0.10.0](README.deprecated.md)
+- [< 0.6.0](README.old.md)
