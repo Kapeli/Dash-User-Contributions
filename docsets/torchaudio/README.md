@@ -11,4 +11,4 @@ torchaudio Docset
 
 #### Docset Author:
 
-- [Gerry Gao](https://github.com/hologerry)
+- [Yue Gao](https://github.com/hologerry)
