@@ -11,5 +11,5 @@ torchtext Docset
 
 #### Docset Author:
 
-- [Gerry Gao](https://github.com/hologerry)
+- [Yue Gao](https://github.com/hologerry)
 - [Yuan Tian](https://github.com/xzwj)
