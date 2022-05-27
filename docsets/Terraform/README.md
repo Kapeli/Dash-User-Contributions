@@ -31,8 +31,9 @@ make docset
 
 The docset will be available at `.build/latest/Terraform.docset` and the archive at `.build/latest/Terraform.tgz`.
 
-# Old Versions
+# Previous Maintainers
 
-- [< 1.2.0](README.deprecated.2.md)
-- [< 0.10.0](README.deprecated.md)
-- [< 0.6.0](README.old.md)
+- [bartoszj](https://github.com/bartoszj)
+- [rolandjohann](https://github.com/rolandjohann)
+- [f440](https://github.com/f440)
+- [dazoakley](https://github.com/dazoakley)
