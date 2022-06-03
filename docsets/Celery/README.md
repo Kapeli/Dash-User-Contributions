@@ -54,8 +54,11 @@ if ! grep -q '/*dash*/' _build/html/_static/celery.css; then
 EOF
 fi
 
+# Find latest tag for URL
+tag=$(git describe --tags --match "v*" --abbrev=0 || echo latest)
+
 # generate Dash docset and install it in global location
-doc2dash -Afj -nCelery -Iindex.html -uhttp://docs.celeryproject.org/en/v4.1.0/ _build/html
+doc2dash -Afj -nCelery -Iindex.html -uhttp://docs.celeryproject.org/en/${tag}/ _build/html
 
 # create tarball
 cd ~/Library/Application\ Support/doc2dash/DocSets
