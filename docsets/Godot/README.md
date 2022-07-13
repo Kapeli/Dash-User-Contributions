@@ -3,52 +3,17 @@ Godot Docset
 
 [Godot](https://godotengine.org/) docset for [Dash](http://kapeli.com/dash).
 
-By [Dmitrii Maganov](https://github.com/vonagam).
+Generated and optimized by [poga](https://github.com/poga)
 
-Instructions how to reproduce the build (using version 3.2 as an example):
+## Build
 
-- Install [Dashing](https://github.com/technosophos/dashing) (`brew install dashing` on mac).
+The docset is generated with a custom script to optimize reading experience in dash.
 
-- Download documentation sources from https://github.com/godotengine/godot-docs/tree/3.2
+Highlights:
 
-- Build documentation with `pip install -r requirements.txt` and `make html`.
+- full support of ToC
+- sidebar removed
+- simple custom script that can be easily modified for future doc updates
 
-- Move into built documentation folder (`_build/html`).
+Checkout the [repo](https://github.com/poga/godot-dash-docset) for more detail.
 
-- Optionally copy provided here `icon@2x.png`.
-
-- Create `dashing.json`:
-
-```json
-{
-  "name": "Godot",
-  "package": "godot",
-  "index":"index.html",
-  "icon32x32": "icon@2x.png",
-  "allowJS": true,
-  "ExternalURL": "https://docs.godotengine.org/en/3.2",
-  "selectors": {
-    "span[id^=doc-] + h1": {
-      "type": "Guide",
-      "regexp": "¶$",
-      "replacement": ""
-    },
-    "span[id^=class-] + h1": {
-      "type": "Class",
-      "regexp": "¶$",
-      "replacement": ""
-    },
-    ".section#signals > ul[id^=class-] > li > strong:first-of-type": "Event",
-    ".section#enumerations > p[id^=class-] > strong:first-of-type": "Enum",
-    ".section#enumerations > p[id^=class-] + ul > li > strong:first-of-type": "Value",
-    ".section#constants > ul[id^=class-] > li > strong:first-of-type": "Constant",
-    ".section#method-descriptions > ul[id^=class-] > li > strong:first-of-type": "Method",
-    ".section#property-descriptions > ul[id^=class-] > li > strong:first-of-type": "Property"
-  },
-  "ignore": [
-    "@C#¶"
-  ]
-}
-```
-
-- Run `dashing build` to create docset.
