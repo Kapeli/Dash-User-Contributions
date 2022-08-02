@@ -3,7 +3,15 @@
 
 Author: [lucasg][2]
 
-#### Generation steps:
+Author: [tddschn][3]
+
+#### Generation steps for Powershell documentation version 7+:
+
+See [tddschn's powershell-docset](https://github.com/tddschn/powershell-docset).
+
+It's recommended to use the [GitHub Actions](https://github.com/tddschn/powershell-docset/actions/workflows/scrape-and-build.yaml) to scrape the doc and build the docset.
+
+#### Generation steps for Powershell documentation version 6 or under:
 
 `posh-to-dash.py` is written for Python 3, and has been tested on Windows and Linux. 
 
@@ -27,3 +35,4 @@ Otherwise, look at the `.travis` generation script for an up to date build recip
 
 [1]: https://docs.microsoft.com/en-us/powershell/module/
 [2]: https://github.com/lucasg
+[3]: https://github.com/tddschn
