@@ -61,7 +61,7 @@ def get_defold_sha1():
 
 def get_defold_version():
     info_url = "http://d.defold.com/stable/info.json"
-    info_file = urllib.urlopen(info_url)
+    info_file = urllib.request.urlopen(info_url)
     info = json.loads(info_file.read())
     info_file.close()
     return info["version"]
@@ -72,7 +72,7 @@ def get_ref_doc():
     sha1 = get_defold_sha1()
     if os.path.exists(DOC_ZIP):
         os.remove(DOC_ZIP)
-    urllib.urlretrieve("http://d.defold.com/archive/" + sha1 + "/engine/share/ref-doc.zip", DOC_ZIP)
+    urllib.request.urlretrieve("http://d.defold.com/archive/" + sha1 + "/engine/share/ref-doc.zip", DOC_ZIP)
 
 
 def cleanup():
