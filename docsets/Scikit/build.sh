@@ -28,22 +28,15 @@ pip install virtualenv
 python -m virtualenv $workdir/venv
 source $workdir/venv/bin/activate
 
-# build docs
-cd $workdir
+pip install git+https://github.com/hynek/doc2dash.git
 
-git clone --branch $tag https://github.com/scikit-learn/scikit-learn
-cd scikit-learn/doc
-
-pip install wheel numpy scipy cython
-pip install sphinx sphinx-gallery numpydoc matplotlib Pillow pandas \
-            scikit-image packaging seaborn sphinx-prompt \
-            sphinxext-opengraph pytest
-pip install doc2dash scikit-learn==$tag
-NO_MATHJAX=1 make html
 cd $workdir
+# download scikit-learn docs directly
+wget https://scikit-learn.org/stable/_downloads/scikit-learn-docs.zip
+unzip -d scikit-learn-docs scikit-learn-docs.zip
 
 # convert to dash
-doc2dash --index-page documentation.html --enable-js -n scikit-learn scikit-learn/doc/_build/html/stable
+doc2dash --index-page documentation.html --enable-js -u https://scikit-learn.org/stable/ -n scikit-learn scikit-learn-docs
 tar --exclude='.DS_Store' -czvf scikit-learn.tgz scikit-learn.docset
 
 # update Dash-User-Contributions
