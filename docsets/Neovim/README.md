@@ -1,10 +1,6 @@
 Neovim Docset
 =======================
 
-* Maintainer: ianding1 ([Github][maintainer])
-* Download newest Neovim source code from [Neovim's release page][release]
-* Generate the docset with [makeneovimdoc.py][gist-makeneovimdoc]
-
-[maintainer]: https://github.com/ianding1
-[gist-makeneovimdoc]: https://gist.github.com/ianding1/d02b9e03de68e4b11913b9afa1d56399
-[release]: https://github.com/neovim/neovim/releases
+- Orignal Maintainer: [ianding1](https://github.com/ianding1)
+- New Maintainer: [h-hg](https:github.com/h-hg/)
+- Generation script: [neovim.py](https://github.com/h-hg/dash-docset/blob/main/neovim.py) (The script will download the documentation from [Neovim's release][https://github.com/neovim/neovim/releases] automatically.)
