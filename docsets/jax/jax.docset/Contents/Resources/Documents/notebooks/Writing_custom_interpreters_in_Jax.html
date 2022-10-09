@@ -1,0 +1,1202 @@
+
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="Docutils 0.17.1: http://docutils.sourceforge.net/" name="generator"/>
+<title>Writing custom Jaxpr interpreters in JAX — JAX  documentation</title>
+<!-- Loaded before other Sphinx assets -->
+<link href="../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet"/>
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet"/>
+<link href="../_static/vendor/fontawesome/5.13.0/css/all.min.css" rel="stylesheet"/>
+<link as="font" crossorigin="" href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-solid-900.woff2" rel="preload" type="font/woff2"/>
+<link as="font" crossorigin="" href="../_static/vendor/fontawesome/5.13.0/webfonts/fa-brands-400.woff2" rel="preload" type="font/woff2"/>
+<link href="../_static/pygments.css" rel="stylesheet" type="text/css">
+<link href="../_static/styles/sphinx-book-theme.css?digest=5115cc725059bd94278eecd172e13a965bf8f5a9" rel="stylesheet" type="text/css">
+<link href="../_static/plot_directive.css" rel="stylesheet" type="text/css">
+<link href="../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" rel="stylesheet" type="text/css">
+<link href="../_static/copybutton.css" rel="stylesheet" type="text/css">
+<link href="../_static/style.css" rel="stylesheet" type="text/css"/>
+<!-- Pre-loaded scripts that we'll load fully later -->
+<link as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf" rel="preload"/>
+<script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+<script src="../_static/jquery.js"></script>
+<script src="../_static/underscore.js"></script>
+<script src="../_static/doctools.js"></script>
+<script src="../_static/clipboard.min.js"></script>
+<script src="../_static/copybutton.js"></script>
+<script src="../_static/scripts/sphinx-book-theme.js?digest=9c920249402e914e316237a7dbc6769907cce411"></script>
+<link href="../_static/favicon.png" rel="shortcut icon">
+<link href="../genindex.html" rel="index" title="Index"/>
+<link href="../search.html" rel="search" title="Search"/>
+<link href="Neural_Network_and_Data_Loading.html" rel="next" title="Training a Simple Neural Network, with PyTorch Data Loading"/>
+<link href="How_JAX_primitives_work.html" rel="prev" title="How JAX primitives work"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<meta content="None" name="docsearch:language"/>
+<!-- Google Analytics -->
+</link></link></link></link></link></link></head>
+<body data-offset="60" data-spy="scroll" data-target="#bd-toc-nav">
+<!-- Checkboxes to toggle the left sidebar -->
+<input aria-label="Toggle navigation sidebar" class="sidebar-toggle" id="__navigation" name="__navigation" type="checkbox"/>
+<label class="overlay overlay-navbar" for="__navigation">
+<div class="visually-hidden">Toggle navigation sidebar</div>
+</label>
+<!-- Checkboxes to toggle the in-page toc -->
+<input aria-label="Toggle in-page Table of Contents" class="sidebar-toggle" id="__page-toc" name="__page-toc" type="checkbox"/>
+<label class="overlay overlay-pagetoc" for="__page-toc">
+<div class="visually-hidden">Toggle in-page Table of Contents</div>
+</label>
+<!-- Headers at the top -->
+<div class="announcement header-item noprint"></div>
+<div class="header header-item noprint"></div>
+<div class="container-fluid" id="banner"></div>
+<div class="container-xl">
+<div class="row">
+<!-- Sidebar -->
+<div class="bd-sidebar noprint" id="site-navigation">
+<div class="bd-sidebar__content">
+<div class="bd-sidebar__top"><div class="navbar-brand-box">
+<a class="navbar-brand text-wrap" href="../index.html">
+<!-- `logo` is deprecated in Sphinx 4.0, so remove this when we stop supporting 3 -->
+<img alt="logo" class="logo" src="../_static/jax_logo_250px.png"/>
+</a>
+</div><form action="../search.html" class="bd-search d-flex align-items-center" method="get">
+<i class="icon fas fa-search"></i>
+<input aria-label="Search the docs ..." autocomplete="off" class="form-control" id="search-input" name="q" placeholder="Search the docs ..." type="search"/>
+</form><nav aria-label="Main" class="bd-links" id="bd-docs-nav">
+<div class="bd-toc-item active">
+<p aria-level="2" class="caption" role="heading">
+<span class="caption-text">
+  Getting Started
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1">
+<a class="reference internal" href="../installation.html">
+   Installing JAX
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="quickstart.html">
+   JAX Quickstart
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="thinking_in_jax.html">
+   How to Think in JAX
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="Common_Gotchas_in_JAX.html">
+   🔪 JAX - The Sharp Bits 🔪
+  </a>
+</li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children">
+<a class="reference internal" href="../jax-101/index.html">
+   Tutorial: JAX 101
+  </a>
+<input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" type="checkbox">
+<label for="toctree-checkbox-1">
+<i class="fas fa-chevron-down">
+</i>
+</label>
+<ul>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax-101/01-jax-basics.html">
+     JAX As Accelerated NumPy
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax-101/02-jitting.html">
+     Just In Time Compilation with JAX
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax-101/03-vectorization.html">
+     Automatic Vectorization in JAX
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax-101/04-advanced-autodiff.html">
+     Advanced Automatic Differentiation in JAX
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax-101/05-random-numbers.html">
+     Pseudo Random Numbers in JAX
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax-101/05.1-pytrees.html">
+     Working with Pytrees
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax-101/06-parallelism.html">
+     Parallel Evaluation in JAX
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax-101/07-state.html">
+     Stateful Computations in JAX
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax-101/08-pjit.html">
+     Introduction to pjit
+    </a>
+</li>
+</ul>
+</input></li>
+</ul>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children">
+<a class="reference internal" href="../debugging/index.html">
+   Runtime value debugging in JAX
+  </a>
+<input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" type="checkbox">
+<label for="toctree-checkbox-2">
+<i class="fas fa-chevron-down">
+</i>
+</label>
+<ul>
+<li class="toctree-l2">
+<a class="reference internal" href="../debugging/print_breakpoint.html">
+<code class="docutils literal notranslate">
+<span class="pre">
+       jax.debug.print
+      </span>
+</code>
+     and
+     <code class="docutils literal notranslate">
+<span class="pre">
+       jax.debug.breakpoint
+      </span>
+</code>
+</a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../debugging/checkify_guide.html">
+     The
+     <code class="docutils literal notranslate">
+<span class="pre">
+       checkify
+      </span>
+</code>
+     transformation
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../debugging/flags.html">
+     JAX debugging flags
+    </a>
+</li>
+</ul>
+</input></li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+<span class="caption-text">
+  Reference Documentation
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1">
+<a class="reference internal" href="../faq.html">
+   JAX Frequently Asked Questions (FAQ)
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../async_dispatch.html">
+   Asynchronous dispatch
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../aot.html">
+   Ahead-of-time lowering and compilation
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../jaxpr.html">
+   Understanding Jaxprs
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="convolutions.html">
+   Convolutions in JAX
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../pytrees.html">
+   Pytrees
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../type_promotion.html">
+   Type promotion semantics
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../errors.html">
+   JAX Errors
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../transfer_guard.html">
+   Transfer guard
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../glossary.html">
+   JAX Glossary of Terms
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../changelog.html">
+   Change log
+  </a>
+</li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+<span class="caption-text">
+  Advanced JAX Tutorials
+ </span>
+</p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1">
+<a class="reference internal" href="autodiff_cookbook.html">
+   The Autodiff Cookbook
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="vmapped_log_probs.html">
+   Autobatching log-densities example
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="neural_network_with_tfds_data.html">
+   Training a Simple Neural Network, with tensorflow/datasets Data Loading
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="Custom_derivative_rules_for_Python_code.html">
+   Custom derivative rules for JAX-transformable Python functions
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="How_JAX_primitives_work.html">
+   How JAX primitives work
+  </a>
+</li>
+<li class="toctree-l1 current active">
+<a class="current reference internal" href="#">
+   Writing custom Jaxpr interpreters in JAX
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="Neural_Network_and_Data_Loading.html">
+   Training a Simple Neural Network, with PyTorch Data Loading
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="xmap_tutorial.html">
+   Named axes and easy-to-revise parallelism
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../multi_process.html">
+   Using JAX in multi-host and multi-process environments
+  </a>
+</li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+<span class="caption-text">
+  Notes
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1">
+<a class="reference internal" href="../api_compatibility.html">
+   API compatibility
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../deprecation.html">
+   Python and NumPy version support policy
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../concurrency.html">
+   Concurrency
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../gpu_memory_allocation.html">
+   GPU memory allocation
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../profiling.html">
+   Profiling JAX programs
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../device_memory_profiling.html">
+   Device Memory Profiling
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../rank_promotion_warning.html">
+   Rank promotion warning
+  </a>
+</li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+<span class="caption-text">
+  Developer documentation
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1">
+<a class="reference internal" href="../contributing.html">
+   Contributing to JAX
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../developer.html">
+   Building from source
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../jax_internal_api.html">
+   Internal APIs
+  </a>
+</li>
+<li class="toctree-l1">
+<a class="reference internal" href="../autodidax.html">
+   Autodidax: JAX core from scratch
+  </a>
+</li>
+<li class="toctree-l1 has-children">
+<a class="reference internal" href="../jep/index.html">
+   JAX Enhancement Proposals (JEPs)
+  </a>
+<input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" type="checkbox">
+<label for="toctree-checkbox-3">
+<i class="fas fa-chevron-down">
+</i>
+</label>
+<ul>
+<li class="toctree-l2">
+<a class="reference internal" href="../jep/263-prng.html">
+     263: JAX PRNG Design
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jep/2026-custom-derivatives.html">
+     2026: Custom JVP/VJP rules for JAX-transformable functions
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jep/4008-custom-vjp-update.html">
+     4008: Custom VJP and `nondiff_argnums` update
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jep/4410-omnistaging.html">
+     4410: Omnistaging
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jep/9407-type-promotion.html">
+     9407: Design of Type Promotion Semantics for JAX
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jep/9419-jax-versioning.html">
+     9419: Jax and Jaxlib versioning
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jep/10657-sequencing-effects.html">
+     10657: Sequencing side-effects in JAX
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jep/11830-new-remat-checkpoint.html">
+     11830: `jax.remat` / `jax.checkpoint` new implementation
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jep/12049-type-annotations.html">
+     12049: Type Annotation Roadmap for JAX
+    </a>
+</li>
+</ul>
+</input></li>
+</ul>
+<p aria-level="2" class="caption" role="heading">
+<span class="caption-text">
+  API documentation
+ </span>
+</p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1 has-children">
+<a class="reference internal" href="../jax.html">
+   Public API: jax package
+  </a>
+<input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" type="checkbox"/>
+<label for="toctree-checkbox-4">
+<i class="fas fa-chevron-down">
+</i>
+</label>
+<ul>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax.numpy.html">
+     jax.numpy package
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax.scipy.html">
+     jax.scipy package
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax.config.html">
+     JAX configuration
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax.debug.html">
+     jax.debug package
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax.dlpack.html">
+     jax.dlpack module
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax.distributed.html">
+     jax.distributed module
+    </a>
+</li>
+<li class="toctree-l2 has-children">
+<a class="reference internal" href="../jax.example_libraries.html">
+     jax.example_libraries package
+    </a>
+<input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" type="checkbox"/>
+<label for="toctree-checkbox-5">
+<i class="fas fa-chevron-down">
+</i>
+</label>
+<ul>
+<li class="toctree-l3">
+<a class="reference internal" href="../jax.example_libraries.optimizers.html">
+       jax.example_libraries.optimizers module
+      </a>
+</li>
+<li class="toctree-l3">
+<a class="reference internal" href="../jax.example_libraries.stax.html">
+       jax.example_libraries.stax module
+      </a>
+</li>
+</ul>
+</li>
+<li class="toctree-l2 has-children">
+<a class="reference internal" href="../jax.experimental.html">
+     jax.experimental package
+    </a>
+<input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" type="checkbox"/>
+<label for="toctree-checkbox-6">
+<i class="fas fa-chevron-down">
+</i>
+</label>
+<ul>
+<li class="toctree-l3">
+<a class="reference internal" href="../jax.experimental.checkify.html">
+       jax.experimental.checkify module
+      </a>
+</li>
+<li class="toctree-l3">
+<a class="reference internal" href="../jax.experimental.global_device_array.html">
+       jax.experimental.global_device_array module
+      </a>
+</li>
+<li class="toctree-l3">
+<a class="reference internal" href="../jax.experimental.host_callback.html">
+       jax.experimental.host_callback module
+      </a>
+</li>
+<li class="toctree-l3">
+<a class="reference internal" href="../jax.experimental.maps.html">
+       jax.experimental.maps module
+      </a>
+</li>
+<li class="toctree-l3">
+<a class="reference internal" href="../jax.experimental.pjit.html">
+       jax.experimental.pjit module
+      </a>
+</li>
+<li class="toctree-l3">
+<a class="reference internal" href="../jax.experimental.sparse.html">
+       jax.experimental.sparse module
+      </a>
+</li>
+<li class="toctree-l3">
+<a class="reference internal" href="../jax.experimental.jet.html">
+       jax.experimental.jet module
+      </a>
+</li>
+</ul>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax.flatten_util.html">
+     jax.flatten_util package
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax.image.html">
+     jax.image package
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax.lax.html">
+     jax.lax package
+    </a>
+</li>
+<li class="toctree-l2 has-children">
+<a class="reference internal" href="../jax.nn.html">
+     jax.nn package
+    </a>
+<input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" type="checkbox"/>
+<label for="toctree-checkbox-7">
+<i class="fas fa-chevron-down">
+</i>
+</label>
+<ul>
+<li class="toctree-l3">
+<a class="reference internal" href="../jax.nn.initializers.html">
+       jax.nn.initializers package
+      </a>
+</li>
+</ul>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax.ops.html">
+     jax.ops package
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax.profiler.html">
+     jax.profiler module
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax.random.html">
+     jax.random package
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax.stages.html">
+     jax.stages package
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax.tree_util.html">
+     jax.tree_util package
+    </a>
+</li>
+<li class="toctree-l2">
+<a class="reference internal" href="../jax.lib.html">
+     jax.lib package
+    </a>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</nav></div>
+<div class="bd-sidebar__bottom">
+<!-- To handle the deprecated key -->
+<div class="navbar_extra_footer">
+            Theme by the <a href="https://ebp.jupyterbook.org">Executable Book Project</a>
+</div>
+</div>
+</div>
+<div id="rtd-footer-container"></div>
+</div>
+<!-- A tiny helper pixel to detect if we've scrolled -->
+<div class="sbt-scroll-pixel-helper"></div>
+<!-- Main content -->
+<div class="col py-0 content-container">
+<div class="header-article row sticky-top noprint">
+<div class="col py-1 d-flex header-article-main">
+<div class="header-article__left">
+<label class="headerbtn" data-placement="right" data-toggle="tooltip" for="__navigation" title="Toggle navigation">
+<span class="headerbtn__icon-container">
+<i class="fas fa-bars"></i>
+</span>
+</label>
+</div>
+<div class="header-article__right">
+<button class="headerbtn" data-placement="bottom" data-toggle="tooltip" onclick="toggleFullScreen()" title="Fullscreen mode">
+<span class="headerbtn__icon-container">
+<i class="fas fa-expand"></i>
+</span>
+</button>
+<a class="headerbtn" data-placement="bottom" data-toggle="tooltip" href="https://github.com/google/jax" title="Source repository">
+<span class="headerbtn__icon-container">
+<i class="fab fa-github"></i>
+</span>
+</a>
+<div class="menu-dropdown menu-dropdown-download-buttons">
+<button aria-label="Download this page" class="headerbtn menu-dropdown__trigger">
+<i class="fas fa-download"></i>
+</button>
+<div class="menu-dropdown__content">
+<ul>
+<li>
+<a class="headerbtn" data-placement="left" data-toggle="tooltip" href="../_sources/notebooks/Writing_custom_interpreters_in_Jax.ipynb.txt" title="Download source file">
+<span class="headerbtn__icon-container">
+<i class="fas fa-file"></i>
+</span>
+<span class="headerbtn__text-container">.ipynb</span>
+</a>
+</li>
+<li>
+<button class="headerbtn" data-placement="left" data-toggle="tooltip" onclick="printPdf(this)" title="Print to PDF">
+<span class="headerbtn__icon-container">
+<i class="fas fa-file-pdf"></i>
+</span>
+<span class="headerbtn__text-container">.pdf</span>
+</button>
+</li>
+</ul>
+</div>
+</div>
+<label class="headerbtn headerbtn-page-toc" for="__page-toc">
+<span class="headerbtn__icon-container">
+<i class="fas fa-list"></i>
+</span>
+</label>
+</div>
+</div>
+<!-- Table of contents -->
+<div class="col-md-3 bd-toc show noprint">
+<div class="tocsection onthispage pt-5 pb-3">
+<i class="fas fa-list"></i> Contents
+    </div>
+<nav aria-label="Page" id="bd-toc-nav">
+<ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry">
+<a class="reference internal nav-link" href="#what-is-jax-doing">
+   What is JAX doing?
+  </a>
+</li>
+<li class="toc-h2 nav-item toc-entry">
+<a class="reference internal nav-link" href="#jaxpr-tracer">
+   Jaxpr tracer
+  </a>
+<ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry">
+<a class="reference internal nav-link" href="#why-are-jaxprs-useful">
+     Why are Jaxprs useful?
+    </a>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry">
+<a class="reference internal nav-link" href="#your-first-interpreter-invert">
+   Your first interpreter:
+   <code class="docutils literal notranslate">
+<span class="pre">
+     invert
+    </span>
+</code>
+</a>
+<ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry">
+<a class="reference internal nav-link" href="#tracing-a-function">
+     1. Tracing a function
+    </a>
+</li>
+<li class="toc-h3 nav-item toc-entry">
+<a class="reference internal nav-link" href="#evaluating-a-jaxpr">
+     2. Evaluating a Jaxpr
+    </a>
+</li>
+<li class="toc-h3 nav-item toc-entry">
+<a class="reference internal nav-link" href="#custom-inverse-jaxpr-interpreter">
+     Custom
+     <code class="docutils literal notranslate">
+<span class="pre">
+       inverse
+      </span>
+</code>
+     Jaxpr interpreter
+    </a>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry">
+<a class="reference internal nav-link" href="#exercises-for-the-reader">
+   Exercises for the reader
+  </a>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+<div class="article row">
+<div class="col pl-md-3 pl-lg-5 content-container">
+<!-- Table of contents that is only displayed when printing the page -->
+<div class="onlyprint" id="jb-print-docs-body">
+<h1>Writing custom Jaxpr interpreters in JAX</h1>
+<!-- Table of contents -->
+<div id="print-main-content">
+<div id="jb-print-toc">
+<div>
+<h2> Contents </h2>
+</div>
+<nav aria-label="Page">
+<ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry">
+<a class="reference internal nav-link" href="#what-is-jax-doing">
+   What is JAX doing?
+  </a>
+</li>
+<li class="toc-h2 nav-item toc-entry">
+<a class="reference internal nav-link" href="#jaxpr-tracer">
+   Jaxpr tracer
+  </a>
+<ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry">
+<a class="reference internal nav-link" href="#why-are-jaxprs-useful">
+     Why are Jaxprs useful?
+    </a>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry">
+<a class="reference internal nav-link" href="#your-first-interpreter-invert">
+   Your first interpreter:
+   <code class="docutils literal notranslate">
+<span class="pre">
+     invert
+    </span>
+</code>
+</a>
+<ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry">
+<a class="reference internal nav-link" href="#tracing-a-function">
+     1. Tracing a function
+    </a>
+</li>
+<li class="toc-h3 nav-item toc-entry">
+<a class="reference internal nav-link" href="#evaluating-a-jaxpr">
+     2. Evaluating a Jaxpr
+    </a>
+</li>
+<li class="toc-h3 nav-item toc-entry">
+<a class="reference internal nav-link" href="#custom-inverse-jaxpr-interpreter">
+     Custom
+     <code class="docutils literal notranslate">
+<span class="pre">
+       inverse
+      </span>
+</code>
+     Jaxpr interpreter
+    </a>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry">
+<a class="reference internal nav-link" href="#exercises-for-the-reader">
+   Exercises for the reader
+  </a>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<main id="main-content" role="main">
+<div>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/Writing custom Jaxpr interpreters in JAX"></a><section class="tex2jax_ignore mathjax_ignore" id="writing-custom-jaxpr-interpreters-in-jax">
+<h1>Writing custom Jaxpr interpreters in JAX<a class="headerlink" href="#writing-custom-jaxpr-interpreters-in-jax" title="Permalink to this headline">#</a></h1>
+<p><a class="reference external" href="https://colab.research.google.com/github/google/jax/blob/main/docs/notebooks/Writing_custom_interpreters_in_Jax.ipynb"><img alt="Open in Colab" src="https://colab.research.google.com/assets/colab-badge.svg"/></a></p>
+<p>JAX offers several composable function transformations (<code class="docutils literal notranslate"><span class="pre">jit</span></code>, <code class="docutils literal notranslate"><span class="pre">grad</span></code>, <code class="docutils literal notranslate"><span class="pre">vmap</span></code>,
+etc.) that enable writing concise, accelerated code.</p>
+<p>Here we show how to add your own function transformations to the system, by writing a custom Jaxpr interpreter. And we’ll get composability with all the other transformations for free.</p>
+<p><strong>This example uses internal JAX APIs, which may break at any time. Anything not in <a class="reference external" href="https://jax.readthedocs.io/en/latest/jax.html">the API Documentation</a> should be assumed internal.</strong></p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">jax</span>
+<span class="kn">import</span> <span class="nn">jax.numpy</span> <span class="k">as</span> <span class="nn">jnp</span>
+<span class="kn">from</span> <span class="nn">jax</span> <span class="kn">import</span> <span class="n">jit</span><span class="p">,</span> <span class="n">grad</span><span class="p">,</span> <span class="n">vmap</span>
+<span class="kn">from</span> <span class="nn">jax</span> <span class="kn">import</span> <span class="n">random</span>
+</pre></div>
+</div>
+</div>
+</div>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/What is JAX doing?"></a><section id="what-is-jax-doing">
+<h2>What is JAX doing?<a class="headerlink" href="#what-is-jax-doing" title="Permalink to this headline">#</a></h2>
+<p>JAX provides a NumPy-like API for numerical computing which can be used as is, but JAX’s true power comes from composable function transformations. Take the <code class="docutils literal notranslate"><span class="pre">jit</span></code> function transformation, which takes in a function and returns a semantically identical function but is lazily compiled by XLA for accelerators.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">PRNGKey</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="p">(</span><span class="mi">5000</span><span class="p">,</span> <span class="mi">5000</span><span class="p">))</span>
+<span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span> <span class="o">+</span> <span class="n">b</span><span class="p">)</span>
+<span class="n">fast_f</span> <span class="o">=</span> <span class="n">jit</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>When we call <code class="docutils literal notranslate"><span class="pre">fast_f</span></code>, what happens? JAX traces the function and constructs an XLA computation graph. The graph is then JIT-compiled and executed. Other transformations work similarly in that they first trace the function and handle the output trace in some way. To learn more about Jax’s tracing machinery, you can refer to the <a class="reference external" href="https://github.com/google/jax#how-it-works">“How it works”</a> section in the README.</p>
+</section>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/Jaxpr tracer"></a><section id="jaxpr-tracer">
+<h2>Jaxpr tracer<a class="headerlink" href="#jaxpr-tracer" title="Permalink to this headline">#</a></h2>
+<p>A tracer of special importance in Jax is the Jaxpr tracer, which records ops into a Jaxpr (Jax expression). A Jaxpr is a data structure that can be evaluated like a mini functional programming language and
+thus Jaxprs are a useful intermediate representation
+for function transformation.</p>
+<p>To get a first look at Jaxprs, consider the <code class="docutils literal notranslate"><span class="pre">make_jaxpr</span></code> transformation. <code class="docutils literal notranslate"><span class="pre">make_jaxpr</span></code> is essentially a “pretty-printing” transformation:
+it transforms a function into one that, given example arguments, produces a Jaxpr representation of its computation.
+<code class="docutils literal notranslate"><span class="pre">make_jaxpr</span></code> is useful for debugging and introspection.
+Let’s use it to look at how some example Jaxprs are structured.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">examine_jaxpr</span><span class="p">(</span><span class="n">closed_jaxpr</span><span class="p">):</span>
+  <span class="n">jaxpr</span> <span class="o">=</span> <span class="n">closed_jaxpr</span><span class="o">.</span><span class="n">jaxpr</span>
+  <span class="nb">print</span><span class="p">(</span><span class="s2">"invars:"</span><span class="p">,</span> <span class="n">jaxpr</span><span class="o">.</span><span class="n">invars</span><span class="p">)</span>
+  <span class="nb">print</span><span class="p">(</span><span class="s2">"outvars:"</span><span class="p">,</span> <span class="n">jaxpr</span><span class="o">.</span><span class="n">outvars</span><span class="p">)</span>
+  <span class="nb">print</span><span class="p">(</span><span class="s2">"constvars:"</span><span class="p">,</span> <span class="n">jaxpr</span><span class="o">.</span><span class="n">constvars</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">eqn</span> <span class="ow">in</span> <span class="n">jaxpr</span><span class="o">.</span><span class="n">eqns</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"equation:"</span><span class="p">,</span> <span class="n">eqn</span><span class="o">.</span><span class="n">invars</span><span class="p">,</span> <span class="n">eqn</span><span class="o">.</span><span class="n">primitive</span><span class="p">,</span> <span class="n">eqn</span><span class="o">.</span><span class="n">outvars</span><span class="p">,</span> <span class="n">eqn</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+  <span class="nb">print</span><span class="p">()</span>
+  <span class="nb">print</span><span class="p">(</span><span class="s2">"jaxpr:"</span><span class="p">,</span> <span class="n">jaxpr</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">foo</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"foo"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"====="</span><span class="p">)</span>
+<span class="n">examine_jaxpr</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">make_jaxpr</span><span class="p">(</span><span class="n">foo</span><span class="p">)(</span><span class="mi">5</span><span class="p">))</span>
+
+<span class="nb">print</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">bar</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span> <span class="o">+</span> <span class="n">b</span> <span class="o">+</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span> <span class="n">x</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"bar"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"====="</span><span class="p">)</span>
+<span class="n">examine_jaxpr</span><span class="p">(</span><span class="n">jax</span><span class="o">.</span><span class="n">make_jaxpr</span><span class="p">(</span><span class="n">bar</span><span class="p">)(</span><span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">)),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">10</span><span class="p">)))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>foo
+=====
+invars: [a]
+outvars: [b]
+constvars: []
+equation: [a, 1] add [b] {}
+
+jaxpr: { lambda ; a:i32[]. let b:i32[] = add a 1 in (b,) }
+
+bar
+=====
+invars: [a, b, c]
+outvars: [g, c]
+constvars: []
+equation: [a, c] dot_general [d] {'dimension_numbers': (((1,), (0,)), ((), ())), 'precision': None, 'preferred_element_type': None}
+equation: [d, b] add [e] {}
+equation: [1.0] broadcast_in_dim [f] {'shape': (5,), 'broadcast_dimensions': ()}
+equation: [e, f] add [g] {}
+
+jaxpr: { lambda ; a:f32[5,10] b:f32[5] c:f32[10]. let
+    d:f32[5] = dot_general[
+      dimension_numbers=(((1,), (0,)), ((), ()))
+      precision=None
+      preferred_element_type=None
+    ] a c
+    e:f32[5] = add d b
+    f:f32[5] = broadcast_in_dim[broadcast_dimensions=() shape=(5,)] 1.0
+    g:f32[5] = add e f
+  in (g, c) }
+</pre></div>
+</div>
+</div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">jaxpr.invars</span></code> - the <code class="docutils literal notranslate"><span class="pre">invars</span></code> of a Jaxpr are a list of the input variables to Jaxpr, analogous to arguments in Python functions.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">jaxpr.outvars</span></code> - the <code class="docutils literal notranslate"><span class="pre">outvars</span></code> of a Jaxpr are the variables that are returned by the Jaxpr. Every Jaxpr has multiple outputs.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">jaxpr.constvars</span></code> - the <code class="docutils literal notranslate"><span class="pre">constvars</span></code> are a list of variables that are also inputs to the Jaxpr, but correspond to constants from the trace (we’ll go over these in more detail later).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">jaxpr.eqns</span></code> - a list of equations, which are essentially let-bindings. Each equation is a list of input variables, a list of output variables, and a <em>primitive</em>, which is used to evaluate inputs to produce outputs. Each equation also has a <code class="docutils literal notranslate"><span class="pre">params</span></code>, a dictionary of parameters.</p></li>
+</ul>
+<p>Altogether, a Jaxpr encapsulates a simple program that can be evaluated with inputs to produce an output. We’ll go over how exactly to do this later. The important thing to note now is that a Jaxpr is a data structure that can be manipulated and evaluated in whatever way we want.</p>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/Why are Jaxprs useful?"></a><section id="why-are-jaxprs-useful">
+<h3>Why are Jaxprs useful?<a class="headerlink" href="#why-are-jaxprs-useful" title="Permalink to this headline">#</a></h3>
+<p>Jaxprs are simple program representations that are easy to transform. And because Jax lets us stage out Jaxprs from Python functions, it gives us a way to transform numerical programs written in Python.</p>
+</section>
+</section>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/Your first interpreter: invert"></a><section id="your-first-interpreter-invert">
+<h2>Your first interpreter: <code class="docutils literal notranslate"><span class="pre">invert</span></code><a class="headerlink" href="#your-first-interpreter-invert" title="Permalink to this headline">#</a></h2>
+<p>Let’s try to implement a simple function “inverter”, which takes in the output of the original function and returns the inputs that produced those outputs. For now, let’s focus on simple, unary functions which are composed of other invertible unary functions.</p>
+<p>Goal:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+<span class="n">f_inv</span> <span class="o">=</span> <span class="n">inverse</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">jnp</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">f_inv</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)),</span> <span class="mf">1.0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The way we’ll implement this is by (1) tracing <code class="docutils literal notranslate"><span class="pre">f</span></code> into a Jaxpr, then (2) interpreting the Jaxpr <em>backwards</em>. While interpreting the Jaxpr backwards, for each equation we’ll look up the primitive’s inverse in a table and apply it.</p>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/1. Tracing a function"></a><section id="tracing-a-function">
+<h3>1. Tracing a function<a class="headerlink" href="#tracing-a-function" title="Permalink to this headline">#</a></h3>
+<p>Let’s use <code class="docutils literal notranslate"><span class="pre">make_jaxpr</span></code> to trace a function into a Jaxpr.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Importing Jax functions useful for tracing/interpreting.</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">wraps</span>
+
+<span class="kn">from</span> <span class="nn">jax</span> <span class="kn">import</span> <span class="n">core</span>
+<span class="kn">from</span> <span class="nn">jax</span> <span class="kn">import</span> <span class="n">lax</span>
+<span class="kn">from</span> <span class="nn">jax._src.util</span> <span class="kn">import</span> <span class="n">safe_map</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">jax.make_jaxpr</span></code> returns a <em>closed</em> Jaxpr, which is a Jaxpr that has been bundled with
+the constants (<code class="docutils literal notranslate"><span class="pre">literals</span></code>) from the trace.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+
+<span class="n">closed_jaxpr</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">make_jaxpr</span><span class="p">(</span><span class="n">f</span><span class="p">)(</span><span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">closed_jaxpr</span><span class="o">.</span><span class="n">jaxpr</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">closed_jaxpr</span><span class="o">.</span><span class="n">literals</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>{ lambda ; a:f32[5]. let b:f32[5] = tanh a; c:f32[5] = exp b in (c,) }
+[]
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/2. Evaluating a Jaxpr"></a><section id="evaluating-a-jaxpr">
+<h3>2. Evaluating a Jaxpr<a class="headerlink" href="#evaluating-a-jaxpr" title="Permalink to this headline">#</a></h3>
+<p>Before we write a custom Jaxpr interpreter, let’s first implement the “default” interpreter, <code class="docutils literal notranslate"><span class="pre">eval_jaxpr</span></code>, which evaluates the Jaxpr as-is, computing the same values that the original, un-transformed Python function would.</p>
+<p>To do this, we first create an environment to store the values for each of the variables, and update the environment with each equation we evaluate in the Jaxpr.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">eval_jaxpr</span><span class="p">(</span><span class="n">jaxpr</span><span class="p">,</span> <span class="n">consts</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+  <span class="c1"># Mapping from variable -&gt; value</span>
+  <span class="n">env</span> <span class="o">=</span> <span class="p">{}</span>
+  
+  <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="n">var</span><span class="p">):</span>
+    <span class="c1"># Literals are values baked into the Jaxpr</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">var</span><span class="p">)</span> <span class="ow">is</span> <span class="n">core</span><span class="o">.</span><span class="n">Literal</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">var</span><span class="o">.</span><span class="n">val</span>
+    <span class="k">return</span> <span class="n">env</span><span class="p">[</span><span class="n">var</span><span class="p">]</span>
+
+  <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+    <span class="n">env</span><span class="p">[</span><span class="n">var</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+
+  <span class="c1"># Bind args and consts to environment</span>
+  <span class="n">safe_map</span><span class="p">(</span><span class="n">write</span><span class="p">,</span> <span class="n">jaxpr</span><span class="o">.</span><span class="n">invars</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+  <span class="n">safe_map</span><span class="p">(</span><span class="n">write</span><span class="p">,</span> <span class="n">jaxpr</span><span class="o">.</span><span class="n">constvars</span><span class="p">,</span> <span class="n">consts</span><span class="p">)</span>
+
+  <span class="c1"># Loop through equations and evaluate primitives using `bind`</span>
+  <span class="k">for</span> <span class="n">eqn</span> <span class="ow">in</span> <span class="n">jaxpr</span><span class="o">.</span><span class="n">eqns</span><span class="p">:</span>
+    <span class="c1"># Read inputs to equation from environment</span>
+    <span class="n">invals</span> <span class="o">=</span> <span class="n">safe_map</span><span class="p">(</span><span class="n">read</span><span class="p">,</span> <span class="n">eqn</span><span class="o">.</span><span class="n">invars</span><span class="p">)</span>  
+    <span class="c1"># `bind` is how a primitive is called</span>
+    <span class="n">outvals</span> <span class="o">=</span> <span class="n">eqn</span><span class="o">.</span><span class="n">primitive</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="o">*</span><span class="n">invals</span><span class="p">,</span> <span class="o">**</span><span class="n">eqn</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+    <span class="c1"># Primitives may return multiple outputs or not</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">eqn</span><span class="o">.</span><span class="n">primitive</span><span class="o">.</span><span class="n">multiple_results</span><span class="p">:</span> 
+      <span class="n">outvals</span> <span class="o">=</span> <span class="p">[</span><span class="n">outvals</span><span class="p">]</span>
+    <span class="c1"># Write the results of the primitive into the environment</span>
+    <span class="n">safe_map</span><span class="p">(</span><span class="n">write</span><span class="p">,</span> <span class="n">eqn</span><span class="o">.</span><span class="n">outvars</span><span class="p">,</span> <span class="n">outvals</span><span class="p">)</span> 
+  <span class="c1"># Read the final result of the Jaxpr from the environment</span>
+  <span class="k">return</span> <span class="n">safe_map</span><span class="p">(</span><span class="n">read</span><span class="p">,</span> <span class="n">jaxpr</span><span class="o">.</span><span class="n">outvars</span><span class="p">)</span> 
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">closed_jaxpr</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">make_jaxpr</span><span class="p">(</span><span class="n">f</span><span class="p">)(</span><span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>
+<span class="n">eval_jaxpr</span><span class="p">(</span><span class="n">closed_jaxpr</span><span class="o">.</span><span class="n">jaxpr</span><span class="p">,</span> <span class="n">closed_jaxpr</span><span class="o">.</span><span class="n">literals</span><span class="p">,</span> <span class="n">jnp</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[DeviceArray([2.1416876, 2.1416876, 2.1416876, 2.1416876, 2.1416876], dtype=float32)]
+</pre></div>
+</div>
+</div>
+</div>
+<p>Notice that <code class="docutils literal notranslate"><span class="pre">eval_jaxpr</span></code> will always return a flat list even if the original function does not.</p>
+<p>Furthermore, this interpreter does not handle higher-order primitives (like <code class="docutils literal notranslate"><span class="pre">jit</span></code> and <code class="docutils literal notranslate"><span class="pre">pmap</span></code>), which we will not cover in this guide. You can refer to <code class="docutils literal notranslate"><span class="pre">core.eval_jaxpr</span></code> (<a class="reference external" href="https://github.com/google/jax/blob/main/jax/core.py">link</a>) to see the edge cases that this interpreter does not cover.</p>
+</section>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/Custom inverse Jaxpr interpreter"></a><section id="custom-inverse-jaxpr-interpreter">
+<h3>Custom <code class="docutils literal notranslate"><span class="pre">inverse</span></code> Jaxpr interpreter<a class="headerlink" href="#custom-inverse-jaxpr-interpreter" title="Permalink to this headline">#</a></h3>
+<p>An <code class="docutils literal notranslate"><span class="pre">inverse</span></code> interpreter doesn’t look too different from <code class="docutils literal notranslate"><span class="pre">eval_jaxpr</span></code>. We’ll first set up the registry which will map primitives to their inverses. We’ll then write a custom interpreter that looks up primitives in the registry.</p>
+<p>It turns out that this interpreter will also look similar to the “transpose” interpreter used in reverse-mode autodifferentiation <a class="reference external" href="https://github.com/google/jax/blob/main/jax/interpreters/ad.py#L164-L234">found here</a>.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">inverse_registry</span> <span class="o">=</span> <span class="p">{}</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>We’ll now register inverses for some of the primitives. By convention, primitives in Jax end in <code class="docutils literal notranslate"><span class="pre">_p</span></code> and a lot of the popular ones live in <code class="docutils literal notranslate"><span class="pre">lax</span></code>.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">inverse_registry</span><span class="p">[</span><span class="n">lax</span><span class="o">.</span><span class="n">exp_p</span><span class="p">]</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">log</span>
+<span class="n">inverse_registry</span><span class="p">[</span><span class="n">lax</span><span class="o">.</span><span class="n">tanh_p</span><span class="p">]</span> <span class="o">=</span> <span class="n">jnp</span><span class="o">.</span><span class="n">arctanh</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">inverse</span></code> will first trace the function, then custom-interpret the Jaxpr. Let’s set up a simple skeleton.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">inverse</span><span class="p">(</span><span class="n">fun</span><span class="p">):</span>
+  <span class="nd">@wraps</span><span class="p">(</span><span class="n">fun</span><span class="p">)</span>
+  <span class="k">def</span> <span class="nf">wrapped</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="c1"># Since we assume unary functions, we won't worry about flattening and</span>
+    <span class="c1"># unflattening arguments.</span>
+    <span class="n">closed_jaxpr</span> <span class="o">=</span> <span class="n">jax</span><span class="o">.</span><span class="n">make_jaxpr</span><span class="p">(</span><span class="n">fun</span><span class="p">)(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">inverse_jaxpr</span><span class="p">(</span><span class="n">closed_jaxpr</span><span class="o">.</span><span class="n">jaxpr</span><span class="p">,</span> <span class="n">closed_jaxpr</span><span class="o">.</span><span class="n">literals</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+  <span class="k">return</span> <span class="n">wrapped</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>Now we just need to define <code class="docutils literal notranslate"><span class="pre">inverse_jaxpr</span></code>, which will walk through the Jaxpr backward and invert primitives when it can.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">inverse_jaxpr</span><span class="p">(</span><span class="n">jaxpr</span><span class="p">,</span> <span class="n">consts</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+  <span class="n">env</span> <span class="o">=</span> <span class="p">{}</span>
+  
+  <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="n">var</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">var</span><span class="p">)</span> <span class="ow">is</span> <span class="n">core</span><span class="o">.</span><span class="n">Literal</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">var</span><span class="o">.</span><span class="n">val</span>
+    <span class="k">return</span> <span class="n">env</span><span class="p">[</span><span class="n">var</span><span class="p">]</span>
+
+  <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+    <span class="n">env</span><span class="p">[</span><span class="n">var</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+  <span class="c1"># Args now correspond to Jaxpr outvars</span>
+  <span class="n">safe_map</span><span class="p">(</span><span class="n">write</span><span class="p">,</span> <span class="n">jaxpr</span><span class="o">.</span><span class="n">outvars</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+  <span class="n">safe_map</span><span class="p">(</span><span class="n">write</span><span class="p">,</span> <span class="n">jaxpr</span><span class="o">.</span><span class="n">constvars</span><span class="p">,</span> <span class="n">consts</span><span class="p">)</span>
+
+  <span class="c1"># Looping backward</span>
+  <span class="k">for</span> <span class="n">eqn</span> <span class="ow">in</span> <span class="n">jaxpr</span><span class="o">.</span><span class="n">eqns</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+    <span class="c1">#  outvars are now invars </span>
+    <span class="n">invals</span> <span class="o">=</span> <span class="n">safe_map</span><span class="p">(</span><span class="n">read</span><span class="p">,</span> <span class="n">eqn</span><span class="o">.</span><span class="n">outvars</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">eqn</span><span class="o">.</span><span class="n">primitive</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inverse_registry</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+          <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">eqn</span><span class="o">.</span><span class="n">primitive</span><span class="si">}</span><span class="s2"> does not have registered inverse."</span><span class="p">)</span>
+    <span class="c1"># Assuming a unary function </span>
+    <span class="n">outval</span> <span class="o">=</span> <span class="n">inverse_registry</span><span class="p">[</span><span class="n">eqn</span><span class="o">.</span><span class="n">primitive</span><span class="p">](</span><span class="o">*</span><span class="n">invals</span><span class="p">)</span>
+    <span class="n">safe_map</span><span class="p">(</span><span class="n">write</span><span class="p">,</span> <span class="n">eqn</span><span class="o">.</span><span class="n">invars</span><span class="p">,</span> <span class="p">[</span><span class="n">outval</span><span class="p">])</span>
+  <span class="k">return</span> <span class="n">safe_map</span><span class="p">(</span><span class="n">read</span><span class="p">,</span> <span class="n">jaxpr</span><span class="o">.</span><span class="n">invars</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>That’s it!</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">f</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">jnp</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">jnp</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+
+<span class="n">f_inv</span> <span class="o">=</span> <span class="n">inverse</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">jnp</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">f_inv</span><span class="p">(</span><span class="n">f</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)),</span> <span class="mf">1.0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>Importantly, you can trace through a Jaxpr interpreter.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">jax</span><span class="o">.</span><span class="n">make_jaxpr</span><span class="p">(</span><span class="n">inverse</span><span class="p">(</span><span class="n">f</span><span class="p">))(</span><span class="n">f</span><span class="p">(</span><span class="mf">1.</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>{ lambda ; a:f32[]. let b:f32[] = log a; c:f32[] = atanh b in (c,) }
+</pre></div>
+</div>
+</div>
+</div>
+<p>That’s all it takes to add a new transformation to a system, and you get composition with all the others for free! For example, we can use <code class="docutils literal notranslate"><span class="pre">jit</span></code>, <code class="docutils literal notranslate"><span class="pre">vmap</span></code>, and <code class="docutils literal notranslate"><span class="pre">grad</span></code> with <code class="docutils literal notranslate"><span class="pre">inverse</span></code>!</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">jit</span><span class="p">(</span><span class="n">vmap</span><span class="p">(</span><span class="n">grad</span><span class="p">(</span><span class="n">inverse</span><span class="p">(</span><span class="n">f</span><span class="p">))))((</span><span class="n">jnp</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1.</span><span class="p">)</span> <span class="o">/</span> <span class="mf">5.</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>DeviceArray([-3.1440797, 15.584931 ,  2.2551253,  1.3155028,  1.       ],            dtype=float32, weak_type=True)
+</pre></div>
+</div>
+</div>
+</div>
+</section>
+</section>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/Exercises for the reader"></a><section id="exercises-for-the-reader">
+<h2>Exercises for the reader<a class="headerlink" href="#exercises-for-the-reader" title="Permalink to this headline">#</a></h2>
+<ul class="simple">
+<li><p>Handle primitives with multiple arguments where inputs are partially known, for example <code class="docutils literal notranslate"><span class="pre">lax.add_p</span></code>, <code class="docutils literal notranslate"><span class="pre">lax.mul_p</span></code>.</p></li>
+<li><p>Handle <code class="docutils literal notranslate"><span class="pre">xla_call</span></code> and <code class="docutils literal notranslate"><span class="pre">xla_pmap</span></code> primitives, which will not work with both <code class="docutils literal notranslate"><span class="pre">eval_jaxpr</span></code> and <code class="docutils literal notranslate"><span class="pre">inverse_jaxpr</span></code> as written.</p></li>
+</ul>
+</section>
+</section>
+</div>
+</main>
+<footer class="footer-article noprint">
+<!-- Previous / next buttons -->
+<div class="prev-next-area">
+<a class="left-prev" href="How_JAX_primitives_work.html" id="prev-link" title="previous page">
+<i class="fas fa-angle-left"></i>
+<div class="prev-next-info">
+<p class="prev-next-subtitle">previous</p>
+<p class="prev-next-title">How JAX primitives work</p>
+</div>
+</a>
+<a class="right-next" href="Neural_Network_and_Data_Loading.html" id="next-link" title="next page">
+<div class="prev-next-info">
+<p class="prev-next-subtitle">next</p>
+<p class="prev-next-title">Training a Simple Neural Network, with PyTorch Data Loading</p>
+</div>
+<i class="fas fa-angle-right"></i>
+</a>
+</div>
+</footer>
+</div>
+</div>
+<div class="footer-content row">
+<footer class="col footer"><p>
+  
+    By The JAX authors<br/>
+  
+      © Copyright 2020, The JAX Authors. NumPy and SciPy documentation are copyright the respective authors..<br/>
+</p>
+</footer>
+</div>
+</div>
+</div>
+</div>
+<!-- Scripts loaded after <body> so the DOM is not blocked -->
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=1999514e3f237ded88cf"></script>
+</body>
+</html>
