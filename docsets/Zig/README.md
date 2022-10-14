@@ -8,7 +8,7 @@ This docset includes static renditions of
 Note: The standard library reference above is the public output of [autodoc](https://github.com/ziglang/zig/wiki/How-to-contribute-to-Autodoc) which is experimental and under heavy development at this time. Expect issues and broken links.
 
 ## Generation details
-Generated v0.9.1 and v0.10.0-dev.4327+3a9344d8f on 14th Oct 2022 with [this script](https://github.com/puqeko/zig2dash). Details at link.
+Generated v0.9.1 and v0.10.0-dev.4333+f5f28e0d2 on 15th Oct 2022 with [this script](https://github.com/puqeko/zig2dash). Details at link.
 
 ## Authors
 [Matheus Catarino](https://kassane.github.io) and [puqeko](https://github.com/puqeko).
