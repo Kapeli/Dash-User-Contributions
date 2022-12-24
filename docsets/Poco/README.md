@@ -1,6 +1,10 @@
 Poco
 =======================
 
+### Known issue
+1. Some `Class` and `Namespace` definitions in index page may show as `Function`. This situation does not result in a decrease in overall availability.
+2. Version `1.10.1` formatting is brocken. See also [#3838](https://github.com/Kapeli/Dash-User-Contributions/issues/3838). This will be fixed in the future.
+
 ### Author
  + [wxk6b1203](https://github.com/wxk6b1203)
 
