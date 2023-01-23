@@ -7,7 +7,7 @@ The Docset was generated with the [Elm Docset Generator](https://github.com/krak
 
 There are two versions of the documentation: 
   * `^0.18.0` is version of packages for older version of Elm (generated on 2018-07-18)
-  * `^0.19.0` current version of 1644 packages as of 2022-12-27
+  * `^0.19.0` current version of 1659 packages as of 2023-01-23
 
 For more information about Elm, visit http://elm-lang.org/
 
