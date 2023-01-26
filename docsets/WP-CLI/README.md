@@ -2,7 +2,7 @@
 
 ## Author
 
-[Patrik Csak](https://github.com/ptrkcsk)
+[Patrik Csak](https://github.com/patrik-csak)
 
 ## How to generate this docset
 
