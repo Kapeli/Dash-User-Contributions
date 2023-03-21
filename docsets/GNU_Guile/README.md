@@ -1,6 +1,7 @@
 GNU Guile Docset
 ================
-* Name: [Peking Duck](https://github.com/pekingduck)
+* Name: [Peking Duck](https://github.com/pekingduck) - original author and maintainer
+* Name: [Louie Shprung](https://github.com/lshprung) - maintainer
 * Document source: http://www.gnu.org/software/guile/manual/ (HTML compressed with one web page per node)
 * To generate the doc:
   * Download and uncompress the .tgz file into ```GNU_Guile.docset/Contents/Resources/Documents/guile```
