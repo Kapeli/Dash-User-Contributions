@@ -1,4 +1,4 @@
 CUDA Docset
 =======================
 
-https://github.com/blahgeek/dashdoc-cuda
+https://github.com/siboehm/dashdoc-cuda
