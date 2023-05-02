@@ -17,14 +17,15 @@ How to Generate
 
 ```sh
 # Download the Vulkan spec
-wget https://www.khronos.org/registry/vulkan/specs/1.0-wsi_extensions/html/vkspec.html
+wget https://registry.khronos.org/vulkan/specs/1.3-extensions/html/chap{1..59}.html https://registry.khronos.org/vulkan/specs/1.3-extensions/html/index.html
 
 # Use dashing to generate
-git clone -b vulkan git@github.com:antiagainst/dashing.git
+git clone -b vulkan https://github.com/antiagainst/dashing.git
 # The above has modifications for parsing Vulkan spec.
 # Build it and use the dashing.json at examples/vulkan/dashing.json
 # for building the docset.
 $GOPATH/bin/dashing build
+tar --exclude='Makefile' --exclude='.DS_Store' -cvzf Vulkan.tgz vulkan.docset
 ```
 
 [vulkan]: https://www.khronos.org/vulkan
