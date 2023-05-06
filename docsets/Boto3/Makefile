@@ -8,8 +8,9 @@ DOCSET ?= $(shell pwd)
 
 fetch:
 	cd $(BOTO3_SRC) && \
-		git fetch && \
-		git checkout $(shell cd $(BOTO3_SRC) && git tag | sort -V | tail -n1 )
+		git fetch
+	cd $(BOTO3_SRC) && \
+		git checkout "$$(cd $(BOTO3_SRC) && git tag | sort -V | tail -n1 )"
 
 docs:
 	cd $(BOTO3_SRC) && \
