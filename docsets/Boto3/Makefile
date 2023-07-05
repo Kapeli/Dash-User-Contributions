@@ -8,8 +8,9 @@ DOCSET ?= $(shell pwd)
 
 fetch:
 	cd $(BOTO3_SRC) && \
-		git fetch && \
-		git checkout $(shell cd $(BOTO3_SRC) && git tag | sort -V | tail -n1 )
+		git fetch
+	cd $(BOTO3_SRC) && \
+		git checkout "$$(cd $(BOTO3_SRC) && git tag | sort -V | tail -n1 )"
 
 docs:
 	cd $(BOTO3_SRC) && \
@@ -41,3 +42,9 @@ version:
 			mv docset.json.tmp docset.json && \
 			sed -E -i .bak "s/Boto3 Version: .+/Boto3 Version: $$VERSION/" README.md && \
 			rm -f README.md.bak
+
+upload:
+	VERSION=$(shell cd $(BOTO3_SRC) && git describe --tags) && \
+			aws s3 cp boto3.tgz s3://$(BOTO3_BUCKET)/$$VERSION/boto3.tgz && \
+			curl --fail --silent --head https://$(BOTO3_CF)/$$VERSION/boto3.tgz && \
+			echo https://$(BOTO3_CF)/$$VERSION/boto3.tgz
