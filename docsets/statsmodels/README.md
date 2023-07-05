@@ -8,25 +8,17 @@ Statsmodels Dash Docset
     - [Angelo Varlotta - GitHub](https://github.com/capac)
 
 - Docset Generation:
-    - Read the `README.md` file in the `docs` directory. From the file:
-      - _We use a combination of sphinx and Jupyter notebooks for the documentation. Jupyter notebooks should be used for longer, self-contained examples demonstrating a topic. Sphinx is nice because we get the tables of contents and API documentation._
+    - Read the `README.md` file in the main and `docs` directory.
     - Create an environment for compiling the docs using Anaconda.
-      - `conda create -n statsmodels-docs -c conda-docs`
-    - Clone from the statsmodels GitHub repository the v0.13.1 branch and switch to the directory.
-        - `git clone --branch=v0.13.1 https://github.com/statsmodels/statsmodels`
-    - Run `python -m pip install -e .[docs]` to install Python packages contained in the `requirement.txt` files in the `docs/` folder.
-    - You may need to install several additional Python packages not contained in the `requirements.txt` file. Just run `python -m pip install <package-name>` or `conda install -c conda-forge <package-name>`. Some of the packages I needed to install include:
-        - `rpy2`
-        - `pytest`
-        - `seaborn`
-        - `pymc3`
-        - `pyyaml`
-        - `sphinx_material`
-        - `nbsphinx`
-        - `graphviz`
+      - `conda create -n statsmodels-docs -c conda-forge`
+    - Clone from the statsmodels GitHub repository the v0.14.0 branch and switch to the directory.
+        - `git clone --branch=v0.14.0 https://github.com/statsmodels/statsmodels`
+    - Run `python -m pip install -f requirement.txt` and `python -m pip install -f requirement-doc.txt` to install required Python packages.
+    - You may need to install several additional Python packages not contained in the requirements file. Just run `python -m pip install <package-name>` or `conda install -c conda-forge <package-name>`.
+    - Go to `cd docs/`
     - Compile the docs with `make html`.
-    - Install `doc2dash` with `python -m pip install doc2dash` (will also install: `zope.interface`, `soupsieve`, `beautifulsoup4`, `colorama`, `click`).
+    - Install `doc2dash` with `python -m pip install doc2dash` (will also install extra packages).
     - Go to `cd _build/html`.
     - Run `doc2dash` command with option parameters. My command was: 
-    ```doc2dash -n "statsmodels 0.13.1" -d "~/Library/ApplicationSupport/doc2dash/DocSets/statsmodels/0-13-1" -i "~/Pictures/Icons/dash/statsmodels/icon@2x.png" -v -j -u "https://www.statsmodels.org/" -I "index.html" ./ -a -f```
+    ```doc2dash -n "statsmodels 0.14.0" -d "~/Library/ApplicationSupport/doc2dash/DocSets/statsmodels/0-14-0" -i "~/Pictures/Icons/dash/statsmodels/icon@2x.png" -v -j -u "https://www.statsmodels.org/" -I "index.html" ./ -a -f```
     - The statsmodels package will install directly into Dash.
