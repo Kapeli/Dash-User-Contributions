@@ -3,7 +3,7 @@ Boto3 Docset
 Boto3 is the Amazon Web Services (AWS) Software Development Kit (SDK) for Python, which allows Python developers to write software that makes use of services like Amazon S3 and Amazon EC2.
 http://boto3.readthedocs.io/en/latest/
 
-* Boto3 Version: 1.26.121
+* Boto3 Version: 1.26.143
 * Dash Docset: Updated by James Seward
 * Twitter: @jamesoff
 * Mastodon: @jamesoff@mastodon.jamesoff.net
@@ -14,6 +14,17 @@ http://boto3.readthedocs.io/en/latest/
 How to generate this docset:
 
 * Clone the boto3 repo from here: https://github.com/boto/boto3
+
+**Automated build**
+
+* Set `BOTO3_SRC` in your environment to the directory the boto3 repo is checked out to
+* If you are uploading to an S3 bucket + CF distribution (to host for the PR), set `BOTO3_BUCKET` and `BOTO3_CF`, and arrange for suitable AWS credentials to be available
+* Fetch `master` from upstream and check out a new branch
+* `make all` will perform the entire build and update this file and the JSON specificiation with the new version numbers
+* Commit
+* If hosting the tgz file in S3, `make upload` will upload, check the URL, then print it
+
+**Step-by-step instructions**
 
 * Generate local docs as per: https://github.com/boto/boto3#generating-documentation
 	```
