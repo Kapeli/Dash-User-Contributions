@@ -11,14 +11,16 @@
 ## Generate docset
 
 1. Install Dependencies
-
-"""sh
+```sh
 pip3 install bs4
 pip3 install lxml
-"""
+```
 
-2. Run the steps pointed in this [repository](https://github.com/drmargarido/odin-docset/tree/master#steps-to-generate-the-manually)
-
+2. Run the following scripts from this [repository](https://github.com/drmargarido/odin-docset)
+```sh
+bash download_pkgs_docs.sh
+python3 generate_odin_docset.py
+```
 
 ## Notes
 
