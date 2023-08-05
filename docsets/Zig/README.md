@@ -11,7 +11,7 @@ Note: The standard library reference above is the processed output of [autodoc](
 
 Using [this hacky script](https://github.com/puqeko/zig2dash).
 
-* Added v0.11.0 on 4th Aug 2023.
+* Updated v0.11.0 on 6th Aug 2023.
 * Updated v0.10.0 on 2nd Nov 2022.
 * Updated v0.9.1 on 15th Oct 2022.
 
