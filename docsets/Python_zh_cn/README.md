@@ -13,4 +13,4 @@ To generate docset, install [doc2dash](https://doc2dash.hynek.me/en/stable/insta
 
     doc2dash -n Python_zh_cn -I index.html -u https://docs.python.org/zh-cn/3.x/ -j python-3.x.x-docs-html
 
-add `-i icon.png` to include a icon.
+Copy two icons into `Python_zh_cn.docset`, then change the value of `<key>CFBundleName</key>` in `Info.plist` to `<string>Python 3.x</string>`.
