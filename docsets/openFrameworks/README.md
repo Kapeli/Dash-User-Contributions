@@ -1,6 +1,6 @@
 # Docset for openFrameworks 0.11.1
 
-Created by [Yi donghoon](https://github.com/icq4ever), [@icq4ever](https://twitter.com/icq4ever)
+Created by [Yi donghoon](https://github.com/icq4ever), [@icq4ever.dev](https://instagram.com/icq4ever.dev/)
 
 ## generate docset for Dash
 
@@ -53,6 +53,12 @@ To create this docset, we need two application
 ---
 
 ## Contributions
+#### Docset for openFrameworks 0.12.0 
+- Created by [Yi donghoon](https://github.com/icq4ever), [@icq4ever.dev](https://instagram.com/icq4ever)
+
+#### Docset for openFrameworks 0.11.1
+- Created by [Yi donghoon](https://github.com/icq4ever), [@icq4ever](https://twitter.com/icq4ever)
+- 
 #### Docset for openFrameworks 0.11.0 
 - Created by [Yi donghoon](https://github.com/icq4ever), [@icq4ever](https://twitter.com/icq4ever)
 
