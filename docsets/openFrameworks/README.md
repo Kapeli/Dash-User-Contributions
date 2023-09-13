@@ -1,4 +1,4 @@
-# Docset for openFrameworks 0.11.1
+# Docset for openFrameworks
 
 Created by [Yi donghoon](https://github.com/icq4ever), [@icq4ever.dev](https://instagram.com/icq4ever.dev/)
 
