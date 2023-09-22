@@ -24,12 +24,6 @@ doc2dash -n SymPy -d SymPy.docset.X.Y --enable-js -i "sympy-docs-html-X.Y/_stati
 
 where `X.Y` has to be replaced by the current version number
 
-for example
-
-```cmd
-doc2dash -n SymPy -d SymPy.docset.1.12 --enable-js -i "sympy-docs-html-1.12/_static/sympylogo.png" -uhttp://docs.sympy.org/latest/index.html -v sympy-docs-html-1.12
-```
-
 4. Change into the created directory `SymPy-X.Y.docset`
 
 5. Pack the content:
@@ -39,3 +33,9 @@ tar cvzf SymPy.tgz SymPy.docset
 ```
 
 6. Adapt the `docset.json` file and put `SymPy.tgz` into a newly created directory `X.Y` in the versions directory.
+
+For example
+
+```cmd
+doc2dash -n SymPy -d SymPy.docset.1.12 --enable-js -i "sympy-docs-html-1.12/_static/sympylogo.png" -uhttp://docs.sympy.org/latest/index.html -v sympy-docs-html-1.12 && cd sympy-docs-html-1.12 && tar cvzf SymPy.tgz SymPy.docset
+```
