@@ -1,10 +1,12 @@
-Requests Docset
-=======================
+# Requests Docset
 
-Docset made by Matt Cowger (@mcowger, github/mcowger)
+Docset made by Matt Cowger (@mcowger, github/mcowger) and Xinbin Yang (@_ivaquero_, github/ivaquero)
 
-built with doc2dash -n Requests -i ../../requests-sidebar.png -f -I index.html -A -v _build/html
- 
-https://github.com/kennethreitz/requests
+```cmd
+cd docs & make html
+doc2dash -n Requests -i _static/requests-sidebar.png -f -I index.html -v _build/html
+```
 
-Original author of requests is not me, but Kenneth Reitz.
+Check [requests](https://github.com/psf/requests) for details.
+
+Original authors of requests ain't us, but Kenneth Reitz.
