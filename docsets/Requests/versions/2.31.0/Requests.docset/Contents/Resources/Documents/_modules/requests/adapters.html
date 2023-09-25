@@ -1,0 +1,724 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>requests.adapters &#8212; Requests 2.31.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css" />
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/jquery.js"></script>
+    <script src="../../_static/underscore.js"></script>
+    <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for requests.adapters</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">requests.adapters</span>
+<span class="sd">~~~~~~~~~~~~~~~~~</span>
+
+<span class="sd">This module contains the transport adapters that Requests uses to define</span>
+<span class="sd">and maintain connections.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os.path</span>
+<span class="kn">import</span> <span class="nn">socket</span>  <span class="c1"># noqa: F401</span>
+
+<span class="kn">from</span> <span class="nn">urllib3.exceptions</span> <span class="kn">import</span> <span class="n">ClosedPoolError</span><span class="p">,</span> <span class="n">ConnectTimeoutError</span>
+<span class="kn">from</span> <span class="nn">urllib3.exceptions</span> <span class="kn">import</span> <span class="n">HTTPError</span> <span class="k">as</span> <span class="n">_HTTPError</span>
+<span class="kn">from</span> <span class="nn">urllib3.exceptions</span> <span class="kn">import</span> <span class="n">InvalidHeader</span> <span class="k">as</span> <span class="n">_InvalidHeader</span>
+<span class="kn">from</span> <span class="nn">urllib3.exceptions</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">LocationValueError</span><span class="p">,</span>
+    <span class="n">MaxRetryError</span><span class="p">,</span>
+    <span class="n">NewConnectionError</span><span class="p">,</span>
+    <span class="n">ProtocolError</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">urllib3.exceptions</span> <span class="kn">import</span> <span class="n">ProxyError</span> <span class="k">as</span> <span class="n">_ProxyError</span>
+<span class="kn">from</span> <span class="nn">urllib3.exceptions</span> <span class="kn">import</span> <span class="n">ReadTimeoutError</span><span class="p">,</span> <span class="n">ResponseError</span>
+<span class="kn">from</span> <span class="nn">urllib3.exceptions</span> <span class="kn">import</span> <span class="n">SSLError</span> <span class="k">as</span> <span class="n">_SSLError</span>
+<span class="kn">from</span> <span class="nn">urllib3.poolmanager</span> <span class="kn">import</span> <span class="n">PoolManager</span><span class="p">,</span> <span class="n">proxy_from_url</span>
+<span class="kn">from</span> <span class="nn">urllib3.util</span> <span class="kn">import</span> <span class="n">Timeout</span> <span class="k">as</span> <span class="n">TimeoutSauce</span>
+<span class="kn">from</span> <span class="nn">urllib3.util</span> <span class="kn">import</span> <span class="n">parse_url</span>
+<span class="kn">from</span> <span class="nn">urllib3.util.retry</span> <span class="kn">import</span> <span class="n">Retry</span>
+
+<span class="kn">from</span> <span class="nn">.auth</span> <span class="kn">import</span> <span class="n">_basic_auth_str</span>
+<span class="kn">from</span> <span class="nn">.compat</span> <span class="kn">import</span> <span class="n">basestring</span><span class="p">,</span> <span class="n">urlparse</span>
+<span class="kn">from</span> <span class="nn">.cookies</span> <span class="kn">import</span> <span class="n">extract_cookies_to_jar</span>
+<span class="kn">from</span> <span class="nn">.exceptions</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="ne">ConnectionError</span><span class="p">,</span>
+    <span class="n">ConnectTimeout</span><span class="p">,</span>
+    <span class="n">InvalidHeader</span><span class="p">,</span>
+    <span class="n">InvalidProxyURL</span><span class="p">,</span>
+    <span class="n">InvalidSchema</span><span class="p">,</span>
+    <span class="n">InvalidURL</span><span class="p">,</span>
+    <span class="n">ProxyError</span><span class="p">,</span>
+    <span class="n">ReadTimeout</span><span class="p">,</span>
+    <span class="n">RetryError</span><span class="p">,</span>
+    <span class="n">SSLError</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">Response</span>
+<span class="kn">from</span> <span class="nn">.structures</span> <span class="kn">import</span> <span class="n">CaseInsensitiveDict</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DEFAULT_CA_BUNDLE_PATH</span><span class="p">,</span>
+    <span class="n">extract_zipped_paths</span><span class="p">,</span>
+    <span class="n">get_auth_from_url</span><span class="p">,</span>
+    <span class="n">get_encoding_from_headers</span><span class="p">,</span>
+    <span class="n">prepend_scheme_if_needed</span><span class="p">,</span>
+    <span class="n">select_proxy</span><span class="p">,</span>
+    <span class="n">urldefragauth</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">urllib3.contrib.socks</span> <span class="kn">import</span> <span class="n">SOCKSProxyManager</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="nf">SOCKSProxyManager</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">InvalidSchema</span><span class="p">(</span><span class="s2">&quot;Missing dependencies for SOCKS support.&quot;</span><span class="p">)</span>
+
+
+<span class="n">DEFAULT_POOLBLOCK</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="n">DEFAULT_POOLSIZE</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">DEFAULT_RETRIES</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">DEFAULT_POOL_TIMEOUT</span> <span class="o">=</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="BaseAdapter"><a class="viewcode-back" href="../../api.html#requests.adapters.BaseAdapter">[docs]</a><span class="k">class</span> <span class="nc">BaseAdapter</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The Base Transport Adapter&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+<div class="viewcode-block" id="BaseAdapter.send"><a class="viewcode-back" href="../../api.html#requests.adapters.BaseAdapter.send">[docs]</a>    <span class="k">def</span> <span class="nf">send</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cert</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">proxies</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sends PreparedRequest object. Returns Response object.</span>
+
+<span class="sd">        :param request: The :class:`PreparedRequest &lt;PreparedRequest&gt;` being sent.</span>
+<span class="sd">        :param stream: (optional) Whether to stream the request content.</span>
+<span class="sd">        :param timeout: (optional) How long to wait for the server to send</span>
+<span class="sd">            data before giving up, as a float, or a :ref:`(connect timeout,</span>
+<span class="sd">            read timeout) &lt;timeouts&gt;` tuple.</span>
+<span class="sd">        :type timeout: float or tuple</span>
+<span class="sd">        :param verify: (optional) Either a boolean, in which case it controls whether we verify</span>
+<span class="sd">            the server&#39;s TLS certificate, or a string, in which case it must be a path</span>
+<span class="sd">            to a CA bundle to use</span>
+<span class="sd">        :param cert: (optional) Any user-provided SSL certificate to be trusted.</span>
+<span class="sd">        :param proxies: (optional) The proxies dictionary to apply to the request.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
+
+<div class="viewcode-block" id="BaseAdapter.close"><a class="viewcode-back" href="../../api.html#requests.adapters.BaseAdapter.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Cleans up adapter specific items.&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span></div></div>
+
+
+<div class="viewcode-block" id="HTTPAdapter"><a class="viewcode-back" href="../../api.html#requests.adapters.HTTPAdapter">[docs]</a><span class="k">class</span> <span class="nc">HTTPAdapter</span><span class="p">(</span><span class="n">BaseAdapter</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The built-in HTTP Adapter for urllib3.</span>
+
+<span class="sd">    Provides a general-case interface for Requests sessions to contact HTTP and</span>
+<span class="sd">    HTTPS urls by implementing the Transport Adapter interface. This class will</span>
+<span class="sd">    usually be created by the :class:`Session &lt;Session&gt;` class under the</span>
+<span class="sd">    covers.</span>
+
+<span class="sd">    :param pool_connections: The number of urllib3 connection pools to cache.</span>
+<span class="sd">    :param pool_maxsize: The maximum number of connections to save in the pool.</span>
+<span class="sd">    :param max_retries: The maximum number of retries each connection</span>
+<span class="sd">        should attempt. Note, this applies only to failed DNS lookups, socket</span>
+<span class="sd">        connections and connection timeouts, never to requests where data has</span>
+<span class="sd">        made it to the server. By default, Requests does not retry failed</span>
+<span class="sd">        connections. If you need granular control over the conditions under</span>
+<span class="sd">        which we retry a request, import urllib3&#39;s ``Retry`` class and pass</span>
+<span class="sd">        that instead.</span>
+<span class="sd">    :param pool_block: Whether the connection pool should block for connections.</span>
+
+<span class="sd">    Usage::</span>
+
+<span class="sd">      &gt;&gt;&gt; import requests</span>
+<span class="sd">      &gt;&gt;&gt; s = requests.Session()</span>
+<span class="sd">      &gt;&gt;&gt; a = requests.adapters.HTTPAdapter(max_retries=3)</span>
+<span class="sd">      &gt;&gt;&gt; s.mount(&#39;http://&#39;, a)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">__attrs__</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;max_retries&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;config&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_pool_connections&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_pool_maxsize&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_pool_block&quot;</span><span class="p">,</span>
+    <span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">pool_connections</span><span class="o">=</span><span class="n">DEFAULT_POOLSIZE</span><span class="p">,</span>
+        <span class="n">pool_maxsize</span><span class="o">=</span><span class="n">DEFAULT_POOLSIZE</span><span class="p">,</span>
+        <span class="n">max_retries</span><span class="o">=</span><span class="n">DEFAULT_RETRIES</span><span class="p">,</span>
+        <span class="n">pool_block</span><span class="o">=</span><span class="n">DEFAULT_POOLBLOCK</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">if</span> <span class="n">max_retries</span> <span class="o">==</span> <span class="n">DEFAULT_RETRIES</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">max_retries</span> <span class="o">=</span> <span class="n">Retry</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">read</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">max_retries</span> <span class="o">=</span> <span class="n">Retry</span><span class="o">.</span><span class="n">from_int</span><span class="p">(</span><span class="n">max_retries</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">proxy_manager</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pool_connections</span> <span class="o">=</span> <span class="n">pool_connections</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pool_maxsize</span> <span class="o">=</span> <span class="n">pool_maxsize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pool_block</span> <span class="o">=</span> <span class="n">pool_block</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_poolmanager</span><span class="p">(</span><span class="n">pool_connections</span><span class="p">,</span> <span class="n">pool_maxsize</span><span class="p">,</span> <span class="n">block</span><span class="o">=</span><span class="n">pool_block</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">attr</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__attrs__</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="c1"># Can&#39;t handle by adding &#39;proxy_manager&#39; to self.__attrs__ because</span>
+        <span class="c1"># self.poolmanager uses a lambda function, which isn&#39;t pickleable.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">proxy_manager</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">attr</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_poolmanager</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_pool_connections</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pool_maxsize</span><span class="p">,</span> <span class="n">block</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pool_block</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="HTTPAdapter.init_poolmanager"><a class="viewcode-back" href="../../api.html#requests.adapters.HTTPAdapter.init_poolmanager">[docs]</a>    <span class="k">def</span> <span class="nf">init_poolmanager</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">connections</span><span class="p">,</span> <span class="n">maxsize</span><span class="p">,</span> <span class="n">block</span><span class="o">=</span><span class="n">DEFAULT_POOLBLOCK</span><span class="p">,</span> <span class="o">**</span><span class="n">pool_kwargs</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes a urllib3 PoolManager.</span>
+
+<span class="sd">        This method should not be called from user code, and is only</span>
+<span class="sd">        exposed for use when subclassing the</span>
+<span class="sd">        :class:`HTTPAdapter &lt;requests.adapters.HTTPAdapter&gt;`.</span>
+
+<span class="sd">        :param connections: The number of urllib3 connection pools to cache.</span>
+<span class="sd">        :param maxsize: The maximum number of connections to save in the pool.</span>
+<span class="sd">        :param block: Block when no free connections are available.</span>
+<span class="sd">        :param pool_kwargs: Extra keyword arguments used to initialize the Pool Manager.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># save these values for pickling</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pool_connections</span> <span class="o">=</span> <span class="n">connections</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pool_maxsize</span> <span class="o">=</span> <span class="n">maxsize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pool_block</span> <span class="o">=</span> <span class="n">block</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">poolmanager</span> <span class="o">=</span> <span class="n">PoolManager</span><span class="p">(</span>
+            <span class="n">num_pools</span><span class="o">=</span><span class="n">connections</span><span class="p">,</span>
+            <span class="n">maxsize</span><span class="o">=</span><span class="n">maxsize</span><span class="p">,</span>
+            <span class="n">block</span><span class="o">=</span><span class="n">block</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">pool_kwargs</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="HTTPAdapter.proxy_manager_for"><a class="viewcode-back" href="../../api.html#requests.adapters.HTTPAdapter.proxy_manager_for">[docs]</a>    <span class="k">def</span> <span class="nf">proxy_manager_for</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proxy</span><span class="p">,</span> <span class="o">**</span><span class="n">proxy_kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return urllib3 ProxyManager for the given proxy.</span>
+
+<span class="sd">        This method should not be called from user code, and is only</span>
+<span class="sd">        exposed for use when subclassing the</span>
+<span class="sd">        :class:`HTTPAdapter &lt;requests.adapters.HTTPAdapter&gt;`.</span>
+
+<span class="sd">        :param proxy: The proxy to return a urllib3 ProxyManager for.</span>
+<span class="sd">        :param proxy_kwargs: Extra keyword arguments used to configure the Proxy Manager.</span>
+<span class="sd">        :returns: ProxyManager</span>
+<span class="sd">        :rtype: urllib3.ProxyManager</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">proxy</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">proxy_manager</span><span class="p">:</span>
+            <span class="n">manager</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">proxy_manager</span><span class="p">[</span><span class="n">proxy</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">proxy</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;socks&quot;</span><span class="p">):</span>
+            <span class="n">username</span><span class="p">,</span> <span class="n">password</span> <span class="o">=</span> <span class="n">get_auth_from_url</span><span class="p">(</span><span class="n">proxy</span><span class="p">)</span>
+            <span class="n">manager</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">proxy_manager</span><span class="p">[</span><span class="n">proxy</span><span class="p">]</span> <span class="o">=</span> <span class="n">SOCKSProxyManager</span><span class="p">(</span>
+                <span class="n">proxy</span><span class="p">,</span>
+                <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">,</span>
+                <span class="n">password</span><span class="o">=</span><span class="n">password</span><span class="p">,</span>
+                <span class="n">num_pools</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pool_connections</span><span class="p">,</span>
+                <span class="n">maxsize</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pool_maxsize</span><span class="p">,</span>
+                <span class="n">block</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pool_block</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">proxy_kwargs</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">proxy_headers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">proxy_headers</span><span class="p">(</span><span class="n">proxy</span><span class="p">)</span>
+            <span class="n">manager</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">proxy_manager</span><span class="p">[</span><span class="n">proxy</span><span class="p">]</span> <span class="o">=</span> <span class="n">proxy_from_url</span><span class="p">(</span>
+                <span class="n">proxy</span><span class="p">,</span>
+                <span class="n">proxy_headers</span><span class="o">=</span><span class="n">proxy_headers</span><span class="p">,</span>
+                <span class="n">num_pools</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pool_connections</span><span class="p">,</span>
+                <span class="n">maxsize</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pool_maxsize</span><span class="p">,</span>
+                <span class="n">block</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_pool_block</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">proxy_kwargs</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">manager</span></div>
+
+<div class="viewcode-block" id="HTTPAdapter.cert_verify"><a class="viewcode-back" href="../../api.html#requests.adapters.HTTPAdapter.cert_verify">[docs]</a>    <span class="k">def</span> <span class="nf">cert_verify</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">verify</span><span class="p">,</span> <span class="n">cert</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Verify a SSL certificate. This method should not be called from user</span>
+<span class="sd">        code, and is only exposed for use when subclassing the</span>
+<span class="sd">        :class:`HTTPAdapter &lt;requests.adapters.HTTPAdapter&gt;`.</span>
+
+<span class="sd">        :param conn: The urllib3 connection object associated with the cert.</span>
+<span class="sd">        :param url: The requested URL.</span>
+<span class="sd">        :param verify: Either a boolean, in which case it controls whether we verify</span>
+<span class="sd">            the server&#39;s TLS certificate, or a string, in which case it must be a path</span>
+<span class="sd">            to a CA bundle to use</span>
+<span class="sd">        :param cert: The SSL certificate to verify.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">url</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;https&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">verify</span><span class="p">:</span>
+
+            <span class="n">cert_loc</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="c1"># Allow self-specified cert location.</span>
+            <span class="k">if</span> <span class="n">verify</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">cert_loc</span> <span class="o">=</span> <span class="n">verify</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">cert_loc</span><span class="p">:</span>
+                <span class="n">cert_loc</span> <span class="o">=</span> <span class="n">extract_zipped_paths</span><span class="p">(</span><span class="n">DEFAULT_CA_BUNDLE_PATH</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">cert_loc</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">cert_loc</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Could not find a suitable TLS CA certificate bundle, &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;invalid path: </span><span class="si">{</span><span class="n">cert_loc</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+
+            <span class="n">conn</span><span class="o">.</span><span class="n">cert_reqs</span> <span class="o">=</span> <span class="s2">&quot;CERT_REQUIRED&quot;</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">cert_loc</span><span class="p">):</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">ca_certs</span> <span class="o">=</span> <span class="n">cert_loc</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">ca_cert_dir</span> <span class="o">=</span> <span class="n">cert_loc</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">cert_reqs</span> <span class="o">=</span> <span class="s2">&quot;CERT_NONE&quot;</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">ca_certs</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">ca_cert_dir</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">cert</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cert</span><span class="p">,</span> <span class="n">basestring</span><span class="p">):</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">cert_file</span> <span class="o">=</span> <span class="n">cert</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">key_file</span> <span class="o">=</span> <span class="n">cert</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">cert_file</span> <span class="o">=</span> <span class="n">cert</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">key_file</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">conn</span><span class="o">.</span><span class="n">cert_file</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">conn</span><span class="o">.</span><span class="n">cert_file</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Could not find the TLS certificate file, &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;invalid path: </span><span class="si">{</span><span class="n">conn</span><span class="o">.</span><span class="n">cert_file</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">conn</span><span class="o">.</span><span class="n">key_file</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">conn</span><span class="o">.</span><span class="n">key_file</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Could not find the TLS key file, invalid path: </span><span class="si">{</span><span class="n">conn</span><span class="o">.</span><span class="n">key_file</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span></div>
+
+<div class="viewcode-block" id="HTTPAdapter.build_response"><a class="viewcode-back" href="../../api.html#requests.adapters.HTTPAdapter.build_response">[docs]</a>    <span class="k">def</span> <span class="nf">build_response</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">req</span><span class="p">,</span> <span class="n">resp</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Builds a :class:`Response &lt;requests.Response&gt;` object from a urllib3</span>
+<span class="sd">        response. This should not be called from user code, and is only exposed</span>
+<span class="sd">        for use when subclassing the</span>
+<span class="sd">        :class:`HTTPAdapter &lt;requests.adapters.HTTPAdapter&gt;`</span>
+
+<span class="sd">        :param req: The :class:`PreparedRequest &lt;PreparedRequest&gt;` used to generate the response.</span>
+<span class="sd">        :param resp: The urllib3 response object.</span>
+<span class="sd">        :rtype: requests.Response</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">response</span> <span class="o">=</span> <span class="n">Response</span><span class="p">()</span>
+
+        <span class="c1"># Fallback to None if there&#39;s no status_code, for whatever reason.</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">resp</span><span class="p">,</span> <span class="s2">&quot;status&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="c1"># Make headers case-insensitive.</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">headers</span> <span class="o">=</span> <span class="n">CaseInsensitiveDict</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">resp</span><span class="p">,</span> <span class="s2">&quot;headers&quot;</span><span class="p">,</span> <span class="p">{}))</span>
+
+        <span class="c1"># Set encoding.</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">encoding</span> <span class="o">=</span> <span class="n">get_encoding_from_headers</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">headers</span><span class="p">)</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">raw</span> <span class="o">=</span> <span class="n">resp</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">reason</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">raw</span><span class="o">.</span><span class="n">reason</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">req</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">req</span><span class="o">.</span><span class="n">url</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">response</span><span class="o">.</span><span class="n">url</span> <span class="o">=</span> <span class="n">req</span><span class="o">.</span><span class="n">url</span>
+
+        <span class="c1"># Add new cookies from the server.</span>
+        <span class="n">extract_cookies_to_jar</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">cookies</span><span class="p">,</span> <span class="n">req</span><span class="p">,</span> <span class="n">resp</span><span class="p">)</span>
+
+        <span class="c1"># Give the Response some context.</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">request</span> <span class="o">=</span> <span class="n">req</span>
+        <span class="n">response</span><span class="o">.</span><span class="n">connection</span> <span class="o">=</span> <span class="bp">self</span>
+
+        <span class="k">return</span> <span class="n">response</span></div>
+
+<div class="viewcode-block" id="HTTPAdapter.get_connection"><a class="viewcode-back" href="../../api.html#requests.adapters.HTTPAdapter.get_connection">[docs]</a>    <span class="k">def</span> <span class="nf">get_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">proxies</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns a urllib3 connection for the given URL. This should not be</span>
+<span class="sd">        called from user code, and is only exposed for use when subclassing the</span>
+<span class="sd">        :class:`HTTPAdapter &lt;requests.adapters.HTTPAdapter&gt;`.</span>
+
+<span class="sd">        :param url: The URL to connect to.</span>
+<span class="sd">        :param proxies: (optional) A Requests-style dictionary of proxies used on this request.</span>
+<span class="sd">        :rtype: urllib3.ConnectionPool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">proxy</span> <span class="o">=</span> <span class="n">select_proxy</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">proxies</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">proxy</span><span class="p">:</span>
+            <span class="n">proxy</span> <span class="o">=</span> <span class="n">prepend_scheme_if_needed</span><span class="p">(</span><span class="n">proxy</span><span class="p">,</span> <span class="s2">&quot;http&quot;</span><span class="p">)</span>
+            <span class="n">proxy_url</span> <span class="o">=</span> <span class="n">parse_url</span><span class="p">(</span><span class="n">proxy</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">proxy_url</span><span class="o">.</span><span class="n">host</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">InvalidProxyURL</span><span class="p">(</span>
+                    <span class="s2">&quot;Please check proxy URL. It is malformed &quot;</span>
+                    <span class="s2">&quot;and could be missing the host.&quot;</span>
+                <span class="p">)</span>
+            <span class="n">proxy_manager</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">proxy_manager_for</span><span class="p">(</span><span class="n">proxy</span><span class="p">)</span>
+            <span class="n">conn</span> <span class="o">=</span> <span class="n">proxy_manager</span><span class="o">.</span><span class="n">connection_from_url</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Only scheme should be lower case</span>
+            <span class="n">parsed</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="n">parsed</span><span class="o">.</span><span class="n">geturl</span><span class="p">()</span>
+            <span class="n">conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">poolmanager</span><span class="o">.</span><span class="n">connection_from_url</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">conn</span></div>
+
+<div class="viewcode-block" id="HTTPAdapter.close"><a class="viewcode-back" href="../../api.html#requests.adapters.HTTPAdapter.close">[docs]</a>    <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Disposes of any internal state.</span>
+
+<span class="sd">        Currently, this closes the PoolManager and any active ProxyManager,</span>
+<span class="sd">        which closes any pooled connections.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">poolmanager</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">proxy</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">proxy_manager</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">proxy</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="HTTPAdapter.request_url"><a class="viewcode-back" href="../../api.html#requests.adapters.HTTPAdapter.request_url">[docs]</a>    <span class="k">def</span> <span class="nf">request_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">proxies</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Obtain the url to use when making the final request.</span>
+
+<span class="sd">        If the message is being sent through a HTTP proxy, the full URL has to</span>
+<span class="sd">        be used. Otherwise, we should only use the path portion of the URL.</span>
+
+<span class="sd">        This should not be called from user code, and is only exposed for use</span>
+<span class="sd">        when subclassing the</span>
+<span class="sd">        :class:`HTTPAdapter &lt;requests.adapters.HTTPAdapter&gt;`.</span>
+
+<span class="sd">        :param request: The :class:`PreparedRequest &lt;PreparedRequest&gt;` being sent.</span>
+<span class="sd">        :param proxies: A dictionary of schemes or schemes and hosts to proxy URLs.</span>
+<span class="sd">        :rtype: str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">proxy</span> <span class="o">=</span> <span class="n">select_proxy</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="n">proxies</span><span class="p">)</span>
+        <span class="n">scheme</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">scheme</span>
+
+        <span class="n">is_proxied_http_request</span> <span class="o">=</span> <span class="n">proxy</span> <span class="ow">and</span> <span class="n">scheme</span> <span class="o">!=</span> <span class="s2">&quot;https&quot;</span>
+        <span class="n">using_socks_proxy</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="n">proxy</span><span class="p">:</span>
+            <span class="n">proxy_scheme</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">proxy</span><span class="p">)</span><span class="o">.</span><span class="n">scheme</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+            <span class="n">using_socks_proxy</span> <span class="o">=</span> <span class="n">proxy_scheme</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;socks&quot;</span><span class="p">)</span>
+
+        <span class="n">url</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">path_url</span>
+        <span class="k">if</span> <span class="n">is_proxied_http_request</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">using_socks_proxy</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="n">urldefragauth</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">url</span></div>
+
+<div class="viewcode-block" id="HTTPAdapter.add_headers"><a class="viewcode-back" href="../../api.html#requests.adapters.HTTPAdapter.add_headers">[docs]</a>    <span class="k">def</span> <span class="nf">add_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add any headers needed by the connection. As of v2.0 this does</span>
+<span class="sd">        nothing by default, but is left for overriding by users that subclass</span>
+<span class="sd">        the :class:`HTTPAdapter &lt;requests.adapters.HTTPAdapter&gt;`.</span>
+
+<span class="sd">        This should not be called from user code, and is only exposed for use</span>
+<span class="sd">        when subclassing the</span>
+<span class="sd">        :class:`HTTPAdapter &lt;requests.adapters.HTTPAdapter&gt;`.</span>
+
+<span class="sd">        :param request: The :class:`PreparedRequest &lt;PreparedRequest&gt;` to add headers to.</span>
+<span class="sd">        :param kwargs: The keyword arguments from the call to send().</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="HTTPAdapter.proxy_headers"><a class="viewcode-back" href="../../api.html#requests.adapters.HTTPAdapter.proxy_headers">[docs]</a>    <span class="k">def</span> <span class="nf">proxy_headers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">proxy</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns a dictionary of the headers to add to any request sent</span>
+<span class="sd">        through a proxy. This works with urllib3 magic to ensure that they are</span>
+<span class="sd">        correctly sent to the proxy, rather than in a tunnelled request if</span>
+<span class="sd">        CONNECT is being used.</span>
+
+<span class="sd">        This should not be called from user code, and is only exposed for use</span>
+<span class="sd">        when subclassing the</span>
+<span class="sd">        :class:`HTTPAdapter &lt;requests.adapters.HTTPAdapter&gt;`.</span>
+
+<span class="sd">        :param proxy: The url of the proxy being used for this request.</span>
+<span class="sd">        :rtype: dict</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">username</span><span class="p">,</span> <span class="n">password</span> <span class="o">=</span> <span class="n">get_auth_from_url</span><span class="p">(</span><span class="n">proxy</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">username</span><span class="p">:</span>
+            <span class="n">headers</span><span class="p">[</span><span class="s2">&quot;Proxy-Authorization&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_basic_auth_str</span><span class="p">(</span><span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">headers</span></div>
+
+<div class="viewcode-block" id="HTTPAdapter.send"><a class="viewcode-back" href="../../api.html#requests.adapters.HTTPAdapter.send">[docs]</a>    <span class="k">def</span> <span class="nf">send</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cert</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">proxies</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sends PreparedRequest object. Returns Response object.</span>
+
+<span class="sd">        :param request: The :class:`PreparedRequest &lt;PreparedRequest&gt;` being sent.</span>
+<span class="sd">        :param stream: (optional) Whether to stream the request content.</span>
+<span class="sd">        :param timeout: (optional) How long to wait for the server to send</span>
+<span class="sd">            data before giving up, as a float, or a :ref:`(connect timeout,</span>
+<span class="sd">            read timeout) &lt;timeouts&gt;` tuple.</span>
+<span class="sd">        :type timeout: float or tuple or urllib3 Timeout object</span>
+<span class="sd">        :param verify: (optional) Either a boolean, in which case it controls whether</span>
+<span class="sd">            we verify the server&#39;s TLS certificate, or a string, in which case it</span>
+<span class="sd">            must be a path to a CA bundle to use</span>
+<span class="sd">        :param cert: (optional) Any user-provided SSL certificate to be trusted.</span>
+<span class="sd">        :param proxies: (optional) The proxies dictionary to apply to the request.</span>
+<span class="sd">        :rtype: requests.Response</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_connection</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="n">proxies</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">LocationValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InvalidURL</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cert_verify</span><span class="p">(</span><span class="n">conn</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">url</span><span class="p">,</span> <span class="n">verify</span><span class="p">,</span> <span class="n">cert</span><span class="p">)</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request_url</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">proxies</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_headers</span><span class="p">(</span>
+            <span class="n">request</span><span class="p">,</span>
+            <span class="n">stream</span><span class="o">=</span><span class="n">stream</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
+            <span class="n">verify</span><span class="o">=</span><span class="n">verify</span><span class="p">,</span>
+            <span class="n">cert</span><span class="o">=</span><span class="n">cert</span><span class="p">,</span>
+            <span class="n">proxies</span><span class="o">=</span><span class="n">proxies</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">chunked</span> <span class="o">=</span> <span class="ow">not</span> <span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">body</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="s2">&quot;Content-Length&quot;</span> <span class="ow">in</span> <span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">timeout</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">connect</span><span class="p">,</span> <span class="n">read</span> <span class="o">=</span> <span class="n">timeout</span>
+                <span class="n">timeout</span> <span class="o">=</span> <span class="n">TimeoutSauce</span><span class="p">(</span><span class="n">connect</span><span class="o">=</span><span class="n">connect</span><span class="p">,</span> <span class="n">read</span><span class="o">=</span><span class="n">read</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Invalid timeout </span><span class="si">{</span><span class="n">timeout</span><span class="si">}</span><span class="s2">. Pass a (connect, read) timeout tuple, &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;or a single float to set both timeouts to the same value.&quot;</span>
+                <span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">timeout</span><span class="p">,</span> <span class="n">TimeoutSauce</span><span class="p">):</span>
+            <span class="k">pass</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">timeout</span> <span class="o">=</span> <span class="n">TimeoutSauce</span><span class="p">(</span><span class="n">connect</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span> <span class="n">read</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">resp</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span>
+                <span class="n">method</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">method</span><span class="p">,</span>
+                <span class="n">url</span><span class="o">=</span><span class="n">url</span><span class="p">,</span>
+                <span class="n">body</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">body</span><span class="p">,</span>
+                <span class="n">headers</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="p">,</span>
+                <span class="n">redirect</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">assert_same_host</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">preload_content</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">decode_content</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">retries</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_retries</span><span class="p">,</span>
+                <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">,</span>
+                <span class="n">chunked</span><span class="o">=</span><span class="n">chunked</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">except</span> <span class="p">(</span><span class="n">ProtocolError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">)</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ConnectionError</span><span class="p">(</span><span class="n">err</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="n">MaxRetryError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">reason</span><span class="p">,</span> <span class="n">ConnectTimeoutError</span><span class="p">):</span>
+                <span class="c1"># TODO: Remove this in 3.0.0: see #2811</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">reason</span><span class="p">,</span> <span class="n">NewConnectionError</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="n">ConnectTimeout</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">reason</span><span class="p">,</span> <span class="n">ResponseError</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">RetryError</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">reason</span><span class="p">,</span> <span class="n">_ProxyError</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">ProxyError</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">reason</span><span class="p">,</span> <span class="n">_SSLError</span><span class="p">):</span>
+                <span class="c1"># This branch is for urllib3 v1.22 and later.</span>
+                <span class="k">raise</span> <span class="n">SSLError</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+
+            <span class="k">raise</span> <span class="ne">ConnectionError</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="n">ClosedPoolError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ConnectionError</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="n">_ProxyError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ProxyError</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="p">(</span><span class="n">_SSLError</span><span class="p">,</span> <span class="n">_HTTPError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">_SSLError</span><span class="p">):</span>
+                <span class="c1"># This branch is for urllib3 versions earlier than v1.22</span>
+                <span class="k">raise</span> <span class="n">SSLError</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">ReadTimeoutError</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">ReadTimeout</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">_InvalidHeader</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">InvalidHeader</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">request</span><span class="o">=</span><span class="n">request</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_response</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">resp</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><p>
+  <iframe src="https://ghbtns.com/github-btn.html?user=psf&repo=requests&type=watch&count=true&size=large"
+    allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+<p>
+  Requests is an elegant and simple HTTP library for Python, built for
+  human beings. You are currently looking at the documentation of the
+  development release.
+</p>
+
+<h3>Useful Links</h3>
+<ul>
+  <li><a href="https://requests.readthedocs.io/en/latest/user/quickstart/">Quickstart</a></li>
+  <li><a href="https://requests.readthedocs.io/en/latest/user/advanced/">Advanced Usage</a></li>
+  <li><a href="https://requests.readthedocs.io/en/latest/api/">API Reference</a></li>
+  <li><a href="https://requests.readthedocs.io/en/latest/community/updates/#release-history">Release History</a></li>
+  <li><a href="https://requests.readthedocs.io/en/latest/dev/contributing/">Contributors Guide</a></li>
+
+  <p></p>
+
+  <li><a href="https://requests.readthedocs.io/en/latest/community/recommended/">Recommended Packages and Extensions</a></li>
+
+  <p></p>
+
+  <li><a href="https://github.com/psf/requests">Requests @ GitHub</a></li>
+  <li><a href="https://pypi.org/project/requests/">Requests @ PyPI</a></li>
+  <li><a href="https://github.com/psf/requests/issues">Issue Tracker</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script><!-- Alabaster (krTheme++) Hacks -->
+
+<!-- CSS Adjustments (I'm very picky.) -->
+<style type="text/css">
+
+  /* Rezzy requires precise alignment. */
+  img.logo {margin-left: -20px!important;}
+
+  /* "Quick Search" should be capitalized. */
+  div#searchbox h3 {text-transform: capitalize;}
+
+  /* Make the document a little wider, less code is cut-off. */
+  div.document {width: 1008px;}
+
+  /* Much-improved spacing around code blocks. */
+  div.highlight pre {padding: 11px 14px;}
+
+  /* Remain Responsive! */
+  @media screen and (max-width: 1008px) {
+    div.sphinxsidebar {display: none;}
+    div.document {width: 100%!important;}
+
+    /* Have code blocks escape the document right-margin. */
+    div.highlight pre {margin-right: -30px;}
+  }
+</style>
+
+<!-- Native CPC by BuySellAds -->
+
+<script type="text/javascript" src="//m.servedby-buysellads.com/monetization.js"></script>
+
+<div id="native-ribbon">
+</div>
+
+<script>
+_bsa.init('custom', 'CK7D62JU', 'placement:pythonrequestsorg',
+    {
+      target: '#native-ribbon',
+      template: `
+<div class="native-sponsor">Sponsored by ##company## — Learn More</div>
+  <a href="##link##" class="native-flex">
+    <style>
+    #native-ribbon #_custom_ {
+      background: linear-gradient(-30deg, ##backgroundColor##E5, ##backgroundColor##E5 45%, ##backgroundColor## 45%) #fff;
+    }
+
+    .native-details,
+    .native-sponsor,
+    .native-bsa {
+      color: ##textColor## !important;
+    }
+
+    .native-details:hover {
+      color: ##textColorHover## !important;
+    }
+
+    .native-cta {
+      color: ##ctaTextColor##;
+      background-color: ##ctaBackgroundColor##;
+    }
+
+    .native-cta:hover {
+      color: ##ctaTextColorHover##;
+      background-color: ##ctaBackgroundColorHover##;
+    }
+    </style>
+    <div class="native-main">
+      <img class="native-img" src="##logo##">
+      <div class="native-details">
+        <span class="native-company">##title##</span>
+        <span class="native-desc">##description##</span>
+      </div>
+    </div>
+    <span class="native-cta">##callToAction##</span>
+  </a>
+</div>
+`
+    }
+  );
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;MMXVIX. A <a href="https://kenreitz.org/projects">Kenneth Reitz</a> Project.
+      
+    </div>
+
+    
+    <a href="https://github.com/requests/requests" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>
