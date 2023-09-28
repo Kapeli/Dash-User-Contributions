@@ -10,13 +10,10 @@
 ## Instructions
 
 - Download source code of the latest release
-- `cd doc`
-- Modify `conf.py`, comment the `sphinx_gallery` related blocks or the size of docset will be too large.
-- Get a png file for the icon
-- Run the following command
+- Get an icon file and rename the icon file to `icon.png`, or just use the one in this repo
+- Run the following commands
 
 ```cmd
-make html
-doc2dash -n NetworkX -i icon.png -f -I index.html -v build/html
+doc2dash -n NetworkX -i networkx-gh-pages/icon.png -j -I networkx-gh-pages/index.html -f ./networkx-gh-pages
 tar cvzf NetworkX.tgz NetworkX.docset
 ```
