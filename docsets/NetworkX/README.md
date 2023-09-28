@@ -9,11 +9,11 @@
 
 ## Instructions
 
-- Download source code of the latest release
-- Get an icon file and rename the icon file to `icon.png`, or just use the one in this repo
+- Download the latest gh-pages files from https://github.com/networkx/networkx/tree/gh-pages
+- Get an icon file (16×16) and rename it to `icon.png`, or just use the one in this repo
 - Run the following commands
 
 ```cmd
-doc2dash -n NetworkX -i networkx-gh-pages/icon.png -j -I networkx-gh-pages/index.html -f ./networkx-gh-pages
+doc2dash -n NetworkX -i networkx-gh-pages/icon.png -I networkx-gh-pages/index.html -f ./networkx-gh-pages
 tar cvzf NetworkX.tgz NetworkX.docset
 ```
