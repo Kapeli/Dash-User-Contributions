@@ -5,7 +5,7 @@
 ## Author
 
 - [AllanLRH](https://github.com/AllanLRH)
-- [ivaquero](https://github.com/ivaquero)
+- [Xavier Yang](https://github.com/ivaquero)
 
 ## Instructions
 
@@ -17,5 +17,6 @@
 
 ```cmd
 make html
-doc2dash -n NetworkX -i icon.png -f -I index.html -v build/html && tar cvzf NetworkX.tgz NetworkX.docset
+doc2dash -n NetworkX -i icon.png -f -I index.html -v build/html
+tar cvzf NetworkX.tgz NetworkX.docset
 ```
