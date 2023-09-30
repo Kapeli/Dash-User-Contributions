@@ -23,6 +23,6 @@ conda install doc2dash
 
 ```bash
 make file
-doc2dash -n CausalPy -d CausalPy.docset -i source/_static/logo.png -I build/html/index.html -v build/html
+doc2dash -n CausalPy -i source/_static/logo.png -I build/html/index.html -v build/html
 tar cvzf CausalPy.tgz CausalPy.docset
 ```
