@@ -12,13 +12,13 @@ pip install doc2dash
 conda install doc2dash
 ```
 
-- Download the lastest document from https://github.com/conda/conda-docs
+- Download the lastest document from https://github.com/conda/conda
 - Unpack the downloaded archive
 - Comment out the `sphinx` related blocks in `source/conf.py`
 - Execute the command
 
 ```bash
 make file
-doc2dash -n Conda -d Conda.docset -i source/conda-logo.png -I build/html/index.html -v build/html
+doc2dash -n Conda -i conda-main/docs/source/img/conda-logo.png -I conda-main/docs/_build/html/index.html -v _build/html
 tar cvzf Conda.tgz Conda.docset
 ```
