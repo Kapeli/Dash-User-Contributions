@@ -2,8 +2,8 @@
 
 ## Ascikit-learnuthors
 
-- Alto Aziz (https://github.com/iamaziz)
-- Angelo Varlotta (https://www.github.com/capac)
+- Aziz Alto (https://github.com/iamaziz)
+- Angelo Varlotta (https://github.com/capac)
 - Christian Stade-Schuldt (https://github.com/tafkas)
 - Josh Devlin (https://github.com/jaypeedevlin)
 - Joel Nothman (https://github.com/jnothman)
