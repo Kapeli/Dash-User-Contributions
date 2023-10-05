@@ -4,9 +4,9 @@
 
 - Xavier Yang (https://github.com/ivaquero)
 
-## How to build:
+## Instructions
 
-1. Install doc2dash:
+Install doc2dash:
 
 ```bash
 pip install doc2dash
@@ -14,12 +14,13 @@ pip install doc2dash
 conda install doc2dash
 ```
 
-- Download the lastest document from https://github.com/has2k1/plotnine
-- Unpack the downloaded archive
-- Install doc-building packages selectively according to `source/conf.py`
-- Execute the command
+- download the lastest document from https://github.com/has2k1/plotnine
+- unpack the downloaded archive
+- comment the plotnine_example-related blocks `source/conf.py`
+- run the following commands
 
 ```bash
-doc2dash -n plotnine -i plotnine-gh-pages/images/logo-540.png -I /Users/integzz/Documents/plotnine-gh-pages/index.html -v plotnine-gh-pages/
+make html
+doc2dash -n plotnine -i plotnine-main/doc/_build/html/_static/logo-32.png -I plotnine-main/doc/_build/html/index.html plotnine-main/doc/_build/html
 tar cvzf plotnine.tgz plotnine.docset
 ```
