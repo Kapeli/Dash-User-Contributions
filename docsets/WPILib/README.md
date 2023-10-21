@@ -18,6 +18,7 @@ Additionally, the javadocs can be found posted officially online [here](http://f
 
 ## Changelog
 
+- Version 2023.4.3 - 2023-10-21 updated by [Adam Nativ] (https://github.com/admlvntv)
 - Version 2022.1.1 - 2022-01-13 updated by [Jeff Hutchison](https://github.com/jhh)
 - Version 2021.3.1 - 2022-01-13 updated by [Jeff Hutchison](https://github.com/jhh)
 - Version 2021.2.2 - 2021-04-19
