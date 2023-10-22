@@ -1,18 +1,21 @@
-Scikit-image Dash Docset
-=======================
+# scikit-image Dash Docset
 
-- Docset Description:
-    - [Scikit-image](http://scikit-image.org/) is a collection of algorithms for image processing in python.
+[scikit-image](http://scikit-image.org/) is a collection of algorithms for image processing in python.
 
-- Author:
-    - [Aziz Alto](https://github.com/iamaziz)
+## Authors
 
-- Instructions to generate the docset:
-    - clone the docs repo (this may take a while as the repo is quite heavy):
-        - `git clone https://github.com/scikit-image/docs scikit-image-docs`
-    - checkout the html branch
-        - `git checkout gh-pages`
-    - download the icon
-        - `wget https://raw.githubusercontent.com/Kapeli/Dash-User-Contributions/master/docsets/Scikit-image/icon%402x.png -O icon.png`
-    - generate docset:
-    	- `doc2dash --verbose --name Scikit-image --icon icon.png --index-page index.html --enable-js 0.16.x`
+- [Aziz Alto](https://github.com/iamaziz)
+- [Xavier Yang](https://github.com/ivaquero)
+
+## Instructions
+
+- download the latest document from https://github.com/scikit-image/
+- comment some blocks in `source/conf.py`
+- `make html`
+- remove `_downloads` and `_sources` in `doc/build/html`
+- run the following commands
+
+```bash
+doc2dash -v -n scikit-image -i scikit-image-main/doc/build/html/_static/logo.png -I scikit-image-main/doc/build/html/index.html scikit-image-main/doc/build/html
+tar cvzf scikit-image.tgz scikit-image.docset
+```

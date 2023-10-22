@@ -1,14 +1,15 @@
 # pymc
 
-## Who am I
+## Authors
 
-[Paulo S. Costa](https://github.com/paw-lu)
+- [Paulo S. Costa](https://github.com/paw-lu)
+- [Xavier Yang]
 
-## How to generate docset
+## Building Method 1
 
 This docset is automatically generated via [paw-lu/pymc-dash-docset](https://github.com/paw-lu/pymc-dash-docset).
 
-### Requirements
+#### Requirements
 
 - [git](https://git-scm.com/)
 - [GitHub CLI (`gh`)](https://cli.github.com/)
@@ -18,18 +19,29 @@ This docset is automatically generated via [paw-lu/pymc-dash-docset](https://git
 - [Nox](https://nox.thea.codes/en/stable/)
 - [Python 3.10](https://www.python.org/)
 
-### Build directions
+#### Build directions
 
 To build the docs, run:
 
-```console
-$ gh repo clone paw-lu/pymc-dash-docset
-
-$ cd pymc-dash-docset
-
-$ nox --tags build
+```bash
+gh repo clone paw-lu/pymc-dash-docset
+cd pymc-dash-docset
+nox --tags build
 ```
 
-## Credits
+### Credits
 
 This project was generated from [Cookiecutter Dash docset](https://github.com/paw-lu/cookiecutter-dash-docset).
+
+## Building Method 2
+
+- download the latest document from https://github.com/pymc-devs/pymc.io
+- unpack the archive file
+- `cd pymc.io-main && make html`
+- remove `_source` in `_build`
+- run the following commands
+
+```bash
+doc2dash -v -n pymc -i icon.png -I pymc.io-main/_build/index.html pymc.io-main/_build
+tar cvzf pymc.tgz pymc.docset
+```
