@@ -11,7 +11,7 @@ querying nested and repeated data.
 
 ### Docset Maintainer
 
-[Akinori MUSHA](https://github.com/knu)
+[Akinori Musha](https://github.com/knu)
 
 ### Docset Generation
 
