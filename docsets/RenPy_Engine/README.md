@@ -11,30 +11,29 @@ Windows10
 
 ## Install
 
-```
+```sh
 scoop install make
 scoop install python39
 pip install sphinx==4.4.0 sphinx_rtd_theme==1.1.1 sphinx_rtd_dark_mode future
 pip install doc2dash
-scoop install trash
+scoop install trash // Optional
 ```
 
 ## Start
 
-Download stable-version source from https://github.com/renpy/renpy/releases.  
-Decompress, then:
+Download stable-version source from https://github.com/renpy/renpy/releases. Decompress it, then:
 
-```
+```sh
 cd renpy
 cd sphinx
 make html
 doc2dash --name renpy -f ./build/html
 move renpy.docset RenPy_Engine.docset
-copy ...\Dash-User-Contributions\docsets\RenPy_Engine\icon.png RenPy_Engine.docset\icon.png
-copy ...\Dash-User-Contributions\docsets\RenPy_Engine\icon@2x.png RenPy_Engine.docset\icon@2x.png
+wget https://raw.githubusercontent.com/Kapeli/Dash-User-Contributions/master/docsets/RenPy_Engine/icon.png -O RenPy_Engine.docset/icon.png
+wget https://raw.githubusercontent.com/Kapeli/Dash-User-Contributions/master/docsets/RenPy_Engine/icon@2x.png -O RenPy_Engine.docset/icon@2x.png
 tar --exclude='.DS_Store' -cvzf RenPy_Engine.tgz RenPy_Engine.docset
 trash RenPy_Engine.docset
-move RenPy_Engine.tgz ...\Dash-User-Contributions\docsets\RenPy_Engine\RenPy_Engine.tgz
+move RenPy_Engine.tgz .../Dash-User-Contributions/docsets/RenPy_Engine/RenPy_Engine.tgz
 ```
 
 ## Feed
@@ -42,5 +41,5 @@ move RenPy_Engine.tgz ...\Dash-User-Contributions\docsets\RenPy_Engine\RenPy_Eng
 Zeal > Tools > Docsets > Add feed:
 
 ```
-dash-feed://http%3A%2F%2Fraw.githubusercontent.com%2Fscillidan%2Fgh-cos%2Fmain%2Fzeal%2FRenPy_Engine.xml
+dash-feed://http%3A%2F%2Fraw.githubusercontent.com%2Fscillidan%2Frepo_cos%2Fmain%2Fdocset%2FRenPy_Engine.xml
 ```
