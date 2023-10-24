@@ -35,13 +35,12 @@ This project was generated from [Cookiecutter Dash docset](https://github.com/pa
 
 ## Building Method 2
 
-- download the latest document from https://github.com/pymc-devs/pymc.io
+- download the latest document from https://github.com/pymc-devs/pymc
 - unpack the archive file
-- `cd pymc.io-main && make html`
-- remove `_source` in `_build`
+- `cd pymc-main && make html` (remove some function in .rst files according to the summary)
 - run the following commands
 
 ```bash
-doc2dash -v -n pymc -i icon.png -I pymc.io-main/_build/index.html pymc.io-main/_build
+doc2dash -v -n pymc -i docs/logos/PyMC.png -I docs/build/index.html docs/build
 tar cvzf pymc.tgz pymc.docset
 ```
