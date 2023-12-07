@@ -12,8 +12,9 @@ PIP = $(PYTHON) -m pip
 HTML_DIR = $(GITHUB_REPO)/docs/_build/html
 DOCSET_DEST_DIR = versions/$(VERSION)
 DOCSET_FILE = $(DOCSET_DEST_DIR)/$(GITHUB_REPO).docset
+DOCSET_ARCHIVE = $(DOCSET_DEST_DIR)/$(GITHUB_REPO).tgz
 
-$(DOCSET_FILE):
+$(DOCSET_ARCHIVE):
 	- mkdir -p $(DOCSET_DEST_DIR)
 	$(GIT) clone "git@github.com:$(GITHUB_USER)/$(GITHUB_REPO).git" && \
 	$(PIP) install "furo" "sphinx-autobuild" "codespell" "sphinx-copybutton"  "beanbag-docutils>=2.0" "pygments-csv-lexer"
@@ -26,8 +27,13 @@ $(DOCSET_FILE):
 
 	$(DOC2DASH) $(DOC2DASH_OPTS) -d $(DOCSET_DEST_DIR) $(HTML_DIR)
 
-.phony: $(DOCSET_FILE))
-.default: $(DOCSET_FILE)
+	tar --exclude='.DS_Store' -cvzf $(DOCSET_ARCHIVE) $(DOCSET_FILE)
+	- rm -rf $(DOCSET_FILE)
+
+all: $(DOCSET_ARCHIVE)
+
+.phony: all
+.default: all
 
 clean:
 	-rm -rf $(GITHUB_REPO)
