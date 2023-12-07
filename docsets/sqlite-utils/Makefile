@@ -10,7 +10,7 @@ PYTHON ?= $(shell which python3)
 PIP = $(PYTHON) -m pip
 
 HTML_DIR = $(GITHUB_REPO)/docs/_build/html
-DOCSET_DEST_DIR = versions/$(VERSION)
+DOCSET_DEST_DIR = .
 DOCSET_FILE = $(DOCSET_DEST_DIR)/$(GITHUB_REPO).docset
 DOCSET_ARCHIVE = $(DOCSET_DEST_DIR)/$(GITHUB_REPO).tgz
 
@@ -36,7 +36,7 @@ all: $(DOCSET_ARCHIVE)
 .default: all
 
 clean:
-	-rm -rf $(GITHUB_REPO)
+	-rm -rf $(GITHUB_REPO) versions/
 
 uninstall:
 	-rm -rf $(GITHUB_REPO) "/Users/$$USER/Library/Application Support/doc2dash/DocSets/$(GITHUB_REPO).docset"
