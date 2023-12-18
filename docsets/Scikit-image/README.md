@@ -9,13 +9,15 @@
 
 ## Instructions
 
-- download the latest document from https://github.com/scikit-image/
-- comment some blocks in `source/conf.py`
-- `make html`
+- download the latest source code from https://github.com/scikit-image/scikit-image/tags
+- comment some blocks in `doc/source/conf.py`
+- back to `doc`
+- `make api & make html`
 - remove `_downloads` and `_sources` in `doc/build/html`
 - run the following commands
 
 ```bash
-doc2dash -v -n scikit-image -i scikit-image-main/doc/build/html/_static/logo.png -I scikit-image-main/doc/build/html/index.html scikit-image-main/doc/build/html
+cd doc
+doc2dash -v -n scikit-image -i build/html/_static/logo.png -I scikit-image-0.22.0/doc/build/html/index.html build/html
 tar cvzf scikit-image.tgz scikit-image.docset
 ```
