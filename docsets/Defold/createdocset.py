@@ -72,7 +72,9 @@ def get_ref_doc():
     sha1 = get_defold_sha1()
     if os.path.exists(DOC_ZIP):
         os.remove(DOC_ZIP)
-    urllib.request.urlretrieve("http://d.defold.com/archive/" + sha1 + "/engine/share/ref-doc.zip", DOC_ZIP)
+    urllib.request.urlretrieve(
+        f"http://d.defold.com/archive/{sha1}/engine/share/ref-doc.zip", DOC_ZIP
+    )
 
 
 def cleanup():
@@ -134,15 +136,19 @@ def create_docset():
             for file in files:
                 with open(os.path.join(root, file), "r") as fh:
                     if file.endswith(".json"):
-                        print("  Parsing " + file)
+                        print(f"  Parsing {file}")
                         class_name = file.replace("_doc.json", "")
-                        class_path = class_name + ".html"
+                        class_path = f"{class_name}.html"
                         class_doc = ""
                         parsed_json = json.load(fh)
                         info = parsed_json["info"]
-                        class_doc = class_doc + "<h1>" + info["name"] + "</h1>\n"
-                        class_doc = class_doc + "<p>" + info["description"] + "</p>\n"
-                        index_html = index_html + "<a class='index' href='ref/" + class_path + "'>" + class_name + "</a>" + info["brief"] + "</br>"
+                        class_doc = f"{class_doc}<h1>" + info["name"] + "</h1>\n"
+                        class_doc = f"{class_doc}<p>" + info["description"] + "</p>\n"
+                        index_html = (
+                            f"{index_html}<a class='index' href='ref/{class_path}'>{class_name}</a>"
+                            + info["brief"]
+                            + "</br>"
+                        )
                         for element in parsed_json["elements"]:
                             function_name = element["name"].split("\n")[0]
                             if function_name != "":
@@ -160,55 +166,83 @@ def create_docset():
                                 elif element["type"] == "ENUM":
                                     entry_type = "Enum"
 
-                                function_path = class_path + "#" + function_name
+                                function_path = f"{class_path}#{function_name}"
                                 name = function_name
                                 if entry_type == "Function":
-                                    name = name + "("
+                                    name = f"{name}("
                                     for num, parameter in enumerate(element["parameters"]):
                                         name = name + parameter["name"]
                                         if num < len(element["parameters"]) - 1:
-                                            name = name + ", "
-                                    name = name + ")"
+                                            name = f"{name}, "
+                                    name = f"{name})"
 
-                                class_doc = class_doc + "<h1><a name='//apple_ref/cpp/" + entry_type + "/" + function_name + "' class='dashAnchor'></a><a class='entry' name='" + function_name + "'>" + name + "</a></h1>"
-                                class_doc = class_doc + "<div class='brief'>" + element["brief"] + "</div>"
+                                class_doc = f"{class_doc}<h1><a name='//apple_ref/cpp/{entry_type}/{function_name}' class='dashAnchor'></a><a class='entry' name='{function_name}'>{name}</a></h1>"
+                                class_doc = f"{class_doc}<div class='brief'>" + element["brief"] + "</div>"
                                 if element.get("description", "") != "":
-                                    class_doc = class_doc + "<p>" + element["description"] + "</p>"
+                                    class_doc = f"{class_doc}<p>" + element["description"] + "</p>"
                                 if element.get("note", "") != "":
-                                    class_doc = class_doc + "<p>Note: " + element["note"] + "</p>"
+                                    class_doc = f"{class_doc}<p>Note: " + element["note"] + "</p>"
                                 if len(element["parameters"]) > 0:
-                                    class_doc = class_doc + "<h3>PARAMETERS</h3>"
-                                    class_doc = class_doc + "<div class='params'>"
+                                    class_doc = f"{class_doc}<h3>PARAMETERS</h3>"
+                                    class_doc = f"{class_doc}<div class='params'>"
                                     for parameter in element["parameters"]:
-                                        class_doc = class_doc + "<p class='param'>" + parameter["name"] + " - " + parameter["doc"] + "</p>"
-                                    class_doc = class_doc + "</div>"
+                                        class_doc = (
+                                            f"{class_doc}<p class='param'>"
+                                            + parameter["name"]
+                                            + " - "
+                                            + parameter["doc"]
+                                            + "</p>"
+                                        )
+                                    class_doc = f"{class_doc}</div>"
                                 if len(element["members"]) > 0:
-                                    class_doc = class_doc + "<h3>MEMBERS</h3>"
-                                    class_doc = class_doc + "<div class='params'>"
+                                    class_doc = f"{class_doc}<h3>MEMBERS</h3>"
+                                    class_doc = f"{class_doc}<div class='params'>"
                                     for member in element["members"]:
-                                        class_doc = class_doc + "<p class='param'>" + member["name"] + " - " + member["doc"] + "</p>"
-                                    class_doc = class_doc + "</div>"
+                                        class_doc = (
+                                            f"{class_doc}<p class='param'>"
+                                            + member["name"]
+                                            + " - "
+                                            + member["doc"]
+                                            + "</p>"
+                                        )
+                                    class_doc = f"{class_doc}</div>"
                                 if len(element["returnvalues"]) > 0:
-                                    class_doc = class_doc + "<h3>RETURN</h3>"
-                                    class_doc = class_doc + "<div class='return'>"
+                                    class_doc = f"{class_doc}<h3>RETURN</h3>"
+                                    class_doc = f"{class_doc}<div class='return'>"
                                     for returnvalue in element["returnvalues"]:
-                                        class_doc = class_doc + "<p>" + returnvalue["name"] + " - " + returnvalue["doc"] + "</p>"
-                                    class_doc = class_doc + "</div>"
+                                        class_doc = (
+                                            f"{class_doc}<p>"
+                                            + returnvalue["name"]
+                                            + " - "
+                                            + returnvalue["doc"]
+                                            + "</p>"
+                                        )
+                                    class_doc = f"{class_doc}</div>"
                                 if element.get("examples", "") != "":
-                                    class_doc = class_doc + "<h3>EXAMPLES</h3>"
-                                    class_doc = class_doc + "<div class='examples'>"
-                                    class_doc = class_doc + "<p>" + element["examples"] + "</p>"
-                                    class_doc = class_doc + "</div>"
+                                    class_doc = f"{class_doc}<h3>EXAMPLES</h3>"
+                                    class_doc = f"{class_doc}<div class='examples'>"
+                                    class_doc = f"{class_doc}<p>" + element["examples"] + "</p>"
+                                    class_doc = f"{class_doc}</div>"
 
-                                class_doc = class_doc + "<hr/>"
-                                cursor.execute('INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES (?,?,?)', (function_name, entry_type, "ref/" + function_path))
+                                class_doc = f"{class_doc}<hr/>"
+                                cursor.execute(
+                                    'INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES (?,?,?)',
+                                    (
+                                        function_name,
+                                        entry_type,
+                                        f"ref/{function_path}",
+                                    ),
+                                )
 
                         with open(os.path.join(ref_path, class_path), "w") as out:
                             out.write("<html><head><link rel='stylesheet' type='text/css' href='../defold.css'></head><body>")
                             out.write(convert_hrefs(class_doc))
                             out.write("</body></html>")
 
-                        cursor.execute('INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES (?,?,?)', (class_name, 'Module', "ref/" + class_path))
+                        cursor.execute(
+                            'INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES (?,?,?)',
+                            (class_name, 'Module', f"ref/{class_path}"),
+                        )
 
         with open(os.path.join(documents_path, "index.html"), "w") as out:
             out.write("<html><head><link rel='stylesheet' type='text/css' href='defold.css'></head>")
