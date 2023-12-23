@@ -86,7 +86,7 @@ def main():
   # docset settings
   global docset_name
   docset_name = 'Pandoc.docset'
-  output = docset_name + '/Contents/Resources/Documents/'
+  output = f'{docset_name}/Contents/Resources/Documents/'
 
   # docset directory
   if not os.path.exists(output):
@@ -94,7 +94,7 @@ def main():
 
   # docset icon
   icon = 'http://kirkstrobeck.github.io/whatismarkdown.com/img/markdown.png'
-  urllib.urlretrieve(icon, docset_name + "/icon.png")
+  urllib.urlretrieve(icon, f"{docset_name}/icon.png")
 
   # index pages
   base_page = 'http://pandoc.org/'
@@ -107,7 +107,7 @@ def main():
   get_html(docset_name, base_page, True)
 
   # create and connect to SQLite
-  db = sqlite3.connect(docset_name + '/Contents/Resources/docSet.dsidx')
+  db = sqlite3.connect(f'{docset_name}/Contents/Resources/docSet.dsidx')
   global cur
   cur = db.cursor()
   cur.execute('CREATE TABLE searchIndex(id INTEGER PRIMARY KEY, name TEXT, type TEXT, path TEXT);')
@@ -120,7 +120,7 @@ def main():
   # report num of entries
   cur.execute('Select count(*) from searchIndex;')
   entry = cur.fetchone()
-  print("{} entry.".format(entry))
+  print(f"{entry} entry.")
 
   # commit and close db
   db.commit()

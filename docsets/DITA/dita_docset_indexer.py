@@ -5,7 +5,7 @@
 # Intended to be run in the same directory as the docset under development; 
 # paths may be fragile! 
 #
-import os 
+import os
 import re
 import sqlite3
 from bs4 import BeautifulSoup
@@ -46,25 +46,24 @@ if __name__ == '__main__':
             if re.search('.html$', path):
                 page = open(path).read()
                 soup = BeautifulSoup(page, "lxml")
-            
+
                 if fname in guide_files:
                     rawname = soup.title
                     name = rawname.string
-                    cur.execute('INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES (?,?,?)', (name, "Guide", shortpath))    
-                    print('Found %s: %s' % ("Guide", name))
-            
+                    cur.execute('INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES (?,?,?)', (name, "Guide", shortpath))
+                    print(f'Found Guide: {name}')
+
                 if re.search('langRef', dir_name):
-                    rawname = soup.body.h1.code
                     itemtype = None
-                    if rawname:
+                    if rawname := soup.body.h1.code:
                         name = rawname.string
                         if re.match('@',name):
                             itemtype = "Attribute"
                         elif re.match('<',name):
                             itemtype = "Element"
-        
+
                     if itemtype:
-                        cur.execute('INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES (?,?,?)', (name, itemtype, shortpath))    
-                        print('Found %s: %s' % (itemtype, name))
+                        cur.execute('INSERT OR IGNORE INTO searchIndex(name, type, path) VALUES (?,?,?)', (name, itemtype, shortpath))
+                        print(f'Found {itemtype}: {name}')
                 conn.commit()    
             
