@@ -2,13 +2,12 @@ Dash User Contributed Docsets
 =======================
 
 ### Report a bug or request a docset
-[Open an issue](https://github.com/Kapeli/Dash-User-Contributions/issues/new).
-
-### Install a docset
+[Open an issue](https://github.com/Kapeli/Dash-User-Contributions/issues/new
+Install a docset
 
 You can install these docsets from [Dash's](https://kapeli.com/dash) Preferences > Downloads > User Contributed.
 
-### Contribute a new docset
+Contribute a new docset
 
 To contribute a docset, follow the steps below. If you get stuck at any point or have any questions, [open an issue](https://github.com/Kapeli/Dash-User-Contributions/issues). I'll help.
 
