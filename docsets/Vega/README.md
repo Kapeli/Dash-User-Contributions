@@ -1,6 +1,9 @@
 # Vega Docset
 
 * Maintainer: Cameron Yick ([Github][github]/[Twitter][twitter])
+* Offline version of <https://vega.github.io/vega/docs/>
+* Version: [5.27.0](https://github.com/vega/vega/releases/tag/v5.27.0)
+
 
 ## Instructions
 
