@@ -1,15 +1,11 @@
-Cython Dash Docset
-=======================
+# Cython Docset
 
-- __Docset Description__:
-    - Cython is a programming language that makes writing C extensions for the Python language as easy as Python itself.
+[Cython](https://github.com/cython/cython) is a programming language that makes writing C extensions for the Python language as easy as Python itself.
 
-- Author:
-    - [Aziz Alto](https://github.com/iamaziz)
+## Author
 
-- __Docset repo__:
-    - [https://github.com/iamaziz/Cython-dash](https://github.com/iamaziz/Cython-dash)
+- [Christopher Hong](https://github.com/halmoni100)
 
-- Instructions to generate the docset:
-    - Fetch the HTML from [http://docs.cython.org/](http://docs.cython.org/)
-    - Run [this script](https://github.com/iamaziz/Cython-dash/blob/master/Cython-to-dash.py) to generate the docset entries.
+## How to build
+
+[See here](https://gitlab.com/docs1234/cython)
