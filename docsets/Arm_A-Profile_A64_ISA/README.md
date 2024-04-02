@@ -1,10 +1,10 @@
 # ARM docset
 
-* Author: [liu lei](https://github.com/leolovenet/)
+* Authors: [liu lei](https://github.com/leolovenet/) and [Laine Taffin Altman](https://github.com/pthariensflame)
 * Generated using: [dash-armref](https://github.com/leolovenet/Dash-ARMRef)
 
 ## Bugs & feature requests
 
-You can raise an issue in the [dash-armref](https://github.com/leolovenet/Dash-ARMRef).
+You can raise an issue in the [dash-armref](https://github.com/leolovenet/Dash-ARMRef) repository.
 
-Feature suggestions are welcome, if the docset hasn't been updated for the latest version of https://developer.arm.com/architectures/cpu-architecture/a-profile/exploration-tools, feel free to raise an issue!
+Feature suggestions are welcome; if the docset hasn't been updated for the latest version of [The A-Profile Exploration Tools](https://developer.arm.com/Architectures/A-Profile%20Architecture#Software-Download), feel free to raise an issue!
