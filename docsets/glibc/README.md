@@ -6,9 +6,11 @@ The GNU C Library Docset
 
 - __Author:__
     - [David Wedderwille](https://github.com/davidwed)
+    - [Louie Shprung](https://github.com/lshprung) (v2.38+)
 
 - Instructions to generate the docset:
-	- Follow the instructions https://github.com/deadloko/glibcdash
+	- Up to v2.25: Follow the instructions https://github.com/deadloko/glibcdash
+	- Since v2.38: Follow the instructions https://github.com/lshprung/https://github.com/lshprung/gnu-libc-dash-docset
 
 Thanks to:
 	- https://github.com/deadloko
