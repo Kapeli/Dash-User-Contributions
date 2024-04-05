@@ -12,7 +12,7 @@ pip install doc2dash
 conda install doc2dash
 ```
 
-- Download the lastest document from https://github.com/bambinos/bambi/tree/gh-pages
+- Download the latest document from https://github.com/bambinos/bambi/tree/gh-pages
 - Unpack the downloaded archive
 - remove `.doctrees` and `_source` to reduce the size
 - Execute the following commands
