@@ -15,6 +15,7 @@ conda install doc2dash
 ```
 
 - download the latest document from https://github.com/has2k1/plotnine.org/tree/gh-pages
+
 - unpack the downloaded archive
 - run the following commands
 
