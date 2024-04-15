@@ -12,7 +12,7 @@ pip install doc2dash
 conda install doc2dash
 ```
 
-- Download the lastest document from https://github.com/conda/conda
+- Download the latest document from https://github.com/conda/conda
 - Unpack the downloaded archive
 - Install doc-building packages selectively according to `source/conf.py`
 - Execute the command
