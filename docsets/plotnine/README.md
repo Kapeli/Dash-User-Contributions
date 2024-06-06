@@ -14,7 +14,7 @@ pip install doc2dash
 conda install doc2dash
 ```
 
-- download the lastest document from https://github.com/has2k1/plotnine
+- download the latest document from https://github.com/has2k1/plotnine
 - unpack the downloaded archive
 - comment the plotnine_example-related blocks `source/conf.py`
 - run the following commands

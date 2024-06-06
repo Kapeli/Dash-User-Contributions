@@ -14,7 +14,7 @@ pip install doc2dash
 conda install doc2dash
 ```
 
-- Download the lastest document from https://github.com/scikit-learn-contrib/imbalanced-learn
+- Download the latest document from https://github.com/scikit-learn-contrib/imbalanced-learn
 - Unpack the downloaded archive
 - Execute the command
 
