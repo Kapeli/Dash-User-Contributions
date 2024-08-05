@@ -1,9 +1,9 @@
-QGIS
+PyQGIS
 =======================
 
 ## Author
 
-This docset is maintained by [Julien Cabieces](https://github.com/troopa81) and [Antoine Facchini](https://github.com/Koyaani)
+This docset is maintained by [Julien Cabieces](https://github.com/troopa81) and [Jacky Volpes](https://github.com/Djedouas)
 
 ## Building
 
@@ -17,6 +17,7 @@ Build it
 mkdir build
 cd build
 cmake ../ -DWITH_3D=TRUE -DWITH_SERVER=TRUE
+make
 ```
 
 Then, clone PyQGIS
