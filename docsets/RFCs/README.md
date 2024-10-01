@@ -1,9 +1,18 @@
 RFCs Docset
 =======================
 
-This docset contains all published RFCs from the IETF.  It is a mirror of the
-<http://tools.ietf.org/html/> website.
+This docset contains all published RFCs from the IETF.
 
-**Author:** [Will Norris](https://willnorris.com/), [Simone Carletti](https://simonecarletti.com/)
+## Author
 
-**Generating Instructions:** [rfcdash](https://github.com/willnorris/rfcdash#updating-the-docset)
+Alexander Mankuta:
+- [GitHub profile](https://github.com/pointlessone)
+- [Personal website](https://pointless.one)
+
+## Generating Instructions
+
+Full instructions are in the repo Readme: [rfcs-docset](https://code.pointless.one/pointless.one/rfcs-docset#updating-the-docset)
+
+Prerequisites: any modern Ruby (3.1 to 3.4 as of time of writing).
+
+The script will install all its dependencies, fetch the latest set of RFCs, and generate the docset. No further manual steps are required.
