@@ -5,9 +5,8 @@ Unicode Characters Docset
 
 Remko Tronçon 
 
-- Twitter: [@remko](https://twitter.com/remko) 
 - GitHub: [remko](https://github.com/remko)
-- Web: <https://el-tramo.be>
+- Web: <https://mko.re>
 
 
 ## Building the Docset
