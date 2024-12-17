@@ -18,7 +18,7 @@ pip install doc2dash
 conda install doc2dash
 ```
 
-- Download the lastest document from https://github.com/joke2k/faker
+- Download the latest document from https://github.com/joke2k/faker
 - Unpack the downloaded archive
 - Install doc-building packages selectively according to `docs/conf.py`
 - Edit `docs/conf.py` and replace corresponding sections with the following

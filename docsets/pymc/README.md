@@ -3,7 +3,7 @@
 ## Authors
 
 - [Paulo S. Costa](https://github.com/paw-lu)
-- [Xavier Yang]
+- [Xavier Yang](https://github.com/ivaquero)
 
 ## Building Method 1
 
@@ -37,10 +37,10 @@ This project was generated from [Cookiecutter Dash docset](https://github.com/pa
 
 - download the latest document from https://github.com/pymc-devs/pymc
 - unpack the archive file
-- `cd pymc-main && make html` (remove some function in .rst files according to the summary)
+- `cd pymc-main && make html` (remove jax-* function in api/samplers.rst files according to the summary)
 - run the following commands
 
 ```bash
-doc2dash -v -n pymc -i docs/logos/PyMC.png -I docs/build/index.html docs/build
+doc2dash -v -n pymc -i docs/logos/PyMC.png -I $(pwd)/docs/build/index.html docs/build
 tar cvzf pymc.tgz pymc.docset
 ```

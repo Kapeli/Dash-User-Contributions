@@ -16,7 +16,7 @@ pip install doc2dash
 conda install doc2dash
 ```
 
-- Download the lastest document from https://github.com/pymc-labs/CausalPy
+- Download the latest document from https://github.com/pymc-labs/CausalPy
 - Unpack the downloaded archive
 - Comment out the `sphinx` related blocks in `docs/source/conf.py`
 - Execute the command
