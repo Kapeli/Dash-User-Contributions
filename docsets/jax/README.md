@@ -9,6 +9,7 @@ Versions:
 - Version 0.4.20 ([@ppwwyyxx](https://github.com/ppwwyyxx)).
 - Version 0.4.31 ([@garymm](https://github.com/garymm)).
 - Version 0.4.38 ([@garymm](https://github.com/garymm)).
+- Version 0.5.2 ([@garymm](https://github.com/garymm)).
 
 Update instructions:
 1. Use [dash-docset-jax](https://github.com/garymm/dash-docset-jax)
