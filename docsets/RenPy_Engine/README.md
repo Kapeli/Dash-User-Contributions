@@ -7,7 +7,7 @@ I tried building `8.3.1` on `Ubuntu 24.04 Arm`. This time I noticed some useful 
 
 And I keep some notes. It will be useful when you want to make docset for yourself.
 
-## Build renpy documentation (on Ubuntu 24.04)
+## Build renpy documentation (on Ubuntu 24.04) [^1]
 
 ```sh
 sudo apt install virtualenvwrapper python3-dev libavcodec-dev libavformat-dev libswresample-dev libswscale-dev libharfbuzz-dev libfreetype6-dev libfribidi-dev libsdl2-dev libsdl2-image-dev libsdl2-gfx-dev libsdl2-mixer-dev libsdl2-ttf-dev libjpeg-dev
@@ -38,22 +38,20 @@ pip install -U sphinx sphinx_rtd_theme sphinx_rtd_dark_mode
 ./build.sh
 ```
 
-↪ [renpy - Compiling the Modules](https://github.com/renpy/renpy#compiling-the-modules)
-
 ## Build docset
 
 ```sh
 pip install doc2dash
-doc2dash --name <ShortName> -f ./build/html
+doc2dash --name <short_name> -f ./build/html
 ```
 
 Here, `ShortName` can be a shorter keyword for search. But don't use abbreviation, see [Docset requirements](https://github.com/Kapeli/Dash-User-Contributions/wiki/Docset-Contribution-Checklist#docset-requirements).
 
 ```sh
-mv <shortname>.docset <Full_Name>.docset
+mv <short_name>.docset <full_name>.docset
 ```
 
-Edit `<Full_Name>.docset\Contents\Info.plist`:
+Edit `<full_name>.docset\Contents\Info.plist`:
 
 ```
 <key>CFBundleName</key>
@@ -64,24 +62,24 @@ If you want to keep multiple versions, add the version number:
 
 ```
 <key>CFBundleName</key>
-<string>ShortName <Version></string>
+<string>Full Name <version></string>
 ```
 
 If you have `icon.svg`:
 
-1. Get `svg2png021.zip` from [SVG to PNG converter - Releases](https://github.com/v0lt/svg2png/releases).
+1. Get `svg2png*.zip` from [SVG to PNG converter - Releases](https://github.com/v0lt/svg2png/releases).
 2. Decompress it to `svg2png\`.
 
 ```sh
 cd svg2png\x64
 svg2png.exe icon.svg -w 16 icon.png
 svg2png.exe icon.svg -w 32 icon@2x.png
-mv icon*.png <Full_Name>.docset\
+mv icon*.png <full_name>.docset\
 ```
 
 ## Usage docset with [Zeal](https://zealdocs.org):
 
-Zeal → Edit → Preferences → Docset storage → Browse
+Zeal → Edit → Preferences → Docset storage → Browse → Choice the path of `<full_name>.docset`
 
 ## Usage docset with [Keypirinha](https://keypirinha.com) (Optional):
 
@@ -90,8 +88,8 @@ Zeal → Edit → Preferences → Docset storage → Browse
 
 ```
 [main]
-path = "<The path of zeal.exe >"
-docset_path = "<The path of docsets>"
+path = "<the path of zeal.exe>"
+docset_path = "<the path of docsets>"
 results = 50
 wildcard = no
 
@@ -115,25 +113,25 @@ v = Variable
 o = Option
 ```
 
-## Create PR
+## Create PR [^2][^3]
 
-Fork https://github.com/Kapeli/Dash-User-Contributions.
+Fork `https://github.com/Kapeli/Dash-User-Contributions`.
 
 ```sh
 git clone https://github.com/<User>/Dash-User-Contributions
 cd Dash-User-Contributions
 git pull
 git checkout -b "<full-name>-<stable_version>"
-tar --exclude='.DS_Store' -cvzf <Full_Name>.tgz <Full_Name>.docset
-mv <Full_Name>.tgz Dash-User-Contributions\docsets\<Full_Name>\
-vim Dash-User-Contributions\docsets\<Full_Name>\docset.json
+tar --exclude='.DS_Store' -cvzf <full_name>.tgz <full_name>.docset
+mv <full_name>.tgz Dash-User-Contributions\docsets\<full_name>\
+vim Dash-User-Contributions\docsets\<full_name>\docset.json
 ```
 
 ```
 {
     "name": "Full Name",
     "version": "<stable_version>",
-    "archive": "<Full_Name>.tgz",
+    "archive": "<full_name>.tgz",
     "author": {
         "name": "<Name>",
         "link": "<Link>"
@@ -145,15 +143,15 @@ vim Dash-User-Contributions\docsets\<Full_Name>\docset.json
 If you build specific versions (Optional):
 
 ```sh
-mv <Full_Name>.tgz Dash-User-Contributions\docsets\<Full_Name>\versions\<specific_version>\
-vim Dash-User-Contributions\docsets\<Full_Name>\docset.json
+mv <full_name>.tgz Dash-User-Contributions\docsets\<full_name>\versions\<specific_version>\
+vim Dash-User-Contributions\docsets\<full_name>\docset.json
 ```
 
 ```sh
     "specific_versions": [
         {
             "version": "<specific_version>",
-            "archive": "versions/<specific_version>/<Full_Name>.tgz"
+            "archive": "versions/<specific_version>/<full_name>.tgz"
         },
         ...
     ]
@@ -167,12 +165,13 @@ git commit -m "Update <full-name> to <stable_version>"
 git push -u origin <full-name>-<stable_version>
 ```
 
-Visit `https://github.com/<User>/Dash-User-Contributions` → Sync fork → Create Pull requests → Waiting check and merge
-
-↪ [Dash-User-Contributions](https://github.com/Kapeli/Dash-User-Contributions)  
-↪ [Contributions](https://github.com/MarcDiethelm/contributing).
+Visit `https://github.com/<user>/Dash-User-Contributions` → Sync fork → Create Pull requests → Waiting check and merge
 
 ## Usage docset as feed
 
 1. You can get some feed from [Zeal User Contributions & Cheat Sheets](https://zealusercontributions.vercel.app/docsets).
 2. Zeal →  Tools → Docsets → Add feed.
+
+[^1]: [renpy - Compiling the Modules](https://github.com/renpy/renpy#compiling-the-modules)
+[^2]: [Dash-User-Contributions](https://github.com/Kapeli/Dash-User-Contributions)
+[^3]: [Contributions](https://github.com/MarcDiethelm/contributing)
