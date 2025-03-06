@@ -10,7 +10,7 @@ Matrix
 
 ## How to build
 
-I'm building the Docset on GitLab CI. The files `.gitlab-ci.yml` and `generate.sh` contain most of the logic.
+I'm building the Docset locally, but there's also and untested workflow for GitLab CI. The files `.gitlab-ci.yml` and `generate.sh` contain most of the logic.
 
 https://gitlab.com/jaller94/dash-matrix-spec/
 
