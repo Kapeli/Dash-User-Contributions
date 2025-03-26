@@ -24,6 +24,6 @@
 - run the following command
 
 ```cmd
-doc2dash -n scikit-learn -i scikit-learn-docs/_static/scikit-learn-logo-small.png -I scikit-learn-docs/index.html scikit-learn-docs -v
-tar cvzf scikit-learn.tgz scikit-learn.docset
+doc2dash -n scikit-learn -I preface.html scikit-learn-docs -v
+tar --exclude='.DS_Store' -cvzf scikit-learn.tgz scikit-learn.docset
 ```
