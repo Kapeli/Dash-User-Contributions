@@ -30,7 +30,7 @@ Build it
 ```shell
 mkdir build
 cd build
-cmake ../ -DWITH_APIDOC=TRUE -DWITH_3D=TRUE -DWITH_SERVER=TRUE
+cmake ../ -DWITH_DOT=FALSE -DWITH_APIDOC=TRUE -DWITH_3D=TRUE -DWITH_SERVER=TRUE
 make apidoc
 ```
 Then, in *doc/api/html/Info.plist* remove *CFBundleVersion* (key and string value), and add the following two lines
