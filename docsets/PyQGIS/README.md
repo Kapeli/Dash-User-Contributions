@@ -32,11 +32,11 @@ Copy `pyqgis.patch` in pyqgis directory and apply patch
 patch -ruN  < pyqgis.patch
 ```
 
-Build docset
+Build docset (prerequisites with pip are sphinx, python-docs-theme, doc2dash)
 
 ```shell
 ./scripts/build-docs.sh
-doc2dash -n PyQGIS_3 build/master/html/
+doc2dash -n PyQGIS_3 build/master/
 ```
 Finally, add icons and docset.json to `PyQGIS_3.docset`
 
