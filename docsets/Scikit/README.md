@@ -1,6 +1,6 @@
-# documentation
+# Documentation
 
-## Ascikit-learnuthors
+## Scikit-Learn Authors
 
 - Aziz Alto (https://github.com/iamaziz)
 - Angelo Varlotta (https://github.com/capac)
