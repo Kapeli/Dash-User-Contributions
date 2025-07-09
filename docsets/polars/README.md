@@ -16,7 +16,7 @@ This docset is automatically generated via [paw-lu/polars-dash-docset](https://g
 - [GNU Tar](https://www.gnu.org/software/tar/)
 - [ImageMagick](https://imagemagick.org/index.php)
 - [Nox](https://nox.thea.codes/en/stable/)
-- [Python 3.10](https://www.python.org/)
+- [Python 3.13](https://www.python.org/)
 
 ### Build directions
 
