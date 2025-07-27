@@ -12,14 +12,13 @@
 
 1. Install Dependencies
 ```sh
-pip3 install bs4
-pip3 install lxml
+pip3 install bs4 lxml cssselect
 ```
 
-2. Run the following scripts from this [repository](https://github.com/drmargarido/odin-docset)
+2. Run the generation scripts from this [repository](https://github.com/drmargarido/odin-docset)
 ```sh
-bash download_pkgs_docs.sh
-python3 generate_odin_docset.py
+git clone https://github.com/drmargarido/odin-docset
+./odin-docset/make_docset.sh
 ```
 
 ## Notes
