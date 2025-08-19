@@ -24,6 +24,7 @@ html_theme_options = {
 }
 ```
 
+- deactivate rediraffe plugin to avoid duplicate entries:
 - you may have to specify extra arguments to jupyter_sphinx to run correctly locally:
 ``` python
 jupyter_execute_kwargs = dict(
