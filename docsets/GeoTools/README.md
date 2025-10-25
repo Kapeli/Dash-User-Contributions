@@ -10,9 +10,9 @@ Documentation for [GeoTools](http://www.geotools.org) library as a [Dash](http:/
 * [javadocset](https://github.com/Kapeli/javadocset), to convert the Javadoc to a Dash docset.
 
 #### Available Versions
-* 33.1
-* 32.3
-* 31.7
+* 34.0
+* 33.3
+* 32.4
 
 #### Generating
 1. Download the GeoTools API documentation from http://docs.geotools.org. 
