@@ -1,17 +1,14 @@
-# Sublime Text
+# Sublime Merge
 
 This is a localized docset
-from the [official documentation site][st-docs]
-for the [Sublime Text][st] editor.
+from the [official documentation site][sm-docs]
+for the [Sublime Merge][sm] Git GUI.
 
 
 ## Features
 
 - Usage guides
-- API Reference
 - Customization and theming
-- Syntax definitions
-- Troubleshooting
 
 
 ## Generator
@@ -23,8 +20,6 @@ at [github.com/SublimeText/sublime-text-docset][repo].
 ## Maintainer
 
 Maintained by the [SublimeText community GitHub organization][org].
-An earlier version of this docset
-was created by [Alex (Oleksii) Markov][malexer].
 
 
 ## Known issues
@@ -32,8 +27,7 @@ was created by [Alex (Oleksii) Markov][malexer].
 Please submit any issues to [the generator repository][repo].
 
 
-[st]: https://www.sublimetext.com/
-[st-docs]: https://www.sublimetext.com/docs/index.html
+[sm]: https://www.sublimemerge.com/
+[sm-docs]: https://www.sublimemerge.com/docs/index.html
 [repo]: https://github.com/SublimeText/sublime-text-docset
 [org]: https://github.com/SublimeText
-[malexer]: https://github.com/malexer
