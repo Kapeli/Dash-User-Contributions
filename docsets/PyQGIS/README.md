@@ -32,7 +32,7 @@ Copy `pyqgis.patch` in pyqgis directory and apply patch
 patch -ruN  < pyqgis.patch
 ```
 
-Build docset (prerequisites with pip are sphinx, python-docs-theme, doc2dash)
+Build docset (prerequisites with pip are sphinx, python-docs-theme, doc2dash, pyaml, sphinxcontrib-jquery)
 
 ```shell
 ./scripts/build-docs.sh
