@@ -1,33 +1,106 @@
-Dash User Contributed Docsets
-=======================
+# <Docset Name> Docset for Dash
 
-### Report a bug or request a docset
-[Open an issue](https://github.com/Kapeli/Dash-User-Contributions/issues/new).
+## Overview
+This repository contains a **Dash-compatible docset** for **<Docset Name>**, allowing developers to browse the documentation **offline** using the Dash app.
 
-### Install a docset
+The docset is structured and indexed according to Dash’s official guidelines to ensure fast search, clean navigation, and accurate symbol indexing.
 
-You can install these docsets from [Dash's](https://kapeli.com/dash) Preferences > Downloads > User Contributed.
+---
 
-### Contribute a new docset
+## 📘 Documentation Included
+- API Reference
+- Core Concepts
+- Guides & Tutorials
+- Examples (where available)
 
-To contribute a docset, follow the steps below. If you get stuck at any point or have any questions, [open an issue](https://github.com/Kapeli/Dash-User-Contributions/issues). I'll help.
+All content is organized for easy lookup inside Dash.
 
-**Notice:** You might qualify for a **free Dash license** if you had to write your own generation script to make the docset (e.g. docsets made using doc2dash, javadocset or similar do not qualify). Please mention your email address in the pull request if you'd like to request a free license.
+---
 
-* Generate a docset by following the instructions at https://kapeli.com/docsets
-    * Note: you can ignore the instructions regarding docset feeds. You won't need them if you plan to contribute to this repo
-* Make sure your docset fulfils all the required criteria on the [Docset Contribution Checklist](https://github.com/Kapeli/Dash-User-Contributions/wiki/Docset-Contribution-Checklist) and as many of the optional ones as possible
-* Check out the [Versioning Guidelines](https://github.com/Kapeli/Dash-User-Contributions/wiki/Docset-Versioning-Guidelines) to understand how docset versioning works in Dash
-* Fork and clone this repo
-* Set up your directory structure:
-  * Copy the `Sample_Docset` folder into the `docsets` folder and rename it. Use the same name as your docset, but replace whitespaces with underscores. Note: don't add `_Docset` at the end of the name, just use the docset name (e.g. `ExtJS`) and nothing else.
-  * Archive your docset using:
-  ```bash
-  tar --exclude='.DS_Store' -cvzf <docset name>.tgz <docset name>.docset
-  ```
-  * Copy your docset archive
-    * Note: don't worry about this repo's size getting huge. As soon as your docset gets distributed to my CDN, it will get removed from the repo automatically. If your docset exceeds GitHub's file limit of 100 MB, open an issue and we'll figure out a different way to submit your docset
-  * Include an `icon.png` and `icon@2x.png` with sizes `16x16` and `32x32` or simply delete the sample icon if you don't want an icon at all
-  * Edit the docset.json file. Make sure to follow the same naming rules as the sample (i.e. your docset name should be the same as the archive name, but replace whitespaces with underscores)
-  * Edit the README.md
-* Submit a pull request
+## 🛠 Docset Generation Details
+- **Documentation Source:** <Official documentation URL>
+- **Docset Type:** User Contributed
+- **Generation Method:**  
+  - Custom script / doc2dash / javadocset / other (specify clearly)
+- **Indexing:**  
+  - Indexed using Dash-compatible SQLite index
+  - Follows the Docset Contribution Checklist
+
+> ⚠️ Note: If a **custom generation script** was used, this docset may qualify for a **free Dash license**.  
+> Please mention your email address in the pull request.
+
+---
+
+## 📦 Installation Instructions
+1. Open **Dash**
+2. Navigate to **Preferences → Downloads → User Contributed**
+3. Search for **<Docset Name>**
+4. Click **Install**
+
+Once installed, the docset will be available for offline use.
+
+---
+
+## 📁 Docset Structure
+<Docset_Name>/
+├── <Docset_Name>.docset
+├── <Docset_Name>.tgz
+├── docset.json
+├── README.md
+├── icon.png
+└── icon@2x.png
+
+- Folder and archive names use underscores instead of spaces
+- `.tgz` archive name matches the docset name
+
+---
+
+## 🖼 Icons
+The docset includes:
+- `icon.png` (16 × 16)
+- `icon@2x.png` (32 × 32)
+
+Icons follow Dash’s recommended size and format.
+
+---
+
+## 📌 Docset Metadata
+- **Docset Name:** <Docset Name>
+- **Version:** <Version>
+- **Language / Framework:** <Language or Framework>
+- **Platform:** Dash (macOS)
+
+---
+
+## 👤 Maintainer
+- **Name:** Barath B
+- **GitHub:** https://github.com/<your-username>
+- **Email:** <your-email> (optional, required only for Dash license request)
+
+---
+
+## 📄 License & Disclaimer
+All documentation content belongs to its respective owners.
+
+This docset is provided **as-is** for **offline reference and educational purposes only**.  
+No ownership of the original documentation is claimed.
+
+---
+
+## ✅ Contribution Checklist
+- [x] Properly indexed
+- [x] Searchable in Dash
+- [x] Correct naming conventions
+- [x] Dash-compatible structure
+- [x] Includes metadata and README
+
+---
+
+## 🔄 Updates
+If the upstream documentation changes, this docset may be updated in future releases to reflect the latest version.
+
+---
+
+## 🚀 Status
+Ready for review and submission as a **Dash User Contributed Docset**.
+
