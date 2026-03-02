@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+
+<html data-content_root="../" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Running — trepan3k 1.0 documentation</title>
+<link href="../_static/pygments.css%3Fv=03e43079.css" rel="stylesheet" type="text/css"/>
+<link href="../_static/basic.css%3Fv=b08954a9.css" rel="stylesheet" type="text/css"/>
+<link href="../_static/alabaster.css%3Fv=27fed22d.css" rel="stylesheet" type="text/css"/>
+<script src="../_static/documentation_options.js%3Fv=f2a433a1"></script>
+<script src="../_static/doctools.js%3Fv=fd6eb6e6"></script>
+<script src="../_static/sphinx_highlight.js%3Fv=6ffebe34"></script>
+<link href="../genindex.html" rel="index" title="Index"/>
+<link href="../search.html" rel="search" title="Search"/>
+<link href="running/continue.html" rel="next" title="Continue"/>
+<link href="info/threads.html" rel="prev" title="Info Threads"/>
+<link href="../_static/custom.css" rel="stylesheet" type="text/css"/>
+<script async="" src="../../../_/static/javascript/readthedocs-addons.js" type="text/javascript"></script><meta content="python3-trepan" name="readthedocs-project-slug"/><meta content="latest" name="readthedocs-version-slug"/><meta content="/commands/running.html" name="readthedocs-resolver-filename"/><meta content="200" name="readthedocs-http-status"/></head><body>
+<div class="document">
+<div class="documentwrapper">
+<div class="bodywrapper">
+<div class="body" role="main">
+<a class="dashAnchor" name="//apple_ref/cpp/Section/Running"></a><section id="running">
+<h1>Running<a class="headerlink" href="running.html#running" title="Link to this heading">¶</a></h1>
+<p>Running, restarting, or stopping the program.</p>
+<p>When a program is stopped, there are several possibilities for further
+program execution. You can:</p>
+<ul class="simple">
+<li><p>terminate the program inside the debugger</p></li>
+<li><p>restart the program</p></li>
+<li><p>continue its execution until it would normally terminate or until a
+breakpoint is hit</p></li>
+<li><p>step execution, which runs for a limited amount of code before stopping</p></li>
+</ul>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/About Debugging Overhead"></a><section id="about-debugging-overhead">
+<h2>About Debugging Overhead<a class="headerlink" href="running.html#about-debugging-overhead" title="Link to this heading">¶</a></h2>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/Explanation of Problem"></a><section id="explanation-of-problem">
+<h3>Explanation of Problem<a class="headerlink" href="running.html#explanation-of-problem" title="Link to this heading">¶</a></h3>
+<p>When you enable the debugger, there are callbacks made in the running
+of the program when certain events happen. Events are things that occur in
+running the program, like when the code reaches a new line in the
+program, when a call or return occurs, or when an exception is raised.</p>
+<p>The overhead in running these callbacks slows down your
+program. Currently, the overhead can be greater than the overhead in
+<code class="docutils literal notranslate"><span class="pre">pdb</span></code>. This is because the debugger tries to be more precise and
+careful it tracing, and the features it provides are more powerful. In
+most cases, we can do this without a significant slow down in the
+debugged program.</p>
+<p>But in certain situations, the overhead in running debugged code can
+be large. This happens when we want to “step over” a function that is
+large and complex, like an <code class="docutils literal notranslate"><span class="pre">import</span></code> of a large module.</p>
+<p>For example, if you turn on the debugger and run the <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">pandas</span></code> instruction, it can increase your CPU usage for a while.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cat slow.py
+#!/usr/bin/env python3
+import pandas as pd
+print(pd)
+
+$ trepan3k slow.py
+(/tmp/slow.py:1): &lt;module&gt;
+-&gt; 1 import pandas as pd
+(trepan3k) next
+ -- 1 import pandas as pd
+(trepan3k) next # this may be slow and increase your CPU a bit
+(/tmp/slow.py:2 @10): &lt;module&gt;
+-- 2 print(pd)
+</pre></div>
+</div>
+<p>The debugger overhead only concerns the instructions of the program to
+be debugged, the instructions of the trepan3k interpreter are not
+analyzed.</p>
+<p>Given this, here is how to speed up the above</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ trepan3k slow.py
+(/tmp/slow.py:1): &lt;module&gt;
+-&gt; 1 import pandas as pd
+(trepan3k) next
+(trepan3k) import pandas as pd
+ -- 1 import pandas as pd
+(trepan3k) next # this will run fast
+(/tmp/slow.py:2 @10): &lt;module&gt;
+-- 2 print(pd)
+</pre></div>
+</div>
+<p>Alternatively, modifying the program with a call to <code class="docutils literal notranslate"><span class="pre">debug</span></code> will also run fast:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cat fast.py
+#!/usr/bin/env python3
+import pandas as pd
+from trepan.api import debug; debug()
+print(pd)
+
+$ python fast.py
+(/tmp/fast.py:3 @36): &lt;module&gt;
+-- 3 print(pd)
+(trepan3k)
+</pre></div>
+</div>
+</section>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/Techniques to Reduce Debugger Overhead"></a><section id="techniques-to-reduce-debugger-overhead">
+<h3>Techniques to Reduce Debugger Overhead<a class="headerlink" href="running.html#techniques-to-reduce-debugger-overhead" title="Link to this heading">¶</a></h3>
+<ol class="arabic">
+<li><p>Activate the debugger only when you need it</p>
+<p>Look at
+<a class="reference external" href="../entry-exit.html#calling-the-debugger-from-your-program">https://python3-trepan.readthedocs.io/en/latest/entry-exit.html#calling-the-debugger-from-your-program</a>.
+By doing there is no slowdown whatsoever until the first breakpoint
+is hit.</p>
+</li>
+<li><p>Remove keep breakpoints when you no longer need them</p></li>
+</ol>
+<p>When there are <em>any</em> breakpoints in the program, the debugger has to check every event to see if the event is the target of a breakpoint.</p>
+<p>In particular, the <code class="docutils literal notranslate"><span class="pre">continue</span></code>, <code class="docutils literal notranslate"><span class="pre">finish</span></code>, and <code class="docutils literal notranslate"><span class="pre">next</span></code> (step over) commands are much slower.</p>
+<p>Therefore, remove <em>all</em> breakpoints when they are no longer
+needed. Consider using temporary or one-time breakpoints when you need to stop only once.</p>
+<ol class="arabic simple">
+<li><p>Use debugging commands with less overhead</p></li>
+</ol>
+<p><code class="docutils literal notranslate"><span class="pre">continue</span></code> when there are no breakpoints pending probably gives the
+fastest execution. <code class="docutils literal notranslate"><span class="pre">info</span> <span class="pre">break</span></code> will show you if there are any
+breakpoints. Recall that one-time breakpoints are removed after they
+are encountered.</p>
+<p>When no breakpoints are used, the <code class="docutils literal notranslate"><span class="pre">continue</span></code> command will cause the debugger to remove its trace hook, and execution should continue at normal speed.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">step</span></code> is usually fast, because there is generally very little
+debugger overhead between stopping points.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">next</span></code> (step over) debugger command is faster without a breakpoint than when there are breakpoint because without breakpoints, there is
+less debugger overhead in checking for the stopping condition.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">finish</span></code> command when there are no breakpoints is faster than when there are breakpoints.
+Without breakpoints debugger will remove tracing calls.</p>
+<p>When there must breakpoint in use, setting a breakpoint and running
+<code class="docutils literal notranslate"><span class="pre">continue</span></code> is faster than the <code class="docutils literal notranslate"><span class="pre">next</span></code> command. Because <code class="docutils literal notranslate"><span class="pre">next</span></code> has
+to check stack depth, that can considerably slow things down.</p>
+</section>
+</section>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/Debugging commands"></a><section id="debugging-commands">
+<h2>Debugging commands<a class="headerlink" href="running.html#debugging-commands" title="Link to this heading">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="running/continue.html">Continue</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running/exit.html">Exit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running/finish.html">Finish (step out)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running/jump.html">Jump</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running/kill.html">Kill</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running/next.html">Next (step over)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running/quit.html">Quit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running/run.html">Run</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running/restart.html">Restart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running/skip.html">Skip</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running/step.html">Step (step into)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running/stepi.html">Step Instruction</a></li>
+</ul>
+</div>
+</section>
+</section>
+</div>
+<div class="related bottom">
+                 
+  <nav id="rellinks">
+<ul>
+<li>
+          ←
+          <a href="info/threads.html" title="Previous document">Info Threads</a>
+</li>
+<li>
+<a href="running/continue.html" title="Next document">Continue</a>
+          →
+        </li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div aria-label="Main" class="sphinxsidebar" role="navigation">
+<div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">trepan3k</a></h1>
+<search id="searchbox" role="search" style="display: none">
+<div class="searchformwrapper">
+<form action="../search.html" class="search" method="get">
+<input aria-labelledby="searchlabel" autocapitalize="off" autocomplete="off" autocorrect="off" name="q" placeholder="Search" spellcheck="false" type="text"/>
+<input type="submit" value="Go"/>
+</form>
+</div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../features.html">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">How to install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../options.html">Command-line Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../entry-exit.html">Entering the Debugger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../syntax.html">Command Syntax</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../commands.html">Command Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="breakpoints.html">Breakpoints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data.html">Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="files.html">Files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="info.html">Info</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="running.html#">Running</a></li>
+<li class="toctree-l2"><a class="reference internal" href="set.html">Set</a></li>
+<li class="toctree-l2"><a class="reference internal" href="stack.html">Stack</a></li>
+<li class="toctree-l2"><a class="reference internal" href="show.html">Show</a></li>
+<li class="toctree-l2"><a class="reference internal" href="support.html">Support</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+<li><a href="../index.html">Documentation overview</a><ul>
+<li><a href="../commands.html">Command Reference</a><ul>
+<li>Previous: <a href="info/threads.html" title="previous chapter">Info Threads</a></li>
+<li>Next: <a href="running/continue.html" title="next chapter">Continue</a></li>
+</ul></li>
+</ul></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="clearer"></div>
+</div>
+<div class="footer">
+      ©2017, 2021, 2024 Rocky Bernstein.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.0.4</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/commands/running.rst.txt" rel="nofollow">Page source</a>
+</div>
+</body>
+</html>

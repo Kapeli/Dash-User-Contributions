@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+
+<html data-content_root="../" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Syntax for Source-Code Locations — trepan3k 1.0 documentation</title>
+<link href="../_static/pygments.css%3Fv=03e43079.css" rel="stylesheet" type="text/css"/>
+<link href="../_static/basic.css%3Fv=b08954a9.css" rel="stylesheet" type="text/css"/>
+<link href="../_static/alabaster.css%3Fv=27fed22d.css" rel="stylesheet" type="text/css"/>
+<script src="../_static/documentation_options.js%3Fv=f2a433a1"></script>
+<script src="../_static/doctools.js%3Fv=fd6eb6e6"></script>
+<script src="../_static/sphinx_highlight.js%3Fv=6ffebe34"></script>
+<link href="../genindex.html" rel="index" title="Index"/>
+<link href="../search.html" rel="search" title="Search"/>
+<link href="range.html" rel="next" title="Syntax for List Ranges"/>
+<link href="filename.html" rel="prev" title="Syntax for Indicating a Filename"/>
+<link href="../_static/custom.css" rel="stylesheet" type="text/css"/>
+<script async="" src="../../../_/static/javascript/readthedocs-addons.js" type="text/javascript"></script><meta content="python3-trepan" name="readthedocs-project-slug"/><meta content="latest" name="readthedocs-version-slug"/><meta content="/syntax/location.html" name="readthedocs-resolver-filename"/><meta content="200" name="readthedocs-http-status"/></head><body>
+<div class="document">
+<div class="documentwrapper">
+<div class="bodywrapper">
+<div class="body" role="main">
+<a class="dashAnchor" name="//apple_ref/cpp/Section/Syntax for Source-Code Locations"></a><section id="syntax-for-source-code-locations">
+<a class="dashAnchor" name="//apple_ref/cpp/Section/Syntax for Source-Code Locations"></a><span id="syntax-location"></span><span id="index-0"></span><h1>Syntax for Source-Code Locations<a class="headerlink" href="location.html#syntax-for-source-code-locations" title="Link to this heading">¶</a></h1>
+<p>Several commands like “break” and “list” have locations
+embedded in them.</p>
+<p>A location can be either a <em>linespec</em>, an explicit function, or a <em>module linespec</em></p>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/Linespec"></a><section id="linespec">
+<h2>Linespec<a class="headerlink" href="location.html#linespec" title="Link to this heading">¶</a></h2>
+<p id="index-1">A linespec has a colon-separated pair of a source-location parameter
+and a line number.  A source location is a file path or a module name.</p>
+<p>In [<em>path</em>:] <em>linenum</em> , the line <em>linenum</em> in the source file <em>path</em>
+is indicated. When <em>path</em> is omitted, some default value is given; usually it is the <em>path</em> associated with the current frame. Or in
+list-like commands, it is the <em>path</em> that was most recently set; the
+most-recently set path starts as the current frame’s path.</p>
+<p>If <em>filename</em> is a relative file name, then Python’s <cite>sys.path</cite> items
+(which are assumed to be a list of directories) are tried in the order
+given. Often, the current working directory or <cite>.</cite> is in that
+list. Note that <cite>.</cite> can be set with the  <cite>cd</cite> debugger command.</p>
+<p>To specify a path containing non-alphanumeric characters, specifically
+blanks (” “), backslashes (”"), or quotes, there are several
+quoting mechanisms one can use. You can enclose the path in single
+quotes, double quotes, or triple quotes as you would do in Python</p>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/Location Examples"></a><section id="location-examples">
+<h3>Location Examples<a class="headerlink" href="location.html#location-examples" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">10</span>                   <span class="c1"># line 10 of the most-recently used path</span>
+<span class="n">myfile</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">2</span>          <span class="c1"># line 2 of myfile.py, where the directory name is</span>
+                     <span class="c1">#resolved from `sys.path`</span>
+<span class="o">./../</span><span class="n">myfile</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">3</span>     <span class="c1"># line 3 of the parent of some directory in `sys.path`</span>
+<span class="o">/</span><span class="n">tmp</span><span class="o">/</span><span class="n">foo</span><span class="o">.</span><span class="n">py</span><span class="p">:</span><span class="mi">4</span>        <span class="c1"># line 4 of absolute path /tmp/foo.py</span>
+<span class="s2">"foo's.py"</span><span class="p">:</span><span class="mi">1</span><span class="s2">"        # One way to specify a path with a quote</span>
+<span class="sd">'''foo's.py"'''</span><span class="p">:</span><span class="mi">2</span>    <span class="c1"># Another way to specify a path with a quote</span>
+<span class="s1">'c:</span><span class="se">\f</span><span class="s1">oo.bat'</span><span class="p">:</span><span class="mi">1</span><span class="s2">"      # One way to specify a Windows file name,</span>
+<span class="s1">'/My Docs/foo.py'</span><span class="p">:</span><span class="mi">1</span><span class="s2">" # One way to specify a path with blanks in it</span>
+</pre></div>
+</div>
+</section>
+</section>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/function()"></a><section id="function">
+<h2>function()<a class="headerlink" href="location.html#function" title="Link to this heading">¶</a></h2>
+<p>Specifies the line that the function <em>function</em> starts on. This is the
+line that contains <cite>def</cite>. We get this information from the Python code
+object, in particular the <cite>co_firstlineno</cite> field.
+In  contrast to <em>gdb</em>, use parentheses at the end of the function name
+to indicate this is a function.</p>
+<p>You can also specify functions through the values in a Python program
+variables or the function indicated in an instance method.</p>
+<p>For example, consider this program:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">Foo</span><span class="p">():</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">food</span><span class="p">():</span> <span class="k">return</span>
+<span class="n">f</span> <span class="o">=</span> <span class="n">Foo</span><span class="p">()</span>
+<span class="n">b</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">food</span><span class="p">]</span>
+<span class="n">x</span> <span class="o">=</span> <span class="mi">2</span>
+</pre></div>
+</div>
+<p>If you are stopped at the last line <cite>x = 2</cite>. You can specify the function <cite>food</cite>
+as either of these ways:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Foo</span><span class="o">.</span><span class="n">food</span><span class="p">()</span>
+<span class="n">f</span><span class="o">.</span><span class="n">food</span><span class="p">()</span>
+<span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">]()</span>
+</pre></div>
+</div>
+<p>Although in the last example <cite>b[0]()</cite> the expressions can get a bit
+complex, to simplify parsing, we don’t allow arbitrary expressions. We
+currently allow only alphanumeric symbols as you’d find in valid
+Python identifiers along with extra symbols “.”, “[”, and “]”.  This
+means <cite>b[i+1]()</cite> would be invalid because it contains “+”.  So would
+<cite>b[“foo”]()</cite>, assuming <cite>b</cite> were a dictionary, because of the quote
+symbol.</p>
+<p><em>Right now, we don’t allow line offsets from functions. If the need
+arises, we may do so in the future.</em></p>
+</section>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/module linespec"></a><section id="module-linespec">
+<h2>module linespec<a class="headerlink" href="location.html#module-linespec" title="Link to this heading">¶</a></h2>
+<p>While functions need a closing <cite>()</cite> to indicate their function-ness,
+Python module names don’t. What we do here is first look up the name
+as a file path.  If that’s not found, we look up the file as a Python
+module name. Modules have to have been imported before it is accepted in
+the debugger. However, you can run <cite>eval</cite> (or <cite>autoeval</cite>) to have
+Python <code class="docutils literal notranslate"><span class="pre">1mport</span></code> the module inside the debugger.</p>
+<p>In sum, file names are distinguished from method names purely by
+semantic means. However, <em>gdb</em> and thus this debugger have no means to
+explicitly tag names as a file path or Python module name. We, but not
+<em>gdb</em>, make a distinction between functions versus modules and file
+paths.</p>
+<a class="dashAnchor" name="//apple_ref/cpp/Section/Linespec Examples"></a><section id="linespec-examples">
+<h3>Linespec Examples<a class="headerlink" href="location.html#linespec-examples" title="Link to this heading">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="p">:</span><span class="mi">45</span>  <span class="c1"># Line 45 of the file that contains os.path</span>
+<span class="n">os</span><span class="p">:</span><span class="mi">1</span>        <span class="c1"># First line of module os</span>
+<span class="n">os</span>          <span class="c1"># Invalid! (for now)</span>
+</pre></div>
+</div>
+<p>Note that the last line is invalid. In contrast to functions, you need
+to give line numbers. Also, it is assumed there is no <em>file</em>
+called <cite>os</cite> in the last example line. Nor a file called <cite>os.path</cite> in
+the first example.</p>
+</section>
+</section>
+</section>
+</div>
+<div class="related bottom">
+                 
+  <nav id="rellinks">
+<ul>
+<li>
+          ←
+          <a href="filename.html" title="Previous document">Syntax for Indicating a Filename</a>
+</li>
+<li>
+<a href="range.html" title="Next document">Syntax for List Ranges</a>
+          →
+        </li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div aria-label="Main" class="sphinxsidebar" role="navigation">
+<div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">trepan3k</a></h1>
+<search id="searchbox" role="search" style="display: none">
+<div class="searchformwrapper">
+<form action="../search.html" class="search" method="get">
+<input aria-labelledby="searchlabel" autocapitalize="off" autocomplete="off" autocorrect="off" name="q" placeholder="Search" spellcheck="false" type="text"/>
+<input type="submit" value="Go"/>
+</form>
+</div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../features.html">Features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">How to install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../options.html">Command-line Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../entry-exit.html">Entering the Debugger</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../syntax.html">Command Syntax</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="arange.html">Syntax for Address Ranges</a></li>
+<li class="toctree-l2"><a class="reference internal" href="command.html">Debugger Command Syntax</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html">Command examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="filename.html">Syntax for Indicating a Filename</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="location.html#">Syntax for Source-Code Locations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="range.html">Syntax for List Ranges</a></li>
+<li class="toctree-l2"><a class="reference internal" href="suffixes.html">Command suffixes that have special meaning</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../commands.html">Command Reference</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+<li><a href="../index.html">Documentation overview</a><ul>
+<li><a href="../syntax.html">Command Syntax</a><ul>
+<li>Previous: <a href="filename.html" title="previous chapter">Syntax for Indicating a Filename</a></li>
+<li>Next: <a href="range.html" title="next chapter">Syntax for List Ranges</a></li>
+</ul></li>
+</ul></li>
+</ul>
+</div>
+</div>
+</div>
+<div class="clearer"></div>
+</div>
+<div class="footer">
+      ©2017, 2021, 2024 Rocky Bernstein.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.0.4</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/syntax/location.rst.txt" rel="nofollow">Page source</a>
+</div>
+</body>
+</html>
