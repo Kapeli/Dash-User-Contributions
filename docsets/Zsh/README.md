@@ -1,16 +1,27 @@
 Zsh Docset
 ==========
 
-This docset is maintained by [Zhiming Wang](https://github.com/zmwangx).
+This docset is maintained by [Zhiming Wang](https://github.com/zmwangx),
+updated for 5.9 by [Kevin Turner](https://github.com/keturn).
 
 Build instructions
 ------------------
 
-To generate the docset, download the generation script
-from <https://gist.github.com/zmwangx/9d5d18927e6d1dbccfac970567c59b53>,
+To generate the docset from the upstream doc distribution, download the generation script
+from <https://github.com/keturn/gen-zsh-docset>,
 and run
 
-    ./gen-zsh-docset <zsh_version_number>
+```zsh
+uv run gen-zsh-docset 5.9
+```
 
-The script handles the rest, including downloads, and spits out a docset as
-well as its tarball.
+Or if you have a recent (v7+) `texinfo` and want more bells and whistles,
+
+```zsh
+git submodule update
+cd vendor/zsh
+Util/preconfig && ./configure && make html && make tarxz-doc
+cd ../..
+ln vendor/zsh/zsh-*-doc.tar.xz .
+uv run gen-zsh-docset --no-download 5.9
+```
