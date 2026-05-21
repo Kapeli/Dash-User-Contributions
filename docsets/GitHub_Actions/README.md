@@ -1,4 +1,4 @@
-# GitHub Actions docset
+# GitHub docset
 
 Build requirements:
 * `ruby` to generate HTML
@@ -7,8 +7,8 @@ Build requirements:
 
 Build instructions:
 ```shell
-git clone https://github.com/toy/github-actions-docset-builder.git
-cd github-actions-docset-builder
+git clone https://github.com/toy/github-docset-builder.git
+cd github-docset-builder
 bundle install
 bundle exec rake
 ```
