@@ -11,5 +11,6 @@ PyTorch Docset
 
 #### Docset Author:
 
+- [sheikheddy](https://github.com/sheikheddy)
 - [Yue Gao](https://github.com/hologerry)
 - [Aziz Alto](https://github.com/iamaziz)
