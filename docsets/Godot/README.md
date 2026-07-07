@@ -3,7 +3,9 @@ Godot Docset
 
 [Godot](https://docs.godotengine.org/en/stable/) docset for [Dash](http://kapeli.com/dash), [Zeal](https://zealdocs.org), [Velocity](https://velocity.silverlakesoftware.com/).
 
-This document is quite large and the latest stable version is updated weekly. I think it would be better to only upload the previous stable version for now. If you need real-time updates in the meantime, you can use these feed URLs:
+This document is quite large and the latest stable version is updated weekly. I think it would be better to only upload the previous stable version for now.
+
+You can use these feed URLs:
 
 - Godot 4: `http://zealusercontributions.vercel.app/api/docsets/Godot.xml`
 - Godot 3: `http://zealusercontributions.vercel.app/api/docsets/Godot3.xml`
