@@ -6,13 +6,13 @@
 
 - Florian Knoop ([Twitter](https://twitter.com/floknoo) · [GitHub](https://github.com/flokno))
 - Xavier Yang ([GitHub](https://github.com/ivaquero))
-- Clément Haëck ([GitHub](https://github.com/Descanonge)): Update to 2026.6
+- Clément Haëck ([GitHub](https://github.com/Descanonge)): Update to 2025.6
 
 ## Instructions
 
 - download the latest document from https://github.com/pydata/xarray
 - unpack the zip file
-- `cd xarray-main/doc`
+- `cd xarray-<version>/doc`
 - custom sphinx options in `doc/conf.py` in order to remove sidebar and navbar:
 ```python
 html_sidebars = {"**": []}
@@ -32,29 +32,29 @@ jupyter_execute_kwargs = dict(
 )
 ```
 
-- Make available a [custom parser](./parser.py) which will filters duplicate entries:
-``` bash
-cp parser.py xarray-main/xarray
+- build the documentation (details  [here](https://docs.xarray.dev/en/stable/contribute/contributing.html#how-to-build-the-xarray-documentation)):
+```bash
+pixi run doc
 ```
 
-- build the documentation:
+- Make a [custom parser](./parser.py) available which will filters duplicate entries:
+``` bash
+cp /.../parser.py xarray
+```
+
+- build the docset:
 ```bash
-make html
-doc2dash -v -n xarray -I index.html -u "https://docs.xarray.dev/en/stable/" \
+pixi run doc2dash -v -n xarray -I index.html -u "https://docs.xarray.dev/en/stable/" \
     --parser xarray.parser.InterSphinxFilter \
-    xarray-main/doc/_build/html 
+    doc/_build/html 
 ```
 
 - copy icons:
 ``` bash
-cp icons*.png xarray.docset
+cp /.../icons*.png xarray.docset
 ```
 
 - Create archive:
 ```bash
 tar --exclude=".DS_STORE' -cvzf xarray.tgz xarray.docset
 ```
-
-## More details
-
-Details on how to build the `xarray` documentation can be found [here](https://docs.xarray.dev/en/stable/contribute/contributing.html#how-to-build-the-xarray-documentation).

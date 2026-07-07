@@ -17,7 +17,7 @@ Then edit Doxyfile template file *cmake_templates/Doxyfile.in* and modify these 
 GENERATE_DOCSET        = YES
 PROJECT_NAME           = "QGIS"
 DOCSET_FEEDNAME        = "QGIS"
-DOCSET_BUNDLE_ID       = QGIS_3
+DOCSET_BUNDLE_ID       = QGIS_4
 DOCSET_PUBLISHER_ID    = com.QGIS
 DOCSET_PUBLISHER_NAME  = QGIS
 DISABLE_INDEX          = YES
@@ -44,15 +44,15 @@ Then generate docset (doxytag2zealdb can be installed with pip, but be aware tha
 # First command fail on docsetutil missing, nevermind!
 cd doc/api/html && make
 cd ../../../
-doxytag2zealdb --tag doc/qgis.tag --db doc/api/html/QGIS_3.docset/Contents/Resources/docSet.dsidx  --include-parent-scopes --include-function-signatures
+doxytag2zealdb --tag doc/qgis.tag --db doc/api/html/QGIS_4.docset/Contents/Resources/docSet.dsidx  --include-parent-scopes --include-function-signatures
 ```
 
-Finally, add icons and docset.json to `doc/api/html/QGIS_3.docset`
+Finally, add icons and docset.json to `doc/api/html/QGIS_4.docset`
 
 If you want to propose a PR to update this documentation, just zip it, share it (on Dropbox for instance) and give the URL in the PR.
 
 To create the tar archive
 
 ```shell
-cd doc/api/html && tar cvzf QGIS.tgz --exclude='.DS_Store' QGIS_3.docset
+cd doc/api/html && tar cvzf QGIS.tgz --exclude='.DS_Store' QGIS_4.docset
 ```

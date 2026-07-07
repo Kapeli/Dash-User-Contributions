@@ -2,7 +2,7 @@
 
 This is a localized PHP documentation docset generated from the official PHP manual. It includes user-contributed notes and a complete index of all functions, classes, constants, and language constructs.
 
-The docset is automatically updated via [a GitHub workflow](https://github.com/ElfSundae/dash-php/actions/workflows/auto-update-docsets.yml) to keep it in sync with the official documentation.
+The docset is automatically updated via [a GitHub workflow](https://github.com/ElfSundae/dash-php/actions/workflows/update-dash-user-contributions.yml) to keep it in sync with the official documentation.
 
 ## Features
 

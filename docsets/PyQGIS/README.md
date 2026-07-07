@@ -36,12 +36,12 @@ Build docset (prerequisites with pip are sphinx, python-docs-theme, doc2dash, py
 
 ```shell
 ./scripts/build-docs.sh
-doc2dash -n PyQGIS_3 build/master/
+doc2dash -n PyQGIS_4 build/master/
 ```
-Finally, add icons and docset.json to `PyQGIS_3.docset`
+Finally, add icons and docset.json to `PyQGIS_4.docset`
 
 To create the tar archive
 
 ```shell
-tar cvzf PyQGIS.tgz --exclude='.DS_Store' PyQGIS_3.docset
+tar cvzf PyQGIS.tgz --exclude='.DS_Store' PyQGIS_4.docset
 ```
