@@ -1,77 +1,104 @@
 # Transformers Docset
 
-[Transformers](https://github.com/huggingface/transformers) (formerly known as
-`pytorch-transformers` and `pytorch-pretrained-bert`) by
-[Hugging Face](https://huggingface.co) provides state-of-the-art general-purpose
- architectures for Natural Language Understanding (NLU) and Natural Language
- Generation (NLG). This repository contains the Dash docset of the
- documentation, and steps required to replicate it.
+[Transformers](https://github.com/huggingface/transformers) by
+[Hugging Face](https://huggingface.co) provides state-of-the-art architectures
+for Natural Language Processing, Computer Vision, Audio, Video, and Multimodal
+tasks — for both inference and training.
+
+> **Note** I am not affiliated with the Hugging Face team. I created this Dash
+> docset because I love the library and Dash.
 
 ## Author
 
-#### Venkat
+**Venkat**
+GitHub: [venkatasg](https://github.com/venkatasg)
+Twitter: [@_venkatasg](https://twitter.com/_venkatasg)
 
-- Github: [venkatasg](https://github.com/venkatasg)
-- Twitter: [_venkatasg](https://twitter.com/_venkatasg)
-
-(I am not related to the Hugging Face team or the `transformers` project in
-anyway. I only created the Dash docset because I love the transformers library
-and Dash)
-
-## Prerequisites
-
-Ensure that `pytorch`, `tensorflow` and `transformers` are installed in the
-environment you are currently working in. If one of `tensorflow` or `pytorch`
-isn't installed, then documentation will only be generated for the one you do
-have installed.
+---
 
 ## Building the Docset
 
-`transformers` uses  the
-[sphinx_rtd_theme](https://sphinx-rtd-theme.readthedocs.io/en/stable/).
-Unfortunately, it isn't easy to hide the navigation sidebar like in some other
-themes. To build the documentation for easy readability on Dash, follow these
-steps.
+The `generate_docset.py` script downloads the rendered documentation from
+[huggingface.co/docs/transformers](https://huggingface.co/docs/transformers)
+and packages it into a Dash-compatible `.docset` bundle.
 
-1. Follow the instructions on the
-[transformers repository](https://github.com/huggingface/transformers/tree/master/docs)
-to generate the documentation **up until the build line** : `make html`.
-2.  Before building, add the `hidesidebar.css` file to the
-`docs/source/_static/css/` folder.
-3. Open `docs/source/conf.py` and add the following line towards the end of the
-file (in the function definition
-`def setup(app)`): `app.add_stylesheet('css/hidesidebar.css')`. This will hide
-the sidebar, remove unneccessary buttons and the Hugging Face logo.
-4. Now build using `make html`. There will probably be a bunch of warnings -
-search [issues](https://github.com/huggingface/transformers/issues) in the
-transformers repository if the build fails.
-5. Generate the Dash docset using [doc2dash](https://doc2dash.readthedocs.io/en/stable/).
-This is the command I use(which needs to be run within the `docs/` folder, same
-as where you built the documentation):
+### Prerequisites
 
-`doc2dash -i PATH_TO_ICON@2x.png -u https://huggingface.co/transformers/index.html# -n transformers -j -f -v -d DESTINATION_PATH_FOR_DOCSET_build/html/`.
+Python 3.10+ and the following packages:
 
-6. Before archiving docset, go into the package contents of the `.docset` file
-and add the following to the `plist` file. The FallbackURL would need to be
-replaced with the one given below.
-
-```
-    <key>DashDocSetFallbackURL</key>
-	<string>https://huggingface.co/transformers/</string>
-    <key>DashDocSetKeyword</key>
-	<string>transformers</string>
-	<key>DashDocSetPluginKeyword</key>
-	<string>transformers</string>
-	<key>DashWebSearchKeyword</key>
-	<string>transformers</string>
+```bash
+pip install requests beautifulsoup4 pyyaml lxml
 ```
 
-7. Now archive and submit [as instructed](https://github.com/Kapeli/Dash-User-Contributions)
+### Usage
 
-## Minor issues
+```bash
+# Build the docset for the latest published version (fetched from PyPI)
+python generate_docset.py
 
-Depending on the size of your Dash window, a navigation bar might show up on
-the top with a button (a hamburger button) to open the sidebar. Clicking on the
-button will lead to an empty space on the left margin. Just click the button
-again to get back your space. To get rid of the top bar, set your Dash window to
-a wider width.
+# Pin to a specific version
+python generate_docset.py --version 4.47.0
+
+# Write the output somewhere other than the script directory
+python generate_docset.py --output-dir ~/Desktop
+
+# Speed up downloads with more parallel workers (be polite — default is 8)
+python generate_docset.py --workers 12
+
+# Skip the .tgz archive step (faster for local testing)
+python generate_docset.py --no-archive
+
+# Skip bundling the HuggingFace compiled CSS
+# (pages will load it from the CDN — requires internet access inside Dash)
+python generate_docset.py --skip-hf-css
+```
+
+The script will create:
+
+```
+transformers.docset/         ← Dash docset bundle
+transformers.tgz             ← Archive ready for submission
+```
+
+### What the script does
+
+1. **Fetches navigation** — downloads `_toctree.yml` from the transformers
+   GitHub repository to discover all ~629 documentation pages.
+2. **Downloads pages** — fetches each rendered HTML page from
+   `huggingface.co/docs/transformers/vX.Y.Z/en/<slug>` in parallel.
+3. **Bundles HF CSS** — downloads the HuggingFace compiled Tailwind CSS once
+   so the docset renders correctly without an internet connection.
+4. **Injects `hidesidebar.css`** — hides the top navigation bar, left sidebar,
+   and right table-of-contents sidebar so the Dash viewer shows only the
+   documentation content.
+5. **Adds Dash anchors** — inserts
+   `<a name="//apple_ref/cpp/Class/…" class="dashAnchor">` before every API
+   entry (classes, functions, methods) so they appear in Dash's search index.
+6. **Builds the SQLite index** — creates `docSet.dsidx` with entries for
+   classes, functions, methods, sections, and guide pages.
+7. **Writes `Info.plist`** — sets the docset metadata including the fallback URL
+   and keyword (`transformers`).
+8. **Archives** — packages everything into `transformers.tgz`.
+
+### Submitting a new version
+
+After generating the docset, follow the standard
+[Dash User Contributions](https://github.com/Kapeli/Dash-User-Contributions)
+submission process:
+
+1. Copy the `.tgz` to the appropriate `versions/X.Y.Z/` subdirectory.
+2. Update `docset.json` with the new version number and add an entry to
+   `specific_versions`.
+3. Open a pull request.
+
+---
+
+## Visual notes
+
+The HuggingFace docs site uses a SvelteKit frontend with Tailwind CSS. A few
+layout quirks may be visible depending on Dash window width:
+
+- A thin breadcrumb bar at the top of each page is intentionally kept — it
+  shows the current page path and is useful for navigation context.
+- If you resize the Dash window very narrow the content may wrap differently
+  than on the website; this is expected Tailwind responsive behaviour.

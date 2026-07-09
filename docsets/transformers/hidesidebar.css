@@ -1,23 +1,137 @@
-/* CSS stuff to hide the damn sidebar in rtd theme for Dash */
+/*
+ * hidesidebar.css
+ * ===============
+ * Hides HuggingFace website navigation chrome so the Dash docset viewer shows
+ * only the documentation content.
+ *
+ * The HuggingFace docs site uses SvelteKit with Tailwind CSS.  The key layout
+ * elements targeted below are:
+ *
+ *   header                          – top navigation bar (logo, sign-in, etc.)
+ *   #hf-doc-container > .sticky     – left sidebar (doc tree) and right TOC
+ *   #doc-footer                     – footer with prev/next page links
+ *   .SVELTE_HYDRATER outside <main> – SvelteKit hydration wrappers for the
+ *                                     header and other global UI components
+ *
+ * Additional fixes for the Dash viewer
+ * -------------------------------------
+ *   div[class*="from-orange-300"]   – "Join the Hugging Face community" promo
+ *                                     banner (orange gradient) above the content
+ *   .huggingchat-input-container    – HuggingChat AI assistant widget that
+ *                                     appears fixed in the bottom-right corner
+ *   a.header-link                   – per-heading and per-parameter anchor link
+ *                                     icons; on the website they are hidden until
+ *                                     hover but in Dash the with-hover: Tailwind
+ *                                     variants may not apply, leaving SVG icons
+ *                                     visible before every parameter name
+ *   .code-block > div.absolute      – "copy to clipboard" button overlay on
+ *                                     code blocks (opacity-0 but can peek through)
+ *   .prose.prose-doc .docstring li::before
+ *                                   – large decorative character injected by
+ *                                     hf_style.css before each parameter list
+ *                                     item; absolutely positioned, opacity 0.3,
+ *                                     font-size 2xl — renders as visible text
+ *                                     overlapping the parameter name in Dash
+ */
 
-/* Why didn't I just alabaster theme? Because I want it to look pretty */
-
-/* This hides the search bar and the github star below it */
-.wy-side-nav-search{
-    display: none;
+/* ── Top navigation header ─────────────────────────────────────────────────── */
+header {
+    display: none !important;
 }
 
-.wy-nav-side{
-    display: none;  /*This hides the sidebar but leaves empty space*/
+/* ── Left navigation sidebar and right table-of-contents sidebar ────────────
+   Both sidebars are direct children of #hf-doc-container that carry the
+   Tailwind "sticky" utility class.  The main content div does not. */
+#hf-doc-container > .sticky {
+    display: none !important;
 }
 
-/* This takes care of the bad left margin after the above */
-.wy-nav-content-wrap {
-    margin-left: auto;
-    margin-right: auto;
+/* ── Page footer ─────────────────────────────────────────────────────────────*/
+#doc-footer {
+    display: none !important;
 }
 
-/* This deletes the login and models buttons in top right */
-div.menu {
-    display: none;
+/* ── SvelteKit hydration wrappers that live outside <main> ───────────────────
+   These wrap the header and global modals; none of them contain doc content. */
+.flex.min-h-dvh.flex-col > .SVELTE_HYDRATER {
+    display: none !important;
+}
+
+/* ── "Join the Hugging Face community" promotional banner ────────────────────
+   The banner sits above the page content inside .prose-doc and uses an orange
+   gradient (from-orange-300/*).  The attribute selector matches all Tailwind
+   opacity variants (from-orange-300/10, /20, etc.). */
+div[class*="from-orange-300"] {
+    display: none !important;
+}
+
+/* ── HuggingChat AI assistant widget ─────────────────────────────────────────
+   Fixed-position floating widget in the bottom-right corner of every page. */
+.huggingchat-input-container {
+    display: none !important;
+}
+
+/* ── Heading and parameter anchor link icons ─────────────────────────────────
+   HuggingFace renders a small chain-link SVG icon next to every heading and
+   parameter name.  On the live site these are hidden (opacity-0 / display-none)
+   until the user hovers; the visibility is controlled by custom with-hover:*
+   and no-hover:* Tailwind variants.  In Dash's offline WebKit viewer those
+   variant classes may not resolve correctly, leaving the SVG icons rendered
+   as visible inline-block elements that overlap parameter names.
+   Hiding the whole anchor is safe: Dash uses its own search index for
+   navigation and does not need these per-entry permalink icons. */
+a.header-link {
+    display: none !important;
+}
+
+/* ── Code-block "copy" button overlay ────────────────────────────────────────
+   Each code block has an absolutely-positioned copy-to-clipboard button
+   (opacity-0 by default) and a tooltip arrow triangle.  Without JS they are
+   inert but can sometimes bleed through in Dash. */
+.code-block > div.absolute {
+    display: none !important;
+}
+
+/* ── Decorative ::before on parameter list items ─────────────────────────────
+   hf_style.css injects a large (font-size: 2xl), semi-transparent (opacity 0.3)
+   decorative character before every <li> inside .docstring via the rule:
+
+       .prose.prose-doc .docstring li:before {
+           content: var(--tw-content);   ← a Unicode glyph / chain-link icon
+           position: absolute;
+           font-size: var(--text-2xl);
+           opacity: .3;
+       }
+
+   In the live browser this character is hidden behind the list item background,
+   but in Dash's offline WebKit viewer the stacking/clipping differs and the
+   glyph renders visibly in front of the parameter name.
+   Setting content: none suppresses the pseudo-element entirely. */
+.prose.prose-doc .docstring li::before {
+    content: none !important;
+}
+
+/* ── Make the content column fill the full width ─────────────────────────────
+   Once the sidebars are gone the flex container needs to let the content
+   column expand.  #hf-doc-container switches from lg:flex to plain block so
+   the single remaining child fills the viewport. */
+#hf-doc-container {
+    display: block !important;
+}
+
+#hf-doc-container > .min-w-0 {
+    max-width: 100% !important;
+    width: 100% !important;
+}
+
+/* ── Remove the max-width cap on the prose content ───────────────────────────*/
+.prose-doc,
+.prose {
+    max-width: 100% !important;
+}
+
+/* ── Reduce outer padding now that the sidebars are gone ─────────────────────*/
+#hf-doc-container > div:not(.sticky) > div {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
 }
