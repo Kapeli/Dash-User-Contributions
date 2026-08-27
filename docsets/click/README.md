@@ -1,9 +1,9 @@
 click Docset
 =======================
 
-This docset was created by Florian Knoop ([Twitter](https://twitter.com/floknoo) · [GitHub](https://github.com/flokno))
+This docset was created by Florian Knoop ([Twitter](https://twitter.com/floknoo) · [GitHub](https://github.com/flokno)) and updated to `8.4.2` by [pleasedodisturb](https://github.com/pleasedodisturb).
 
-It contains documentation from [click](https://click.palletsprojects.com/en/8.0.x/), which describes `click`, and was generated with [doc2dash](https://doc2dash.readthedocs.io/en/stable/index.html).
+It contains documentation from [click](https://click.palletsprojects.com/en/stable/), which describes `click`, and was generated with [doc2dash](https://doc2dash.readthedocs.io/en/stable/index.html) following the steps below (`html_theme = "basic"`, `nosidebar`, per the diff in step 3).
 
 ## How to build the docset.
 
