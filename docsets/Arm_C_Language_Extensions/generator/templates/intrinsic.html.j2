@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="{{ page_description }}">
+  <title>{{ name }}</title>
+  <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+  <main class="page">
+    {% for anchor in dash_anchors %}
+    <a name="{{ anchor.name }}" class="dashAnchor"></a>
+    {% endfor %}
+
+    <header class="hero">
+      <div class="eyebrow">{{ callable_kind }} · {{ family_label }}</div>
+      <div class="title-row">
+        <h1><code>{{ name }}</code></h1>
+        <span class="badge maturity maturity-{{ maturity.css_class }}">{{ maturity.label }}</span>
+      </div>
+      {% if signature %}
+      <pre class="signature"><code>{{ signature }}</code></pre>
+      {% else %}
+      <p class="missing-value">No concrete source-backed signature is available.</p>
+      {% endif %}
+      <div class="tag-list" aria-label="Families">
+        {% for family in families %}<span class="tag">{{ family }}</span>{% endfor %}
+      </div>
+    </header>
+
+    {% if diagnostics %}
+    <section class="diagnostic-summary" aria-labelledby="data-quality-heading">
+      <h2 id="data-quality-heading">Data quality</h2>
+      {% for diagnostic in diagnostics %}
+      <div class="callout callout-{{ diagnostic.severity }}">
+        <div class="callout-title">{{ diagnostic.severity_label }}{% if diagnostic.code %} · <code>{{ diagnostic.code }}</code>{% endif %}</div>
+        <p>{{ diagnostic.message }}</p>
+      </div>
+      {% endfor %}
+    </section>
+    {% endif %}
+
+    <section id="compilation-requirements" aria-labelledby="compilation-requirements-heading">
+      <h2 id="compilation-requirements-heading">Compilation requirements</h2>
+      <dl class="facts">
+        <div><dt>Header</dt><dd>{{ compilation.headers | join(", ") if compilation.headers else "Not resolved from the pinned sources." }}</dd></div>
+        <div><dt>Architecture</dt><dd>{{ compilation.architecture_min or "Not resolved from the pinned sources." }}</dd></div>
+        <div><dt>Profile</dt><dd>{{ compilation.profiles | join(", ") if compilation.profiles else "Not resolved from the pinned sources." }}</dd></div>
+        <div><dt>ISA extensions</dt><dd>{{ compilation.extensions | join(", ") if compilation.extensions else "No source-backed extension mapping is available." }}</dd></div>
+        <div><dt>ACLE feature macros</dt><dd>{% if compilation.feature_macros %}{% for macro in compilation.feature_macros %}<code>{{ macro }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% else %}No source-backed feature-macro mapping is available.{% endif %}</dd></div>
+        <div><dt>Execution state</dt><dd>{{ compilation.execution_states | join(", ") if compilation.execution_states else "No additional execution-state restriction was resolved." }}</dd></div>
+        <div><dt>Availability</dt><dd><code class="wrap-code">{{ compilation.availability }}</code></dd></div>
+      </dl>
+
+      {% if compilation.mode_availability %}
+      <h3>Availability by calling mode</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Mode</th><th>Condition</th><th>Source</th></tr></thead>
+          <tbody>{% for item in compilation.mode_availability %}<tr><td>{{ item.mode }}</td><td><code>{{ item.availability }}</code></td><td>{{ item.source }}</td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      {% if compilation.flags %}
+      <h3>Compiler flag examples</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Compiler</th><th>Flags</th><th>Target / mode</th><th>Branch condition</th><th>Base architecture / context</th><th>Default</th><th>Source</th></tr></thead>
+          <tbody>
+          {% for flag in compilation.flags %}
+            <tr>
+              <td>{{ flag.compiler }}</td>
+              <td><code>{{ flag.flags }}</code></td>
+              <td>{{ flag.target }} · {{ flag.mode }}</td>
+              <td><code>{{ flag.availability }}</code></td>
+              <td>{{ flag.context }}</td>
+              <td>{{ flag.is_default }}</td>
+              <td>{{ flag.source }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if compilation.unresolved_reason %}
+      <p class="missing-value">{{ compilation.unresolved_reason }}</p>
+      {% endif %}
+      {% else %}
+      <p class="missing-value">{{ compilation.missing_flags_reason }}</p>
+      {% endif %}
+    </section>
+
+    <section id="parameters" aria-labelledby="parameters-heading">
+      <h2 id="parameters-heading">Parameters</h2>
+      {% if parameters %}
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Name</th><th>Type</th><th>Description</th><th>Constraints</th></tr></thead>
+          <tbody>
+          {% for parameter in parameters %}
+            <tr>
+              <td><code>{{ parameter.name }}</code></td>
+              <td><code>{{ parameter.type }}</code></td>
+              <td>{{ parameter.description }}</td>
+              <td>{{ parameter.constraints }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p>{{ parameters_reason }}</p>
+      {% endif %}
+    </section>
+
+    <section id="semantics" aria-labelledby="semantics-heading">
+      <h2 id="semantics-heading">Semantics</h2>
+      {% if semantics.summary %}<p class="lead">{{ semantics.summary }}</p>{% endif %}
+      {% if semantics.description %}<div class="source-prose">{{ semantics.description }}</div>{% endif %}
+      {% if semantics.operation %}
+      <h3>Operation</h3>
+      <pre class="operation"><code>{{ semantics.operation }}</code></pre>
+      {% endif %}
+      {% if semantics.notes %}
+      <h3>Notes</h3>
+      <ul>{% for note in semantics.notes %}<li>{{ note }}</li>{% endfor %}</ul>
+      {% endif %}
+      {% if not semantics.summary and not semantics.description and not semantics.operation %}
+      <p class="missing-value">No source-backed semantic description is available for this callable.</p>
+      {% endif %}
+
+      {% if state_access %}
+      <h3>Architectural state</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>State</th><th>Access</th><th>Details</th></tr></thead>
+          <tbody>
+          {% for state in state_access %}<tr><td><code>{{ state.state }}</code></td><td>{{ state.mode }}</td><td>{{ state.details }}</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </section>
+
+    <section id="result" aria-labelledby="result-heading">
+      <h2 id="result-heading">Result</h2>
+      <p>{{ result }}</p>
+    </section>
+
+    <section id="instruction-mapping" aria-labelledby="instruction-mapping-heading">
+      <h2 id="instruction-mapping-heading">Instruction mapping</h2>
+      {% if instruction_disclaimer %}<div class="callout callout-note"><p>{{ instruction_disclaimer }}</p></div>{% endif %}
+      {% if instructions %}
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Relation</th><th>Instruction</th><th>Form / sequence</th><th>Argument mapping</th><th>Result mapping</th><th>Emission</th><th>Evidence</th></tr></thead>
+          <tbody>
+          {% for instruction in instructions %}
+            <tr>
+              <td>{{ instruction.relation }}</td>
+              <td>{% if instruction.instruction_set %}<span class="muted">{{ instruction.instruction_set }}</span> {% endif %}<code>{{ instruction.mnemonic }}</code></td>
+              <td>{{ instruction.form }}</td>
+              <td>{{ instruction.argument_mapping }}</td>
+              <td>{{ instruction.result_mapping }}</td>
+              <td>{{ instruction.emission }}</td>
+              <td>{{ instruction.evidence }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="missing-value">{{ instruction_reason }}</p>
+      {% endif %}
+    </section>
+
+    <section id="performance" aria-labelledby="performance-heading">
+      <h2 id="performance-heading">Performance</h2>
+      <p class="section-note">Numbers are microarchitecture-specific and are shown only when tied to a pinned source. They are not architectural guarantees.</p>
+      {% if performance.rows %}
+      <div class="table-scroll">
+        <table class="performance-table">
+          <thead><tr><th>Microarchitecture</th><th>CPU / instruction form</th><th>Latency (cycles)</th><th>Reciprocal throughput</th><th>µops / resources</th><th>Confidence and source</th></tr></thead>
+          <tbody>
+          {% for row in performance.rows %}
+            <tr>
+              <td>{{ row.microarchitecture }}</td>
+              <td>{{ row.cpu_form }}</td>
+              <td>{{ row.latency }}</td>
+              <td>{{ row.throughput }}</td>
+              <td>{{ row.resources }}</td>
+              <td>
+                <span class="badge confidence confidence-{{ row.confidence_class }}">{{ row.confidence }}</span>
+                {{ row.source_summary }}
+                <details class="evidence-details">
+                  <summary>Full provenance</summary>
+                  <p>{{ row.source_note }}</p>
+                </details>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+      {% for reason in performance.reasons %}<div class="callout callout-note"><p>{{ reason }}</p></div>{% endfor %}
+    </section>
+
+    <section id="constraints" aria-labelledby="constraints-heading">
+      <h2 id="constraints-heading">Constraints</h2>
+      {% if constraints %}
+      <ul>{% for constraint in constraints %}<li>{{ constraint }}</li>{% endfor %}</ul>
+      {% else %}
+      <p class="missing-value">No additional source-backed constraints were supplied by the converter.</p>
+      {% endif %}
+    </section>
+
+    <section id="aliases" aria-labelledby="aliases-heading">
+      <h2 id="aliases-heading">Aliases</h2>
+      {% if aliases %}
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Name</th><th>Role</th><th>Availability</th><th>Provenance</th></tr></thead>
+          <tbody>
+          {% for alias in aliases %}<tr><td><code>{{ alias.name }}</code></td><td>{{ alias.role }}</td><td>{{ alias.availability }}</td><td>{{ alias.provenance }}</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p>This callable has no documented aliases.</p>
+      {% endif %}
+    </section>
+
+    <section id="related-intrinsics" aria-labelledby="related-intrinsics-heading">
+      <h2 id="related-intrinsics-heading">Related intrinsics</h2>
+      {% if related %}<ul class="related-list">{% for item in related %}<li><code>{{ item }}</code></li>{% endfor %}</ul>{% else %}<p>No source-backed related-intrinsic links are available.</p>{% endif %}
+    </section>
+
+    <section id="source" aria-labelledby="source-heading">
+      <h2 id="source-heading">Source</h2>
+      {% if sources %}
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Source</th><th>Revision</th><th>Location</th><th>License</th></tr></thead>
+          <tbody>
+          {% for source in sources %}
+            <tr>
+              <td>{% if source.url %}<a href="{{ source.url }}">{{ source.label }}</a>{% else %}{{ source.label }}{% endif %}</td>
+              <td><code>{{ source.revision }}</code></td>
+              <td><code>{{ source.location }}</code></td>
+              <td>{{ source.license }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="missing-value">No source reference was attached. This is a release-blocking data issue.</p>
+      {% endif %}
+
+      {% if provenance %}
+      <h3>Field provenance</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Field</th><th>Method</th><th>Evidence / rule</th></tr></thead>
+          <tbody>{% for item in provenance %}<tr><td><code>{{ item.field }}</code></td><td>{{ item.method }}</td><td>{{ item.evidence }}</td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+      {% endif %}
+    </section>
+  </main>
+</body>
+</html>
