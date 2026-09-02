@@ -160,6 +160,7 @@ class DashRenderer:
         version: str | None = None,
         source_revision: str | None = None,
         catalog_diagnostics: Iterable[Diagnostic] = (),
+        navigation_targets: _NavigationTargets | None = None,
     ) -> RenderedPage:
         """Render the offline landing and attribution page."""
 
@@ -188,6 +189,9 @@ class DashRenderer:
             source_revision=source_revision,
             source_revisions=source_revisions,
             callable_count=len(items),
+            top_level_guides=_top_level_guide_rows(
+                items, navigation_targets or _navigation_targets(items)
+            ),
             family_counts=sorted(
                 family_counts.items(), key=lambda item: item[0].lower()
             ),
@@ -235,13 +239,15 @@ class DashRenderer:
     def render_catalog_pages(
         self,
         callables: Iterable[ConcreteCallable],
+        *,
+        navigation_targets: _NavigationTargets | None = None,
     ) -> tuple[RenderedPage, ...]:
         """Render callable pages together with taxonomy and data-width guides."""
 
         items = tuple(sorted(callables, key=lambda item: (item.slug, item.id)))
         callable_hrefs = {item.id: f"{item.slug}.html" for item in items}
         type_targets = _type_targets(items, callable_hrefs)
-        navigation_targets = _navigation_targets(items)
+        navigation_targets = navigation_targets or _navigation_targets(items)
         guides = _navigation_pages(
             self,
             items,
@@ -274,14 +280,21 @@ class DashRenderer:
         destination = Path(documents_directory)
         destination.mkdir(parents=True, exist_ok=True)
         items = tuple(sorted(callables, key=lambda item: (item.slug, item.id)))
+        navigation_targets = _navigation_targets(items)
         pages = [
             self.render_index(
                 items,
                 version=version,
                 source_revision=source_revision,
+                navigation_targets=navigation_targets,
             )
         ]
-        pages.extend(self.render_catalog_pages(items))
+        pages.extend(
+            self.render_catalog_pages(
+                items,
+                navigation_targets=navigation_targets,
+            )
+        )
 
         seen_paths: set[str] = set()
         for page in pages:
@@ -459,6 +472,31 @@ def _navigation_targets(callables: Sequence[ConcreteCallable]) -> _NavigationTar
         )
     }
     return _NavigationTargets(taxonomy=taxonomy, widths=widths)
+
+
+def _top_level_guide_rows(
+    callables: Sequence[ConcreteCallable],
+    targets: _NavigationTargets | None,
+) -> tuple[dict[str, object], ...]:
+    """Return landing-page links for the roots of the rendered taxonomy."""
+
+    if targets is None:
+        return ()
+    roots = sorted(path for path in targets.taxonomy if len(path) == 1)
+    return tuple(
+        {
+            "label": root[0],
+            "href": f"intrinsics/{targets.taxonomy[root]}",
+            "count": sum(
+                1
+                for callable_ in callables
+                if any(
+                    path[:1] == root for path in _callable_taxonomy_paths(callable_)
+                )
+            ),
+        }
+        for root in roots
+    )
 
 
 def _guide_href(kind: str, identity: str) -> str:

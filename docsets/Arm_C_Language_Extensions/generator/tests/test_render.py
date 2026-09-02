@@ -685,6 +685,8 @@ def test_render_index_includes_catalog_level_diagnostics() -> None:
     assert "<td>Warning</td><td>1</td>" in page.html
     assert "Diagnostic entries" in page.html
     assert "not affected callables" in page.html
+    assert "Browse top-level guides" in page.html
+    assert 'href="intrinsics/category-general-acle-crc-' in page.html
 
 
 def test_render_to_directory_is_deterministic_and_writes_offline_landing(
@@ -730,6 +732,8 @@ def test_render_to_directory_is_deterministic_and_writes_offline_landing(
     assert SOURCE_COMMIT in landing
     assert "CC BY-SA 4.0" in landing
     assert "Installed runtime dependencies" in landing
+    assert "Browse top-level guides" in landing
+    assert 'href="intrinsics/category-general-acle-crc-' in landing
     assert "<title>Overview</title>" in landing
     assert "<script" not in landing
     assert (first / "assets" / "style.css").is_file()
