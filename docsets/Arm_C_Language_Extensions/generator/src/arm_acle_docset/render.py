@@ -308,7 +308,6 @@ class DashRenderer:
         parameters = _parameter_rows(callable_, type_targets)
         instructions = _instruction_rows(callable_)
         sources = _source_rows(collect_callable_sources(callable_))
-        families = _families(callable_)
         result = semantics.result
         if not result:
             if callable_.signature.return_type.strip() == "void":
@@ -322,9 +321,10 @@ class DashRenderer:
             or f"Reference for the {callable_.name} ACLE callable.",
             "is_type": callable_.kind is CallableKind.TYPE,
             "callable_kind": _display_enum(_enum_text(callable_.kind)),
-            "family_label": " / ".join(families),
-            "families": tuple(callable_.families),
-            "taxonomy_links": _taxonomy_links(callable_, navigation_targets),
+            "family_label": _family_taxonomy_label(callable_.family),
+            "taxonomy_breadcrumbs": _taxonomy_breadcrumbs(
+                callable_, navigation_targets
+            ),
             "maturity": _maturity_context(callable_.maturity),
             "signature": (
                 callable_.signature.raw
@@ -600,17 +600,22 @@ def _guide_callable_rows(
     )
 
 
-def _taxonomy_links(
+def _taxonomy_breadcrumbs(
     callable_: ConcreteCallable,
     targets: _NavigationTargets,
 ) -> tuple[dict[str, str], ...]:
+    paths = _callable_taxonomy_paths(callable_)
+    if not paths:
+        return ()
+    path = paths[0]
     return tuple(
         {
-            "label": " › ".join(path),
-            "href": targets.taxonomy[path],
+            "label": item,
+            "href": targets.taxonomy[path[: index + 1]],
+            "separator": " / " if index == 0 else " › ",
         }
-        for path in _callable_taxonomy_paths(callable_)
-        if path in targets.taxonomy
+        for index, item in enumerate(path)
+        if path[: index + 1] in targets.taxonomy
     )
 
 
@@ -1097,14 +1102,6 @@ def _dash_type(kind: CallableKind) -> str:
 def _dash_anchor(entry_type: str, name: str) -> str:
     encoded_name = quote(name, safe="._-")
     return f"//apple_ref/cpp/{entry_type}/{encoded_name}"
-
-
-def _families(callable_: ConcreteCallable) -> tuple[str, ...]:
-    values = list(callable_.families)
-    for path in callable_.taxonomy:
-        if path:
-            values.append(" › ".join(path))
-    return _deduplicate_text(values)
 
 
 def _format_availability(expression: AvailabilityExpr | None) -> str:

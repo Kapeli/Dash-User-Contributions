@@ -276,6 +276,9 @@ def test_render_callable_uses_uniform_dash_layout_and_indexes_aliases() -> None:
         "Source",
     ):
         assert f">{heading}<" in page.html
+    assert page.html.index('id="compilation-requirements"') < page.html.index(
+        'id="source"'
+    )
 
     assert "//apple_ref/cpp/Function/__crc32b" in page.html
     assert "//apple_ref/cpp/Instruction/CRC32CB" in page.html
@@ -324,6 +327,9 @@ def test_render_type_uses_dash_type_index_and_exact_declaration() -> None:
     assert ">Compilation requirements<" in page.html
     assert ">Semantics<" in page.html
     assert ">Source<" in page.html
+    assert page.html.index('id="compilation-requirements"') < page.html.index(
+        'id="source"'
+    )
     assert ">Parameters<" not in page.html
     assert ">Performance<" not in page.html
     assert '<link rel="stylesheet" href="../assets/style.css">' in page.html
@@ -427,6 +433,9 @@ def test_render_type_properties_and_links_type_references(tmp_path: Path) -> Non
     assert f'href="{int32x4.slug}.html"' in function_html
     assert f'href="{float32x4.slug}.html"' in function_html
     assert "<strong>Type:</strong>" in function_html
+    assert 'Intrinsic · <a href="category-mve-' in function_html
+    assert ">MVE</a> / <a href=" in function_html
+    assert 'class="tag-list"' not in function_html
     root_category = next(
         page
         for page in pages

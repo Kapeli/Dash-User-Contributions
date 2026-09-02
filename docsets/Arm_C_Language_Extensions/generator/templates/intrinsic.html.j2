@@ -14,7 +14,7 @@
     {% endfor %}
 
     <header class="hero">
-      <div class="eyebrow">{{ callable_kind }} · {{ family_label }}</div>
+      <div class="eyebrow">{{ callable_kind }} · {% if taxonomy_breadcrumbs %}{% for item in taxonomy_breadcrumbs %}<a href="{{ item.href }}">{{ item.label }}</a>{% if not loop.last %}{{ item.separator }}{% endif %}{% endfor %}{% else %}{{ family_label }}{% endif %}</div>
       <div class="title-row">
         <h1><code>{{ name }}</code></h1>
         <span class="badge maturity maturity-{{ maturity.css_class }}">{{ maturity.label }}</span>
@@ -24,10 +24,6 @@
       {% else %}
       <p class="missing-value">No concrete source-backed signature is available.</p>
       {% endif %}
-      <div class="tag-list" aria-label="Families">
-        {% for family in families %}<span class="tag">{{ family }}</span>{% endfor %}
-        {% for taxonomy in taxonomy_links %}<a class="tag" href="{{ taxonomy.href }}">{{ taxonomy.label }}</a>{% endfor %}
-      </div>
     </header>
 
     {% if diagnostics %}
@@ -41,56 +37,6 @@
       {% endfor %}
     </section>
     {% endif %}
-
-    <section id="compilation-requirements" aria-labelledby="compilation-requirements-heading">
-      <h2 id="compilation-requirements-heading">Compilation requirements</h2>
-      <dl class="facts">
-        <div><dt>Header</dt><dd>{{ compilation.headers | join(", ") if compilation.headers else "Not resolved from the pinned sources." }}</dd></div>
-        <div><dt>Architecture</dt><dd>{{ compilation.architecture_min or "Not resolved from the pinned sources." }}</dd></div>
-        <div><dt>Profile</dt><dd>{{ compilation.profiles | join(", ") if compilation.profiles else "Not resolved from the pinned sources." }}</dd></div>
-        <div><dt>ISA extensions</dt><dd>{{ compilation.extensions | join(", ") if compilation.extensions else "No source-backed extension mapping is available." }}</dd></div>
-        <div><dt>ACLE feature macros</dt><dd>{% if compilation.feature_macros %}{% for macro in compilation.feature_macros %}<code>{{ macro }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% else %}No source-backed feature-macro mapping is available.{% endif %}</dd></div>
-        <div><dt>Execution state</dt><dd>{{ compilation.execution_states | join(", ") if compilation.execution_states else "No additional execution-state restriction was resolved." }}</dd></div>
-        <div><dt>Availability</dt><dd><code class="wrap-code">{{ compilation.availability }}</code></dd></div>
-      </dl>
-
-      {% if compilation.mode_availability %}
-      <h3>Availability by calling mode</h3>
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th>Mode</th><th>Condition</th><th>Source</th></tr></thead>
-          <tbody>{% for item in compilation.mode_availability %}<tr><td>{{ item.mode }}</td><td><code>{{ item.availability }}</code></td><td>{{ item.source }}</td></tr>{% endfor %}</tbody>
-        </table>
-      </div>
-      {% endif %}
-
-      {% if compilation.flags %}
-      <h3>Compiler flag examples</h3>
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th>Compiler</th><th>Flags</th><th>Target / mode</th><th>Branch condition</th><th>Base architecture / context</th><th>Default</th><th>Source</th></tr></thead>
-          <tbody>
-          {% for flag in compilation.flags %}
-            <tr>
-              <td>{{ flag.compiler }}</td>
-              <td><code>{{ flag.flags }}</code></td>
-              <td>{{ flag.target }} · {{ flag.mode }}</td>
-              <td><code>{{ flag.availability }}</code></td>
-              <td>{{ flag.context }}</td>
-              <td>{{ flag.is_default }}</td>
-              <td>{{ flag.source }}</td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% if compilation.unresolved_reason %}
-      <p class="missing-value">{{ compilation.unresolved_reason }}</p>
-      {% endif %}
-      {% else %}
-      <p class="missing-value">{{ compilation.missing_flags_reason }}</p>
-      {% endif %}
-    </section>
 
     <section id="semantics" aria-labelledby="semantics-heading">
       <h2 id="semantics-heading">Semantics</h2>
@@ -342,6 +288,56 @@
       {% if related %}<ul class="related-list">{% for item in related %}<li><code>{{ item }}</code></li>{% endfor %}</ul>{% else %}<p>No source-backed related-intrinsic links are available.</p>{% endif %}
     </section>
     {% endif %}
+
+    <section id="compilation-requirements" aria-labelledby="compilation-requirements-heading">
+      <h2 id="compilation-requirements-heading">Compilation requirements</h2>
+      <dl class="facts">
+        <div><dt>Header</dt><dd>{{ compilation.headers | join(", ") if compilation.headers else "Not resolved from the pinned sources." }}</dd></div>
+        <div><dt>Architecture</dt><dd>{{ compilation.architecture_min or "Not resolved from the pinned sources." }}</dd></div>
+        <div><dt>Profile</dt><dd>{{ compilation.profiles | join(", ") if compilation.profiles else "Not resolved from the pinned sources." }}</dd></div>
+        <div><dt>ISA extensions</dt><dd>{{ compilation.extensions | join(", ") if compilation.extensions else "No source-backed extension mapping is available." }}</dd></div>
+        <div><dt>ACLE feature macros</dt><dd>{% if compilation.feature_macros %}{% for macro in compilation.feature_macros %}<code>{{ macro }}</code>{% if not loop.last %}, {% endif %}{% endfor %}{% else %}No source-backed feature-macro mapping is available.{% endif %}</dd></div>
+        <div><dt>Execution state</dt><dd>{{ compilation.execution_states | join(", ") if compilation.execution_states else "No additional execution-state restriction was resolved." }}</dd></div>
+        <div><dt>Availability</dt><dd><code class="wrap-code">{{ compilation.availability }}</code></dd></div>
+      </dl>
+
+      {% if compilation.mode_availability %}
+      <h3>Availability by calling mode</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Mode</th><th>Condition</th><th>Source</th></tr></thead>
+          <tbody>{% for item in compilation.mode_availability %}<tr><td>{{ item.mode }}</td><td><code>{{ item.availability }}</code></td><td>{{ item.source }}</td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      {% if compilation.flags %}
+      <h3>Compiler flag examples</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Compiler</th><th>Flags</th><th>Target / mode</th><th>Branch condition</th><th>Base architecture / context</th><th>Default</th><th>Source</th></tr></thead>
+          <tbody>
+          {% for flag in compilation.flags %}
+            <tr>
+              <td>{{ flag.compiler }}</td>
+              <td><code>{{ flag.flags }}</code></td>
+              <td>{{ flag.target }} · {{ flag.mode }}</td>
+              <td><code>{{ flag.availability }}</code></td>
+              <td>{{ flag.context }}</td>
+              <td>{{ flag.is_default }}</td>
+              <td>{{ flag.source }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if compilation.unresolved_reason %}
+      <p class="missing-value">{{ compilation.unresolved_reason }}</p>
+      {% endif %}
+      {% else %}
+      <p class="missing-value">{{ compilation.missing_flags_reason }}</p>
+      {% endif %}
+    </section>
 
     <section id="source" aria-labelledby="source-heading">
       <h2 id="source-heading">Source</h2>
