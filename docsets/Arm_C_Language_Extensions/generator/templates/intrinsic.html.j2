@@ -26,6 +26,7 @@
       {% endif %}
       <div class="tag-list" aria-label="Families">
         {% for family in families %}<span class="tag">{{ family }}</span>{% endfor %}
+        {% for taxonomy in taxonomy_links %}<a class="tag" href="{{ taxonomy.href }}">{{ taxonomy.label }}</a>{% endfor %}
       </div>
     </header>
 
@@ -127,14 +128,16 @@
         <div><dt>Data width</dt><dd>{{ type_details.width.value }}</dd></div>
       </dl>
       <p class="section-note">{{ type_details.width.note }}</p>
+      {% if type_details.width_page %}<p class="section-note">Browse related types: <a href="{{ type_details.width_page.href }}">{{ type_details.width_page.label }}</a>.</p>{% endif %}
 
-      <h3>Direct type-conversion functions</h3>
-      {% if type_details.conversions %}
+      <h3>Value-conversion functions</h3>
+      <p class="section-note">Value-preserving or value-changing ACLE conversions, analogous to a C++ <code>static_cast</code> navigation category.</p>
+      {% if type_details.value_conversions %}
       <div class="table-scroll">
         <table>
           <thead><tr><th>Function</th><th>Other documented ACLE type(s)</th><th>Exact signature</th></tr></thead>
           <tbody>
-          {% for item in type_details.conversions %}
+          {% for item in type_details.value_conversions %}
             <tr><td><a href="{{ item.href }}"><code>{{ item.name }}</code></a></td><td>{% for type_name in item.other_types %}<code>{{ type_name }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</td><td><code>{{ item.signature }}</code></td></tr>
           {% endfor %}
           </tbody>
@@ -142,6 +145,23 @@
       </div>
       {% else %}
       <p class="missing-value">No source-backed conversion signature to another documented ACLE type was found.</p>
+      {% endif %}
+
+      <h3>Same-width reinterpret casts</h3>
+      <p class="section-note">Public <code>vreinterpret*</code> and <code>svreinterpret*</code> entry points with a source type in the same derived width group, analogous to C++ <code>reinterpret_cast</code> navigation.</p>
+      {% if type_details.reinterpret_casts %}
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Function</th><th>Other documented ACLE type(s)</th><th>Exact signature</th></tr></thead>
+          <tbody>
+          {% for item in type_details.reinterpret_casts %}
+            <tr><td><a href="{{ item.href }}"><code>{{ item.name }}</code></a></td><td>{% for type_name in item.other_types %}<code>{{ type_name }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</td><td><code>{{ item.signature }}</code></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="missing-value">No public same-width reinterpret-cast signature was found.</p>
       {% endif %}
 
       <h3>Build or insert from scalar values</h3>
@@ -174,6 +194,30 @@
       </div>
       {% else %}
       <p class="missing-value">No source-backed scalar extraction signature was found.</p>
+      {% endif %}
+
+      <h3>Functions returning this type</h3>
+      {% if type_details.returning %}
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Function</th><th>Exact signature</th></tr></thead>
+          <tbody>{% for item in type_details.returning %}<tr><td><a href="{{ item.href }}"><code>{{ item.name }}</code></a></td><td><code>{{ item.signature }}</code></td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="missing-value">No source-backed function returns this exact documented type declaration.</p>
+      {% endif %}
+
+      <h3>Functions accepting this type as an operand</h3>
+      {% if type_details.accepting %}
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Function</th><th>Exact signature</th></tr></thead>
+          <tbody>{% for item in type_details.accepting %}<tr><td><a href="{{ item.href }}"><code>{{ item.name }}</code></a></td><td><code>{{ item.signature }}</code></td></tr>{% endfor %}</tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="missing-value">No source-backed function accepts this exact documented type declaration.</p>
       {% endif %}
       <p class="section-note">{{ type_details.relationship_note }}</p>
     </section>

@@ -261,7 +261,6 @@ def test_render_callable_uses_uniform_dash_layout_and_indexes_aliases() -> None:
     assert page.relative_path.endswith(".html")
     assert set(page.index_entries) == {
         IndexEntry("__crc32b", "Function", page.relative_path),
-        IndexEntry("__crc32b_alias", "Function", page.relative_path),
         IndexEntry("CRC32CB", "Instruction", page.relative_path),
     }
     for heading in (
@@ -303,7 +302,7 @@ def test_render_callable_uses_uniform_dash_layout_and_indexes_aliases() -> None:
 def test_render_type_uses_dash_type_index_and_exact_declaration() -> None:
     provenance = explicit_provenance()
     type_page = ConcreteCallable(
-        family="neon",
+        family="mve",
         name="int32x4_t",
         signature=Signature(
             "typedef __attribute__((neon_vector_type(4))) int32_t int32x4_t;",
@@ -347,12 +346,31 @@ def test_render_type_properties_and_links_type_references(tmp_path: Path) -> Non
     int32x4 = type_record("int32x4_t")
     float32x4 = type_record("float32x4_t")
     conversion = ConcreteCallable(
-        family="neon",
+        family="mve",
         name="vcvtq_s32_f32",
         signature=Signature(
             "int32x4_t", (Parameter("value", "float32x4_t"),)
         ),
         semantics=Semantics(summary="Converts lanes."),
+        taxonomy=(("Vector arithmetic", "Add", "Addition"),),
+        sources=(source_ref(),),
+    )
+    reinterpret = ConcreteCallable(
+        family="neon",
+        name="vreinterpretq_s32_f32",
+        signature=Signature(
+            "int32x4_t", (Parameter("value", "float32x4_t"),)
+        ),
+        semantics=Semantics(summary="Reinterprets lanes."),
+        sources=(source_ref(),),
+    )
+    non_cast_internal = ConcreteCallable(
+        family="neon",
+        name="__arm_vreinterpretq_s32_f32",
+        signature=Signature(
+            "int32x4_t", (Parameter("value", "float32x4_t"),)
+        ),
+        semantics=Semantics(summary="Not a public cast entry point."),
         sources=(source_ref(),),
     )
     construction = ConcreteCallable(
@@ -374,7 +392,16 @@ def test_render_type_properties_and_links_type_references(tmp_path: Path) -> Non
     )
 
     pages = DashRenderer().render_to_directory(
-        (int32x4, float32x4, conversion, construction, extraction), tmp_path
+        (
+            int32x4,
+            float32x4,
+            conversion,
+            reinterpret,
+            non_cast_internal,
+            construction,
+            extraction,
+        ),
+        tmp_path,
     )
     html_by_path = {page.relative_path: page.html for page in pages}
     type_html = html_by_path[f"intrinsics/{int32x4.slug}.html"]
@@ -382,16 +409,45 @@ def test_render_type_properties_and_links_type_references(tmp_path: Path) -> Non
 
     assert "Type properties" in type_html
     assert "128 bits (4 × 32-bit lanes)" in type_html
-    assert "Direct type-conversion functions" in type_html
+    assert "Value-conversion functions" in type_html
+    assert "Same-width reinterpret casts" in type_html
     assert "Build or insert from scalar values" in type_html
     assert "Extract a scalar value" in type_html
+    assert "Functions returning this type" in type_html
+    assert "Functions accepting this type as an operand" in type_html
+    assert "128-bit data types" in type_html
     assert f'href="{float32x4.slug}.html"' in type_html
     assert f'href="{conversion.slug}.html"' in type_html
+    assert f'href="{reinterpret.slug}.html"' in type_html
     assert f'href="{construction.slug}.html"' in type_html
     assert f'href="{extraction.slug}.html"' in type_html
+    assert non_cast_internal.name not in type_html.split(
+        "Same-width reinterpret casts", maxsplit=1
+    )[1].split("Build or insert from scalar values", maxsplit=1)[0]
     assert f'href="{int32x4.slug}.html"' in function_html
     assert f'href="{float32x4.slug}.html"' in function_html
     assert "<strong>Type:</strong>" in function_html
+    root_category = next(
+        page
+        for page in pages
+        if page.index_entries and page.index_entries[0].name == "ACLE · MVE"
+    )
+    vector_category = next(
+        page
+        for page in pages
+        if page.index_entries
+        and page.index_entries[0].name == "ACLE · MVE / Vector arithmetic"
+    )
+    category = next(
+        page
+        for page in pages
+        if page.index_entries
+        and page.index_entries[0].name == "ACLE · MVE / Vector arithmetic / Add"
+    )
+    assert "Vector arithmetic" in root_category.html
+    assert "Add" in vector_category.html
+    assert "Subcategories" in category.html
+    assert "Addition" in category.html
 
 
 def test_render_callable_marks_missing_evidence_instead_of_fabricating_values() -> None:

@@ -30,6 +30,14 @@ result type links to its local Dash Type page. These groups are generated from
 the pinned signatures as navigation aids; they do not claim identical value
 semantics for every listed intrinsic.
 
+The docset also generates clickable Dash `Guide` pages for every level of the
+source taxonomy. A guide lists its child categories and the callables directly
+assigned to it, allowing navigation such as MVE → Vector arithmetic → Add →
+Addition. Data-width guides collect documented types with the same derived
+fixed or scalable width group. To keep Dash's sidebar unambiguous, aliases are
+shown on their canonical callable page but are not duplicated as sidebar search
+index entries.
+
 ## Coverage
 
 The generated catalog covers:

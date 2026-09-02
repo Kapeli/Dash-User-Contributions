@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+import hashlib
 from pathlib import Path
 import re
 import shutil
@@ -75,6 +76,14 @@ class _TypeTarget:
     href: str
 
 
+@dataclass(frozen=True, slots=True)
+class _NavigationTargets:
+    """Stable local guide paths for taxonomy and data-width navigation."""
+
+    taxonomy: dict[tuple[str, ...], str]
+    widths: dict[str, str]
+
+
 _TYPE_IDENTIFIER_RE = re.compile(r"\b[A-Za-z_]\w*\b")
 _FIXED_VECTOR_NAME_RE = re.compile(
     r"^(?:u?int|float|poly|bfloat|mfloat)(?P<element_bits>8|16|32|64)"
@@ -87,7 +96,8 @@ _SCALABLE_VECTOR_NAME_RE = re.compile(
 _SCALAR_NAME_RE = re.compile(
     r"^(?:u?int|float|poly|bfloat|mfloat)(?P<bits>8|16|32|64)_t$"
 )
-_CONVERSION_NAME_MARKERS = ("cvt", "convert", "reinterpret")
+_POLYNOMIAL_SCALAR_NAME_RE = re.compile(r"^poly(?P<bits>8|16|32|64|128)_t$")
+_CONVERSION_NAME_MARKERS = ("cvt", "convert")
 _CONSTRUCTION_NAME_MARKERS = ("dup", "create", "set_lane")
 _EXTRACTION_NAME_MARKERS = ("get_lane", "getq_lane", "lastb", "lasta")
 _SCALAR_C_TYPE_RE = re.compile(
@@ -124,6 +134,7 @@ class DashRenderer:
         *,
         type_targets: dict[str, tuple[_TypeTarget, ...]] | None = None,
         callable_hrefs: dict[str, str] | None = None,
+        navigation_targets: _NavigationTargets | None = None,
         all_callables: Sequence[ConcreteCallable] = (),
     ) -> RenderedPage:
         """Render one concrete signature to one stable page."""
@@ -135,6 +146,8 @@ class DashRenderer:
             index_entries,
             type_targets=type_targets or {},
             callable_hrefs=callable_hrefs or {},
+            navigation_targets=navigation_targets
+            or _NavigationTargets(taxonomy={}, widths={}),
             all_callables=all_callables,
         )
         html = self.environment.get_template("intrinsic.html.j2").render(context)
@@ -219,6 +232,35 @@ class DashRenderer:
             for item in items
         )
 
+    def render_catalog_pages(
+        self,
+        callables: Iterable[ConcreteCallable],
+    ) -> tuple[RenderedPage, ...]:
+        """Render callable pages together with taxonomy and data-width guides."""
+
+        items = tuple(sorted(callables, key=lambda item: (item.slug, item.id)))
+        callable_hrefs = {item.id: f"{item.slug}.html" for item in items}
+        type_targets = _type_targets(items, callable_hrefs)
+        navigation_targets = _navigation_targets(items)
+        guides = _navigation_pages(
+            self,
+            items,
+            type_targets,
+            callable_hrefs,
+            navigation_targets,
+        )
+        callables_pages = tuple(
+            self.render_callable(
+                item,
+                type_targets=type_targets,
+                callable_hrefs=callable_hrefs,
+                navigation_targets=navigation_targets,
+                all_callables=items,
+            )
+            for item in items
+        )
+        return (*guides, *callables_pages)
+
     def render_to_directory(
         self,
         callables: Iterable[ConcreteCallable],
@@ -239,7 +281,7 @@ class DashRenderer:
                 source_revision=source_revision,
             )
         ]
-        pages.extend(self.render_callables(items))
+        pages.extend(self.render_catalog_pages(items))
 
         seen_paths: set[str] = set()
         for page in pages:
@@ -259,6 +301,7 @@ class DashRenderer:
         *,
         type_targets: dict[str, tuple[_TypeTarget, ...]],
         callable_hrefs: dict[str, str],
+        navigation_targets: _NavigationTargets,
         all_callables: Sequence[ConcreteCallable],
     ) -> dict[str, object]:
         semantics = callable_.semantics
@@ -280,7 +323,8 @@ class DashRenderer:
             "is_type": callable_.kind is CallableKind.TYPE,
             "callable_kind": _display_enum(_enum_text(callable_.kind)),
             "family_label": " / ".join(families),
-            "families": families,
+            "families": tuple(callable_.families),
+            "taxonomy_links": _taxonomy_links(callable_, navigation_targets),
             "maturity": _maturity_context(callable_.maturity),
             "signature": (
                 callable_.signature.raw
@@ -305,6 +349,7 @@ class DashRenderer:
                 all_callables,
                 type_targets,
                 callable_hrefs,
+                navigation_targets,
             ),
             "parameters_reason": (
                 "This callable takes no parameters."
@@ -370,10 +415,6 @@ class DashRenderer:
             IndexEntry(callable_.name, callable_type, relative_path)
         ]
         entries.extend(
-            IndexEntry(alias.name, callable_type, relative_path)
-            for alias in callable_.aliases
-        )
-        entries.extend(
             IndexEntry(mapping.mnemonic, "Instruction", relative_path)
             for mapping in callable_.instructions
             if mapping.mnemonic
@@ -392,6 +433,212 @@ def render_callable(callable_: ConcreteCallable) -> RenderedPage:
     """Convenience entrypoint using the bundled templates."""
 
     return DashRenderer().render_callable(callable_)
+
+
+def _navigation_targets(callables: Sequence[ConcreteCallable]) -> _NavigationTargets:
+    taxonomy_paths = {
+        path[:depth]
+        for callable_ in callables
+        for path in _callable_taxonomy_paths(callable_)
+        for depth in range(1, len(path) + 1)
+    }
+    taxonomy = {
+        path: _guide_href("category", " / ".join(path))
+        for path in sorted(taxonomy_paths)
+    }
+    widths = {
+        group_key: _guide_href("data-width", group_key)
+        for group_key in sorted(
+            {
+                group_key
+                for callable_ in callables
+                if callable_.kind is CallableKind.TYPE
+                for group_key in (_type_width_group(callable_.name),)
+                if group_key is not None
+            }
+        )
+    }
+    return _NavigationTargets(taxonomy=taxonomy, widths=widths)
+
+
+def _guide_href(kind: str, identity: str) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "-", identity.lower()).strip("-")
+    digest = hashlib.sha256(f"{kind}:{identity}".encode()).hexdigest()[:12]
+    return f"{kind}-{normalized[:64]}-{digest}.html"
+
+
+def _navigation_pages(
+    renderer: DashRenderer,
+    callables: Sequence[ConcreteCallable],
+    type_targets: dict[str, tuple[_TypeTarget, ...]],
+    callable_hrefs: dict[str, str],
+    targets: _NavigationTargets,
+) -> tuple[RenderedPage, ...]:
+    pages = [
+        _taxonomy_page(renderer, path, callables, type_targets, callable_hrefs, targets)
+        for path in sorted(targets.taxonomy)
+    ]
+    pages.extend(
+        _width_page(renderer, group_key, callables, type_targets, callable_hrefs, targets)
+        for group_key in sorted(targets.widths)
+    )
+    return tuple(pages)
+
+
+def _taxonomy_page(
+    renderer: DashRenderer,
+    path: tuple[str, ...],
+    callables: Sequence[ConcreteCallable],
+    type_targets: dict[str, tuple[_TypeTarget, ...]],
+    callable_hrefs: dict[str, str],
+    targets: _NavigationTargets,
+) -> RenderedPage:
+    children = sorted(
+        {
+            candidate[: len(path) + 1]
+            for candidate in targets.taxonomy
+            if candidate[: len(path)] == path and len(candidate) == len(path) + 1
+        }
+    )
+    direct = tuple(
+        callable_
+        for callable_ in callables
+        if path in _callable_taxonomy_paths(callable_)
+    )
+    context = {
+        "title": " / ".join(path),
+        "eyebrow": "ACLE taxonomy",
+        "anchor": _dash_anchor("Guide", "ACLE · " + " / ".join(path)),
+        "parent": (
+            {"label": " / ".join(path[:-1]), "href": targets.taxonomy[path[:-1]]}
+            if len(path) > 1
+            else None
+        ),
+        "children": tuple(
+            {
+                "label": child[-1],
+                "path": " / ".join(child),
+                "href": targets.taxonomy[child],
+                "count": sum(
+                    1
+                    for callable_ in callables
+                    if any(
+                        item[: len(child)] == child
+                        for item in _callable_taxonomy_paths(callable_)
+                    )
+                ),
+            }
+            for child in children
+        ),
+        "types": (),
+        "items": _guide_callable_rows(direct, type_targets, callable_hrefs),
+        "empty_message": "No direct callable is assigned to this taxonomy node.",
+    }
+    relative_path = f"intrinsics/{targets.taxonomy[path]}"
+    html = renderer.environment.get_template("navigation.html.j2").render(context)
+    entry = IndexEntry("ACLE · " + " / ".join(path), "Guide", relative_path)
+    return RenderedPage(relative_path, html, (entry,))
+
+
+def _width_page(
+    renderer: DashRenderer,
+    group_key: str,
+    callables: Sequence[ConcreteCallable],
+    type_targets: dict[str, tuple[_TypeTarget, ...]],
+    callable_hrefs: dict[str, str],
+    targets: _NavigationTargets,
+) -> RenderedPage:
+    type_rows = []
+    for callable_ in callables:
+        if (
+            callable_.kind is not CallableKind.TYPE
+            or _type_width_group(callable_.name) != group_key
+        ):
+            continue
+        type_rows.append(
+            {
+                "name": callable_.name,
+                "href": callable_hrefs[callable_.id],
+                "summary": _type_width(callable_.name)["value"],
+            }
+        )
+    label = _width_group_label(group_key)
+    context = {
+        "title": label,
+        "eyebrow": "ACLE data-width index",
+        "anchor": _dash_anchor("Guide", "Data width · " + label),
+        "parent": None,
+        "children": (),
+        "items": (),
+        "types": tuple(sorted(type_rows, key=lambda item: (item["name"], item["href"]))),
+        "empty_message": "No documented type has this derived data-width group.",
+    }
+    relative_path = f"intrinsics/{targets.widths[group_key]}"
+    html = renderer.environment.get_template("navigation.html.j2").render(context)
+    entry = IndexEntry("Data width · " + label, "Guide", relative_path)
+    return RenderedPage(relative_path, html, (entry,))
+
+
+def _guide_callable_rows(
+    callables: Sequence[ConcreteCallable],
+    type_targets: dict[str, tuple[_TypeTarget, ...]],
+    callable_hrefs: dict[str, str],
+) -> tuple[dict[str, object], ...]:
+    return tuple(
+        sorted(
+            (
+                {
+                    "name": callable_.name,
+                    "href": callable_hrefs[callable_.id],
+                    "signature": _signature_html(callable_, type_targets),
+                    "kind": _display_enum(_enum_text(callable_.kind)),
+                }
+                for callable_ in callables
+            ),
+            key=lambda item: (str(item["name"]), str(item["signature"])),
+        )
+    )
+
+
+def _taxonomy_links(
+    callable_: ConcreteCallable,
+    targets: _NavigationTargets,
+) -> tuple[dict[str, str], ...]:
+    return tuple(
+        {
+            "label": " › ".join(path),
+            "href": targets.taxonomy[path],
+        }
+        for path in _callable_taxonomy_paths(callable_)
+        if path in targets.taxonomy
+    )
+
+
+def _callable_taxonomy_paths(callable_: ConcreteCallable) -> tuple[tuple[str, ...], ...]:
+    """Return taxonomy paths rooted at the concrete callable's ISA family."""
+
+    family = _family_taxonomy_label(callable_.family)
+    paths = []
+    for taxonomy in callable_.taxonomy:
+        if not taxonomy:
+            paths.append((family,))
+        elif taxonomy[0].casefold() == family.casefold():
+            paths.append(taxonomy)
+        else:
+            paths.append((family, *taxonomy))
+    return tuple(dict.fromkeys(paths))
+
+
+def _family_taxonomy_label(family: str) -> str:
+    labels = {
+        "mve": "MVE",
+        "neon": "Neon",
+        "sve": "SVE",
+        "sve2": "SVE2",
+        "sme": "SME",
+        "sme2": "SME2",
+    }
+    return labels.get(family.casefold(), family)
 
 
 def _type_targets(
@@ -479,24 +726,44 @@ def _type_details(
     all_callables: Sequence[ConcreteCallable],
     type_targets: dict[str, tuple[_TypeTarget, ...]],
     callable_hrefs: dict[str, str],
+    navigation_targets: _NavigationTargets,
 ) -> dict[str, object] | None:
     if callable_.kind is not CallableKind.TYPE:
         return None
+    group_key = _type_width_group(callable_.name)
+    width_page = (
+        {
+            "href": navigation_targets.widths[group_key],
+            "label": _width_group_label(group_key),
+        }
+        if group_key is not None and group_key in navigation_targets.widths
+        else None
+    )
     return {
         "width": _type_width(callable_.name),
+        "width_page": width_page,
         "relationship_note": (
             "Function groups are derived from the exact, source-backed signatures "
             "in this docset. They are navigation aids, not a claim that every "
             "listed intrinsic has identical value semantics."
         ),
-        "conversions": _type_relationship_rows(
-            callable_, all_callables, type_targets, callable_hrefs, "conversion"
+        "value_conversions": _type_relationship_rows(
+            callable_, all_callables, type_targets, callable_hrefs, "value_conversion"
+        ),
+        "reinterpret_casts": _type_relationship_rows(
+            callable_, all_callables, type_targets, callable_hrefs, "reinterpret"
         ),
         "construction": _type_relationship_rows(
             callable_, all_callables, type_targets, callable_hrefs, "construction"
         ),
         "extraction": _type_relationship_rows(
             callable_, all_callables, type_targets, callable_hrefs, "extraction"
+        ),
+        "returning": _type_relationship_rows(
+            callable_, all_callables, type_targets, callable_hrefs, "returning"
+        ),
+        "accepting": _type_relationship_rows(
+            callable_, all_callables, type_targets, callable_hrefs, "accepting"
         ),
     }
 
@@ -552,6 +819,12 @@ def _type_width(name: str) -> dict[str, str]:
             "value": f"{scalar.group('bits')} bits",
             "note": "Derived from the public ACLE type spelling.",
         }
+    polynomial_scalar = _POLYNOMIAL_SCALAR_NAME_RE.fullmatch(name)
+    if polynomial_scalar:
+        return {
+            "value": f"{polynomial_scalar.group('bits')} bits",
+            "note": "Derived from the public ACLE type spelling.",
+        }
     predefined = {"__fp16": "16", "__bf16": "16", "__mfp8": "8"}
     if name in predefined:
         return {
@@ -567,6 +840,40 @@ def _type_width(name: str) -> dict[str, str]:
     }
 
 
+def _type_width_group(name: str) -> str | None:
+    if name == "svbool_t":
+        return "scalable-predicate"
+    scalable = _SCALABLE_VECTOR_NAME_RE.fullmatch(name)
+    if scalable:
+        return f"scalable-{scalable.group('vectors') or '1'}-vl"
+    fixed = _FIXED_VECTOR_NAME_RE.fullmatch(name)
+    if fixed:
+        return (
+            f"fixed-{int(fixed.group('element_bits')) * int(fixed.group('lanes')) * int(fixed.group('vectors') or '1')}-bits"
+        )
+    scalar = _SCALAR_NAME_RE.fullmatch(name) or _POLYNOMIAL_SCALAR_NAME_RE.fullmatch(
+        name
+    )
+    if scalar:
+        return f"fixed-{scalar.group('bits')}-bits"
+    predefined = {"__fp16": "16", "__bf16": "16", "__mfp8": "8"}
+    if name in predefined:
+        return f"fixed-{predefined[name]}-bits"
+    return None
+
+
+def _width_group_label(group_key: str) -> str:
+    if group_key == "scalable-predicate":
+        return "Scalable predicate width"
+    if group_key.startswith("scalable-") and group_key.endswith("-vl"):
+        count = group_key.removeprefix("scalable-").removesuffix("-vl")
+        return f"Scalable {count} × VL data types"
+    if group_key.startswith("fixed-") and group_key.endswith("-bits"):
+        bits = group_key.removeprefix("fixed-").removesuffix("-bits")
+        return f"{bits}-bit data types"
+    raise ValueError(f"unknown data-width group: {group_key}")
+
+
 def _type_relationship_rows(
     type_callable: ConcreteCallable,
     all_callables: Sequence[ConcreteCallable],
@@ -579,9 +886,11 @@ def _type_relationship_rows(
         if candidate.kind is CallableKind.TYPE:
             continue
         href = callable_hrefs.get(candidate.id)
-        if href is None or not _matches_type_relationship(type_callable.name, candidate, type_targets, relationship):
+        if href is None or not _matches_type_relationship(
+            type_callable, candidate, type_targets, relationship
+        ):
             continue
-        other_types = _related_type_names(type_callable.name, candidate, type_targets)
+        other_types = _related_type_names(type_callable, candidate, type_targets)
         rows.append(
             {
                 "name": candidate.name,
@@ -605,22 +914,32 @@ def _type_relationship_rows(
 
 
 def _matches_type_relationship(
-    type_name: str,
+    type_callable: ConcreteCallable,
     candidate: ConcreteCallable,
     type_targets: dict[str, tuple[_TypeTarget, ...]],
     relationship: str,
 ) -> bool:
     name = candidate.name.lower()
-    returns_type = _contains_type_name(candidate.signature.return_type, type_name)
+    returns_type = _expression_uses_type_target(
+        candidate.signature.return_type, type_callable, candidate, type_targets
+    )
     accepts_type = any(
-        _contains_type_name(parameter.type_name, type_name)
+        _expression_uses_type_target(
+            parameter.type_name, type_callable, candidate, type_targets
+        )
         for parameter in candidate.signature.parameters
     )
-    if relationship == "conversion":
+    if relationship == "value_conversion":
         return (
             returns_type
             and any(marker in name for marker in _CONVERSION_NAME_MARKERS)
-            and bool(_related_type_names(type_name, candidate, type_targets))
+            and bool(_related_type_names(type_callable, candidate, type_targets))
+        )
+    if relationship == "reinterpret":
+        return (
+            returns_type
+            and _is_public_reinterpret_cast(candidate.name)
+            and _has_same_width_source_type(type_callable, candidate, type_targets)
         )
     if relationship == "construction":
         return (
@@ -634,20 +953,61 @@ def _matches_type_relationship(
             and any(marker in name for marker in _EXTRACTION_NAME_MARKERS)
             and _is_scalar_c_type(candidate.signature.return_type, type_targets)
         )
+    if relationship == "returning":
+        return returns_type
+    if relationship == "accepting":
+        return accepts_type
     raise ValueError(f"unknown type relationship: {relationship}")
 
 
 def _related_type_names(
-    type_name: str,
+    type_callable: ConcreteCallable,
     candidate: ConcreteCallable,
     type_targets: dict[str, tuple[_TypeTarget, ...]],
 ) -> tuple[str, ...]:
     names: list[str] = []
     for parameter in candidate.signature.parameters:
         for name in _documented_type_names(parameter.type_name, type_targets):
-            if name != type_name:
+            if not _expression_uses_type_target(
+                parameter.type_name, type_callable, candidate, type_targets
+            ):
                 names.append(name)
     return _deduplicate_text(names)
+
+
+def _expression_uses_type_target(
+    expression: str,
+    type_callable: ConcreteCallable,
+    candidate: ConcreteCallable,
+    type_targets: dict[str, tuple[_TypeTarget, ...]],
+) -> bool:
+    return any(
+        target is not None and target.callable.id == type_callable.id
+        for name in _documented_type_names(expression, type_targets)
+        for target in (_type_target_for(name, candidate, type_targets),)
+    )
+
+
+def _is_public_reinterpret_cast(name: str) -> bool:
+    return name.startswith(("vreinterpret", "svreinterpret"))
+
+
+def _has_same_width_source_type(
+    type_callable: ConcreteCallable,
+    candidate: ConcreteCallable,
+    type_targets: dict[str, tuple[_TypeTarget, ...]],
+) -> bool:
+    target_group = _type_width_group(type_callable.name)
+    if target_group is None:
+        return False
+    for parameter in candidate.signature.parameters:
+        for name in _documented_type_names(parameter.type_name, type_targets):
+            source = _type_target_for(name, candidate, type_targets)
+            if source is None or source.callable.id == type_callable.id:
+                continue
+            if _type_width_group(source.callable.name) == target_group:
+                return True
+    return False
 
 
 def _scalar_parameter_types(
@@ -670,10 +1030,6 @@ def _documented_type_names(
         for match in _TYPE_IDENTIFIER_RE.finditer(expression)
         if match.group(0) in type_targets
     )
-
-
-def _contains_type_name(expression: str, name: str) -> bool:
-    return bool(re.search(rf"\b{re.escape(name)}\b", expression))
 
 
 def _is_scalar_c_type(
