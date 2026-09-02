@@ -347,7 +347,7 @@ def _build_from_generated_headers(
             catalog_diagnostics=catalog.diagnostics,
         )
     ]
-    pages.extend(renderer.render_callable(callable_) for callable_ in callables)
+    pages.extend(renderer.render_callables(callables))
     performance_profiles = tuple(
         dataset.manifest.cpu for dataset in performance_datasets
     )

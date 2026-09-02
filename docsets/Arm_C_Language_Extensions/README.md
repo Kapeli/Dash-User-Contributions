@@ -20,7 +20,15 @@ different declarations for distinct ISA families or preprocessor conditions,
 the catalog retains those declarations separately rather than selecting one by
 name alone. Type pages show header and availability facts, but deliberately do
 not show instruction latency or throughput: those are properties of instruction
-forms, not of a data type.
+forms, not of a data type. Where a width is encoded by the public ACLE type
+spelling, the page shows its fixed vector width and lane shape, or explicitly
+labels SVE/SME types as scalable in terms of VL rather than inventing a fixed
+width. Type pages also group source-backed function signatures for direct
+cross-type conversions, scalar construction/insertion, and scalar extraction.
+Every documented ACLE type token in a function signature, parameter row, or
+result type links to its local Dash Type page. These groups are generated from
+the pinned signatures as navigation aids; they do not claim identical value
+semantics for every listed intrinsic.
 
 ## Coverage
 

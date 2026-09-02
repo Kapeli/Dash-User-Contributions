@@ -332,6 +332,68 @@ def test_render_type_uses_dash_type_index_and_exact_declaration() -> None:
     assert 'src="http' not in page.html
 
 
+def test_render_type_properties_and_links_type_references(tmp_path: Path) -> None:
+    def type_record(name: str) -> ConcreteCallable:
+        return ConcreteCallable(
+            family="neon",
+            name=name,
+            signature=Signature(f"typedef int {name};", raw=f"typedef int {name};"),
+            kind=CallableKind.TYPE,
+            semantics=Semantics(summary="Public ACLE data type declaration."),
+            compilation=CompilationRequirements(headers=("arm_neon.h",)),
+            sources=(source_ref(),),
+        )
+
+    int32x4 = type_record("int32x4_t")
+    float32x4 = type_record("float32x4_t")
+    conversion = ConcreteCallable(
+        family="neon",
+        name="vcvtq_s32_f32",
+        signature=Signature(
+            "int32x4_t", (Parameter("value", "float32x4_t"),)
+        ),
+        semantics=Semantics(summary="Converts lanes."),
+        sources=(source_ref(),),
+    )
+    construction = ConcreteCallable(
+        family="neon",
+        name="vdupq_n_s32",
+        signature=Signature("int32x4_t", (Parameter("value", "int32_t"),)),
+        semantics=Semantics(summary="Duplicates a scalar value."),
+        sources=(source_ref(),),
+    )
+    extraction = ConcreteCallable(
+        family="neon",
+        name="vgetq_lane_s32",
+        signature=Signature(
+            "int32_t",
+            (Parameter("value", "int32x4_t"), Parameter("lane", "int")),
+        ),
+        semantics=Semantics(summary="Extracts one lane."),
+        sources=(source_ref(),),
+    )
+
+    pages = DashRenderer().render_to_directory(
+        (int32x4, float32x4, conversion, construction, extraction), tmp_path
+    )
+    html_by_path = {page.relative_path: page.html for page in pages}
+    type_html = html_by_path[f"intrinsics/{int32x4.slug}.html"]
+    function_html = html_by_path[f"intrinsics/{conversion.slug}.html"]
+
+    assert "Type properties" in type_html
+    assert "128 bits (4 × 32-bit lanes)" in type_html
+    assert "Direct type-conversion functions" in type_html
+    assert "Build or insert from scalar values" in type_html
+    assert "Extract a scalar value" in type_html
+    assert f'href="{float32x4.slug}.html"' in type_html
+    assert f'href="{conversion.slug}.html"' in type_html
+    assert f'href="{construction.slug}.html"' in type_html
+    assert f'href="{extraction.slug}.html"' in type_html
+    assert f'href="{int32x4.slug}.html"' in function_html
+    assert f'href="{float32x4.slug}.html"' in function_html
+    assert "<strong>Type:</strong>" in function_html
+
+
 def test_render_callable_marks_missing_evidence_instead_of_fabricating_values() -> None:
     page = DashRenderer().render_callable(unresolved_callable())
 

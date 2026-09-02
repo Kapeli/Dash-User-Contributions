@@ -6,13 +6,14 @@ from collections import Counter
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+import re
 import shutil
 from urllib.parse import quote
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
-from markupsafe import Markup
+from markupsafe import Markup, escape
 
 from .model import (
     AvailabilityExpr,
@@ -66,6 +67,38 @@ class RenderedPage:
     index_entries: tuple[IndexEntry, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class _TypeTarget:
+    """A local page target for one documented ACLE type spelling."""
+
+    callable: ConcreteCallable
+    href: str
+
+
+_TYPE_IDENTIFIER_RE = re.compile(r"\b[A-Za-z_]\w*\b")
+_FIXED_VECTOR_NAME_RE = re.compile(
+    r"^(?:u?int|float|poly|bfloat|mfloat)(?P<element_bits>8|16|32|64)"
+    r"x(?P<lanes>\d+)(?:x(?P<vectors>\d+))?_t$"
+)
+_SCALABLE_VECTOR_NAME_RE = re.compile(
+    r"^sv(?:u?int|float|bfloat|mfloat)(?P<element_bits>8|16|32|64)"
+    r"(?:x(?P<vectors>\d+))?_t$"
+)
+_SCALAR_NAME_RE = re.compile(
+    r"^(?:u?int|float|poly|bfloat|mfloat)(?P<bits>8|16|32|64)_t$"
+)
+_CONVERSION_NAME_MARKERS = ("cvt", "convert", "reinterpret")
+_CONSTRUCTION_NAME_MARKERS = ("dup", "create", "set_lane")
+_EXTRACTION_NAME_MARKERS = ("get_lane", "getq_lane", "lastb", "lasta")
+_SCALAR_C_TYPE_RE = re.compile(
+    r"^(?:(?:const|volatile|restrict|_Atomic)\s+)*(?:"
+    r"(?:unsigned|signed)\s+(?:char|short|int|long(?:\s+long)?)|"
+    r"(?:char|short|int|long(?:\s+long)?|float|double|_Bool)|"
+    r"(?:u?int(?:8|16|32|64)_t|size_t|ptrdiff_t)"
+    r")(?:\s+(?:const|volatile|restrict))?$"
+)
+
+
 class DashRenderer:
     """Render the canonical IR without network access or client-side JavaScript."""
 
@@ -85,12 +118,25 @@ class DashRenderer:
             {"html": False, "linkify": False, "typographer": False},
         ).enable("table")
 
-    def render_callable(self, callable_: ConcreteCallable) -> RenderedPage:
+    def render_callable(
+        self,
+        callable_: ConcreteCallable,
+        *,
+        type_targets: dict[str, tuple[_TypeTarget, ...]] | None = None,
+        callable_hrefs: dict[str, str] | None = None,
+        all_callables: Sequence[ConcreteCallable] = (),
+    ) -> RenderedPage:
         """Render one concrete signature to one stable page."""
 
         relative_path = f"intrinsics/{callable_.slug}.html"
         index_entries = self._index_entries(callable_, relative_path)
-        context = self._callable_context(callable_, index_entries)
+        context = self._callable_context(
+            callable_,
+            index_entries,
+            type_targets=type_targets or {},
+            callable_hrefs=callable_hrefs or {},
+            all_callables=all_callables,
+        )
         html = self.environment.get_template("intrinsic.html.j2").render(context)
         return RenderedPage(relative_path, html, index_entries)
 
@@ -154,6 +200,25 @@ class DashRenderer:
         shutil.copyfile(self.template_directory / "style.css", destination)
         return (destination,)
 
+    def render_callables(
+        self,
+        callables: Iterable[ConcreteCallable],
+    ) -> tuple[RenderedPage, ...]:
+        """Render callable pages with the complete local type-link index."""
+
+        items = tuple(sorted(callables, key=lambda item: (item.slug, item.id)))
+        callable_hrefs = {item.id: f"{item.slug}.html" for item in items}
+        type_targets = _type_targets(items, callable_hrefs)
+        return tuple(
+            self.render_callable(
+                item,
+                type_targets=type_targets,
+                callable_hrefs=callable_hrefs,
+                all_callables=items,
+            )
+            for item in items
+        )
+
     def render_to_directory(
         self,
         callables: Iterable[ConcreteCallable],
@@ -174,7 +239,7 @@ class DashRenderer:
                 source_revision=source_revision,
             )
         ]
-        pages.extend(self.render_callable(item) for item in items)
+        pages.extend(self.render_callables(items))
 
         seen_paths: set[str] = set()
         for page in pages:
@@ -191,9 +256,13 @@ class DashRenderer:
         self,
         callable_: ConcreteCallable,
         index_entries: Sequence[IndexEntry],
+        *,
+        type_targets: dict[str, tuple[_TypeTarget, ...]],
+        callable_hrefs: dict[str, str],
+        all_callables: Sequence[ConcreteCallable],
     ) -> dict[str, object]:
         semantics = callable_.semantics
-        parameters = _parameter_rows(callable_)
+        parameters = _parameter_rows(callable_, type_targets)
         instructions = _instruction_rows(callable_)
         sources = _source_rows(collect_callable_sources(callable_))
         families = _families(callable_)
@@ -218,6 +287,12 @@ class DashRenderer:
                 if callable_.kind is CallableKind.TYPE and callable_.signature.raw
                 else callable_.signature.render(callable_.name)
             ),
+            "signature_html": _signature_html(callable_, type_targets),
+            "return_type": _type_expression_html(
+                callable_.signature.return_type,
+                callable_,
+                type_targets,
+            ),
             "dash_anchors": [
                 {"name": _dash_anchor(entry.type, entry.name)}
                 for entry in index_entries
@@ -225,6 +300,12 @@ class DashRenderer:
             "diagnostics": [_diagnostic_row(item) for item in callable_.diagnostics],
             "compilation": _compilation_context(callable_),
             "parameters": parameters,
+            "type_details": _type_details(
+                callable_,
+                all_callables,
+                type_targets,
+                callable_hrefs,
+            ),
             "parameters_reason": (
                 "This callable takes no parameters."
                 if not callable_.signature.parameters
@@ -311,6 +392,297 @@ def render_callable(callable_: ConcreteCallable) -> RenderedPage:
     """Convenience entrypoint using the bundled templates."""
 
     return DashRenderer().render_callable(callable_)
+
+
+def _type_targets(
+    callables: Sequence[ConcreteCallable],
+    callable_hrefs: dict[str, str],
+) -> dict[str, tuple[_TypeTarget, ...]]:
+    """Index Type pages by spelling while retaining conditional variants."""
+
+    targets: dict[str, list[_TypeTarget]] = {}
+    for callable_ in callables:
+        if callable_.kind is not CallableKind.TYPE:
+            continue
+        href = callable_hrefs.get(callable_.id)
+        if href is None:
+            continue
+        targets.setdefault(callable_.name, []).append(_TypeTarget(callable_, href))
+    return {
+        name: tuple(sorted(values, key=lambda item: (item.callable.family, item.href)))
+        for name, values in targets.items()
+    }
+
+
+def _signature_html(
+    callable_: ConcreteCallable,
+    type_targets: dict[str, tuple[_TypeTarget, ...]],
+) -> Markup:
+    """Render a function signature with local links for documented ACLE types."""
+
+    if callable_.kind is CallableKind.TYPE:
+        return Markup(escape(callable_.signature.raw or callable_.signature.render(callable_.name)))
+    attributes = " ".join(callable_.signature.attributes)
+    prefix = f"{escape(attributes)} " if attributes else ""
+    parameters = ", ".join(
+        f"{_type_expression_html(parameter.type_name, callable_, type_targets)}"
+        f" {escape(parameter.name)}".rstrip()
+        if parameter.name
+        else str(_type_expression_html(parameter.type_name, callable_, type_targets))
+        for parameter in callable_.signature.parameters
+    )
+    return Markup(
+        f"{prefix}{_type_expression_html(callable_.signature.return_type, callable_, type_targets)} "
+        f"{escape(callable_.name)}({parameters})"
+    )
+
+
+def _type_expression_html(
+    expression: str,
+    callable_: ConcreteCallable,
+    type_targets: dict[str, tuple[_TypeTarget, ...]],
+) -> Markup:
+    """Escape a C type expression and link every documented ACLE type token."""
+
+    fragments: list[str] = []
+    position = 0
+    for match in _TYPE_IDENTIFIER_RE.finditer(expression):
+        fragments.append(str(escape(expression[position : match.start()])))
+        token = match.group(0)
+        target = _type_target_for(token, callable_, type_targets)
+        if target is None:
+            fragments.append(str(escape(token)))
+        else:
+            fragments.append(f'<a href="{escape(target.href)}">{escape(token)}</a>')
+        position = match.end()
+    fragments.append(str(escape(expression[position:])))
+    return Markup("".join(fragments))
+
+
+def _type_target_for(
+    name: str,
+    callable_: ConcreteCallable,
+    type_targets: dict[str, tuple[_TypeTarget, ...]],
+) -> _TypeTarget | None:
+    candidates = type_targets.get(name)
+    if not candidates:
+        return None
+    family_order = {family: index for index, family in enumerate(callable_.families)}
+    return min(
+        candidates,
+        key=lambda item: (family_order.get(item.callable.family, len(family_order)), item.href),
+    )
+
+
+def _type_details(
+    callable_: ConcreteCallable,
+    all_callables: Sequence[ConcreteCallable],
+    type_targets: dict[str, tuple[_TypeTarget, ...]],
+    callable_hrefs: dict[str, str],
+) -> dict[str, object] | None:
+    if callable_.kind is not CallableKind.TYPE:
+        return None
+    return {
+        "width": _type_width(callable_.name),
+        "relationship_note": (
+            "Function groups are derived from the exact, source-backed signatures "
+            "in this docset. They are navigation aids, not a claim that every "
+            "listed intrinsic has identical value semantics."
+        ),
+        "conversions": _type_relationship_rows(
+            callable_, all_callables, type_targets, callable_hrefs, "conversion"
+        ),
+        "construction": _type_relationship_rows(
+            callable_, all_callables, type_targets, callable_hrefs, "construction"
+        ),
+        "extraction": _type_relationship_rows(
+            callable_, all_callables, type_targets, callable_hrefs, "extraction"
+        ),
+    }
+
+
+def _type_width(name: str) -> dict[str, str]:
+    """Describe only widths encoded by established ACLE type spellings."""
+
+    if name == "svbool_t":
+        return {
+            "value": "Scalable predicate: VL / 8 predicate bits",
+            "note": (
+                "One predicate bit corresponds to each byte of the scalable "
+                "vector length (VL); no fixed hardware width is implied."
+            ),
+        }
+    scalable = _SCALABLE_VECTOR_NAME_RE.fullmatch(name)
+    if scalable:
+        element_bits = int(scalable.group("element_bits"))
+        vectors = int(scalable.group("vectors") or "1")
+        vector_text = "vector" if vectors == 1 else "vectors"
+        return {
+            "value": (
+                f"Scalable: {vectors} {vector_text}, each VL bits "
+                f"({vectors} × VL bits aggregate; VL / {element_bits} lanes per vector)"
+            ),
+            "note": (
+                "VL is implementation-selected at runtime, so the converter does "
+                "not report a fabricated fixed bit width."
+            ),
+        }
+    fixed = _FIXED_VECTOR_NAME_RE.fullmatch(name)
+    if fixed:
+        element_bits = int(fixed.group("element_bits"))
+        lanes = int(fixed.group("lanes"))
+        vectors = int(fixed.group("vectors") or "1")
+        vector_bits = element_bits * lanes
+        aggregate_bits = vector_bits * vectors
+        vector_text = "vector" if vectors == 1 else "vectors"
+        return {
+            "value": (
+                f"{vector_bits} bits ({lanes} × {element_bits}-bit lanes)"
+                if vectors == 1
+                else (
+                    f"{vectors} × {vector_bits}-bit {vector_text} "
+                    f"({aggregate_bits} bits aggregate; {lanes} × {element_bits}-bit lanes each)"
+                )
+            ),
+            "note": "Derived from the public ACLE type spelling and preserved declaration.",
+        }
+    scalar = _SCALAR_NAME_RE.fullmatch(name)
+    if scalar:
+        return {
+            "value": f"{scalar.group('bits')} bits",
+            "note": "Derived from the public ACLE type spelling.",
+        }
+    predefined = {"__fp16": "16", "__bf16": "16", "__mfp8": "8"}
+    if name in predefined:
+        return {
+            "value": f"{predefined[name]} bits",
+            "note": "Explicitly described by the pinned ACLE data-types section.",
+        }
+    return {
+        "value": "Not resolved from the pinned declaration",
+        "note": (
+            "The declaration does not encode a portable standalone bit width; "
+            "the converter does not infer one from compiler layout."
+        ),
+    }
+
+
+def _type_relationship_rows(
+    type_callable: ConcreteCallable,
+    all_callables: Sequence[ConcreteCallable],
+    type_targets: dict[str, tuple[_TypeTarget, ...]],
+    callable_hrefs: dict[str, str],
+    relationship: str,
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    for candidate in all_callables:
+        if candidate.kind is CallableKind.TYPE:
+            continue
+        href = callable_hrefs.get(candidate.id)
+        if href is None or not _matches_type_relationship(type_callable.name, candidate, type_targets, relationship):
+            continue
+        other_types = _related_type_names(type_callable.name, candidate, type_targets)
+        rows.append(
+            {
+                "name": candidate.name,
+                "href": href,
+                "signature": _signature_html(candidate, type_targets),
+                "other_types": tuple(
+                    _type_expression_html(name, candidate, type_targets)
+                    for name in other_types
+                ),
+                "scalar_types": tuple(
+                    _scalar_parameter_types(candidate, type_targets)
+                    if relationship == "construction"
+                    else ()
+                ),
+                "result_type": _type_expression_html(
+                    candidate.signature.return_type, candidate, type_targets
+                ),
+            }
+        )
+    return sorted(rows, key=lambda item: (str(item["name"]), str(item["signature"])))
+
+
+def _matches_type_relationship(
+    type_name: str,
+    candidate: ConcreteCallable,
+    type_targets: dict[str, tuple[_TypeTarget, ...]],
+    relationship: str,
+) -> bool:
+    name = candidate.name.lower()
+    returns_type = _contains_type_name(candidate.signature.return_type, type_name)
+    accepts_type = any(
+        _contains_type_name(parameter.type_name, type_name)
+        for parameter in candidate.signature.parameters
+    )
+    if relationship == "conversion":
+        return (
+            returns_type
+            and any(marker in name for marker in _CONVERSION_NAME_MARKERS)
+            and bool(_related_type_names(type_name, candidate, type_targets))
+        )
+    if relationship == "construction":
+        return (
+            returns_type
+            and any(marker in name for marker in _CONSTRUCTION_NAME_MARKERS)
+            and bool(_scalar_parameter_types(candidate, type_targets))
+        )
+    if relationship == "extraction":
+        return (
+            accepts_type
+            and any(marker in name for marker in _EXTRACTION_NAME_MARKERS)
+            and _is_scalar_c_type(candidate.signature.return_type, type_targets)
+        )
+    raise ValueError(f"unknown type relationship: {relationship}")
+
+
+def _related_type_names(
+    type_name: str,
+    candidate: ConcreteCallable,
+    type_targets: dict[str, tuple[_TypeTarget, ...]],
+) -> tuple[str, ...]:
+    names: list[str] = []
+    for parameter in candidate.signature.parameters:
+        for name in _documented_type_names(parameter.type_name, type_targets):
+            if name != type_name:
+                names.append(name)
+    return _deduplicate_text(names)
+
+
+def _scalar_parameter_types(
+    candidate: ConcreteCallable,
+    type_targets: dict[str, tuple[_TypeTarget, ...]],
+) -> tuple[str, ...]:
+    return tuple(
+        parameter.type_name
+        for parameter in candidate.signature.parameters
+        if _is_scalar_c_type(parameter.type_name, type_targets)
+    )
+
+
+def _documented_type_names(
+    expression: str,
+    type_targets: dict[str, tuple[_TypeTarget, ...]],
+) -> tuple[str, ...]:
+    return _deduplicate_text(
+        match.group(0)
+        for match in _TYPE_IDENTIFIER_RE.finditer(expression)
+        if match.group(0) in type_targets
+    )
+
+
+def _contains_type_name(expression: str, name: str) -> bool:
+    return bool(re.search(rf"\b{re.escape(name)}\b", expression))
+
+
+def _is_scalar_c_type(
+    expression: str,
+    type_targets: dict[str, tuple[_TypeTarget, ...]],
+) -> bool:
+    if _documented_type_names(expression, type_targets) or "*" in expression:
+        return False
+    return bool(_SCALAR_C_TYPE_RE.fullmatch(" ".join(expression.split())))
 
 
 def _without_fragment_only_links(tokens: Sequence[Token]) -> list[Token]:
@@ -475,7 +847,10 @@ def _compilation_context(callable_: ConcreteCallable) -> dict[str, object]:
     }
 
 
-def _parameter_rows(callable_: ConcreteCallable) -> list[dict[str, str]]:
+def _parameter_rows(
+    callable_: ConcreteCallable,
+    type_targets: dict[str, tuple[_TypeTarget, ...]],
+) -> list[dict[str, object]]:
     documentation = {
         parameter.name: parameter.description
         for parameter in callable_.semantics.parameters
@@ -489,7 +864,11 @@ def _parameter_rows(callable_: ConcreteCallable) -> list[dict[str, str]]:
         rows.append(
             {
                 "name": name,
-                "type": parameter.type_name,
+                "type": _type_expression_html(
+                    parameter.type_name,
+                    callable_,
+                    type_targets,
+                ),
                 "description": documentation.get(
                     parameter.name or "",
                     "No source-backed parameter description is available.",

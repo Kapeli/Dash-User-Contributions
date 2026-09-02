@@ -20,7 +20,7 @@
         <span class="badge maturity maturity-{{ maturity.css_class }}">{{ maturity.label }}</span>
       </div>
       {% if signature %}
-      <pre class="signature"><code>{{ signature }}</code></pre>
+      <pre class="signature"><code>{% if is_type %}{{ signature }}{% else %}{{ signature_html }}{% endif %}</code></pre>
       {% else %}
       <p class="missing-value">No concrete source-backed signature is available.</p>
       {% endif %}
@@ -120,6 +120,65 @@
       {% endif %}
     </section>
 
+    {% if is_type and type_details %}
+    <section id="type-properties" aria-labelledby="type-properties-heading">
+      <h2 id="type-properties-heading">Type properties</h2>
+      <dl class="facts">
+        <div><dt>Data width</dt><dd>{{ type_details.width.value }}</dd></div>
+      </dl>
+      <p class="section-note">{{ type_details.width.note }}</p>
+
+      <h3>Direct type-conversion functions</h3>
+      {% if type_details.conversions %}
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Function</th><th>Other documented ACLE type(s)</th><th>Exact signature</th></tr></thead>
+          <tbody>
+          {% for item in type_details.conversions %}
+            <tr><td><a href="{{ item.href }}"><code>{{ item.name }}</code></a></td><td>{% for type_name in item.other_types %}<code>{{ type_name }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</td><td><code>{{ item.signature }}</code></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="missing-value">No source-backed conversion signature to another documented ACLE type was found.</p>
+      {% endif %}
+
+      <h3>Build or insert from scalar values</h3>
+      {% if type_details.construction %}
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Function</th><th>Scalar input type(s)</th><th>Exact signature</th></tr></thead>
+          <tbody>
+          {% for item in type_details.construction %}
+            <tr><td><a href="{{ item.href }}"><code>{{ item.name }}</code></a></td><td>{% for scalar_type in item.scalar_types %}<code>{{ scalar_type }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</td><td><code>{{ item.signature }}</code></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="missing-value">No source-backed scalar construction or insertion signature was found.</p>
+      {% endif %}
+
+      <h3>Extract a scalar value</h3>
+      {% if type_details.extraction %}
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Function</th><th>Scalar result type</th><th>Exact signature</th></tr></thead>
+          <tbody>
+          {% for item in type_details.extraction %}
+            <tr><td><a href="{{ item.href }}"><code>{{ item.name }}</code></a></td><td><code>{{ item.result_type }}</code></td><td><code>{{ item.signature }}</code></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="missing-value">No source-backed scalar extraction signature was found.</p>
+      {% endif %}
+      <p class="section-note">{{ type_details.relationship_note }}</p>
+    </section>
+    {% endif %}
+
     {% if not is_type %}
     <section id="parameters" aria-labelledby="parameters-heading">
       <h2 id="parameters-heading">Parameters</h2>
@@ -146,6 +205,7 @@
 
     <section id="result" aria-labelledby="result-heading">
       <h2 id="result-heading">Result</h2>
+      <p><strong>Type:</strong> <code>{{ return_type }}</code></p>
       <p>{{ result }}</p>
     </section>
 
