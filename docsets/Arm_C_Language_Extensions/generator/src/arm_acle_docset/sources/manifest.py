@@ -202,6 +202,26 @@ def _raw_llvm_tablegen_artifact(filename: str, sha256: str) -> SourceArtifact:
     )
 
 
+def _raw_llvm_resource_header_artifact(filename: str, sha256: str) -> SourceArtifact:
+    upstream_path = f"clang/lib/Headers/{filename}"
+    return SourceArtifact(
+        source_id=f"llvm-{filename.removesuffix('.h').replace('_', '-')}",
+        kind=SourceKind.DECLARATIONS,
+        url=(
+            "https://raw.githubusercontent.com/llvm/llvm-project/"
+            f"{LLVM_COMMIT}/{upstream_path}"
+        ),
+        revision=f"{LLVM_TAG}@{LLVM_COMMIT}",
+        sha256=sha256,
+        members=(
+            SourceMember(
+                local_path=f"llvm/headers/{filename}",
+                sha256=sha256,
+            ),
+        ),
+    )
+
+
 def _raw_gcc_validation_artifact(
     source_id: str,
     upstream_path: str,
@@ -271,6 +291,10 @@ SOURCE_ARTIFACTS: tuple[SourceArtifact, ...] = (
         "4e353a31b57e35a5126fd793374630b9f28a41a1980747d875c94604e7129034",
     ),
     _raw_llvm_tablegen_artifact(
+        "arm_bf16.td",
+        "251e191752ba629e704b5633e287d67e51dd1659185540e615f282ccb23defaa",
+    ),
+    _raw_llvm_tablegen_artifact(
         "arm_mve.td",
         "4bd80806e6edbc0c8ee24dd7eef07fb664bed153fa0f06e9ce7bf15a572aca99",
     ),
@@ -289,6 +313,14 @@ SOURCE_ARTIFACTS: tuple[SourceArtifact, ...] = (
     _raw_llvm_tablegen_artifact(
         "arm_sve_sme_incl.td",
         "27bc8d5e78615404d564301eeb2fb9da5565c146e54259f70757fc2314fb14cd",
+    ),
+    _raw_llvm_resource_header_artifact(
+        "arm_acle.h",
+        "05e7ef603d3490d485b4051d84fe92bf911ff17656367a2feda4e6064acbcfb4",
+    ),
+    _raw_llvm_resource_header_artifact(
+        "arm_cmse.h",
+        "75b8a5a66726f8c4e8fc329b7b98b21977e2033ce2c95f362d624d0cc6d8a773",
     ),
     _raw_gcc_validation_artifact(
         "gcc-neon-vaddh-f16",
@@ -331,6 +363,14 @@ LLVM_GENERATED_HEADERS: tuple[SourceMember, ...] = (
     SourceMember(
         local_path="llvm/generated/include/arm_neon.h",
         sha256="ed8fc4135aef7c5af5f30ca3715d96ee9ad5a2bc97f558214fadda5704742b26",
+    ),
+    SourceMember(
+        local_path="llvm/generated/include/arm_vector_types.h",
+        sha256="6fe5730cbf5b4760620d643e5b44c9abbb13969b168dd7733252158503003034",
+    ),
+    SourceMember(
+        local_path="llvm/generated/include/arm_bf16.h",
+        sha256="87f7bc1cb7aa53a85347bd4e1855cccd45599408bb106e66515519c1033a6a3d",
     ),
 )
 

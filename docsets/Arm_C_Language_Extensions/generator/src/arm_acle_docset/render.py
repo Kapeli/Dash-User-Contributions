@@ -208,11 +208,16 @@ class DashRenderer:
             "name": callable_.name,
             "page_description": semantics.summary
             or f"Reference for the {callable_.name} ACLE callable.",
+            "is_type": callable_.kind is CallableKind.TYPE,
             "callable_kind": _display_enum(_enum_text(callable_.kind)),
             "family_label": " / ".join(families),
             "families": families,
             "maturity": _maturity_context(callable_.maturity),
-            "signature": callable_.signature.render(callable_.name),
+            "signature": (
+                callable_.signature.raw
+                if callable_.kind is CallableKind.TYPE and callable_.signature.raw
+                else callable_.signature.render(callable_.name)
+            ),
             "dash_anchors": [
                 {"name": _dash_anchor(entry.type, entry.name)}
                 for entry in index_entries

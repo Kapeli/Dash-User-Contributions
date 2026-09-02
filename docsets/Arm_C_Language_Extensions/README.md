@@ -13,6 +13,15 @@ instruction relationships, constraints, aliases, performance evidence, and
 exact provenance. Missing source-backed facts remain visibly unresolved rather
 than being presented as zero or empty values.
 
+Public ACLE C/C++ data types are also rendered as searchable Dash `Type`
+entries. Each type page preserves the exact typedef declaration and source
+location from the pinned Clang resource headers. When the same spelling has
+different declarations for distinct ISA families or preprocessor conditions,
+the catalog retains those declarations separately rather than selecting one by
+name alone. Type pages show header and availability facts, but deliberately do
+not show instruction latency or throughput: those are properties of instruction
+forms, not of a data type.
+
 ## Coverage
 
 The generated catalog covers:
@@ -104,7 +113,7 @@ private snapshot and consumes only that snapshot. This protects against
 other-UID replacement and ordinary concurrent cache updates; a malicious
 same-UID process is outside the isolation claim.
 
-The build regenerates and verifies the four public LLVM Arm headers, then runs
+The build regenerates and verifies the six public LLVM Arm headers, then runs
 all six fixed performance profiles before normalization. All three LLVM tools
 must report 22.1.1. The build records the observed SHA-256 of every resolved
 executable and its normalized complete `--version` output, then re-probes each

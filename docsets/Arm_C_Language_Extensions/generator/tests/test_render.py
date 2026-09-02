@@ -298,6 +298,35 @@ def test_render_callable_uses_uniform_dash_layout_and_indexes_aliases() -> None:
     assert SOURCE_COMMIT in page.html
     assert "CC-BY-SA-4.0 AND Apache-Patent-License" in page.html
     assert "Field provenance" in page.html
+
+
+def test_render_type_uses_dash_type_index_and_exact_declaration() -> None:
+    provenance = explicit_provenance()
+    type_page = ConcreteCallable(
+        family="neon",
+        name="int32x4_t",
+        signature=Signature(
+            "typedef __attribute__((neon_vector_type(4))) int32_t int32x4_t;",
+            raw="typedef __attribute__((neon_vector_type(4))) int32_t int32x4_t;",
+        ),
+        kind=CallableKind.TYPE,
+        semantics=Semantics(summary="Public ACLE data type declaration."),
+        compilation=CompilationRequirements(
+            headers=("arm_neon.h",), provenance=provenance
+        ),
+        sources=(source_ref(),),
+    )
+
+    page = DashRenderer().render_callable(type_page)
+
+    assert page.index_entries == (IndexEntry("int32x4_t", "Type", page.relative_path),)
+    assert "//apple_ref/cpp/Type/int32x4_t" in page.html
+    assert "typedef __attribute__((neon_vector_type(4))) int32_t int32x4_t;" in page.html
+    assert ">Compilation requirements<" in page.html
+    assert ">Semantics<" in page.html
+    assert ">Source<" in page.html
+    assert ">Parameters<" not in page.html
+    assert ">Performance<" not in page.html
     assert '<link rel="stylesheet" href="../assets/style.css">' in page.html
     assert "<script" not in page.html
     assert 'src="http' not in page.html

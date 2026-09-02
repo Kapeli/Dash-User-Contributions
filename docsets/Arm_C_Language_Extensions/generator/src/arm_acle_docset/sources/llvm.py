@@ -52,7 +52,7 @@ LLVM_COMMIT = "fef02d48c08db859ef83f84232ed78bd9d1c323a"
 LLVM_LICENSE = "Apache-2.0 WITH LLVM-exception"
 LLVM_TOOL_VERSION = "22.1.1"
 
-# These hashes describe the resource headers generated from the eight pinned
+# These hashes describe the resource headers generated from the nine pinned
 # TableGen files with clang-tblgen 22.1.1.  The same bytes are present in the
 # matching Homebrew LLVM bottle.  A different official artifact must provide
 # its own explicit hash mapping rather than silently claiming to be this input.
@@ -61,12 +61,15 @@ PINNED_HEADER_SHA256: Mapping[str, str] = {
     "arm_sme.h": "0dae22d987ada9594b197285e1f1528b1c51eafd4579345d2949367c3e788943",
     "arm_mve.h": "8e6fa1bb91c0e5403e6f6152380b4ff318833028b0d4e9c91911e4dd107bd762",
     "arm_neon.h": "ed8fc4135aef7c5af5f30ca3715d96ee9ad5a2bc97f558214fadda5704742b26",
+    "arm_vector_types.h": "6fe5730cbf5b4760620d643e5b44c9abbb13969b168dd7733252158503003034",
+    "arm_bf16.h": "87f7bc1cb7aa53a85347bd4e1855cccd45599408bb106e66515519c1033a6a3d",
 }
 
 LLVM_TABLEGEN_FILES: tuple[str, ...] = (
     "arm_immcheck_incl.td",
     "arm_neon.td",
     "arm_neon_incl.td",
+    "arm_bf16.td",
     "arm_mve.td",
     "arm_mve_defs.td",
     "arm_sve.td",
@@ -78,13 +81,21 @@ _HEADER_GENERATORS: Mapping[str, tuple[str, str]] = {
     "arm_sme.h": ("-gen-arm-sme-header", "arm_sme.td"),
     "arm_mve.h": ("-gen-arm-mve-header", "arm_mve.td"),
     "arm_neon.h": ("-gen-arm-neon", "arm_neon.td"),
+    "arm_vector_types.h": ("-gen-arm-vector-type", "arm_neon.td"),
+    "arm_bf16.h": ("-gen-arm-bf16", "arm_bf16.td"),
 }
 
-_HEADER_FAMILIES: Mapping[str, Literal["sve", "sme", "mve", "neon"]] = {
+_HEADER_FAMILIES: Mapping[
+    str, Literal["general", "sve", "sme", "mve", "neon"]
+] = {
     "arm_sve.h": "sve",
     "arm_sme.h": "sme",
     "arm_mve.h": "mve",
     "arm_neon.h": "neon",
+    "arm_vector_types.h": "neon",
+    "arm_bf16.h": "neon",
+    "arm_acle.h": "general",
+    "arm_cmse.h": "general",
 }
 _BUILTIN_ALIAS_RE = re.compile(
     r"__clang_arm_builtin_alias\(\s*(?P<builtin>__builtin_[A-Za-z0-9_]+)\s*\)"
@@ -126,6 +137,7 @@ _NORMALIZED_INVENTORY_SCHEMA = 1
 
 
 Family = Literal["sve", "sme", "mve", "neon"]
+TypeFamily = Literal["general", "sve", "sme", "mve", "neon"]
 NameRole = Literal["explicit", "overloaded"]
 Namespace = Literal["prefixed", "unprefixed", "default"]
 
@@ -223,6 +235,23 @@ class LLVMCallable:
 
 
 @dataclass(frozen=True, slots=True)
+class LLVMTypeDefinition:
+    """One public typedef preserved from a pinned Clang resource header."""
+
+    family: TypeFamily
+    header: str
+    name: str
+    declaration: str
+    source_ref: LLVMSourceRef
+    end_line: int
+    availability: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.end_line < self.source_ref.line:
+            raise ValueError("LLVM type declaration ends before it begins")
+
+
+@dataclass(frozen=True, slots=True)
 class LLVMInventory:
     """Deterministic declaration inventory for one pinned LLVM input."""
 
@@ -230,6 +259,7 @@ class LLVMInventory:
     commit: str
     header_sha256: tuple[tuple[str, str], ...]
     callables: tuple[LLVMCallable, ...]
+    types: tuple[LLVMTypeDefinition, ...] = ()
     diagnostics: tuple[LLVMDiagnostic, ...] = ()
 
     def canonical_data(self) -> dict[str, object]:
@@ -242,6 +272,7 @@ class LLVMInventory:
             "license": LLVM_LICENSE,
             "header_sha256": dict(self.header_sha256),
             "callables": [_callable_data(callable_) for callable_ in self.callables],
+            "types": [_type_data(type_) for type_ in self.types],
             "diagnostics": [_diagnostic_data(item) for item in self.diagnostics],
         }
 
@@ -763,7 +794,7 @@ def load_llvm_include_dir(
     expected_hashes: Mapping[str, str] | None = PINNED_HEADER_SHA256,
     release_tag: str = LLVM_RELEASE_TAG,
     commit: str = LLVM_COMMIT,
-    headers: Sequence[str] = tuple(_HEADER_FAMILIES),
+    headers: Sequence[str] = tuple(_HEADER_GENERATORS),
 ) -> LLVMInventory:
     """Parse generated resource headers from one explicit include directory.
 
@@ -773,6 +804,7 @@ def load_llvm_include_dir(
 
     include_dir = Path(include_dir)
     all_callables: list[LLVMCallable] = []
+    all_types: list[LLVMTypeDefinition] = []
     all_diagnostics: list[LLVMDiagnostic] = []
     digests: list[tuple[str, str]] = []
 
@@ -800,6 +832,7 @@ def load_llvm_include_dir(
             commit=commit,
         )
         all_callables.extend(parsed.callables)
+        all_types.extend(parsed.types)
         all_diagnostics.extend(parsed.diagnostics)
         digests.append((header, digest))
 
@@ -808,6 +841,7 @@ def load_llvm_include_dir(
         commit=commit,
         header_sha256=tuple(sorted(digests)),
         callables=tuple(sorted(all_callables, key=_callable_sort_key)),
+        types=tuple(sorted(all_types, key=_type_sort_key)),
         diagnostics=tuple(all_diagnostics),
     )
 
@@ -936,7 +970,19 @@ def parse_llvm_header(
     if not re.fullmatch(r"[0-9a-f]{64}", sha256):
         raise ValueError("sha256 must be a lowercase 64-character hexadecimal digest")
 
-    declarations, diagnostics = _parse_declarations(
+    if family == "general":
+        declarations, diagnostics = [], []
+    else:
+        declarations, diagnostics = _parse_declarations(
+            text,
+            family=family,
+            header=header,
+            sha256=sha256,
+            release_tag=release_tag,
+            commit=commit,
+        )
+    callables = _group_declarations(declarations)
+    types = _parse_type_definitions(
         text,
         family=family,
         header=header,
@@ -944,7 +990,6 @@ def parse_llvm_header(
         release_tag=release_tag,
         commit=commit,
     )
-    callables = _group_declarations(declarations)
     if family == "neon":
         diagnostics.append(
             LLVMDiagnostic(
@@ -961,6 +1006,7 @@ def parse_llvm_header(
         commit=commit,
         header_sha256=((header, sha256),),
         callables=tuple(sorted(callables, key=_callable_sort_key)),
+        types=tuple(sorted(types, key=_type_sort_key)),
         diagnostics=tuple(diagnostics),
     )
 
@@ -1010,6 +1056,13 @@ def load_normalized_inventory(path: Path) -> LLVMInventory:
         _callable_from_data(item, release_tag=release_tag, commit=commit)
         for item in raw_callables
     )
+    raw_types = data.get("types", [])
+    if not isinstance(raw_types, list):
+        raise LLVMFormatError("types must be a JSON array")
+    types = tuple(
+        _type_from_data(item, release_tag=release_tag, commit=commit)
+        for item in raw_types
+    )
     raw_diagnostics = data.get("diagnostics", [])
     if not isinstance(raw_diagnostics, list):
         raise LLVMFormatError("diagnostics must be a JSON array")
@@ -1019,6 +1072,7 @@ def load_normalized_inventory(path: Path) -> LLVMInventory:
         commit=commit,
         header_sha256=tuple(sorted(normalized_hashes)),
         callables=callables,
+        types=types,
         diagnostics=tuple(_diagnostic_from_data(item) for item in raw_diagnostics),
     )
 
@@ -1038,7 +1092,8 @@ def to_model_callables(
     """
 
     requested = tuple(dict.fromkeys(families))
-    unsupported = set(requested) - set(_HEADER_FAMILIES.values())
+    supported_families: set[Family] = {"sve", "sme", "mve", "neon"}
+    unsupported = set(requested) - supported_families
     if unsupported:
         raise ValueError(f"unsupported LLVM model families: {sorted(unsupported)!r}")
 
@@ -1145,6 +1200,112 @@ def to_model_callables(
     return tuple(sorted(result, key=lambda item: (item.family, item.name, item.id)))
 
 
+def to_model_types(
+    definitions: Iterable[LLVMTypeDefinition],
+) -> tuple[ConcreteCallable, ...]:
+    """Bridge exact public typedef declarations into Dash ``Type`` pages."""
+
+    result: list[ConcreteCallable] = []
+    seen: set[tuple[str, str, str, str | None]] = set()
+    for definition in sorted(definitions, key=_type_sort_key):
+        key = (
+            definition.family,
+            definition.name,
+            definition.declaration,
+            definition.availability,
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        source = _model_type_source_ref(definition)
+        fact_provenance = Provenance(
+            kind=ProvenanceKind.EXPLICIT,
+            sources=(source,),
+            note="Declaration copied from the pinned Clang resource header.",
+        )
+        requirement_note = (
+            "The declaration is conditionally emitted by the pinned Clang "
+            "resource header. The condition is preserved as availability, but "
+            "no compiler flag is inferred from it."
+            if definition.availability
+            else (
+                "The resource header establishes this declaration but does not "
+                "supply a stable standalone compiler-flag prescription."
+            )
+        )
+        type_summary = (
+            "Public ACLE data type declaration from "
+            f"<{_public_type_header(definition.header)}>.")
+        result.append(
+            normalize_callable(
+                ConcreteCallable(
+                    family=definition.family,
+                    name=definition.name,
+                    signature=Signature(
+                        return_type=definition.declaration,
+                        raw=definition.declaration,
+                    ),
+                    kind=CallableKind.TYPE,
+                    availability=(
+                        AvailabilityExpr.raw(definition.availability)
+                        if definition.availability is not None
+                        else AvailabilityExpr.always()
+                    ),
+                    maturity=Maturity.UNSPECIFIED,
+                    semantics=Semantics(
+                        summary=type_summary,
+                        description=(
+                            "The declaration below is preserved from the pinned "
+                            "Clang resource header; it is not reconstructed from "
+                            "a naming convention."
+                        ),
+                        provenance=fact_provenance,
+                    ),
+                    compilation=CompilationRequirements(
+                        headers=(_public_type_header(definition.header),),
+                        availability=(
+                            AvailabilityExpr.raw(definition.availability)
+                            if definition.availability is not None
+                            else AvailabilityExpr.always()
+                        ),
+                        provenance=fact_provenance,
+                        unresolved_reason=requirement_note,
+                    ),
+                    headers=(_public_type_header(definition.header),),
+                    taxonomy=(("Data types", _type_header_title(definition.header)),),
+                    sources=(source,),
+                    field_provenance=(
+                        FieldProvenance("name", fact_provenance),
+                        FieldProvenance("declaration", fact_provenance),
+                        FieldProvenance("header", fact_provenance),
+                        FieldProvenance("availability", fact_provenance),
+                    ),
+                )
+            )
+        )
+    return tuple(sorted(result, key=lambda item: (item.family, item.name, item.id)))
+
+
+def _public_type_header(header: str) -> str:
+    return {
+        "arm_vector_types.h": "arm_neon.h",
+        "arm_bf16.h": "arm_neon.h",
+    }.get(header, header)
+
+
+def _type_header_title(header: str) -> str:
+    return {
+        "arm_acle.h": "General ACLE",
+        "arm_bf16.h": "BFloat16",
+        "arm_cmse.h": "CMSE",
+        "arm_mve.h": "MVE",
+        "arm_neon.h": "Neon",
+        "arm_sme.h": "SME",
+        "arm_sve.h": "SVE",
+        "arm_vector_types.h": "Neon",
+    }.get(header, header)
+
+
 def _primary_model_name(item: LLVMCallable) -> LLVMName:
     explicit = [name for name in item.names if name.role == "explicit"]
     if not explicit:
@@ -1193,6 +1354,23 @@ def _model_source_ref(source: LLVMSourceRef) -> SourceRef:
         path=f"lib/clang/22/include/{source.header}",
         start_line=source.line,
         end_line=source.line,
+        license_id=source.license,
+        url=(f"https://github.com/llvm/llvm-project/releases/tag/{source.release_tag}"),
+    )
+
+
+def _model_type_source_ref(definition: LLVMTypeDefinition) -> SourceRef:
+    source = definition.source_ref
+    return SourceRef(
+        id=(
+            f"llvm:{source.commit}:{source.header}:{source.line}-"
+            f"{definition.end_line}:{source.sha256[:12]}"
+        ),
+        repository=source.repository,
+        commit=source.commit,
+        path=f"lib/clang/22/include/{source.header}",
+        start_line=source.line,
+        end_line=definition.end_line,
         license_id=source.license,
         url=(f"https://github.com/llvm/llvm-project/releases/tag/{source.release_tag}"),
     )
@@ -1320,6 +1498,185 @@ def _parse_declarations(
         )
 
     return declarations, diagnostics
+
+
+def load_llvm_type_headers(
+    headers: Mapping[str, Path],
+    *,
+    release_tag: str = LLVM_RELEASE_TAG,
+    commit: str = LLVM_COMMIT,
+) -> tuple[LLVMTypeDefinition, ...]:
+    """Load public typedefs from pinned, non-TableGen Clang resource headers.
+
+    The caller supplies paths from the verified source snapshot, whose manifest
+    SHA-256 checks are the content gate.  Keeping these headers separate from
+    ``load_llvm_include_dir`` makes it explicit that they are not generated by
+    ``clang-tblgen`` during a docset build.
+    """
+
+    result: list[LLVMTypeDefinition] = []
+    for header, path in sorted(headers.items()):
+        if header not in {"arm_acle.h", "arm_cmse.h"}:
+            raise ValueError(f"unsupported LLVM type header: {header!r}")
+        path = Path(path)
+        if not path.is_file():
+            raise LLVMFormatError(f"missing LLVM type header: {path}")
+        result.extend(
+            _parse_type_definitions(
+                path.read_text(encoding="utf-8"),
+                family=_HEADER_FAMILIES[header],
+                header=header,
+                sha256=_sha256(path),
+                release_tag=release_tag,
+                commit=commit,
+            )
+        )
+    return tuple(sorted(result, key=_type_sort_key))
+
+
+def _parse_type_definitions(
+    text: str,
+    *,
+    family: TypeFamily,
+    header: str,
+    sha256: str,
+    release_tag: str,
+    commit: str,
+) -> list[LLVMTypeDefinition]:
+    """Extract public typedef statements without interpreting their C syntax.
+
+    The converter preserves declarations verbatim apart from whitespace
+    normalization.  It only needs to locate the terminal typedef name, which
+    lets structures, unions, vector attributes, and compiler builtin aliases
+    remain source-backed instead of being reconstructed from naming rules.
+    """
+
+    lines = text.splitlines(keepends=True)
+    line_offsets: list[int] = []
+    position = 0
+    for line in lines:
+        line_offsets.append(position)
+        position += len(line)
+    conditions = _preprocessor_conditions(lines)
+    result: list[LLVMTypeDefinition] = []
+    for match in re.finditer(r"(?m)^[ \t]*typedef\b", text):
+        start = match.start()
+        end = _typedef_statement_end(text, match.end())
+        if end is None:
+            continue
+        declaration = text[start : end + 1]
+        name_match = re.search(r"([A-Za-z_][A-Za-z0-9_]*)\s*;\s*$", declaration)
+        if name_match is None:
+            continue
+        name = name_match.group(1)
+        line_index = _line_index(line_offsets, start)
+        if not _is_public_type_name(header, name):
+            continue
+        end_line = text.count("\n", 0, end) + 1
+        source_ref = _source_ref(
+            header,
+            line_index + 1,
+            sha256,
+            release_tag=release_tag,
+            commit=commit,
+        )
+        result.append(
+            LLVMTypeDefinition(
+                family=family,
+                header=header,
+                name=name,
+                declaration=_WHITESPACE_RE.sub(" ", declaration).strip(),
+                source_ref=source_ref,
+                end_line=end_line,
+                availability=conditions[line_index],
+            )
+        )
+    return result
+
+
+def _typedef_statement_end(text: str, start: int) -> int | None:
+    braces = 0
+    in_string = False
+    escaped = False
+    for index in range(start, len(text)):
+        character = text[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == '"':
+                in_string = False
+            continue
+        if character == '"':
+            in_string = True
+        elif character == "{":
+            braces += 1
+        elif character == "}":
+            braces = max(braces - 1, 0)
+        elif character == ";" and braces == 0:
+            return index
+    return None
+
+
+def _line_index(offsets: Sequence[int], position: int) -> int:
+    index = 0
+    for candidate, offset in enumerate(offsets):
+        if offset > position:
+            break
+        index = candidate
+    return index
+
+
+def _preprocessor_conditions(lines: Sequence[str]) -> tuple[str | None, ...]:
+    """Return the lexical ``#if`` condition in effect for each source line."""
+
+    conditions: list[str | None] = []
+    stack: list[dict[str, object]] = []
+    for line in lines:
+        stripped = line.strip()
+        directive = re.match(r"#\s*(if|ifdef|ifndef|elif|else|endif)\b(.*)", stripped)
+        if directive is not None:
+            kind, remainder = directive.groups()
+            expression = remainder.strip()
+            if kind == "ifdef":
+                expression = f"defined({expression})"
+            elif kind == "ifndef":
+                expression = f"!defined({expression})"
+            if kind in {"if", "ifdef", "ifndef"}:
+                stack.append({"seen": [expression], "current": expression})
+            elif stack and kind == "elif":
+                previous = stack[-1]["seen"]
+                assert isinstance(previous, list)
+                exclusions = " || ".join(str(item) for item in previous)
+                current = f"!({exclusions}) && ({expression})"
+                previous.append(expression)
+                stack[-1]["current"] = current
+            elif stack and kind == "else":
+                previous = stack[-1]["seen"]
+                assert isinstance(previous, list)
+                stack[-1]["current"] = f"!({' || '.join(str(item) for item in previous)})"
+            elif stack and kind == "endif":
+                stack.pop()
+            conditions.append(_joined_preprocessor_condition(stack))
+            continue
+        conditions.append(_joined_preprocessor_condition(stack))
+    return tuple(conditions)
+
+
+def _joined_preprocessor_condition(stack: Sequence[Mapping[str, object]]) -> str | None:
+    values = [str(block["current"]) for block in stack if block.get("current")]
+    return " && ".join(values) if values else None
+
+
+def _is_public_type_name(header: str, name: str) -> bool:
+    if not _IDENTIFIER_RE.fullmatch(name) or name.startswith("__"):
+        return False
+    if header == "arm_sve.h":
+        return name.startswith("sv") and name.endswith("_t")
+    if header == "arm_neon.h":
+        return name.startswith("poly") and name.endswith("_t")
+    return name.endswith("_t")
 
 
 def _group_declarations(
@@ -1714,6 +2071,16 @@ def _callable_sort_key(item: LLVMCallable) -> tuple[str, str, str]:
     return item.family, item.primary_name, item.prototype.signature
 
 
+def _type_sort_key(item: LLVMTypeDefinition) -> tuple[str, str, str, int, str]:
+    return (
+        item.family,
+        item.name,
+        item.header,
+        item.source_ref.line,
+        item.declaration,
+    )
+
+
 def _callable_data(item: LLVMCallable) -> dict[str, object]:
     return {
         "family": item.family,
@@ -1725,6 +2092,18 @@ def _callable_data(item: LLVMCallable) -> dict[str, object]:
         "diagnostics": [
             _diagnostic_data(diagnostic) for diagnostic in item.diagnostics
         ],
+    }
+
+
+def _type_data(item: LLVMTypeDefinition) -> dict[str, object]:
+    return {
+        "family": item.family,
+        "header": item.header,
+        "name": item.name,
+        "declaration": item.declaration,
+        "source_ref": asdict(item.source_ref),
+        "end_line": item.end_line,
+        "availability": item.availability,
     }
 
 
@@ -1830,6 +2209,40 @@ def _callable_from_data(
         target_features=target_features,
         diagnostics=tuple(_diagnostic_from_data(item) for item in diagnostics_data),
     )
+
+
+def _type_from_data(
+    value: object,
+    *,
+    release_tag: str,
+    commit: str,
+) -> LLVMTypeDefinition:
+    if not isinstance(value, dict):
+        raise LLVMFormatError("type definition must be a JSON object")
+    family = value.get("family")
+    if family not in set(_HEADER_FAMILIES.values()):
+        raise LLVMFormatError(f"unsupported type family: {family!r}")
+    header = _required_string(value, "header")
+    if header not in _HEADER_FAMILIES:
+        raise LLVMFormatError(f"unsupported type header: {header!r}")
+    source_ref = _source_ref_from_data(value.get("source_ref"))
+    if source_ref.release_tag != release_tag or source_ref.commit != commit:
+        raise LLVMFormatError("type provenance does not match inventory pin")
+    end_line = value.get("end_line")
+    if not isinstance(end_line, int):
+        raise LLVMFormatError("end_line must be an integer")
+    try:
+        return LLVMTypeDefinition(
+            family=family,
+            header=header,
+            name=_required_string(value, "name"),
+            declaration=_required_string(value, "declaration"),
+            source_ref=source_ref,
+            end_line=end_line,
+            availability=_optional_string(value, "availability"),
+        )
+    except ValueError as error:
+        raise LLVMFormatError(f"invalid type definition: {error}") from error
 
 
 def _required_string(value: Mapping[str, object], key: str) -> str:

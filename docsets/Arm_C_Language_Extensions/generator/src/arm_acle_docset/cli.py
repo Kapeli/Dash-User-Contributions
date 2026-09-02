@@ -48,6 +48,8 @@ GENERATED_HEADER_SHA256: Mapping[str, str] = {
 }
 _TABLEGEN_TARGETS = (
     ("arm_neon.td", "--gen-arm-neon", "arm_neon.h"),
+    ("arm_neon.td", "--gen-arm-vector-type", "arm_vector_types.h"),
+    ("arm_bf16.td", "--gen-arm-bf16", "arm_bf16.h"),
     ("arm_sve.td", "--gen-arm-sve-header", "arm_sve.h"),
     ("arm_sme.td", "--gen-arm-sme-header", "arm_sme.h"),
     ("arm_mve.td", "--gen-arm-mve-header", "arm_mve.h"),

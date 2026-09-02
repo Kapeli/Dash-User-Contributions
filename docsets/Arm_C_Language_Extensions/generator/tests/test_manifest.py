@@ -184,10 +184,12 @@ def test_manifest_pins_every_download_and_member() -> None:
         for member in artifact.members:
             assert len(member.sha256) == 64
     assert {Path(member.local_path).name for member in LLVM_GENERATED_HEADERS} == {
+        "arm_bf16.h",
         "arm_mve.h",
         "arm_neon.h",
         "arm_sme.h",
         "arm_sve.h",
+        "arm_vector_types.h",
     }
 
 

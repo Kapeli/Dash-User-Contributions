@@ -15,6 +15,7 @@ from .model import (
     Catalog,
     CompilationRequirements,
     CompilerFlagExample,
+    CallableKind,
     ConcreteCallable,
     Diagnostic,
     DiagnosticSeverity,
@@ -62,8 +63,10 @@ from .sources.llvm import (
     LLVMTargetGuard,
     PINNED_HEADER_SHA256,
     load_llvm_include_dir,
+    load_llvm_type_headers,
     load_sve_target_guards,
     to_model_callables,
+    to_model_types,
 )
 from .sources.manifest import ACLE_REVISION
 from .sources.performance import (
@@ -192,9 +195,17 @@ def build_catalog(
             )
         )
 
+    llvm_headers = tuple(PINNED_HEADER_SHA256)
+    if llvm_expected_hashes is None:
+        # Compact parser fixtures intentionally provide only the headers their
+        # scenario needs. Release builds keep the complete pinned set above.
+        llvm_headers = tuple(
+            header for header in llvm_headers if (Path(llvm_include_dir) / header).is_file()
+        )
     llvm_inventory = load_llvm_include_dir(
         Path(llvm_include_dir),
         expected_hashes=llvm_expected_hashes,
+        headers=llvm_headers,
     )
     callables = _apply_llvm_neon_target_features(
         callables,
@@ -202,6 +213,16 @@ def build_catalog(
         require_complete=llvm_expected_hashes is not None,
     )
     callables.extend(to_model_callables(llvm_inventory, families=("sve", "sme")))
+    static_type_paths = {
+        header: source_paths[path]
+        for header, path in {
+            "arm_acle.h": "llvm/headers/arm_acle.h",
+            "arm_cmse.h": "llvm/headers/arm_cmse.h",
+        }.items()
+        if path in source_paths
+    }
+    type_headers = load_llvm_type_headers(static_type_paths)
+    callables.extend(to_model_types((*llvm_inventory.types, *type_headers)))
 
     selected_features = (
         DEFAULT_FEATURE_FLAG_MANIFEST if feature_db is None else tuple(feature_db)
@@ -231,6 +252,9 @@ def build_catalog(
     callables, version_diagnostics = _merge_markdown_declarations(
         callables,
         markdown_callables,
+    )
+    callables.extend(
+        _predefined_acle_type_records(source_paths["acle/main/acle.md"])
     )
     callables = _apply_markdown_enrichments(
         callables,
@@ -288,6 +312,88 @@ def build_catalog(
         ),
         diagnostics=tuple(_unique_diagnostics(diagnostics)),
     )
+
+
+def _predefined_acle_type_records(path: Path) -> tuple[ConcreteCallable, ...]:
+    """Emit ACLE's header-independent predefined floating-point types.
+
+    These are part of the public Data types section but cannot be obtained from
+    a C ``typedef`` parser. Their names and header-independent status come
+    directly from the pinned ACLE Markdown source.
+    """
+
+    lines = Path(path).read_text(encoding="utf-8").splitlines()
+    definitions = (
+        ("__fp16", "16-bit floating-point values"),
+        ("__bf16", "16-bit brain floating-point values"),
+        ("__mfp8", "modal 8-bit floating-point values"),
+    )
+    result: list[ConcreteCallable] = []
+    for name, description in definitions:
+        marker = f"`{name}` type"
+        try:
+            line_number = next(
+                index + 1 for index, line in enumerate(lines) if marker in line
+            )
+        except StopIteration:
+            continue
+        source = SourceRef(
+            id=f"acle:main/acle.md:{line_number}-{line_number}",
+            repository=ACLE_REPOSITORY,
+            commit=ACLE_REVISION,
+            path="main/acle.md",
+            start_line=line_number,
+            end_line=line_number,
+            license_id=ACLE_CONTENT_LICENSE,
+            url=f"{ACLE_SOURCE_URL}/main/acle.md",
+        )
+        provenance = Provenance(
+            kind=ProvenanceKind.EXPLICIT,
+            sources=(source,),
+            note="Named in ACLE's Data types section as a predefined type.",
+        )
+        availability = AvailabilityExpr.raw(
+            "Provided by the implementation when the type is supported."
+        )
+        result.append(
+            normalize_callable(
+                ConcreteCallable(
+                    family="general",
+                    name=name,
+                    signature=Signature(
+                        return_type=f"predefined implementation type {name}",
+                        raw=f"{name} (predefined implementation type)",
+                    ),
+                    kind=CallableKind.TYPE,
+                    availability=availability,
+                    maturity=Maturity.UNSPECIFIED,
+                    semantics=Semantics(
+                        summary=f"ACLE predefined type for {description}.",
+                        description=(
+                            "This type is supplied by the implementation and does "
+                            "not require an ACLE header declaration."
+                        ),
+                        provenance=provenance,
+                    ),
+                    compilation=CompilationRequirements(
+                        availability=availability,
+                        provenance=provenance,
+                        unresolved_reason=(
+                            "ACLE names this as a predefined implementation type; "
+                            "it does not provide a universal compiler flag."
+                        ),
+                    ),
+                    taxonomy=(("Data types", "Predefined implementation types"),),
+                    sources=(source,),
+                    field_provenance=(
+                        FieldProvenance("name", provenance),
+                        FieldProvenance("availability", provenance),
+                        FieldProvenance("description", provenance),
+                    ),
+                )
+            )
+        )
+    return tuple(result)
 
 
 def completeness_report(catalog: Catalog) -> CompletenessReport:

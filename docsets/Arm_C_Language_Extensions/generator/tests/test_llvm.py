@@ -21,6 +21,7 @@ from arm_acle_docset.sources.llvm import (
     parse_llvm_header,
     parse_sve_target_guards,
     to_model_callables,
+    to_model_types,
     write_normalized_inventory,
 )
 
@@ -201,6 +202,37 @@ __ai __attribute__((target("fp16fml,neon"))) float32x4_t vfmlalq_low_f16(float32
         ["neon"],
         ["fp16fml", "neon"],
     ]
+
+
+def test_type_inventory_preserves_exact_typedefs_and_conditions() -> None:
+    text = """
+#if defined(__aarch64__)
+typedef __attribute__((neon_vector_type(4))) int32_t int32x4_t;
+#else
+typedef int32_t int32x4_t;
+#endif
+typedef struct value_pair {
+  int32x4_t val[2];
+} int32x4x2_t;
+"""
+    inventory = parse_llvm_header(
+        text,
+        header="arm_vector_types.h",
+        sha256=hashlib.sha256(text.encode()).hexdigest(),
+    )
+
+    assert [(item.name, item.availability) for item in inventory.types] == [
+        ("int32x4_t", "defined(__aarch64__)"),
+        ("int32x4_t", "!(defined(__aarch64__))"),
+        ("int32x4x2_t", None),
+    ]
+    assert inventory.types[2].declaration == (
+        "typedef struct value_pair { int32x4_t val[2]; } int32x4x2_t;"
+    )
+    assert inventory.types[2].end_line == 9
+    model_types = to_model_types(inventory.types)
+    assert {item.name for item in model_types} == {"int32x4_t", "int32x4x2_t"}
+    assert all(item.kind.value == "type" for item in model_types)
 
 
 def test_neon_target_feature_mismatch_remains_unresolved() -> None:

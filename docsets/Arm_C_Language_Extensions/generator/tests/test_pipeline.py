@@ -37,6 +37,7 @@ from arm_acle_docset.pipeline import (
     _derived_family_macros,
     _merge_compilation,
     _merge_markdown_declarations,
+    _predefined_acle_type_records,
     _target_guard_concrete_names,
     _target_guard_macro_index,
     _translate_target_guard,
@@ -91,6 +92,29 @@ def test_build_catalog_merges_every_declaration_source() -> None:
     assert len({source.id for source in catalog.provenance.sources}) == len(
         catalog.provenance.sources
     )
+
+
+def test_predefined_acle_types_are_source_backed_without_headers(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "acle.md"
+    source.write_text(
+        "\n".join(
+            (
+                "* The `__fp16` type for 16-bit floating-point values.",
+                "* The `__bf16` type for 16-bit brain floating-point values.",
+                "* The `__mfp8` type for modal 8-bit floating-point values.",
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    records = _predefined_acle_type_records(source)
+
+    assert [item.name for item in records] == ["__fp16", "__bf16", "__mfp8"]
+    assert all(item.kind.value == "type" for item in records)
+    assert all(not item.compilation.headers for item in records)
+    assert all(item.sources[0].path == "main/acle.md" for item in records)
 
 
 def test_build_catalog_validates_exact_neon_header_target_features(
