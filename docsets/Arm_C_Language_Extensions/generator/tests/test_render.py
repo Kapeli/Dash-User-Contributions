@@ -295,6 +295,9 @@ def test_render_callable_uses_uniform_dash_layout_and_indexes_aliases() -> None:
     assert "Example Cortex core" in page.html
     assert "2 cycles" in page.html
     assert 'class="performance-table"' in page.html
+    assert 'data-label="Latency (cycles)"' in page.html
+    assert 'data-label="Confidence and source"' in page.html
+    assert 'data-label="Source"' in page.html
     assert "Full provenance" in page.html
     assert "Example pinned performance record." in page.html
     assert SOURCE_COMMIT in page.html
@@ -593,8 +596,11 @@ def test_render_callable_does_not_repeat_compiler_model_note_in_metric_cells() -
         replace(callable_, performance=(compiler_model_record,))
     )
 
-    assert "<td>2 cycles</td>" in page.html
-    assert "<td>1 cycles/instruction</td>" in page.html
+    assert '<td data-label="Latency (cycles)">2 cycles</td>' in page.html
+    assert (
+        '<td data-label="Reciprocal throughput">1 cycles/instruction</td>'
+        in page.html
+    )
     assert "µops: 1 µops; resources:" in page.html
     assert metric_note not in page.html
     assert (
@@ -688,7 +694,8 @@ def test_render_index_includes_catalog_level_diagnostics() -> None:
         ),
     )
 
-    assert "<td>Warning</td><td>1</td>" in page.html
+    assert '<td data-label="Severity">Warning</td>' in page.html
+    assert '<td data-label="Diagnostic entries">1</td>' in page.html
     assert "Diagnostic entries" in page.html
     assert "not affected callables" in page.html
     assert "Browse top-level guides" in page.html
@@ -744,4 +751,7 @@ def test_render_to_directory_is_deterministic_and_writes_offline_landing(
     assert '//apple_ref/cpp/Guide/Source%2C%20attribution%2C%20and%20license' in landing
     assert "<title>Overview</title>" in landing
     assert "<script" not in landing
-    assert (first / "assets" / "style.css").is_file()
+    stylesheet = (first / "assets" / "style.css").read_text(encoding="utf-8")
+    assert "@media (max-width: 760px)" in stylesheet
+    assert "grid-template-columns: minmax(8.25rem, 42%) minmax(0, 1fr);" in stylesheet
+    assert ".performance-table { min-width: 0; table-layout: auto; }" in stylesheet
