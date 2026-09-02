@@ -300,6 +300,9 @@ def test_render_callable_uses_uniform_dash_layout_and_indexes_aliases() -> None:
     assert SOURCE_COMMIT in page.html
     assert "CC-BY-SA-4.0 AND Apache-Patent-License" in page.html
     assert "Field provenance" in page.html
+    assert '//apple_ref/cpp/Guide/Parameters' in page.html
+    assert '//apple_ref/cpp/Guide/Compilation%20requirements' in page.html
+    assert '//apple_ref/cpp/Guide/Source' in page.html
 
 
 def test_render_type_uses_dash_type_index_and_exact_declaration() -> None:
@@ -433,6 +436,7 @@ def test_render_type_properties_and_links_type_references(tmp_path: Path) -> Non
     assert f'href="{int32x4.slug}.html"' in function_html
     assert f'href="{float32x4.slug}.html"' in function_html
     assert "<strong>Type:</strong>" in function_html
+    assert '//apple_ref/cpp/Guide/Type%20properties' in type_html
     assert 'Intrinsic · <a href="category-mve-' in function_html
     assert ">MVE</a> / <a href=" in function_html
     assert 'class="tag-list"' not in function_html
@@ -457,6 +461,8 @@ def test_render_type_properties_and_links_type_references(tmp_path: Path) -> Non
     assert "Add" in vector_category.html
     assert "Subcategories" in category.html
     assert "Addition" in category.html
+    assert '//apple_ref/cpp/Guide/Subcategories' in category.html
+    assert '//apple_ref/cpp/Guide/Direct%20callables' in category.html
 
 
 def test_render_callable_marks_missing_evidence_instead_of_fabricating_values() -> None:
@@ -734,6 +740,8 @@ def test_render_to_directory_is_deterministic_and_writes_offline_landing(
     assert "Installed runtime dependencies" in landing
     assert "Browse top-level guides" in landing
     assert 'href="intrinsics/category-general-acle-crc-' in landing
+    assert '//apple_ref/cpp/Guide/Coverage' in landing
+    assert '//apple_ref/cpp/Guide/Source%2C%20attribution%2C%20and%20license' in landing
     assert "<title>Overview</title>" in landing
     assert "<script" not in landing
     assert (first / "assets" / "style.css").is_file()
