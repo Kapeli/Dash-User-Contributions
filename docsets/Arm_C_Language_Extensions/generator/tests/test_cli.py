@@ -42,6 +42,43 @@ def test_default_cache_is_private_to_the_current_user() -> None:
     assert DEFAULT_CACHE_DIRECTORY == Path.home() / ".arm-acle-docset-cache"
 
 
+@pytest.mark.parametrize("path_name", ("contribution", "child", "ancestor"))
+def test_input_directories_must_not_overlap_the_contribution(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    path_name: str,
+) -> None:
+    contribution = tmp_path / "contribution"
+    contribution.mkdir()
+    monkeypatch.setattr(cli, "CONTRIBUTION_DIRECTORY", contribution)
+    paths = {
+        "contribution": contribution,
+        "child": contribution / "cache",
+        "ancestor": tmp_path,
+    }
+
+    with pytest.raises(ValueError, match="outside the contribution directory"):
+        cli._require_external_input_directory(paths[path_name], "--cache-dir")
+
+
+def test_fetch_rejects_a_contribution_local_cache_before_fetching(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    contribution = tmp_path / "contribution"
+    contribution.mkdir()
+    monkeypatch.setattr(cli, "CONTRIBUTION_DIRECTORY", contribution)
+
+    def unexpected_fetch(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("contribution-local cache must be rejected before fetch")
+
+    monkeypatch.setattr(cli, "fetch_sources", unexpected_fetch)
+
+    assert cli.main(["fetch", "--cache-dir", str(contribution)]) == 1
+    assert "--cache-dir must be outside the contribution directory" in capsys.readouterr().err
+
+
 def test_requested_profiles_are_canonicalized_independently_of_flag_order() -> None:
     assert cli._canonical_requested_profiles(["cortex-m85", "neoverse-n2"]) == (
         "neoverse-n2",
@@ -255,12 +292,12 @@ def test_llvm_identity_binds_executable_bytes_and_complete_version_output(
     first = tmp_path / "llvm-mc-a"
     second = tmp_path / "llvm-mc-b"
     first.write_text(
-        "#!/bin/sh\nprintf 'Homebrew LLVM version 22.1.1\\nTarget: fixture\\n'\n",
+        "#!/bin/sh\nprintf 'Homebrew LLVM version 23.1.1\\nTarget: fixture\\n'\n",
         encoding="utf-8",
     )
     second.write_text(
         "#!/bin/sh\n# different executable bytes\n"
-        "printf 'Homebrew LLVM version 22.1.1\\nTarget: fixture\\n'\n",
+        "printf 'Homebrew LLVM version 23.1.1\\nTarget: fixture\\n'\n",
         encoding="utf-8",
     )
     first.chmod(0o755)
@@ -269,7 +306,7 @@ def test_llvm_identity_binds_executable_bytes_and_complete_version_output(
     first_identity = cli._llvm_tool_identity(first, "llvm-mc")
     second_identity = cli._llvm_tool_identity(second, "llvm-mc")
 
-    assert first_identity.version == second_identity.version == "22.1.1"
+    assert first_identity.version == second_identity.version == "23.1.1"
     assert (
         first_identity.normalized_version_output_sha256
         == second_identity.normalized_version_output_sha256
@@ -283,7 +320,7 @@ def test_llvm_identity_ignores_metadata_but_rejects_content_replacement(
 ) -> None:
     tool = tmp_path / "llvm-mca"
     tool.write_text(
-        "#!/bin/sh\nprintf 'LLVM version 22.1.1\\nTarget: fixture\\n'\n",
+        "#!/bin/sh\nprintf 'LLVM version 23.1.1\\nTarget: fixture\\n'\n",
         encoding="utf-8",
     )
     tool.chmod(0o755)
@@ -294,7 +331,7 @@ def test_llvm_identity_ignores_metadata_but_rejects_content_replacement(
 
     tool.write_text(
         "#!/bin/sh\n# replaced bytes\n"
-        "printf 'LLVM version 22.1.1\\nTarget: fixture\\n'\n",
+        "printf 'LLVM version 23.1.1\\nTarget: fixture\\n'\n",
         encoding="utf-8",
     )
     tool.chmod(0o755)
@@ -312,7 +349,7 @@ def test_llvm_identity_rejects_content_change_during_probe(
     monkeypatch.setattr(
         cli,
         "_llvm_version_probe",
-        lambda _path, _name: ("22.1.1", "c" * 64),
+        lambda _path, _name: ("23.1.1", "c" * 64),
     )
 
     with pytest.raises(RuntimeError, match="contents changed during identity probe"):

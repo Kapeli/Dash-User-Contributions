@@ -3407,15 +3407,37 @@ def _neon_feature_rule(callable_: ConcreteCallable) -> _NeonFeatureRule:
     elif section == _NEON_SECTION_I8MM:
         macros.add("__ARM_FEATURE_MATMUL_INT8")
     elif section == _NEON_SECTION_BF16:
-        macros.add("__ARM_FEATURE_BF16")
-        if any(name in {"vcvth_bf16_f32", "vcvtah_f32_bf16"} for name in spellings):
-            macros.add("__ARM_FEATURE_BF16_SCALAR_ARITHMETIC")
-        elif any(
-            item.startswith(prefix)
-            for item in mnemonics
-            for prefix in ("BFCVTN", "BFDOT", "BFMMLA", "BFMLALB", "BFMLALT")
-        ):
-            macros.add("__ARM_FEATURE_BF16_VECTOR_ARITHMETIC")
+        # LLVM 23.1.1 deliberately marks these representation-only helpers as
+        # `target("neon")`: they shuffle, duplicate, split, or bit-cast bf16
+        # values and do not issue an Arm BF16 instruction.  The source section
+        # is broader than the individual compiler availability, so keep its
+        # extension requirement only for the instruction-bearing declarations.
+        bf16_type_utility = all(
+            name.startswith(
+                (
+                    "vcombine_bf16",
+                    "vdup_n_bf16",
+                    "vdupq_n_bf16",
+                    "vget_high_bf16",
+                    "vget_low_bf16",
+                    "vreinterpret",
+                )
+            )
+            for name in spellings
+        )
+        if not bf16_type_utility:
+            macros.add("__ARM_FEATURE_BF16")
+            if any(
+                name in {"vcvth_bf16_f32", "vcvtah_f32_bf16"}
+                for name in spellings
+            ):
+                macros.add("__ARM_FEATURE_BF16_SCALAR_ARITHMETIC")
+            elif any(
+                item.startswith(prefix)
+                for item in mnemonics
+                for prefix in ("BFCVTN", "BFDOT", "BFMMLA", "BFMLALB", "BFMLALT")
+            ):
+                macros.add("__ARM_FEATURE_BF16_VECTOR_ARITHMETIC")
     elif section == _NEON_SECTION_FP8:
         if "FDOT" in mnemonics and any("_f16_mf8" in name for name in spellings):
             macros.add("__ARM_FEATURE_FP8DOT2")
@@ -3693,7 +3715,7 @@ def _llvm_neon_source_ref(source: LLVMSourceRef) -> SourceRef:
         id=f"llvm:{source.commit}:{source.header}:{source.line}:{source.sha256[:12]}",
         repository=source.repository,
         commit=source.commit,
-        path=f"lib/clang/22/include/{source.header}",
+        path=f"lib/clang/23/include/{source.header}",
         start_line=source.line,
         end_line=source.line,
         license_id=source.license,

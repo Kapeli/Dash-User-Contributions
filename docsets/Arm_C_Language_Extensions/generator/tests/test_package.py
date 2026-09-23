@@ -697,6 +697,28 @@ def test_verify_rejects_invalid_build_manifest(
         verify_docset(result.docset_path, archive_path=result.archive_path)
 
 
+@pytest.mark.parametrize(
+    ("key", "value"),
+    (
+        ("DashDocSetFallbackURL", "https://example.invalid/"),
+        ("UnexpectedKey", "unexpected value"),
+    ),
+)
+def test_verify_rejects_modified_info_plist_metadata(
+    tmp_path: Path, key: str, value: str
+) -> None:
+    result = _package(tmp_path, renderer=Renderer())
+    plist_path = result.docset_path / "Contents" / "Info.plist"
+    with plist_path.open("rb") as input_file:
+        metadata = plistlib.load(input_file)
+    metadata[key] = value
+    with plist_path.open("wb") as output_file:
+        plistlib.dump(metadata, output_file, fmt=plistlib.FMT_XML, sort_keys=True)
+
+    with pytest.raises(ValueError, match="unexpected Info.plist metadata"):
+        verify_docset(result.docset_path, archive_path=result.archive_path)
+
+
 def test_verify_requires_canonical_build_manifest_json(tmp_path: Path) -> None:
     result = _package(tmp_path, renderer=Renderer())
     manifest_path = result.docset_path / "Contents" / "Resources" / BUILD_MANIFEST_NAME

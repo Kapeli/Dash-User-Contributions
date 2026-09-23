@@ -42,7 +42,7 @@ from .sources.manifest import (
 
 CONTRIBUTION_DIRECTORY = Path(__file__).resolve().parents[3]
 DEFAULT_CACHE_DIRECTORY = Path.home() / ".arm-acle-docset-cache"
-CLANG_TBLGEN_VERSION = "22.1.1"
+CLANG_TBLGEN_VERSION = "23.1.1"
 GENERATED_HEADER_SHA256: Mapping[str, str] = {
     Path(member.local_path).name: member.sha256 for member in LLVM_GENERATED_HEADERS
 }
@@ -88,17 +88,17 @@ def build_parser() -> argparse.ArgumentParser:
     build_parser_.add_argument(
         "--clang-tblgen",
         type=Path,
-        help="path to clang-tblgen 22.1.1 (default: PATH lookup)",
+        help="path to clang-tblgen 23.1.1 (default: PATH lookup)",
     )
     build_parser_.add_argument(
         "--llvm-mca",
         type=Path,
-        help="path to llvm-mca 22.1.1 (default: PATH lookup)",
+        help="path to llvm-mca 23.1.1 (default: PATH lookup)",
     )
     build_parser_.add_argument(
         "--llvm-mc",
         type=Path,
-        help="path to llvm-mc 22.1.1 (default: sibling of llvm-mca)",
+        help="path to llvm-mc 23.1.1 (default: sibling of llvm-mca)",
     )
     build_parser_.add_argument(
         "--performance-profile",
@@ -205,16 +205,17 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _fetch_command(args: argparse.Namespace) -> int:
+    cache_dir = _require_external_input_directory(args.cache_dir, "--cache-dir")
     artifacts = select_artifacts(
         SOURCE_ARTIFACTS,
         include_optional=args.include_optional,
     )
     resolved = fetch_sources(
-        args.cache_dir,
+        cache_dir,
         offline=args.offline,
         artifacts=artifacts,
     )
-    print(f"Verified {len(resolved)} source files in {Path(args.cache_dir).resolve()}")
+    print(f"Verified {len(resolved)} source files in {cache_dir}")
     return 0
 
 
@@ -228,6 +229,12 @@ def _build_command(args: argparse.Namespace) -> int:
         raise ValueError(
             "--performance-profile is a development subset; also pass --no-archive"
         )
+    cache_dir = _require_external_input_directory(args.cache_dir, "--cache-dir")
+    source_dir = (
+        _require_external_input_directory(args.source_dir, "--source-dir")
+        if args.source_dir is not None
+        else None
+    )
     build_runtime = require_pinned_build_runtime()
     build_inputs_digest = build_inputs_sha256()
     clang_tblgen = _resolve_clang_tblgen(args.clang_tblgen)
@@ -239,8 +246,8 @@ def _build_command(args: argparse.Namespace) -> int:
     llvm_tools = _collect_llvm_tool_identities(clang_tblgen, llvm_mc, llvm_mca)
 
     with resolved_source_snapshot(
-        args.cache_dir,
-        source_dir=args.source_dir,
+        cache_dir,
+        source_dir=source_dir,
         offline=args.offline,
     ) as source_paths:
         summary = _build_from_source_snapshot(
@@ -422,14 +429,32 @@ def _verify_command(args: argparse.Namespace) -> int:
         allow_development_subset=args.allow_development_subset,
     )
     if args.source_dir is not None:
+        source_dir = _require_external_input_directory(
+            args.source_dir, "--source-dir"
+        )
         with resolved_source_snapshot(
             DEFAULT_CACHE_DIRECTORY,
-            source_dir=args.source_dir,
+            source_dir=source_dir,
             offline=True,
         ):
             pass
     print(f"Verified {docset}")
     return 0
+
+
+def _require_external_input_directory(path: Path, option: str) -> Path:
+    """Reject input paths that could put raw source material in this contribution."""
+
+    requested = Path(path).expanduser().resolve()
+    contribution = CONTRIBUTION_DIRECTORY.resolve()
+    if requested.is_relative_to(contribution) or contribution.is_relative_to(
+        requested
+    ):
+        raise ValueError(
+            f"{option} must be outside the contribution directory; "
+            "use a dedicated private cache or source directory"
+        )
+    return requested
 
 
 def generate_llvm_headers(
@@ -505,7 +530,7 @@ def _resolve_clang_tblgen(value: Path | None) -> Path:
     discovered = shutil.which("clang-tblgen")
     if discovered is None:
         raise RuntimeError(
-            "clang-tblgen 22.1.1 was not found; pass --clang-tblgen with an exact tool path"
+            "clang-tblgen 23.1.1 was not found; pass --clang-tblgen with an exact tool path"
         )
     return Path(discovered).resolve()
 
@@ -519,7 +544,7 @@ def _resolve_llvm_tool(value: Path | None, name: str) -> Path:
     discovered = shutil.which(name)
     if discovered is None:
         raise RuntimeError(
-            f"{name} 22.1.1 was not found; pass --{name} with an exact tool path"
+            f"{name} 23.1.1 was not found; pass --{name} with an exact tool path"
         )
     return Path(discovered).resolve()
 

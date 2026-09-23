@@ -22,7 +22,7 @@ license notices for source material represented in the generated docset:
 - `ARM-TRADEMARK-NOTICE.md` is copied from `main/TRADEMARK_NOTICE.md` at the
   same commit and preserves Arm's trademark notice for the adapted material.
 - `LLVM.txt` is copied from LLVM's `LICENSE.TXT` at commit
-  `fef02d48c08db859ef83f84232ed78bd9d1c323a` (`llvmorg-22.1.1`). It includes
+  `6dfe1677ab8dffbc6ec13d53a1e0215d75147689` (`llvmorg-23.1.1`). It includes
   Apache License 2.0 and the LLVM Exceptions.
 - The Arm A-profile feature registry is not redistributed and no license text
   for it is included here. The adjacent `NOTICE.md` identifies the cited

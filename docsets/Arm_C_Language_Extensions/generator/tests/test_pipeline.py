@@ -304,6 +304,64 @@ def test_neon_header_missing_exact_candidate_uses_source_rule() -> None:
     assert "no exact public-spelling declaration" in diagnostic.message
 
 
+def test_neon_bf16_type_utility_uses_llvm_neon_target() -> None:
+    source = LLVMSourceRef(
+        repository="llvm/llvm-project",
+        commit="llvm-commit",
+        release_tag="llvmorg-23.1.1",
+        header="arm_neon.h",
+        line=10,
+        sha256="a" * 64,
+    )
+    prototype = LLVMPrototype(
+        raw="bfloat16x8_t vcombine_bf16(bfloat16x4_t low, bfloat16x4_t high)",
+        return_type="bfloat16x8_t",
+        parameters=(
+            LLVMParameter("bfloat16x4_t low", "bfloat16x4_t", "low"),
+            LLVMParameter("bfloat16x4_t high", "bfloat16x4_t", "high"),
+        ),
+    )
+    name = LLVMName(
+        spelling="vcombine_bf16",
+        role="explicit",
+        namespace="default",
+        availability=None,
+        source_ref=source,
+    )
+    llvm_callable = LLVMCallable(
+        family="neon",
+        builtin="combine_bf16",
+        prototype=prototype,
+        names=(name,),
+        source_refs=(source,),
+        target_features=("neon",),
+    )
+    callable_ = ConcreteCallable(
+        family="neon",
+        name="vcombine_bf16",
+        signature=Signature(
+            "bfloat16x8_t",
+            (
+                Parameter("low", "bfloat16x4_t"),
+                Parameter("high", "bfloat16x4_t"),
+            ),
+        ),
+        semantics=Semantics(
+            summary="Bfloat16 intrinsics Requires the +bf16 architecture extension."
+        ),
+    )
+
+    validated = _apply_llvm_neon_target_features((callable_,), (llvm_callable,))[0]
+    attached = _attach_feature_flags(
+        validated,
+        index_feature_flags_by_macro(DEFAULT_FEATURE_FLAG_MANIFEST),
+    )
+
+    assert not validated.diagnostics
+    assert attached.compilation.feature_macros == ("__ARM_NEON",)
+    assert attached.compilation.compiler_flags
+
+
 def _complex_variant_patch(
     expected_variants: list[dict[str, object]],
 ) -> dict[str, object]:
@@ -364,7 +422,7 @@ def _llvm_variant_source(line: int) -> SourceRef:
         id=f"llvm-variant-{line}",
         repository="llvm/llvm-project",
         commit="llvm-commit",
-        path="lib/clang/22/include/arm_sve.h",
+        path="lib/clang/23/include/arm_sve.h",
         start_line=line,
         end_line=line,
         license_id="Apache-2.0 WITH LLVM-exception",
@@ -2230,7 +2288,7 @@ def test_early_streaming_guard_enables_exact_markdown_signature_merge() -> None:
         "llvm-header",
         "llvm/llvm-project",
         "llvm-commit",
-        "lib/clang/22/include/arm_sve.h",
+        "lib/clang/23/include/arm_sve.h",
         10,
         10,
     )
@@ -2325,7 +2383,7 @@ def test_markdown_attributes_enrich_unannotated_header_signature() -> None:
         "llvm-header",
         "llvm/llvm-project",
         "llvm-commit",
-        "lib/clang/22/include/arm_sme.h",
+        "lib/clang/23/include/arm_sme.h",
         10,
         10,
     )
@@ -2406,7 +2464,7 @@ def test_markdown_attribute_enrichment_refuses_ambiguous_header_matches() -> Non
         "llvm-header",
         "llvm/llvm-project",
         "llvm-commit",
-        "lib/clang/22/include/arm_sme.h",
+        "lib/clang/23/include/arm_sme.h",
         10,
         10,
     )
@@ -2463,7 +2521,7 @@ def test_markdown_attribute_enrichment_does_not_collapse_sve_dual_mode() -> None
                 "llvm-sve-header",
                 "llvm/llvm-project",
                 "llvm-commit",
-                "lib/clang/22/include/arm_sve.h",
+                "lib/clang/23/include/arm_sve.h",
                 10,
                 10,
             ),

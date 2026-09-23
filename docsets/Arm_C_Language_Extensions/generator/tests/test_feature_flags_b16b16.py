@@ -133,7 +133,7 @@ def test_sve_b16b16_has_complete_sve2_and_sme2_alternatives() -> None:
         for example in requirement.compiler_flags
     }
     expected: set[tuple[str, str, str | None, tuple[str, ...]]] = set()
-    for compiler, version in (("Clang", "22.1.1"), ("GCC", GCC_MANUAL_VERSION)):
+    for compiler, version in (("Clang", "23.1.1"), ("GCC", GCC_MANUAL_VERSION)):
         for dependency in ("sve2", "sme2"):
             expected.add(
                 (
@@ -187,13 +187,13 @@ def test_sme_b16b16_uses_the_source_defined_complete_alias() -> None:
     } == {
         (
             "Clang",
-            "22.1.1",
+            "23.1.1",
             "armv9.2-a",
             ("-march=armv9.2-a+sme2+sve-b16b16+sme-b16b16",),
         ),
         (
             "Clang",
-            "22.1.1",
+            "23.1.1",
             None,
             ("-mcpu=generic+sme2+sve-b16b16+sme-b16b16",),
         ),

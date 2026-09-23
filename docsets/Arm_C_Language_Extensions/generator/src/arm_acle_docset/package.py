@@ -40,9 +40,9 @@ RELEASE_PERFORMANCE_PROFILES = (
     "cortex-m85",
 )
 EXPECTED_LLVM_TOOLS = ("clang-tblgen", "llvm-mc", "llvm-mca")
-LLVM_RELEASE_VERSION = "22.1.1"
-LLVM_RELEASE_TAG = "llvmorg-22.1.1"
-LLVM_RELEASE_COMMIT = "fef02d48c08db859ef83f84232ed78bd9d1c323a"
+LLVM_RELEASE_VERSION = "23.1.1"
+LLVM_RELEASE_TAG = "llvmorg-23.1.1"
+LLVM_RELEASE_COMMIT = "6dfe1677ab8dffbc6ec13d53a1e0215d75147689"
 PINNED_PYTHON_IMPLEMENTATION = "CPython"
 PINNED_PYTHON_VERSION = "3.14.2"
 PINNED_SQLITE_VERSION = "3.50.4"
@@ -555,22 +555,8 @@ def verify_docset(
 
     with plist_path.open("rb") as input_file:
         metadata = plistlib.load(input_file)
-    expected_metadata = {
-        "CFBundleIdentifier": BUNDLE_IDENTIFIER,
-        "CFBundleName": DOCSET_DISPLAY_NAME,
-        "DocSetPlatformFamily": PLATFORM_FAMILY,
-        "DashDocSetFamily": "dashtoc",
-        "dashIndexFilePath": "index.html",
-        "isDashDocset": True,
-    }
-    for key, expected in expected_metadata.items():
-        if metadata.get(key) != expected:
-            raise ValueError(
-                f"unexpected Info.plist value for {key}: {metadata.get(key)!r}"
-            )
-    for forbidden_key in ("CFBundleShortVersionString", "CFBundleVersion"):
-        if forbidden_key in metadata:
-            raise ValueError(f"docset Info.plist must not contain {forbidden_key}")
+    if metadata != _info_plist_metadata():
+        raise ValueError("unexpected Info.plist metadata")
 
     _verify_sqlite_header(index_path)
     try:
@@ -613,7 +599,14 @@ def verify_docset(
 
 
 def _write_info_plist(path: Path) -> None:
-    metadata = {
+    with path.open("wb") as output:
+        plistlib.dump(
+            _info_plist_metadata(), output, fmt=plistlib.FMT_XML, sort_keys=True
+        )
+
+
+def _info_plist_metadata() -> dict[str, object]:
+    return {
         "CFBundleIdentifier": BUNDLE_IDENTIFIER,
         "CFBundleName": DOCSET_DISPLAY_NAME,
         "CFBundleDisplayName": DOCSET_DISPLAY_NAME,
@@ -623,8 +616,6 @@ def _write_info_plist(path: Path) -> None:
         "dashIndexFilePath": "index.html",
         "isDashDocset": True,
     }
-    with path.open("wb") as output:
-        plistlib.dump(metadata, output, fmt=plistlib.FMT_XML, sort_keys=True)
 
 
 def _write_build_manifest(path: Path, manifest: BuildManifest) -> None:

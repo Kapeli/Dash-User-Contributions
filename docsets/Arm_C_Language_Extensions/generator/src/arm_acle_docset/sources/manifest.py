@@ -35,8 +35,8 @@ from typing import IO, Iterable, Iterator, Mapping, Sequence
 
 
 ACLE_REVISION = "62d9cbd68abb6d18dd8f06980da7758d9dbe0560"
-LLVM_TAG = "llvmorg-22.1.1"
-LLVM_COMMIT = "fef02d48c08db859ef83f84232ed78bd9d1c323a"
+LLVM_TAG = "llvmorg-23.1.1"
+LLVM_COMMIT = "6dfe1677ab8dffbc6ec13d53a1e0215d75147689"
 GCC_COMMIT = "fcfb06e236d4d1689a6caf8e5409b078262af481"
 
 
@@ -284,7 +284,7 @@ SOURCE_ARTIFACTS: tuple[SourceArtifact, ...] = (
     ),
     _raw_llvm_tablegen_artifact(
         "arm_neon.td",
-        "ce3de834be74f8292170f4bb5f83d1b3819414c7bee64a326a770be4e53ee71d",
+        "9003a4a0d80ef39dd618eca877c51e8759d9a373d363a7af53e3cbf158cee771",
     ),
     _raw_llvm_tablegen_artifact(
         "arm_neon_incl.td",
@@ -304,19 +304,19 @@ SOURCE_ARTIFACTS: tuple[SourceArtifact, ...] = (
     ),
     _raw_llvm_tablegen_artifact(
         "arm_sve.td",
-        "16d0424f7bbb04ab0e4635623422325fa7ac0a8040adf3ef6fa571651b7f70c5",
+        "19605d7dcdd26a4983bdeef87cbfb0aafe1b9cee9c5634247f15ec6d8fe9dcda",
     ),
     _raw_llvm_tablegen_artifact(
         "arm_sme.td",
-        "c953db7c1f7c7de5b1dddc5efd1bb28e038802733e9f5655c8737eab85228fdf",
+        "647c4d10d0780daf93e0dbfe20b8566c66702050530020d0a73c698a2cc31f39",
     ),
     _raw_llvm_tablegen_artifact(
         "arm_sve_sme_incl.td",
-        "27bc8d5e78615404d564301eeb2fb9da5565c146e54259f70757fc2314fb14cd",
+        "18f8c06367cd7a797ad6cc695fa7dc29dd73e86617e5780d72db49877276a8e3",
     ),
     _raw_llvm_resource_header_artifact(
         "arm_acle.h",
-        "05e7ef603d3490d485b4051d84fe92bf911ff17656367a2feda4e6064acbcfb4",
+        "457519d23996fc9daaed25e22341f7a3e8163162931645ce4e42e6437b767201",
     ),
     _raw_llvm_resource_header_artifact(
         "arm_cmse.h",
@@ -344,17 +344,17 @@ SOURCE_ARTIFACTS: tuple[SourceArtifact, ...] = (
     ),
 )
 
-# clang-tblgen 22.1.1 deterministically produces these declaration inputs from
+# clang-tblgen 23.1.1 deterministically produces these declaration inputs from
 # the pinned TableGen artifacts above. They are verified before any adapter is
 # allowed to consume the generated include directory.
 LLVM_GENERATED_HEADERS: tuple[SourceMember, ...] = (
     SourceMember(
         local_path="llvm/generated/include/arm_sve.h",
-        sha256="52c7dd2eb8ddb280ce24d041a6504d1d5937cc46a288ec78c0041d14ec71ce72",
+        sha256="fa3563bb88e2e500b5542fec8d46f790bd16c85b29769e684aff5ea79f7ad411",
     ),
     SourceMember(
         local_path="llvm/generated/include/arm_sme.h",
-        sha256="0dae22d987ada9594b197285e1f1528b1c51eafd4579345d2949367c3e788943",
+        sha256="0f81e716fb6f3a15566c100b5ab92853d8f45c5a061634ec743156c2afcea53e",
     ),
     SourceMember(
         local_path="llvm/generated/include/arm_mve.h",
@@ -362,7 +362,7 @@ LLVM_GENERATED_HEADERS: tuple[SourceMember, ...] = (
     ),
     SourceMember(
         local_path="llvm/generated/include/arm_neon.h",
-        sha256="ed8fc4135aef7c5af5f30ca3715d96ee9ad5a2bc97f558214fadda5704742b26",
+        sha256="4a2ea7589accb7524eef74e9991c692d5c15059239781076b26ae230a358f20e",
     ),
     SourceMember(
         local_path="llvm/generated/include/arm_vector_types.h",

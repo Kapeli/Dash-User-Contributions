@@ -17,8 +17,8 @@ from arm_acle_docset.model import (
 from arm_acle_docset.sources import performance
 from arm_acle_docset.sources.performance import (
     LLVMToolError,
-    LLVM_22_1_1_PROFILES,
-    LLVM_22_1_1_REPRESENTATIVE_PROBES,
+    LLVM_23_1_1_PROFILES,
+    LLVM_23_1_1_REPRESENTATIVE_PROBES,
     PerformanceFormatError,
     build_default_performance_datasets,
     instruction_form_matches,
@@ -448,23 +448,23 @@ def test_llvm_runner_uses_safe_argv_version_gate_and_model_evidence(
         if argv[-1] == "--version":
             return SimpleNamespace(
                 returncode=0,
-                stdout="Homebrew LLVM version 22.1.1\n",
+                stdout="Homebrew LLVM version 23.1.1\n",
                 stderr="",
             )
         return SimpleNamespace(returncode=0, stdout=raw_json, stderr="")
 
     monkeypatch.setattr(performance.subprocess, "run", fake_run)
     source_ref = SourceRef(
-        id="llvm-aarch64-22.1.1",
+        id="llvm-aarch64-23.1.1",
         repository="llvm/llvm-project",
-        commit="llvmorg-22.1.1",
+        commit="llvmorg-23.1.1",
         path="llvm/lib/Target/AArch64",
         license_id="Apache-2.0 WITH LLVM-exception",
     )
     dataset = run_llvm_mca(
         "add v0.4s, v1.4s, v2.4s\ncrc32w w0, w1, w2\n",
         executable=Path("/opt/llvm/bin/llvm-mca"),
-        expected_tool_version="22.1.1",
+        expected_tool_version="23.1.1",
         march="aarch64",
         mcpu="neoverse-n2",
         microarchitecture="Neoverse N2",
@@ -504,7 +504,7 @@ def test_llvm_runner_rejects_tool_version_drift(
     source_ref = SourceRef(
         id="llvm-test",
         repository="llvm/llvm-project",
-        commit="llvmorg-22.1.1",
+        commit="llvmorg-23.1.1",
         path="llvm/lib/Target/AArch64",
     )
 
@@ -512,7 +512,7 @@ def test_llvm_runner_rejects_tool_version_drift(
         run_llvm_mca(
             "add x0, x1, x2\n",
             executable=Path("llvm-mca"),
-            expected_tool_version="22.1.1",
+            expected_tool_version="23.1.1",
             march="aarch64",
             mcpu="neoverse-n2",
             microarchitecture="Neoverse N2",
@@ -523,24 +523,24 @@ def test_llvm_runner_rejects_tool_version_drift(
 def test_representative_probe_catalog_covers_all_six_profiles_without_fuzzy_keys() -> (
     None
 ):
-    profile_cpus = {profile.cpu for profile in LLVM_22_1_1_PROFILES}
+    profile_cpus = {profile.cpu for profile in LLVM_23_1_1_PROFILES}
     covered_cpus = {
-        cpu for probe in LLVM_22_1_1_REPRESENTATIVE_PROBES for cpu in probe.profiles
+        cpu for probe in LLVM_23_1_1_REPRESENTATIVE_PROBES for cpu in probe.profiles
     }
 
     assert covered_cpus == profile_cpus
-    assert len(LLVM_22_1_1_PROFILES) == 6
-    assert {probe.family for probe in LLVM_22_1_1_REPRESENTATIVE_PROBES} >= {
+    assert len(LLVM_23_1_1_PROFILES) == 6
+    assert {probe.family for probe in LLVM_23_1_1_REPRESENTATIVE_PROBES} >= {
         "general",
         "neon",
         "mve",
         "sve",
         "sve2",
     }
-    assert len({probe.id for probe in LLVM_22_1_1_REPRESENTATIVE_PROBES}) == len(
-        LLVM_22_1_1_REPRESENTATIVE_PROBES
+    assert len({probe.id for probe in LLVM_23_1_1_REPRESENTATIVE_PROBES}) == len(
+        LLVM_23_1_1_REPRESENTATIVE_PROBES
     )
-    assert all(probe.intrinsic_examples for probe in LLVM_22_1_1_REPRESENTATIVE_PROBES)
+    assert all(probe.intrinsic_examples for probe in LLVM_23_1_1_REPRESENTATIVE_PROBES)
 
 
 def test_default_performance_builder_rejects_unknown_and_duplicate_profiles() -> None:
@@ -583,7 +583,7 @@ def test_standard_profile_uses_its_own_llvm_backend_provenance(
 
     monkeypatch.setattr(performance, "run_llvm_mca", fake_run_llvm_mca)
 
-    result = performance.run_llvm_22_1_1_profile(
+    result = performance.run_llvm_23_1_1_profile(
         "rbit r0, r1\n",
         executable=Path("llvm-mca"),
         cpu=cpu,
@@ -601,9 +601,9 @@ def test_standard_profile_uses_its_own_llvm_backend_provenance(
 @pytest.mark.skipif(
     not Path("/opt/homebrew/opt/llvm/bin/llvm-mca").is_file()
     or not Path("/opt/homebrew/opt/llvm/bin/llvm-mc").is_file(),
-    reason="Homebrew LLVM 22.1.1 tools are not installed",
+    reason="Homebrew LLVM 23.1.1 tools are not installed",
 )
-def test_representative_probe_set_runs_on_pinned_llvm_22_1_1() -> None:
+def test_representative_probe_set_runs_on_pinned_llvm_23_1_1() -> None:
     llvm_mca = Path("/opt/homebrew/opt/llvm/bin/llvm-mca")
     version = subprocess.run(
         [str(llvm_mca), "--version"],
@@ -611,13 +611,13 @@ def test_representative_probe_set_runs_on_pinned_llvm_22_1_1() -> None:
         capture_output=True,
         text=True,
     ).stdout
-    if "version 22.1.1" not in version:
-        pytest.skip("installed Homebrew llvm-mca is not version 22.1.1")
+    if "version 23.1.1" not in version:
+        pytest.skip("installed Homebrew llvm-mca is not version 23.1.1")
 
     datasets = build_default_performance_datasets(llvm_mca=llvm_mca)
 
     assert [dataset.manifest.cpu for dataset in datasets] == [
-        profile.cpu for profile in LLVM_22_1_1_PROFILES
+        profile.cpu for profile in LLVM_23_1_1_PROFILES
     ]
     assert all(dataset.records for dataset in datasets)
     assert all(
@@ -687,15 +687,15 @@ def _manifest_payload() -> dict[str, object]:
         "source": {
             "evidence_kind": "compiler_model",
             "name": "LLVM schedule model",
-            "version": "22.1.1",
+            "version": "23.1.1",
             "confidence": "medium",
             "source_ref": {
                 "id": "llvm-test",
                 "repository": "llvm/llvm-project",
-                "commit": "llvmorg-22.1.1",
+                "commit": "llvmorg-23.1.1",
                 "path": "llvm/lib/Target/AArch64",
             },
-            "tool": {"name": "llvm-mca", "version": "22.1.1"},
+            "tool": {"name": "llvm-mca", "version": "23.1.1"},
             "notes": ["Test fixture."],
         },
     }

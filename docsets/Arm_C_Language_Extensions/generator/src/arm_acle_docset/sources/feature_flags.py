@@ -34,8 +34,8 @@ from .acle_markdown import ACLE_MARKDOWN_LICENSE
 
 SCHEMA_VERSION = 1
 ACLE_REVISION = "62d9cbd68abb6d18dd8f06980da7758d9dbe0560"
-LLVM_TAG = "llvmorg-22.1.1"
-LLVM_REVISION = "fef02d48c08db859ef83f84232ed78bd9d1c323a"
+LLVM_TAG = "llvmorg-23.1.1"
+LLVM_REVISION = "6dfe1677ab8dffbc6ec13d53a1e0215d75147689"
 GCC_MANUAL_VERSION = "16.2.0"
 ARM_FEATURE_REGISTRY_DOCUMENT_ID = "109697_2025_12_en"
 ARM_FEATURE_REGISTRY_TITLE = "Feature names in A-profile architecture"
@@ -219,7 +219,7 @@ class FeatureFlagMapping:
                     rule=(
                         "Use Arm feature registry 109697_2025_12_en for the "
                         "minimum architecture and ISA dependencies, the pinned "
-                        "ACLE revision for the macro, and pinned LLVM 22.1.1 "
+                        "ACLE revision for the macro, and pinned LLVM 23.1.1 "
                         f"for Clang feature spellings; {compiler_scope}."
                     ),
                 )
@@ -675,7 +675,7 @@ def _flags(
 ) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
     for compiler, version, source_id in (
-        ("Clang", "22.1.1", source_ids[0]),
+        ("Clang", "23.1.1", source_ids[0]),
         ("GCC", GCC_MANUAL_VERSION, source_ids[1]),
     ):
         common_notes = [
@@ -731,7 +731,7 @@ def _clang_flags(
     return [
         {
             "compiler": "Clang",
-            "version": "22.1.1",
+            "version": "23.1.1",
             "base_march": base_march,
             "flags": [march],
             "default_enabled": default_enabled,
@@ -740,7 +740,7 @@ def _clang_flags(
         },
         {
             "compiler": "Clang",
-            "version": "22.1.1",
+            "version": "23.1.1",
             "base_march": None,
             "flags": [mcpu],
             "default_enabled": None,
@@ -1107,7 +1107,7 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
             ),
             notes=(
                 "Arm feature registry 109697_2025_12_en records FEAT_FAMINMAX as optional from Armv9.2, mandatory with FEAT_FP from Armv9.5, and requiring one of FEAT_AdvSIMD, FEAT_SVE2, or FEAT_SME2.",
-                "Pinned LLVM 22.1.1 and GCC 16.2 expose the +faminmax modifier; Armv9.5-A enables it by default, but the minimum Armv9.2-A example selects it explicitly.",
+                "Pinned LLVM 23.1.1 and GCC 16.2 expose the +faminmax modifier; Armv9.5-A enables it by default, but the minimum Armv9.2-A example selects it explicitly.",
             ),
             arm_registry_page=142,
         ),
@@ -1335,7 +1335,7 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
                     note=(
                         "The Arm ISA requires FEAT_FP8 and either Advanced SIMD "
                         "or SVE2. The examples also enable the FP8 dependencies "
-                        "that Clang 22.1.1 can express; +fp8fma supplies +fp8 in "
+                        "that Clang 23.1.1 can express; +fp8fma supplies +fp8 in "
                         "the pinned compiler model."
                     ),
                 ),
@@ -1343,7 +1343,7 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
             notes=(
                 "Arm feature registry 109697_2025_12_en records FEAT_FP8FMA as optional from Armv9.2 and requires FEAT_FP8 plus either FEAT_AdvSIMD or FEAT_SVE2.",
                 "FEAT_FP8 in turn requires FEAT_FPMR, FEAT_FAMINMAX, FEAT_LUT, FEAT_BF16, and one of FEAT_AdvSIMD, FEAT_SVE2, or FEAT_SME2.",
-                "Clang 22.1.1 has no +fpmr modifier; the official ISA dependency is retained without inventing a compiler flag.",
+                "Clang 23.1.1 has no +fpmr modifier; the official ISA dependency is retained without inventing a compiler flag.",
             ),
             arm_registry_page=145,
         ),
@@ -1369,14 +1369,14 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
                     note=(
                         "The Arm ISA requires FEAT_SME2 and FEAT_FP8. The "
                         "examples name both and enable every additional FP8 "
-                        "dependency that Clang 22.1.1 can express."
+                        "dependency that Clang 23.1.1 can express."
                     ),
                 ),
             ),
             notes=(
                 "Arm feature registry 109697_2025_12_en records FEAT_SSVE_FP8FMA as optional from Armv9.2 with FEAT_FP8 and FEAT_SME2 required.",
                 "FEAT_FP8 in turn requires FEAT_FPMR, FEAT_FAMINMAX, FEAT_LUT, FEAT_BF16, and one of FEAT_AdvSIMD, FEAT_SVE2, or FEAT_SME2.",
-                "Clang 22.1.1 has no +fpmr modifier; the official ISA dependency is retained without inventing a compiler flag.",
+                "Clang 23.1.1 has no +fpmr modifier; the official ISA dependency is retained without inventing a compiler flag.",
             ),
             arm_registry_page=153,
         ),
@@ -1401,14 +1401,14 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
                     default_enabled=False,
                     note=(
                         "The examples enable every FEAT_FP8 dependency that "
-                        "Clang 22.1.1 can express. The AArch64 target provides "
+                        "Clang 23.1.1 can express. The AArch64 target provides "
                         "the required Advanced SIMD alternative."
                     ),
                 ),
             ),
             notes=(
                 "Arm feature registry 109697_2025_12_en records FEAT_FP8 as optional from Armv9.2 and requires FEAT_FPMR, FEAT_FAMINMAX, FEAT_LUT, FEAT_BF16, and one of FEAT_AdvSIMD, FEAT_SVE2, or FEAT_SME2.",
-                "Clang 22.1.1 models +fp8 as implying Advanced SIMD but has no +fpmr modifier; the official ISA dependency is retained without inventing a compiler flag.",
+                "Clang 23.1.1 models +fp8 as implying Advanced SIMD but has no +fpmr modifier; the official ISA dependency is retained without inventing a compiler flag.",
             ),
             arm_registry_page=143,
         ),
@@ -1587,7 +1587,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
 
     gcc_gap_note = (
         "GCC 16.2 does not document this exact modifier; the examples are "
-        "therefore scoped to Clang 22.1.1."
+        "therefore scoped to Clang 23.1.1."
     )
     return (
         _feature(
@@ -1951,7 +1951,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                     note=(
                         "FEAT_RDM is optional from Armv8.0 and requires "
                         "Advanced SIMD. +rdma is the common GCC spelling and "
-                        "a Clang 22.1.1 accepted alias for LLVM's +rdm token."
+                        "a Clang 23.1.1 accepted alias for LLVM's +rdm token."
                     ),
                 ),
             ),
@@ -2013,13 +2013,13 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                     "compiler_flags": [
                         {
                             "compiler": "Clang",
-                            "version": "22.1.1",
+                            "version": "23.1.1",
                             "base_march": "armv8.5-a",
                             "flags": ["-march=armv8.5-a+simd"],
                             "default_enabled": True,
                             "notes": [
                                 "Target: aarch64.",
-                                "Clang 22.1.1 has no accepted explicit FEAT_FRINTTS modifier; Armv8.5-A enables it with floating point.",
+                                "Clang 23.1.1 has no accepted explicit FEAT_FRINTTS modifier; Armv8.5-A enables it with floating point.",
                             ],
                             "source_ids": ["frint:llvm-aarch64"],
                         },

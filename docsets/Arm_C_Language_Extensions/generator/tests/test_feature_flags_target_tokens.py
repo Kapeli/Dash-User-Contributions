@@ -454,10 +454,10 @@ def test_target_tokens_have_exact_macro_and_compiler_mappings(
         for example in requirement.compiler_flags
     }
     expected = {
-        ("Clang", "22.1.1", None, (mcpu,), None, None),
+        ("Clang", "23.1.1", None, (mcpu,), None, None),
         (
             "Clang",
-            "22.1.1",
+            "23.1.1",
             march.removeprefix("-march=").split("+", 1)[0],
             (march,),
             False,

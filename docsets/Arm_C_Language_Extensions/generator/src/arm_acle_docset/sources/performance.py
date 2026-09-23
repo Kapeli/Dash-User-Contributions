@@ -101,7 +101,7 @@ class LLVMToolError(RuntimeError):
 
 @dataclass(frozen=True, slots=True)
 class LLVMModelProfile:
-    """One reproducible LLVM 22.1.1 scheduling-model configuration."""
+    """One reproducible LLVM 23.1.1 scheduling-model configuration."""
 
     display_name: str
     cpu: str
@@ -166,35 +166,35 @@ class LLVMRepresentativeProbe:
             )
 
 
-LLVM_22_1_1_TAG = "llvmorg-22.1.1"
-LLVM_22_1_1_COMMIT = "fef02d48c08db859ef83f84232ed78bd9d1c323a"
-LLVM_22_1_1_AARCH64_SOURCE_REF = SourceRef(
-    id="llvm-aarch64-schedule-model-22.1.1",
+LLVM_23_1_1_TAG = "llvmorg-23.1.1"
+LLVM_23_1_1_COMMIT = "6dfe1677ab8dffbc6ec13d53a1e0215d75147689"
+LLVM_23_1_1_AARCH64_SOURCE_REF = SourceRef(
+    id="llvm-aarch64-schedule-model-23.1.1",
     repository="llvm/llvm-project",
-    commit=LLVM_22_1_1_COMMIT,
+    commit=LLVM_23_1_1_COMMIT,
     path="llvm/lib/Target/AArch64",
     license_id="Apache-2.0 WITH LLVM-exception",
     url=(
         "https://github.com/llvm/llvm-project/tree/"
-        f"{LLVM_22_1_1_COMMIT}/llvm/lib/Target/AArch64"
+        f"{LLVM_23_1_1_COMMIT}/llvm/lib/Target/AArch64"
     ),
 )
-LLVM_22_1_1_ARM_SOURCE_REF = SourceRef(
-    id="llvm-arm-schedule-model-22.1.1",
+LLVM_23_1_1_ARM_SOURCE_REF = SourceRef(
+    id="llvm-arm-schedule-model-23.1.1",
     repository="llvm/llvm-project",
-    commit=LLVM_22_1_1_COMMIT,
+    commit=LLVM_23_1_1_COMMIT,
     path="llvm/lib/Target/ARM",
     license_id="Apache-2.0 WITH LLVM-exception",
     url=(
         "https://github.com/llvm/llvm-project/tree/"
-        f"{LLVM_22_1_1_COMMIT}/llvm/lib/Target/ARM"
+        f"{LLVM_23_1_1_COMMIT}/llvm/lib/Target/ARM"
     ),
 )
 
 # Profiles deliberately describe model coverage, not hardware availability.
 # A partial profile can still provide useful values, but every record carries a
 # lower confidence and an explicit caveat.
-LLVM_22_1_1_PROFILES: tuple[LLVMModelProfile, ...] = (
+LLVM_23_1_1_PROFILES: tuple[LLVMModelProfile, ...] = (
     LLVMModelProfile(
         "Cortex-A55",
         "cortex-a55",
@@ -267,7 +267,7 @@ _MVE_PROFILES = ("cortex-m55", "cortex-m85")
 # describes every intrinsic with the same mnemonic.  Each entry retains its
 # exact operand shape and is checked with llvm-mc before llvm-mca values are
 # exposed to the canonical catalog.
-LLVM_22_1_1_REPRESENTATIVE_PROBES: tuple[LLVMRepresentativeProbe, ...] = (
+LLVM_23_1_1_REPRESENTATIVE_PROBES: tuple[LLVMRepresentativeProbe, ...] = (
     LLVMRepresentativeProbe(
         "a64-rbit-w",
         "general",
@@ -782,20 +782,20 @@ LLVM_22_1_1_REPRESENTATIVE_PROBES: tuple[LLVMRepresentativeProbe, ...] = (
     ),
 )
 
-LLVM_22_1_1_UNAVAILABLE_FAMILIES: Mapping[str, str] = {
+LLVM_23_1_1_UNAVAILABLE_FAMILIES: Mapping[str, str] = {
     "sme": (
-        "LLVM 22.1.1 does not provide an applicable CPU scheduling model for "
+        "LLVM 23.1.1 does not provide an applicable CPU scheduling model for "
         "SME; no performance number is published."
     ),
     "sme2": (
-        "LLVM 22.1.1 does not provide an applicable CPU scheduling model for "
+        "LLVM 23.1.1 does not provide an applicable CPU scheduling model for "
         "SME2; no performance number is published."
     ),
 }
 
-LLVM_22_1_1_NO_EXACT_FORM_REASON = (
+LLVM_23_1_1_NO_EXACT_FORM_REASON = (
     "No exact, assembler-validated representative instruction form is present "
-    "in the LLVM 22.1.1 performance probe set; no value was inferred from a "
+    "in the LLVM 23.1.1 performance probe set; no value was inferred from a "
     "mnemonic, ISA availability, or another intrinsic."
 )
 
@@ -1420,36 +1420,36 @@ def run_llvm_mca(
     return PerformanceDataset(manifest=manifest, records=records)
 
 
-def llvm_22_1_1_profile(cpu: str) -> LLVMModelProfile:
+def llvm_23_1_1_profile(cpu: str) -> LLVMModelProfile:
     """Resolve one supported default profile by exact LLVM CPU name."""
 
-    for profile in LLVM_22_1_1_PROFILES:
+    for profile in LLVM_23_1_1_PROFILES:
         if profile.cpu == cpu:
             return profile
-    supported = ", ".join(profile.cpu for profile in LLVM_22_1_1_PROFILES)
+    supported = ", ".join(profile.cpu for profile in LLVM_23_1_1_PROFILES)
     raise PerformanceFormatError(
-        f"unsupported LLVM 22.1.1 performance profile {cpu!r}; expected {supported}"
+        f"unsupported LLVM 23.1.1 performance profile {cpu!r}; expected {supported}"
     )
 
 
-def run_llvm_22_1_1_profile(
+def run_llvm_23_1_1_profile(
     assembly: str,
     *,
     executable: Path,
     cpu: str,
     timeout_seconds: float = 30.0,
 ) -> PerformanceDataset:
-    """Run one repository-standard LLVM 22.1.1 profile."""
+    """Run one repository-standard LLVM 23.1.1 profile."""
 
-    profile = llvm_22_1_1_profile(cpu)
+    profile = llvm_23_1_1_profile(cpu)
     return run_llvm_mca(
         assembly,
         executable=executable,
-        expected_tool_version="22.1.1",
+        expected_tool_version="23.1.1",
         march=profile.march,
         mcpu=profile.cpu,
         microarchitecture=profile.display_name,
-        source_ref=_llvm_22_1_1_source_ref(profile),
+        source_ref=_llvm_23_1_1_source_ref(profile),
         mattr=profile.features,
         mtriple=profile.target_triple,
         model_complete=profile.model_complete,
@@ -1457,13 +1457,13 @@ def run_llvm_22_1_1_profile(
     )
 
 
-def _llvm_22_1_1_source_ref(profile: LLVMModelProfile) -> SourceRef:
+def _llvm_23_1_1_source_ref(profile: LLVMModelProfile) -> SourceRef:
     """Return the LLVM backend that owns one profile's scheduling model."""
 
     if profile.march == "aarch64":
-        return LLVM_22_1_1_AARCH64_SOURCE_REF
+        return LLVM_23_1_1_AARCH64_SOURCE_REF
     if profile.march == "arm":
-        return LLVM_22_1_1_ARM_SOURCE_REF
+        return LLVM_23_1_1_ARM_SOURCE_REF
     raise PerformanceFormatError(
         f"unsupported LLVM backend architecture {profile.march!r} for "
         f"profile {profile.cpu!r}"
@@ -1606,7 +1606,7 @@ def run_llvm_mc(
     )
 
 
-def run_llvm_22_1_1_pipeline(
+def run_llvm_23_1_1_pipeline(
     assembly: str,
     *,
     llvm_mc_executable: Path,
@@ -1616,17 +1616,17 @@ def run_llvm_22_1_1_pipeline(
 ) -> PerformanceDataset:
     """Run the strong-identity and scheduling-model halves of one profile."""
 
-    profile = llvm_22_1_1_profile(cpu)
+    profile = llvm_23_1_1_profile(cpu)
     identities = run_llvm_mc(
         assembly,
         executable=llvm_mc_executable,
-        expected_tool_version="22.1.1",
+        expected_tool_version="23.1.1",
         target_triple=profile.target_triple,
         cpu=profile.cpu,
         features=profile.features,
         timeout_seconds=timeout_seconds,
     )
-    dataset = run_llvm_22_1_1_profile(
+    dataset = run_llvm_23_1_1_profile(
         assembly,
         executable=llvm_mca_executable,
         cpu=cpu,
@@ -1652,7 +1652,7 @@ def build_default_performance_datasets(
     strict subset by LLVM CPU name for development or targeted verification.
     ``llvm_mc`` defaults to the sibling executable beside ``llvm_mca`` so both
     halves normally come from one pinned LLVM installation.  Version checks in
-    the lower-level runners fail closed unless each tool reports 22.1.1.
+    the lower-level runners fail closed unless each tool reports 23.1.1.
 
     The returned records use reviewed ACLE ``documented_form`` values as join
     keys.  Before that substitution, pinned ``llvm-mc`` must prove that the
@@ -1668,7 +1668,7 @@ def build_default_performance_datasets(
     for profile in selected_profiles:
         selected_probes = tuple(
             probe
-            for probe in LLVM_22_1_1_REPRESENTATIVE_PROBES
+            for probe in LLVM_23_1_1_REPRESENTATIVE_PROBES
             if profile.cpu in probe.profiles
         )
         if not selected_probes:
@@ -1676,7 +1676,7 @@ def build_default_performance_datasets(
                 f"performance profile {profile.cpu!r} has no representative probes"
             )
         assembly = "\n".join(probe.assembly for probe in selected_probes) + "\n"
-        dataset = run_llvm_22_1_1_pipeline(
+        dataset = run_llvm_23_1_1_pipeline(
             assembly,
             llvm_mc_executable=llvm_mc_path,
             llvm_mca_executable=llvm_mca,
@@ -1743,11 +1743,11 @@ def performance_unavailable_record(
 
     unavailable_reason = (
         reason
-        or LLVM_22_1_1_UNAVAILABLE_FAMILIES.get(family)
-        or LLVM_22_1_1_NO_EXACT_FORM_REASON
+        or LLVM_23_1_1_UNAVAILABLE_FAMILIES.get(family)
+        or LLVM_23_1_1_NO_EXACT_FORM_REASON
     )
     return PerformanceRecord(
-        microarchitecture="LLVM 22.1.1 scheduling models",
+        microarchitecture="LLVM 23.1.1 scheduling models",
         instruction_form=instruction_form,
         unresolved_reason=unavailable_reason,
         notes=(
@@ -1761,7 +1761,7 @@ def _resolve_requested_profiles(
     profiles: Sequence[str] | None,
 ) -> tuple[LLVMModelProfile, ...]:
     requested = (
-        tuple(profile.cpu for profile in LLVM_22_1_1_PROFILES)
+        tuple(profile.cpu for profile in LLVM_23_1_1_PROFILES)
         if profiles is None
         else tuple(profiles)
     )
@@ -1769,14 +1769,14 @@ def _resolve_requested_profiles(
         raise PerformanceFormatError("at least one performance profile is required")
     if len(set(requested)) != len(requested):
         raise PerformanceFormatError("performance profiles must be unique")
-    return tuple(llvm_22_1_1_profile(cpu) for cpu in requested)
+    return tuple(llvm_23_1_1_profile(cpu) for cpu in requested)
 
 
 def _validate_representative_probe_catalog() -> None:
-    profile_cpus = {profile.cpu for profile in LLVM_22_1_1_PROFILES}
+    profile_cpus = {profile.cpu for profile in LLVM_23_1_1_PROFILES}
     ids: set[str] = set()
     forms: set[tuple[str, str]] = set()
-    for probe in LLVM_22_1_1_REPRESENTATIVE_PROBES:
+    for probe in LLVM_23_1_1_REPRESENTATIVE_PROBES:
         if probe.id in ids:
             raise PerformanceFormatError(
                 f"duplicate representative performance probe id {probe.id!r}"
@@ -1898,7 +1898,7 @@ def _llvm_target_abi_for_cpu(cpu: str | None) -> LLVMTargetABI | None:
     if cpu is None:
         return None
     normalized_cpu = cpu.casefold()
-    for profile in LLVM_22_1_1_PROFILES:
+    for profile in LLVM_23_1_1_PROFILES:
         if profile.cpu.casefold() != normalized_cpu:
             continue
         if profile.march == "aarch64":
@@ -2000,7 +2000,7 @@ def representative_probes_for_intrinsic_names(
     )
     return tuple(
         probe
-        for probe in LLVM_22_1_1_REPRESENTATIVE_PROBES
+        for probe in LLVM_23_1_1_REPRESENTATIVE_PROBES
         if probe.family in compatible_families
         and name_set.intersection(probe.intrinsic_examples)
         and (target_abi is None or _probe_supports_target_abi(probe, target_abi))

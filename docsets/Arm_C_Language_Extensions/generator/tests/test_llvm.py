@@ -49,8 +49,8 @@ def _required_record_name(record: LLVMTargetGuard) -> str:
 def test_inventory_records_the_exact_llvm_release_pin() -> None:
     inventory = _fixture_inventory()
 
-    assert LLVM_RELEASE_TAG == "llvmorg-22.1.1"
-    assert LLVM_COMMIT == "fef02d48c08db859ef83f84232ed78bd9d1c323a"
+    assert LLVM_RELEASE_TAG == "llvmorg-23.1.1"
+    assert LLVM_COMMIT == "6dfe1677ab8dffbc6ec13d53a1e0215d75147689"
     assert inventory.release_tag == LLVM_RELEASE_TAG
     assert inventory.commit == LLVM_COMMIT
     assert dict(inventory.header_sha256) == {

@@ -9,7 +9,7 @@ The upstream llvm-project source archive does not contain generated
 ``arm_sve.h``, ``arm_sme.h``, or ``arm_mve.h`` files.  Reproducible builds must
 therefore either:
 
-* pass the resource include directory from the pinned LLVM 22.1.1 toolchain;
+* pass the resource include directory from the pinned LLVM 23.1.1 toolchain;
   or
 * consume a normalized inventory previously produced by this module.
 
@@ -47,20 +47,20 @@ from ..model import (
 from ..normalize import normalize_callable, parse_availability_guard
 
 
-LLVM_RELEASE_TAG = "llvmorg-22.1.1"
-LLVM_COMMIT = "fef02d48c08db859ef83f84232ed78bd9d1c323a"
+LLVM_RELEASE_TAG = "llvmorg-23.1.1"
+LLVM_COMMIT = "6dfe1677ab8dffbc6ec13d53a1e0215d75147689"
 LLVM_LICENSE = "Apache-2.0 WITH LLVM-exception"
-LLVM_TOOL_VERSION = "22.1.1"
+LLVM_TOOL_VERSION = "23.1.1"
 
 # These hashes describe the resource headers generated from the nine pinned
-# TableGen files with clang-tblgen 22.1.1.  The same bytes are present in the
+# TableGen files with clang-tblgen 23.1.1.  The same bytes are present in the
 # matching Homebrew LLVM bottle.  A different official artifact must provide
 # its own explicit hash mapping rather than silently claiming to be this input.
 PINNED_HEADER_SHA256: Mapping[str, str] = {
-    "arm_sve.h": "52c7dd2eb8ddb280ce24d041a6504d1d5937cc46a288ec78c0041d14ec71ce72",
-    "arm_sme.h": "0dae22d987ada9594b197285e1f1528b1c51eafd4579345d2949367c3e788943",
+    "arm_sve.h": "fa3563bb88e2e500b5542fec8d46f790bd16c85b29769e684aff5ea79f7ad411",
+    "arm_sme.h": "0f81e716fb6f3a15566c100b5ab92853d8f45c5a061634ec743156c2afcea53e",
     "arm_mve.h": "8e6fa1bb91c0e5403e6f6152380b4ff318833028b0d4e9c91911e4dd107bd762",
-    "arm_neon.h": "ed8fc4135aef7c5af5f30ca3715d96ee9ad5a2bc97f558214fadda5704742b26",
+    "arm_neon.h": "4a2ea7589accb7524eef74e9991c692d5c15059239781076b26ae230a358f20e",
     "arm_vector_types.h": "6fe5730cbf5b4760620d643e5b44c9abbb13969b168dd7733252158503003034",
     "arm_bf16.h": "87f7bc1cb7aa53a85347bd4e1855cccd45599408bb106e66515519c1033a6a3d",
 }
@@ -1351,7 +1351,7 @@ def _model_source_ref(source: LLVMSourceRef) -> SourceRef:
         id=(f"llvm:{source.commit}:{source.header}:{source.line}:{source.sha256[:12]}"),
         repository=source.repository,
         commit=source.commit,
-        path=f"lib/clang/22/include/{source.header}",
+        path=f"lib/clang/23/include/{source.header}",
         start_line=source.line,
         end_line=source.line,
         license_id=source.license,
@@ -1368,7 +1368,7 @@ def _model_type_source_ref(definition: LLVMTypeDefinition) -> SourceRef:
         ),
         repository=source.repository,
         commit=source.commit,
-        path=f"lib/clang/22/include/{source.header}",
+        path=f"lib/clang/23/include/{source.header}",
         start_line=source.line,
         end_line=definition.end_line,
         license_id=source.license,

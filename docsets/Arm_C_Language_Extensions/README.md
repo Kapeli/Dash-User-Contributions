@@ -62,7 +62,7 @@ baseline AArch64 facility.
 | --- | --- | --- |
 | [Arm ACLE](https://github.com/ARM-software/acle/tree/62d9cbd68abb6d18dd8f06980da7758d9dbe0560) | `62d9cbd68abb6d18dd8f06980da7758d9dbe0560` (2026-08-25) | Primary semantics, availability, maturity, general ACLE declarations, and the Neon/MVE intrinsic databases |
 | [Arm A-profile feature registry](https://documentation-service.arm.com/static/69402e206efc1635355c3bb2?token=) | `109697_2025_12_en`, version 1.0 (2025-12-12) | Factual minimum-architecture and ISA-dependency relationships only; no document prose, tables, images, or PDF are redistributed |
-| [LLVM](https://github.com/llvm/llvm-project/tree/fef02d48c08db859ef83f84232ed78bd9d1c323a) | `llvmorg-22.1.1` at `fef02d48c08db859ef83f84232ed78bd9d1c323a` | Generated public declaration data, compiler-feature mappings, and LLVM scheduling-model estimates |
+| [LLVM](https://github.com/llvm/llvm-project/tree/6dfe1677ab8dffbc6ec13d53a1e0215d75147689) | `llvmorg-23.1.1` at `6dfe1677ab8dffbc6ec13d53a1e0215d75147689` | Generated public declaration data, compiler-feature mappings, and LLVM scheduling-model estimates |
 | [GCC manuals](https://gcc.gnu.org/onlinedocs/gcc-16.2.0/gcc/) | `16.2.0` | Version-scoped Arm and AArch64 compiler-option examples |
 | [GCC validation source](https://github.com/gcc-mirror/gcc/tree/fcfb06e236d4d1689a6caf8e5409b078262af481) | `fcfb06e236d4d1689a6caf8e5409b078262af481` | Transient static sampled cross-check only; no GCC content is copied into the docset or archive |
 
@@ -75,13 +75,13 @@ identifier instead of presenting it as an upstream release number.
 
 Latency, reciprocal throughput, micro-op count, and execution-resource values
 are included only when the converter can join an instruction form to an
-applicable pinned LLVM 22.1.1 scheduling model. These values are compiler model
+applicable pinned LLVM 23.1.1 scheduling model. These values are compiler model
 estimates produced by LLVM tooling, not measurements from physical hardware.
 They are labeled per microarchitecture and never generalized across CPUs.
 
 The model profiles cover Cortex-A55, Neoverse N1, Neoverse V1, Neoverse N2,
 Cortex-M55, and Cortex-M85. A profile that LLVM marks incomplete is labeled as
-partial. If LLVM 22.1.1 has no applicable model, including SME and SME2, the
+partial. If LLVM 23.1.1 has no applicable model, including SME and SME2, the
 page states that reason and publishes no invented value.
 
 ## Reproduce the docset
@@ -90,7 +90,7 @@ Requirements:
 
 - CPython 3.14.2 exactly, as selected by `.python-version`;
 - [uv](https://docs.astral.sh/uv/) with the committed `generator/uv.lock`;
-- `clang-tblgen`, `llvm-mca`, and `llvm-mc` 22.1.1 from the pinned LLVM
+- `clang-tblgen`, `llvm-mca`, and `llvm-mc` 23.1.1 from the pinned LLVM
   release; and
 - network access for the initial fetch. A verified cache supports subsequent
   offline builds.
@@ -131,7 +131,7 @@ same-UID process is outside the isolation claim.
 
 The build regenerates and verifies the six public LLVM Arm headers, then runs
 all six fixed performance profiles before normalization. All three LLVM tools
-must report 22.1.1. The build records the observed SHA-256 of every resolved
+must report 23.1.1. The build records the observed SHA-256 of every resolved
 executable and its normalized complete `--version` output, then re-probes each
 tool after use; identity drift aborts the build. The recorded LLVM release tag
 and source revision are declared provenance, not cryptographic proof of how an
@@ -170,9 +170,9 @@ access, pass it to the build explicitly:
 uv run --frozen --project generator python generate_docset.py build \
   --source-dir /path/to/verified/arm-acle-sources \
   --offline \
-  --clang-tblgen /path/to/llvm-22.1.1/bin/clang-tblgen \
-  --llvm-mca /path/to/llvm-22.1.1/bin/llvm-mca \
-  --llvm-mc /path/to/llvm-22.1.1/bin/llvm-mc \
+  --clang-tblgen /path/to/llvm-23.1.1/bin/clang-tblgen \
+  --llvm-mca /path/to/llvm-23.1.1/bin/llvm-mca \
+  --llvm-mc /path/to/llvm-23.1.1/bin/llvm-mc \
   --output-dir .
 ```
 
@@ -183,12 +183,11 @@ cache, GCC validation inputs, and test fixtures remain outside it.
 
 ## Licensing and attribution
 
-The specification material adapted from ACLE's `main/`, `neon_intrinsics/`,
-and `mve_intrinsics/` trees is licensed under Creative Commons
-Attribution-ShareAlike 4.0 International together with Arm's accompanying
-patent-license grant. The `tools/intrinsic_db/` tables consumed by the converter
-are licensed under Apache-2.0. LLVM-derived declaration and scheduling-model
-data is licensed under Apache-2.0 WITH LLVM-exception.
+The specification material adapted from ACLE's `main/acle.md` is licensed under
+Creative Commons Attribution-ShareAlike 4.0 International together with Arm's
+accompanying patent-license grant. The `tools/intrinsic_db/` tables consumed by
+the converter are licensed under Apache-2.0. LLVM-derived declaration and
+scheduling-model data is licensed under Apache-2.0 WITH LLVM-exception.
 The Arm A-profile feature registry remains subject to its Arm Proprietary
 Notice. The generator retains only factual minimum-version and dependency
 relationships with page-level citations; it does not redistribute the source
