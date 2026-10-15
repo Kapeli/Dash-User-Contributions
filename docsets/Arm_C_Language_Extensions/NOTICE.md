@@ -80,6 +80,5 @@ and source links without redistributing GCC manual prose.
 Arm, Neon, SVE, SME, Helium, and related names may be registered trademarks or
 trademarks of Arm Limited (or its subsidiaries) in the United States and/or
 elsewhere. All rights reserved by their respective owners. The contribution
-uses those names only to identify the documented interfaces, uses an original
-neutral icon, and does not use the Arm corporate logo. Arm's upstream notice is
-preserved in `LICENSES/ARM-TRADEMARK-NOTICE.md`.
+uses those names only to identify the documented interfaces. Arm's upstream
+notice is preserved in `LICENSES/ARM-TRADEMARK-NOTICE.md`.

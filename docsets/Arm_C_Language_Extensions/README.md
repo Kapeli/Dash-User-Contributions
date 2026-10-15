@@ -205,7 +205,7 @@ declaration for the generator source. The upstream material remains subject to
 its original license and Arm's accompanying patent grant. The generated pages
 are modified works: the converter normalizes presentation, merges source-backed
 fields, expands concrete declarations, creates search metadata and cross-links,
-and adds provenance and diagnostics. It does not use the Arm corporate logo.
+and adds provenance and diagnostics.
 GCC source and tests are consulted only during a transient static sampled
 cross-check and are not redistributed; this does not claim to compile the
 samples with GCC.
