@@ -33,16 +33,16 @@ from .acle_markdown import ACLE_MARKDOWN_LICENSE
 
 
 SCHEMA_VERSION = 1
-ACLE_REVISION = "62d9cbd68abb6d18dd8f06980da7758d9dbe0560"
-LLVM_TAG = "llvmorg-23.1.1"
-LLVM_REVISION = "6dfe1677ab8dffbc6ec13d53a1e0215d75147689"
+ACLE_REVISION = "74fa229b09d1c5af533a88e387e470c26494953f"
+LLVM_TAG = "llvmorg-23.1.6"
+LLVM_REVISION = "5b10d2d74929eae78912771222c9855af97496f4"
 GCC_MANUAL_VERSION = "16.2.0"
-ARM_FEATURE_REGISTRY_DOCUMENT_ID = "109697_2025_12_en"
+ARM_FEATURE_REGISTRY_DOCUMENT_ID = "109697_2026_09_en"
 ARM_FEATURE_REGISTRY_TITLE = "Feature names in A-profile architecture"
-ARM_FEATURE_REGISTRY_VERSION = "1.0 (2025_12)"
+ARM_FEATURE_REGISTRY_VERSION = "1.0 (2026_09)"
 ARM_FEATURE_REGISTRY_LICENSE = "LicenseRef-Arm-Proprietary-Notice"
 ARM_FEATURE_REGISTRY_URL = (
-    "https://documentation-service.arm.com/static/69402e206efc1635355c3bb2?token="
+    "https://documentation-service.arm.com/static/6abbe6886db85c5e66147fe9?token="
 )
 
 
@@ -217,9 +217,9 @@ class FeatureFlagMapping:
                     kind=ProvenanceKind.MANUAL_OVERRIDE,
                     sources=sources,
                     rule=(
-                        "Use Arm feature registry 109697_2025_12_en for the "
+                        "Use Arm feature registry 109697_2026_09_en for the "
                         "minimum architecture and ISA dependencies, the pinned "
-                        "ACLE revision for the macro, and pinned LLVM 23.1.1 "
+                        "ACLE revision for the macro, and pinned LLVM 23.1.6 "
                         f"for Clang feature spellings; {compiler_scope}."
                     ),
                 )
@@ -675,7 +675,7 @@ def _flags(
 ) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
     for compiler, version, source_id in (
-        ("Clang", "23.1.1", source_ids[0]),
+        ("Clang", "23.1.6", source_ids[0]),
         ("GCC", GCC_MANUAL_VERSION, source_ids[1]),
     ):
         common_notes = [
@@ -731,7 +731,7 @@ def _clang_flags(
     return [
         {
             "compiler": "Clang",
-            "version": "23.1.1",
+            "version": "23.1.6",
             "base_march": base_march,
             "flags": [march],
             "default_enabled": default_enabled,
@@ -740,7 +740,7 @@ def _clang_flags(
         },
         {
             "compiler": "Clang",
-            "version": "23.1.1",
+            "version": "23.1.6",
             "base_march": None,
             "flags": [mcpu],
             "default_enabled": None,
@@ -1106,8 +1106,8 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_FAMINMAX as optional from Armv9.2, mandatory with FEAT_FP from Armv9.5, and requiring one of FEAT_AdvSIMD, FEAT_SVE2, or FEAT_SME2.",
-                "Pinned LLVM 23.1.1 and GCC 16.2 expose the +faminmax modifier; Armv9.5-A enables it by default, but the minimum Armv9.2-A example selects it explicitly.",
+                "Arm feature registry 109697_2026_09_en records FEAT_FAMINMAX as optional from Armv9.2, mandatory with FEAT_FP from Armv9.5, and requiring one of FEAT_AdvSIMD, FEAT_SVE2, or FEAT_SME2.",
+                "Pinned LLVM 23.1.6 and GCC 16.2 expose the +faminmax modifier; Armv9.5-A enables it by default, but the minimum Armv9.2-A example selects it explicitly.",
             ),
             arm_registry_page=142,
         ),
@@ -1118,7 +1118,7 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
             architecture_features=("FEAT_F64MM",),
             extension_names=("f64mm",),
             implies=("sve",),
-            acle_lines=(2490, 2495),
+            acle_lines=(2503, 2508),
             acle_anchor="multiplication-of-64-bit-floating-point-matrices",
             llvm_aarch64_lines=(169, 171),
             llvm_aarch32_lines=None,
@@ -1137,9 +1137,9 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_F64MM as optional from Armv8.2 with FEAT_SVE required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_F64MM as optional from Armv8.2 with FEAT_SVE required.",
             ),
-            arm_registry_page=42,
+            arm_registry_page=45,
         ),
         _feature(
             key="ssve_bitperm",
@@ -1170,7 +1170,7 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
             ),
             notes=(
                 gcc_gap_note,
-                "Arm feature registry 109697_2025_12_en records FEAT_SSVE_BitPerm as optional from Armv9.4 and requires FEAT_SME2p1; FEAT_SVE_BitPerm follows only when FEAT_SVE2 is also present.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SSVE_BitPerm as optional from Armv9.4 and requires FEAT_SME2p1; FEAT_SVE_BitPerm follows only when FEAT_SVE2 is also present.",
             ),
             status=ResolutionStatus.PARTIAL,
             include_gcc_aarch64=False,
@@ -1203,7 +1203,7 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
             ),
             notes=(
                 "The LLVM TableGen guard uses the exact token sve-bitperm; compiler examples use the complete sve2-bitperm alias.",
-                "Arm feature registry 109697_2025_12_en records FEAT_SVE_BitPerm as optional from Armv9.0 with FEAT_SVE2 required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SVE_BitPerm as optional from Armv9.0 with FEAT_SVE2 required.",
             ),
             arm_registry_page=120,
         ),
@@ -1234,7 +1234,7 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_LUT as optional from Armv9.2 and requires one of FEAT_AdvSIMD, FEAT_SVE2, or FEAT_SME2.",
+                "Arm feature registry 109697_2026_09_en records FEAT_LUT as optional from Armv9.2 and requires one of FEAT_AdvSIMD, FEAT_SVE2, or FEAT_SME2.",
                 "Pinned Clang models +lut as implying Advanced SIMD; that compiler implication is distinct from the ISA's three-way requirement.",
             ),
             arm_registry_page=147,
@@ -1270,7 +1270,7 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
             notes=(
                 gcc_gap_note,
                 "Streaming declarations additionally require the distinct ssve-aes target feature; do not collapse it into sve-aes2.",
-                "Arm feature registry 109697_2025_12_en records FEAT_SVE_AES2 as optional from Armv9.5 and requires FEAT_SVE_PMULL128 plus either FEAT_SVE2p1 or FEAT_SSVE_AES.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SVE_AES2 as optional from Armv9.5 and requires FEAT_SVE_PMULL128 plus either FEAT_SVE2p1 or FEAT_SSVE_AES.",
             ),
             status=ResolutionStatus.PARTIAL,
             include_gcc_aarch64=False,
@@ -1307,7 +1307,7 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
             notes=(
                 gcc_gap_note,
                 "This streaming feature is distinct from __ARM_FEATURE_SVE2_AES and __ARM_FEATURE_SVE_AES2.",
-                "Arm feature registry 109697_2025_12_en records FEAT_SSVE_AES as optional from Armv9.5 with FEAT_SME2p1 required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SSVE_AES as optional from Armv9.5 with FEAT_SME2p1 required.",
             ),
             status=ResolutionStatus.PARTIAL,
             include_gcc_aarch64=False,
@@ -1335,15 +1335,15 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
                     note=(
                         "The Arm ISA requires FEAT_FP8 and either Advanced SIMD "
                         "or SVE2. The examples also enable the FP8 dependencies "
-                        "that Clang 23.1.1 can express; +fp8fma supplies +fp8 in "
+                        "that Clang 23.1.6 can express; +fp8fma supplies +fp8 in "
                         "the pinned compiler model."
                     ),
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_FP8FMA as optional from Armv9.2 and requires FEAT_FP8 plus either FEAT_AdvSIMD or FEAT_SVE2.",
+                "Arm feature registry 109697_2026_09_en records FEAT_FP8FMA as optional from Armv9.2 and requires FEAT_FP8 plus either FEAT_AdvSIMD or FEAT_SVE2.",
                 "FEAT_FP8 in turn requires FEAT_FPMR, FEAT_FAMINMAX, FEAT_LUT, FEAT_BF16, and one of FEAT_AdvSIMD, FEAT_SVE2, or FEAT_SME2.",
-                "Clang 23.1.1 has no +fpmr modifier; the official ISA dependency is retained without inventing a compiler flag.",
+                "Clang 23.1.6 has no +fpmr modifier; the official ISA dependency is retained without inventing a compiler flag.",
             ),
             arm_registry_page=145,
         ),
@@ -1369,14 +1369,14 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
                     note=(
                         "The Arm ISA requires FEAT_SME2 and FEAT_FP8. The "
                         "examples name both and enable every additional FP8 "
-                        "dependency that Clang 23.1.1 can express."
+                        "dependency that Clang 23.1.6 can express."
                     ),
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_SSVE_FP8FMA as optional from Armv9.2 with FEAT_FP8 and FEAT_SME2 required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SSVE_FP8FMA as optional from Armv9.2 with FEAT_FP8 and FEAT_SME2 required.",
                 "FEAT_FP8 in turn requires FEAT_FPMR, FEAT_FAMINMAX, FEAT_LUT, FEAT_BF16, and one of FEAT_AdvSIMD, FEAT_SVE2, or FEAT_SME2.",
-                "Clang 23.1.1 has no +fpmr modifier; the official ISA dependency is retained without inventing a compiler flag.",
+                "Clang 23.1.6 has no +fpmr modifier; the official ISA dependency is retained without inventing a compiler flag.",
             ),
             arm_registry_page=153,
         ),
@@ -1401,14 +1401,14 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
                     default_enabled=False,
                     note=(
                         "The examples enable every FEAT_FP8 dependency that "
-                        "Clang 23.1.1 can express. The AArch64 target provides "
+                        "Clang 23.1.6 can express. The AArch64 target provides "
                         "the required Advanced SIMD alternative."
                     ),
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_FP8 as optional from Armv9.2 and requires FEAT_FPMR, FEAT_FAMINMAX, FEAT_LUT, FEAT_BF16, and one of FEAT_AdvSIMD, FEAT_SVE2, or FEAT_SME2.",
-                "Clang 23.1.1 models +fp8 as implying Advanced SIMD but has no +fpmr modifier; the official ISA dependency is retained without inventing a compiler flag.",
+                "Arm feature registry 109697_2026_09_en records FEAT_FP8 as optional from Armv9.2 and requires FEAT_FPMR, FEAT_FAMINMAX, FEAT_LUT, FEAT_BF16, and one of FEAT_AdvSIMD, FEAT_SVE2, or FEAT_SME2.",
+                "Clang 23.1.6 models +fp8 as implying Advanced SIMD but has no +fpmr modifier; the official ISA dependency is retained without inventing a compiler flag.",
             ),
             arm_registry_page=143,
         ),
@@ -1439,7 +1439,7 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_SVE_BFSCALE as optional from Armv9.2 with FEAT_SVE_B16B16 required; FEAT_SVE_B16B16 requires either FEAT_SVE2 or FEAT_SME2.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SVE_BFSCALE as optional from Armv9.2 with FEAT_SVE_B16B16 required; FEAT_SVE_B16B16 requires either FEAT_SVE2 or FEAT_SME2.",
                 "Pinned LLVM's version grouping and parser acceptance are compiler-model facts, not architecture-minimum evidence.",
             ),
             arm_registry_page=165,
@@ -1473,7 +1473,7 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
             ),
             notes=(
                 gcc_gap_note,
-                "Arm feature registry 109697_2025_12_en records FEAT_SSVE_FEXPA as optional from Armv9.4 with FEAT_SME2p1 required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SSVE_FEXPA as optional from Armv9.4 with FEAT_SME2p1 required.",
             ),
             status=ResolutionStatus.PARTIAL,
             include_gcc_aarch64=False,
@@ -1506,7 +1506,7 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_SME_F16F16 as optional from Armv9.2 with FEAT_SME2 required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SME_F16F16 as optional from Armv9.2 with FEAT_SME2 required.",
             ),
             arm_registry_page=136,
         ),
@@ -1536,7 +1536,7 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_F32MM as optional from Armv8.2 with FEAT_SVE required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_F32MM as optional from Armv8.2 with FEAT_SVE required.",
             ),
             arm_registry_page=42,
         ),
@@ -1573,7 +1573,7 @@ def _target_guard_feature_data() -> tuple[dict[str, Any], ...]:
             notes=(
                 gcc_gap_note,
                 "Do not alias this token to GCC's distinct +f16f32mm Advanced SIMD feature.",
-                "Arm feature registry 109697_2025_12_en records FEAT_SVE_F16F32MM as optional from Armv9.2 with FEAT_SVE2p1 required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SVE_F16F32MM as optional from Armv9.2 with FEAT_SVE2p1 required.",
             ),
             status=ResolutionStatus.PARTIAL,
             include_gcc_aarch64=False,
@@ -1587,7 +1587,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
 
     gcc_gap_note = (
         "GCC 16.2 does not document this exact modifier; the examples are "
-        "therefore scoped to Clang 23.1.1."
+        "therefore scoped to Clang 23.1.6."
     )
     return (
         _feature(
@@ -1616,7 +1616,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_SME_I16I64 as optional from Armv9.2 with FEAT_SME required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SME_I16I64 as optional from Armv9.2 with FEAT_SME required.",
             ),
             arm_registry_page=126,
         ),
@@ -1646,7 +1646,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_SME_F64F64 as optional from Armv9.2 with FEAT_SME required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SME_F64F64 as optional from Armv9.2 with FEAT_SME required.",
             ),
             arm_registry_page=126,
         ),
@@ -1676,7 +1676,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_SME_LUTv2 as optional from Armv9.2 with FEAT_SME2 required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SME_LUTv2 as optional from Armv9.2 with FEAT_SME2 required.",
             ),
             arm_registry_page=150,
         ),
@@ -1708,7 +1708,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
             ),
             notes=(
                 gcc_gap_note,
-                "Arm feature registry 109697_2025_12_en records FEAT_SME_MOP4 as optional from Armv9.4 with FEAT_SME2p1 required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SME_MOP4 as optional from Armv9.4 with FEAT_SME2p1 required.",
             ),
             status=ResolutionStatus.PARTIAL,
             include_gcc_aarch64=False,
@@ -1742,7 +1742,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
             ),
             notes=(
                 gcc_gap_note,
-                "Arm feature registry 109697_2025_12_en records FEAT_SME_TMOP as optional from Armv9.4 with FEAT_SME2p1 required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SME_TMOP as optional from Armv9.4 with FEAT_SME2p1 required.",
             ),
             status=ResolutionStatus.PARTIAL,
             include_gcc_aarch64=False,
@@ -1775,7 +1775,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_FP8DOT4 as optional from Armv9.2 with FEAT_FP8FMA and either FEAT_AdvSIMD or FEAT_SVE2 required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_FP8DOT4 as optional from Armv9.2 with FEAT_FP8FMA and either FEAT_AdvSIMD or FEAT_SVE2 required.",
             ),
             arm_registry_page=145,
         ),
@@ -1805,7 +1805,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_FP8DOT2 as optional from Armv9.2 with FEAT_FP8DOT4 and either FEAT_AdvSIMD or FEAT_SVE2 required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_FP8DOT2 as optional from Armv9.2 with FEAT_FP8DOT4 and either FEAT_AdvSIMD or FEAT_SVE2 required.",
             ),
             arm_registry_page=144,
         ),
@@ -1835,7 +1835,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_SSVE_FP8DOT4 as optional from Armv9.2 with FEAT_SSVE_FP8FMA required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SSVE_FP8DOT4 as optional from Armv9.2 with FEAT_SSVE_FP8FMA required.",
             ),
             arm_registry_page=152,
         ),
@@ -1865,7 +1865,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_SSVE_FP8DOT2 as optional from Armv9.2.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SSVE_FP8DOT2 as optional from Armv9.2.",
             ),
             arm_registry_page=152,
         ),
@@ -1895,7 +1895,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_SME_F8F32 as optional from Armv9.2 with FEAT_SME2 and FEAT_FP8 required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SME_F8F32 as optional from Armv9.2 with FEAT_SME2 and FEAT_FP8 required.",
             ),
             arm_registry_page=149,
         ),
@@ -1925,7 +1925,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_SME_F8F16 as optional from Armv9.2 with FEAT_SME_F8F32 required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_SME_F8F16 as optional from Armv9.2 with FEAT_SME_F8F32 required.",
             ),
             arm_registry_page=149,
         ),
@@ -1951,12 +1951,12 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                     note=(
                         "FEAT_RDM is optional from Armv8.0 and requires "
                         "Advanced SIMD. +rdma is the common GCC spelling and "
-                        "a Clang 23.1.1 accepted alias for LLVM's +rdm token."
+                        "a Clang 23.1.6 accepted alias for LLVM's +rdm token."
                     ),
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_RDM as optional from Armv8.0 and selected by default with Advanced SIMD from Armv8.1.",
+                "Arm feature registry 109697_2026_09_en records FEAT_RDM as optional from Armv8.0 and selected by default with Advanced SIMD from Armv8.1.",
                 "Only the AArch64 compiler context is pinned; AArch32 remains explicitly unresolved.",
             ),
             arm_registry_page=38,
@@ -1988,7 +1988,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_FCMA as optional from Armv8.2 and selected by default with floating point from Armv8.3.",
+                "Arm feature registry 109697_2026_09_en records FEAT_FCMA as optional from Armv8.2 and selected by default with floating point from Armv8.3.",
                 "Only the AArch64 compiler context is pinned; AArch32 remains explicitly unresolved.",
             ),
             arm_registry_page=55,
@@ -2013,13 +2013,13 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                     "compiler_flags": [
                         {
                             "compiler": "Clang",
-                            "version": "23.1.1",
+                            "version": "23.1.6",
                             "base_march": "armv8.5-a",
                             "flags": ["-march=armv8.5-a+simd"],
                             "default_enabled": True,
                             "notes": [
                                 "Target: aarch64.",
-                                "Clang 23.1.1 has no accepted explicit FEAT_FRINTTS modifier; Armv8.5-A enables it with floating point.",
+                                "Clang 23.1.6 has no accepted explicit FEAT_FRINTTS modifier; Armv8.5-A enables it with floating point.",
                             ],
                             "source_ids": ["frint:llvm-aarch64"],
                         },
@@ -2047,7 +2047,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                 },
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_FRINTTS as optional from Armv8.4 and mandatory with floating point from Armv8.5.",
+                "Arm feature registry 109697_2026_09_en records FEAT_FRINTTS as optional from Armv8.4 and mandatory with floating point from Armv8.5.",
                 "ACLE restricts __ARM_FEATURE_FRINT to AArch64.",
             ),
             arm_registry_page=75,
@@ -2078,7 +2078,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_F16F32DOT as optional from Armv9.4 with FEAT_FHM required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_F16F32DOT as optional from Armv9.4 with FEAT_FHM required.",
             ),
             arm_registry_page=168,
         ),
@@ -2108,7 +2108,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_F16F32MM as optional from Armv9.4 with FEAT_F16F32DOT required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_F16F32MM as optional from Armv9.4 with FEAT_F16F32DOT required.",
             ),
             arm_registry_page=168,
         ),
@@ -2139,7 +2139,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
                 ),
             ),
             notes=(
-                "Arm feature registry 109697_2025_12_en records FEAT_F16MM as optional from Armv9.6 with FEAT_FP16 and either FEAT_AdvSIMD or FEAT_SVE2p2 required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_F16MM as optional from Armv9.6 with FEAT_FP16 and either FEAT_AdvSIMD or FEAT_SVE2p2 required.",
             ),
             arm_registry_page=169,
         ),
@@ -2171,7 +2171,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
             ),
             notes=(
                 gcc_gap_note,
-                "Arm feature registry 109697_2025_12_en records FEAT_F8F16MM as optional from Armv9.2 with FEAT_FP8DOT2 required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_F8F16MM as optional from Armv9.2 with FEAT_FP8DOT2 required.",
             ),
             status=ResolutionStatus.PARTIAL,
             include_gcc_aarch64=False,
@@ -2205,7 +2205,7 @@ def _late_exact_feature_data() -> tuple[dict[str, Any], ...]:
             ),
             notes=(
                 gcc_gap_note,
-                "Arm feature registry 109697_2025_12_en records FEAT_F8F32MM as optional from Armv9.2 with FEAT_FP8DOT4 required.",
+                "Arm feature registry 109697_2026_09_en records FEAT_F8F32MM as optional from Armv9.2 with FEAT_FP8DOT4 required.",
             ),
             status=ResolutionStatus.PARTIAL,
             include_gcc_aarch64=False,
@@ -3019,7 +3019,7 @@ _FEATURE_DATA: tuple[dict[str, Any], ...] = (
         ),
         notes=(
             "ACLE marks B16B16 as Alpha.",
-            "Arm feature registry 109697_2025_12_en records FEAT_SVE_B16B16 as optional from Armv9.2 and requires either FEAT_SVE2 or FEAT_SME2.",
+            "Arm feature registry 109697_2026_09_en records FEAT_SVE_B16B16 as optional from Armv9.2 and requires either FEAT_SVE2 or FEAT_SME2.",
         ),
         arm_registry_page=137,
     ),
@@ -3238,7 +3238,7 @@ _FEATURE_DATA: tuple[dict[str, Any], ...] = (
         ),
         notes=(
             "ACLE marks B16B16 as Alpha.",
-            "Arm feature registry 109697_2025_12_en records FEAT_SME_B16B16 as optional from Armv9.2 and requires FEAT_SME2 plus FEAT_SVE_B16B16.",
+            "Arm feature registry 109697_2026_09_en records FEAT_SME_B16B16 as optional from Armv9.2 and requires FEAT_SME2 plus FEAT_SVE_B16B16.",
         ),
         arm_registry_page=135,
     ),

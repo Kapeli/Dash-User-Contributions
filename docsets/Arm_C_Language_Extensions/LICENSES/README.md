@@ -4,7 +4,7 @@ These files, together with the adjacent `NOTICE.md`, preserve or identify the
 license notices for source material represented in the generated docset:
 
 - `ARM-ACLE-SPECIFICATION.md` is copied from `main/LICENSE.md` at Arm ACLE
-  commit `62d9cbd68abb6d18dd8f06980da7758d9dbe0560`. It applies to adapted ACLE
+  commit `74fa229b09d1c5af533a88e387e470c26494953f`. It applies to adapted ACLE
   specification material and contains the CC BY-SA 4.0 notice plus Arm's patent
   grant. For the portions of generated pages that adapt this material, CC
   BY-SA 4.0 is also the Adapter's License for this docset's new copyrightable
@@ -22,13 +22,13 @@ license notices for source material represented in the generated docset:
 - `ARM-TRADEMARK-NOTICE.md` is copied from `main/TRADEMARK_NOTICE.md` at the
   same commit and preserves Arm's trademark notice for the adapted material.
 - `LLVM.txt` is copied from LLVM's `LICENSE.TXT` at commit
-  `6dfe1677ab8dffbc6ec13d53a1e0215d75147689` (`llvmorg-23.1.1`). It includes
+  `5b10d2d74929eae78912771222c9855af97496f4` (`llvmorg-23.1.6`). It includes
   Apache License 2.0 and the LLVM Exceptions.
 - The Arm A-profile feature registry is not redistributed and no license text
   for it is included here. The adjacent `NOTICE.md` identifies the cited
   document, its Arm Proprietary Notice, and the limited factual use made by the
   generator. That notice grants no additional rights. The cited document states
-  `Copyright © 2024–2025 Arm Limited (or its affiliates). All rights reserved.`
+  `Copyright © 2024–2026 Arm Limited (or its affiliates). All rights reserved.`
 
 See the adjacent `NOTICE.md` for attribution, transformation, GCC validation,
 and trademark details.

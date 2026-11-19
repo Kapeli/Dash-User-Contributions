@@ -7,9 +7,9 @@ Teng. It is not produced, sponsored, or endorsed by Arm.
 ## Arm C Language Extensions
 
 The docset adapts material from the Arm C Language Extensions repository at
-commit `62d9cbd68abb6d18dd8f06980da7758d9dbe0560`:
+commit `74fa229b09d1c5af533a88e387e470c26494953f`:
 
-<https://github.com/ARM-software/acle/tree/62d9cbd68abb6d18dd8f06980da7758d9dbe0560>
+<https://github.com/ARM-software/acle/tree/74fa229b09d1c5af533a88e387e470c26494953f>
 
 Copyright notices in the pinned source identify Arm Limited and/or its
 affiliates, Google LLC (`Copyright 2022 Google LLC.`), and Matt P. Dziubinski
@@ -41,10 +41,10 @@ patent grant.
 ## Arm A-profile feature registry
 
 Minimum-architecture and ISA-dependency facts are cited from *Feature names in
-A-profile architecture*, document ID `109697_2025_12_en`, version 1.0, issue
-2025_12 (12 December 2025):
+A-profile architecture*, document ID `109697_2026_09_en`, version 1.0, issue
+2026_09 (28 September 2026):
 
-<https://documentation-service.arm.com/static/69402e206efc1635355c3bb2?token=>
+<https://documentation-service.arm.com/static/6abbe6886db85c5e66147fe9?token=>
 
 The source document remains subject to its Arm Proprietary Notice. The
 generator records only the factual minimum-version and dependency relationships
@@ -55,10 +55,10 @@ docset, archive, or source cache.
 ## LLVM Project
 
 Public declaration data, compiler-feature mappings, and scheduling-model data
-are derived from LLVM `llvmorg-23.1.1`, peeled to commit
-`6dfe1677ab8dffbc6ec13d53a1e0215d75147689`:
+are derived from LLVM `llvmorg-23.1.6`, peeled to commit
+`5b10d2d74929eae78912771222c9855af97496f4`:
 
-<https://github.com/llvm/llvm-project/tree/6dfe1677ab8dffbc6ec13d53a1e0215d75147689>
+<https://github.com/llvm/llvm-project/tree/5b10d2d74929eae78912771222c9855af97496f4>
 
 LLVM is licensed under Apache License 2.0 with LLVM Exceptions. See
 `LICENSES/LLVM.txt`. Any latency, reciprocal-throughput, micro-op, or resource

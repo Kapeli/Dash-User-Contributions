@@ -60,14 +60,14 @@ baseline AArch64 facility.
 
 | Source | Revision | Purpose |
 | --- | --- | --- |
-| [Arm ACLE](https://github.com/ARM-software/acle/tree/62d9cbd68abb6d18dd8f06980da7758d9dbe0560) | `62d9cbd68abb6d18dd8f06980da7758d9dbe0560` (2026-08-25) | Primary semantics, availability, maturity, general ACLE declarations, and the Neon/MVE intrinsic databases |
-| [Arm A-profile feature registry](https://documentation-service.arm.com/static/69402e206efc1635355c3bb2?token=) | `109697_2025_12_en`, version 1.0 (2025-12-12) | Factual minimum-architecture and ISA-dependency relationships only; no document prose, tables, images, or PDF are redistributed |
-| [LLVM](https://github.com/llvm/llvm-project/tree/6dfe1677ab8dffbc6ec13d53a1e0215d75147689) | `llvmorg-23.1.1` at `6dfe1677ab8dffbc6ec13d53a1e0215d75147689` | Generated public declaration data, compiler-feature mappings, and LLVM scheduling-model estimates |
+| [Arm ACLE](https://github.com/ARM-software/acle/tree/74fa229b09d1c5af533a88e387e470c26494953f) | `74fa229b09d1c5af533a88e387e470c26494953f` (2026-11-18) | Primary semantics, availability, maturity, general ACLE declarations, and the Neon/MVE intrinsic databases |
+| [Arm A-profile feature registry](https://documentation-service.arm.com/static/6abbe6886db85c5e66147fe9?token=) | `109697_2026_09_en`, version 1.0 (2026-09-28) | Factual minimum-architecture and ISA-dependency relationships only; no document prose, tables, images, or PDF are redistributed |
+| [LLVM](https://github.com/llvm/llvm-project/tree/5b10d2d74929eae78912771222c9855af97496f4) | `llvmorg-23.1.6` at `5b10d2d74929eae78912771222c9855af97496f4` | Generated public declaration data, compiler-feature mappings, and LLVM scheduling-model estimates |
 | [GCC manuals](https://gcc.gnu.org/onlinedocs/gcc-16.2.0/gcc/) | `16.2.0` | Version-scoped Arm and AArch64 compiler-option examples |
 | [GCC validation source](https://github.com/gcc-mirror/gcc/tree/fcfb06e236d4d1689a6caf8e5409b078262af481) | `fcfb06e236d4d1689a6caf8e5409b078262af481` | Transient static sampled cross-check only; no GCC content is copied into the docset or archive |
 
 ACLE uses continuous publication after its 2026Q1 release. The Dash feed
-version is therefore `/62d9cbd68abb`: the immutable ACLE commit is the update
+version is therefore `/74fa229b09d1`: the immutable ACLE commit is the update
 token, while Dash's leading-slash convention hides it as an internal snapshot
 identifier instead of presenting it as an upstream release number.
 
@@ -75,30 +75,30 @@ identifier instead of presenting it as an upstream release number.
 
 Latency, reciprocal throughput, micro-op count, and execution-resource values
 are included only when the converter can join an instruction form to an
-applicable pinned LLVM 23.1.1 scheduling model. These values are compiler model
+applicable pinned LLVM 23.1.6 scheduling model. These values are compiler model
 estimates produced by LLVM tooling, not measurements from physical hardware.
 They are labeled per microarchitecture and never generalized across CPUs.
 
 The model profiles cover Cortex-A55, Neoverse N1, Neoverse V1, Neoverse N2,
 Cortex-M55, and Cortex-M85. A profile that LLVM marks incomplete is labeled as
-partial. If LLVM 23.1.1 has no applicable model, including SME and SME2, the
+partial. If LLVM 23.1.6 has no applicable model, including SME and SME2, the
 page states that reason and publishes no invented value.
 
 ## Reproduce the docset
 
 Requirements:
 
-- CPython 3.14.2 exactly, as selected by `.python-version`;
+- CPython 3.14.10 exactly, as selected by `.python-version`;
 - [uv](https://docs.astral.sh/uv/) with the committed `generator/uv.lock`;
-- `clang-tblgen`, `llvm-mca`, and `llvm-mc` 23.1.1 from the pinned LLVM
+- `clang-tblgen`, `llvm-mca`, and `llvm-mc` 23.1.6 from the pinned LLVM
   release; and
 - network access for the initial fetch. A verified cache supports subsequent
   offline builds.
 
 Release generation also fails closed unless CPython's embedded SQLite and
 zlib runtimes and the byte-affecting Python packages match the pinned build
-identity: SQLite 3.50.4 (including its source ID and compile-options digest),
-zlib 1.2.12, Jinja2 3.1.6, MarkupSafe 3.0.3, markdown-it-py 3.0.0, and mdurl
+identity: SQLite 3.53.1 (including its source ID and compile-options digest),
+zlib 1.2.12, Jinja2 3.1.6, MarkupSafe 3.0.4, markdown-it-py 3.0.0, and mdurl
 0.1.2.
 
 From `docsets/Arm_C_Language_Extensions`, install the locked environment and
@@ -131,7 +131,7 @@ same-UID process is outside the isolation claim.
 
 The build regenerates and verifies the six public LLVM Arm headers, then runs
 all six fixed performance profiles before normalization. All three LLVM tools
-must report 23.1.1. The build records the observed SHA-256 of every resolved
+must report 23.1.6. The build records the observed SHA-256 of every resolved
 executable and its normalized complete `--version` output, then re-probes each
 tool after use; identity drift aborts the build. The recorded LLVM release tag
 and source revision are declared provenance, not cryptographic proof of how an
@@ -170,9 +170,9 @@ access, pass it to the build explicitly:
 uv run --frozen --project generator python generate_docset.py build \
   --source-dir /path/to/verified/arm-acle-sources \
   --offline \
-  --clang-tblgen /path/to/llvm-23.1.1/bin/clang-tblgen \
-  --llvm-mca /path/to/llvm-23.1.1/bin/llvm-mca \
-  --llvm-mc /path/to/llvm-23.1.1/bin/llvm-mc \
+  --clang-tblgen /path/to/llvm-23.1.6/bin/clang-tblgen \
+  --llvm-mca /path/to/llvm-23.1.6/bin/llvm-mca \
+  --llvm-mc /path/to/llvm-23.1.6/bin/llvm-mc \
   --output-dir .
 ```
 
