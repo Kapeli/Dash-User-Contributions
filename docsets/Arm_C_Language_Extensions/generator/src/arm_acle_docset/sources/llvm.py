@@ -9,7 +9,7 @@ The upstream llvm-project source archive does not contain generated
 ``arm_sve.h``, ``arm_sme.h``, or ``arm_mve.h`` files.  Reproducible builds must
 therefore either:
 
-* pass the resource include directory from the pinned LLVM 23.1.1 toolchain;
+* pass the resource include directory from the pinned LLVM 23.1.6 toolchain;
   or
 * consume a normalized inventory previously produced by this module.
 
@@ -47,13 +47,13 @@ from ..model import (
 from ..normalize import normalize_callable, parse_availability_guard
 
 
-LLVM_RELEASE_TAG = "llvmorg-23.1.1"
-LLVM_COMMIT = "6dfe1677ab8dffbc6ec13d53a1e0215d75147689"
+LLVM_RELEASE_TAG = "llvmorg-23.1.6"
+LLVM_COMMIT = "5b10d2d74929eae78912771222c9855af97496f4"
 LLVM_LICENSE = "Apache-2.0 WITH LLVM-exception"
-LLVM_TOOL_VERSION = "23.1.1"
+LLVM_TOOL_VERSION = "23.1.6"
 
 # These hashes describe the resource headers generated from the nine pinned
-# TableGen files with clang-tblgen 23.1.1.  The same bytes are present in the
+# TableGen files with clang-tblgen 23.1.6.  The same bytes are present in the
 # matching Homebrew LLVM bottle.  A different official artifact must provide
 # its own explicit hash mapping rather than silently claiming to be this input.
 PINNED_HEADER_SHA256: Mapping[str, str] = {

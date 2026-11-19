@@ -42,7 +42,7 @@ from .sources.manifest import (
 
 CONTRIBUTION_DIRECTORY = Path(__file__).resolve().parents[3]
 DEFAULT_CACHE_DIRECTORY = Path.home() / ".arm-acle-docset-cache"
-CLANG_TBLGEN_VERSION = "23.1.1"
+CLANG_TBLGEN_VERSION = "23.1.6"
 GENERATED_HEADER_SHA256: Mapping[str, str] = {
     Path(member.local_path).name: member.sha256 for member in LLVM_GENERATED_HEADERS
 }
@@ -88,17 +88,17 @@ def build_parser() -> argparse.ArgumentParser:
     build_parser_.add_argument(
         "--clang-tblgen",
         type=Path,
-        help="path to clang-tblgen 23.1.1 (default: PATH lookup)",
+        help="path to clang-tblgen 23.1.6 (default: PATH lookup)",
     )
     build_parser_.add_argument(
         "--llvm-mca",
         type=Path,
-        help="path to llvm-mca 23.1.1 (default: PATH lookup)",
+        help="path to llvm-mca 23.1.6 (default: PATH lookup)",
     )
     build_parser_.add_argument(
         "--llvm-mc",
         type=Path,
-        help="path to llvm-mc 23.1.1 (default: sibling of llvm-mca)",
+        help="path to llvm-mc 23.1.6 (default: sibling of llvm-mca)",
     )
     build_parser_.add_argument(
         "--performance-profile",
@@ -530,7 +530,7 @@ def _resolve_clang_tblgen(value: Path | None) -> Path:
     discovered = shutil.which("clang-tblgen")
     if discovered is None:
         raise RuntimeError(
-            "clang-tblgen 23.1.1 was not found; pass --clang-tblgen with an exact tool path"
+            "clang-tblgen 23.1.6 was not found; pass --clang-tblgen with an exact tool path"
         )
     return Path(discovered).resolve()
 
@@ -544,7 +544,7 @@ def _resolve_llvm_tool(value: Path | None, name: str) -> Path:
     discovered = shutil.which(name)
     if discovered is None:
         raise RuntimeError(
-            f"{name} 23.1.1 was not found; pass --{name} with an exact tool path"
+            f"{name} 23.1.6 was not found; pass --{name} with an exact tool path"
         )
     return Path(discovered).resolve()
 
