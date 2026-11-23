@@ -33,7 +33,7 @@ cd build
 cmake ../ -DWITH_DOT=FALSE -DWITH_APIDOC=TRUE -DWITH_3D=TRUE -DWITH_SERVER=TRUE
 make apidoc
 ```
-Then, in *doc/api/html/Info.plist* remove *CFBundleVersion* (key and string value), and add the following two lines
+Then, in *doc/api/html/Info.plist* remove *CFBundleVersion* (key and string value), change the value of *DashDocSetFamily* to *qgis*, change the value of *DocSetPlatformFamily* to *cpp*, and add the following two lines
 ```xml
 <key>isDashDocset</key>
 <true/>
@@ -47,12 +47,13 @@ cd ../../../
 doxytag2zealdb --tag doc/qgis.tag --db doc/api/html/QGIS_4.docset/Contents/Resources/docSet.dsidx  --include-parent-scopes --include-function-signatures
 ```
 
+Update docset.json with QGIS version.
 Finally, add icons and docset.json to `doc/api/html/QGIS_4.docset`
-
-If you want to propose a PR to update this documentation, just zip it, share it (on Dropbox for instance) and give the URL in the PR.
 
 To create the tar archive
 
 ```shell
 cd doc/api/html && tar cvzf QGIS.tgz --exclude='.DS_Store' QGIS_4.docset
 ```
+
+Add the tar archive to this directory, and create a pull request.
