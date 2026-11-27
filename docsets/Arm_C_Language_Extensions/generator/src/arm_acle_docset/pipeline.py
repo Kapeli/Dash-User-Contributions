@@ -3407,7 +3407,7 @@ def _neon_feature_rule(callable_: ConcreteCallable) -> _NeonFeatureRule:
     elif section == _NEON_SECTION_I8MM:
         macros.add("__ARM_FEATURE_MATMUL_INT8")
     elif section == _NEON_SECTION_BF16:
-        # LLVM 23.1.1 deliberately marks these representation-only helpers as
+        # LLVM 23.1.6 deliberately marks these representation-only helpers as
         # `target("neon")`: they shuffle, duplicate, split, or bit-cast bf16
         # values and do not issue an Arm BF16 instruction.  The source section
         # is broader than the individual compiler availability, so keep its

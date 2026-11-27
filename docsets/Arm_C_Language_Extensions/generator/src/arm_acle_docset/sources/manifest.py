@@ -34,9 +34,9 @@ from types import MappingProxyType
 from typing import IO, Iterable, Iterator, Mapping, Sequence
 
 
-ACLE_REVISION = "62d9cbd68abb6d18dd8f06980da7758d9dbe0560"
-LLVM_TAG = "llvmorg-23.1.1"
-LLVM_COMMIT = "6dfe1677ab8dffbc6ec13d53a1e0215d75147689"
+ACLE_REVISION = "74fa229b09d1c5af533a88e387e470c26494953f"
+LLVM_TAG = "llvmorg-23.1.6"
+LLVM_COMMIT = "5b10d2d74929eae78912771222c9855af97496f4"
 GCC_COMMIT = "fcfb06e236d4d1689a6caf8e5409b078262af481"
 
 
@@ -251,13 +251,13 @@ SOURCE_ARTIFACTS: tuple[SourceArtifact, ...] = (
     _raw_acle_artifact(
         "acle-main",
         "main/acle.md",
-        "d9b4fe6d25f2e61554ef7ba4a5953cfa91a387fd3d8746d484c396badfba387d",
+        "9a2e040630d99217265480923f3d10ec80d86b1a274ca4fe1357eafd0b83aee5",
         kind=SourceKind.SPECIFICATION,
     ),
     _raw_acle_artifact(
         "acle-advsimd",
         "tools/intrinsic_db/advsimd.csv",
-        "0735e2da918e48ab9a917c94a5756d2a47e7d33d46cce2e235d41af6ba2c46d3",
+        "58791696c0f15fcbedc9f3145da2cf1289ad31f04840f8313664628d291f45bf",
         kind=SourceKind.CATALOG,
     ),
     _raw_acle_artifact(
@@ -344,7 +344,7 @@ SOURCE_ARTIFACTS: tuple[SourceArtifact, ...] = (
     ),
 )
 
-# clang-tblgen 23.1.1 deterministically produces these declaration inputs from
+# clang-tblgen 23.1.6 deterministically produces these declaration inputs from
 # the pinned TableGen artifacts above. They are verified before any adapter is
 # allowed to consume the generated include directory.
 LLVM_GENERATED_HEADERS: tuple[SourceMember, ...] = (
